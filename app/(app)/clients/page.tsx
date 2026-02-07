@@ -28,7 +28,8 @@ export default function ClientsPage() {
     setLoading(true);
     try {
       const res = await api.get(`/clients?search=${encodeURIComponent(search)}`);
-      setItems(res.items || []);
+      setItems(res.data?.items || []);
+
     } catch (e: any) {
       setToast({ type: "error", msg: e?.message || "Failed to load clients" });
     } finally {
