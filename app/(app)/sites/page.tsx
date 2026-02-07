@@ -61,8 +61,10 @@ export default function SitesPage() {
 
   async function loadClients() {
     try {
+      // ✅ FIX: use unwrapItems on AxiosResponse (reads res.data safely)
       const res = await api.get<any>("/clients");
-      setClients(unwrapItems(res));
+      const items = unwrapItems(res);
+      setClients(Array.isArray(items) ? items : []);
     } catch {
       // ignore
     }
@@ -234,7 +236,10 @@ export default function SitesPage() {
 
               <tbody>
                 {items.map((s: any) => (
-                  <tr key={s.id} className={cn("border-t border-white/10 hover:bg-white/5")}>
+                  <tr
+                    key={s.id}
+                    className={cn("border-t border-white/10 hover:bg-white/5")}
+                  >
                     <td className="px-4 py-2 font-medium">{s.name || "—"}</td>
                     <td className="px-4 py-2">{s.clients?.name || "—"}</td>
                     <td className="px-4 py-2">{s.address || "—"}</td>
@@ -288,7 +293,9 @@ export default function SitesPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">{editing ? "Edit Site" : "Create Site"}</h3>
+              <h3 className="text-lg font-bold">
+                {editing ? "Edit Site" : "Create Site"}
+              </h3>
               <button
                 onClick={() => setModalOpen(false)}
                 className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
@@ -353,7 +360,12 @@ export default function SitesPage() {
         </div>
       ) : null}
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }
