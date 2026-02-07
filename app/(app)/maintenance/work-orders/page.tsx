@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/src/store/auth";
 import { useSearchParams, useRouter } from "next/navigation";
+import { api, unwrapItems } from "@/src/lib/api";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -20,53 +21,23 @@ function shortId(id: any) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 function roleUpper(r: any) {
-  return String(r || "").trim().toUpperCase(); // ✅ trim
+  return String(r || "").trim().toUpperCase();
 }
 function isAdminOrAccountant(role: any) {
   const rr = roleUpper(role);
   return rr === "ADMIN" || rr === "ACCOUNTANT";
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3000";
-
-async function apiFetch<T>(
-  path: string,
-  opts: { method?: string; token?: string | null; body?: any; query?: Record<string, any> } = {}
-): Promise<T> {
-  const { method = "GET", token, body, query } = opts;
-  const url = new URL(path.startsWith("http") ? path : `${API_BASE}${path}`);
-
-  if (query) {
-    for (const [k, v] of Object.entries(query)) {
-      if (v === undefined || v === null || v === "") continue;
-      url.searchParams.set(k, String(v));
-    }
-  }
-
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
-
-  const txt = await res.text();
-  let json: any = null;
-  try {
-    json = txt ? JSON.parse(txt) : null;
-  } catch {
-    json = { message: txt || "Unknown response" };
-  }
-
-  if (!res.ok) throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
-}
-
 // UI atoms
-function Card({ title, right, children }: { title: string; right?: React.ReactNode; children: React.ReactNode }) {
+function Card({
+  title,
+  right,
+  children,
+}: {
+  title: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -77,6 +48,7 @@ function Card({ title, right, children }: { title: string; right?: React.ReactNo
     </div>
   );
 }
+
 function Button({
   children,
   onClick,
@@ -206,20 +178,28 @@ export default function WorkOrdersPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await apiFetch<ListResponse>("/maintenance/work-orders", {
-        token,
-        query: {
+      const res: any = await api.get("/maintenance/work-orders", {
+        params: {
           page: p,
           limit,
-          status, // ممكن تكون "OPEN,IN_PROGRESS"
-          q,
-          qa,     // ✅ passthrough
-          parts,  // ✅ passthrough
+          status: status || undefined, // ممكن تكون "OPEN,IN_PROGRESS"
+          q: q || undefined,
+          qa: qa || undefined,
+          parts: parts || undefined,
         },
       });
-      setItems(res.items || []);
-      setTotal(res.total || 0);
-      setPage(res.page || p);
+
+      // unwrapItems يغطي لو السيرفر رجع items داخل data أو رجع array مباشرة
+      const list = unwrapItems<WorkOrderRow>(res);
+      const meta = (res?.meta || res?.data?.meta || null) as any;
+
+      // backend عندك غالباً بيرجع total/page/limit على root أو داخل meta
+      const pageOut = Number(res?.page ?? res?.data?.page ?? meta?.page ?? p);
+      const totalOut = Number(res?.total ?? res?.data?.total ?? meta?.total ?? 0);
+
+      setItems(list);
+      setTotal(Number.isFinite(totalOut) ? totalOut : 0);
+      setPage(Number.isFinite(pageOut) ? pageOut : p);
     } catch {
       setItems([]);
       setTotal(0);
@@ -228,6 +208,7 @@ export default function WorkOrdersPage() {
     }
   }
 
+  // ✅ reload عند تغيّر token أو status/qa/parts (الفلترة السيرفرية)
   useEffect(() => {
     if (!token) return;
     load(1);
@@ -279,7 +260,6 @@ export default function WorkOrdersPage() {
           <Button
             variant="secondary"
             onClick={() => {
-              // ✅ clear URL filters
               router.push("/maintenance/work-orders");
             }}
           >
@@ -304,12 +284,24 @@ export default function WorkOrdersPage() {
           <div>
             <div className="text-xs text-white/60 mb-1">Status</div>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
-              <option value="" className={optionCls}>All</option>
-              <option value="OPEN" className={optionCls}>OPEN</option>
-              <option value="IN_PROGRESS" className={optionCls}>IN PROGRESS</option>
-              <option value="COMPLETED" className={optionCls}>COMPLETED</option>
-              <option value="CANCELED" className={optionCls}>CANCELED</option>
-              <option value="OPEN,IN_PROGRESS" className={optionCls}>OPEN + IN_PROGRESS</option>
+              <option value="" className={optionCls}>
+                All
+              </option>
+              <option value="OPEN" className={optionCls}>
+                OPEN
+              </option>
+              <option value="IN_PROGRESS" className={optionCls}>
+                IN PROGRESS
+              </option>
+              <option value="COMPLETED" className={optionCls}>
+                COMPLETED
+              </option>
+              <option value="CANCELED" className={optionCls}>
+                CANCELED
+              </option>
+              <option value="OPEN,IN_PROGRESS" className={optionCls}>
+                OPEN + IN_PROGRESS
+              </option>
             </select>
             <div className="mt-1 text-[11px] text-white/50">
               Selected: <span className="text-white/80">{statusLabel(status)}</span>
@@ -319,17 +311,27 @@ export default function WorkOrdersPage() {
           <div>
             <div className="text-xs text-white/60 mb-1">QA</div>
             <select value={qa} onChange={(e) => setQa(e.target.value)} className={selectCls}>
-              <option value="" className={optionCls}>All</option>
-              <option value="needs" className={optionCls}>needs</option>
-              <option value="failed" className={optionCls}>failed</option>
+              <option value="" className={optionCls}>
+                All
+              </option>
+              <option value="needs" className={optionCls}>
+                needs
+              </option>
+              <option value="failed" className={optionCls}>
+                failed
+              </option>
             </select>
           </div>
 
           <div>
             <div className="text-xs text-white/60 mb-1">Parts</div>
             <select value={parts} onChange={(e) => setParts(e.target.value)} className={selectCls}>
-              <option value="" className={optionCls}>All</option>
-              <option value="mismatch" className={optionCls}>mismatch</option>
+              <option value="" className={optionCls}>
+                All
+              </option>
+              <option value="mismatch" className={optionCls}>
+                mismatch
+              </option>
             </select>
           </div>
 
@@ -342,13 +344,20 @@ export default function WorkOrdersPage() {
                 placeholder="ابحث..."
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white placeholder:text-white/40"
               />
-              <Button variant="primary" onClick={() => load(1)} disabled={loading}>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setPage(1);
+                  load(1);
+                }}
+                disabled={loading}
+              >
                 Search
               </Button>
             </div>
 
             <div className="mt-2 text-[11px] text-white/50">
-              Tip: الكروت من الداشبورد بتبعت status/qa/parts في الـ URL — الصفحة دي دلوقتي بتقرأهم صح.
+              Tip: الكروت من الداشبورد بتبعت status/qa/parts في الـ URL — الصفحة دي بتقرأهم وتفلتر صح.
             </div>
           </div>
         </div>

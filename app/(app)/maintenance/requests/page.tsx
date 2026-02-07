@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useRouter } from "next/navigation";
+import { api, unwrapItems } from "@/src/lib/api";
 
 // =====================
 // Types
@@ -58,55 +59,6 @@ function shortId(id: unknown) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
-
-// =====================
-// API
-// =====================
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3000";
-
-async function apiFetch<T>(
-  path: string,
-  opts: {
-    method?: string;
-    token?: string | null;
-    body?: any;
-    query?: Record<string, any>;
-  } = {}
-): Promise<T> {
-  const { method = "GET", token, body, query } = opts;
-
-  const url = new URL(path.startsWith("http") ? path : `${API_BASE}${path}`);
-  if (query) {
-    for (const [k, v] of Object.entries(query)) {
-      if (v === undefined || v === null || v === "") continue;
-      url.searchParams.set(k, String(v));
-    }
-  }
-
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  const txt = await res.text();
-  let json: any = null;
-  try {
-    json = txt ? JSON.parse(txt) : null;
-  } catch {
-    json = { message: txt || "Unknown response" };
-  }
-
-  if (!res.ok) {
-    const msg = json?.message || `Request failed (${res.status})`;
-    throw new Error(msg);
-  }
-
-  return json as T;
 }
 
 // =====================
@@ -273,7 +225,6 @@ function Modal({
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      {/* ✅ force readable colors */}
       <div className="absolute left-1/2 top-1/2 w-[95vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white text-black shadow-xl">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="text-base font-semibold">{title}</div>
@@ -296,6 +247,13 @@ export default function MaintenanceRequestsPage() {
   const role = user?.role;
   const router = useRouter();
 
+  // ✅ hydrate (زي باقي الصفحات) علشان token مايبقاش null وقت أول تحميل
+  useEffect(() => {
+    try {
+      (useAuth as any).getState?.().hydrate?.();
+    } catch {}
+  }, []);
+
   // Filters
   const [status, setStatus] = useState<string>("");
   const [vehicleId, setVehicleId] = useState<string>("");
@@ -309,7 +267,11 @@ export default function MaintenanceRequestsPage() {
   const [loading, setLoading] = useState<boolean>(false);
 
   // Toast
-  const [toast, setToast] = useState<{ open: boolean; kind: "error" | "success" | "info"; message: string }>({
+  const [toast, setToast] = useState<{
+    open: boolean;
+    kind: "error" | "success" | "info";
+    message: string;
+  }>({
     open: false,
     kind: "error",
     message: "",
@@ -341,12 +303,11 @@ export default function MaintenanceRequestsPage() {
   }
 
   async function loadVehicleOptions() {
+    if (!token) return;
     setVehiclesLoading(true);
     try {
-      const res = await apiFetch<{ items: VehicleOption[] }>("/maintenance/vehicles/options", {
-        token,
-      });
-      setVehicleOptions(res.items || []);
+      const res: any = await api.get("/maintenance/vehicles/options");
+      setVehicleOptions(unwrapItems<VehicleOption>(res));
     } catch (e: any) {
       setVehicleOptions([]);
       showToast(e?.message || "Failed to load vehicle options", "error");
@@ -355,17 +316,29 @@ export default function MaintenanceRequestsPage() {
     }
   }
 
-  async function loadRequests() {
+  async function loadRequests(p = page) {
+    if (!token) return;
     setLoading(true);
     try {
-      const res = await apiFetch<ListResponse>("/maintenance/requests", {
-        token,
-        query: { status: status || undefined, vehicle_id: vehicleId || undefined, page, limit },
+      const res: any = await api.get("/maintenance/requests", {
+        params: {
+          status: status || undefined,
+          vehicle_id: vehicleId || undefined,
+          page: p,
+          limit,
+        },
       });
-      setItems(res.items || []);
-      setMeta(res.meta || null);
+
+      const list = unwrapItems<MaintenanceRequest>(res);
+      const m = (res?.meta || res?.data?.meta || null) as ListResponse["meta"] | null;
+
+      setItems(list);
+      setMeta(m);
+      if (m?.page) setPage(m.page);
     } catch (e: any) {
       showToast(e?.message || "Failed to load requests", "error");
+      setItems([]);
+      setMeta(null);
     } finally {
       setLoading(false);
     }
@@ -379,9 +352,15 @@ export default function MaintenanceRequestsPage() {
 
   useEffect(() => {
     if (!token) return;
-    loadRequests();
+    loadRequests(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, status, vehicleId, page]);
+  }, [token, status, vehicleId]);
+
+  useEffect(() => {
+    if (!token) return;
+    loadRequests(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, page]);
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
@@ -398,14 +377,10 @@ export default function MaintenanceRequestsPage() {
 
     setSubmitting(true);
     try {
-      await apiFetch<MaintenanceRequest>("/maintenance/requests", {
-        token,
-        method: "POST",
-        body: {
-          vehicle_id: formVehicleId,
-          problem_title: formTitle.trim(),
-          problem_description: formDesc.trim() || null,
-        },
+      await api.post("/maintenance/requests", {
+        vehicle_id: formVehicleId,
+        problem_title: formTitle.trim(),
+        problem_description: formDesc.trim() || null,
       });
 
       setCreateOpen(false);
@@ -415,7 +390,7 @@ export default function MaintenanceRequestsPage() {
       setPage(1);
 
       showToast("Request created", "success");
-      await loadRequests();
+      await loadRequests(1);
     } catch (e: any) {
       showToast(e?.message || "Failed to create request", "error");
     } finally {
@@ -425,14 +400,15 @@ export default function MaintenanceRequestsPage() {
 
   async function onApprove(id: string) {
     try {
-      await apiFetch<any>(`/maintenance/requests/${id}/approve`, {
-        token,
-        method: "POST",
-        body: { type: "CORRECTIVE", vendor_name: null, odometer: null, notes: null },
+      await api.post(`/maintenance/requests/${id}/approve`, {
+        type: "CORRECTIVE",
+        vendor_name: null,
+        odometer: null,
+        notes: null,
       });
       setApproveTarget(null);
       showToast("Approved", "success");
-      await loadRequests();
+      await loadRequests(1);
     } catch (e: any) {
       showToast(e?.message || "Failed to approve", "error");
     }
@@ -440,20 +416,27 @@ export default function MaintenanceRequestsPage() {
 
   async function onReject(id: string, reason: string) {
     try {
-      await apiFetch<any>(`/maintenance/requests/${id}/reject`, {
-        token,
-        method: "POST",
-        body: { reason },
-      });
+      await api.post(`/maintenance/requests/${id}/reject`, { reason });
       setRejectTarget(null);
       showToast("Rejected", "info");
-      await loadRequests();
+      await loadRequests(1);
     } catch (e: any) {
       showToast(e?.message || "Failed to reject", "error");
     }
   }
 
   const totalPages = meta?.pages || 1;
+
+  // ✅ لو token null (قبل hydrate) نعرض Loading بسيط
+  if (token === null) {
+    return (
+      <div className="space-y-4 p-4">
+        <Card title="Maintenance Requests">
+          <div className="text-sm text-neutral-600">Checking session…</div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 p-4">
@@ -472,7 +455,7 @@ export default function MaintenanceRequestsPage() {
               variant="secondary"
               onClick={async () => {
                 await loadVehicleOptions();
-                await loadRequests();
+                await loadRequests(1);
               }}
               disabled={loading || vehiclesLoading}
             >
@@ -571,9 +554,7 @@ export default function MaintenanceRequestsPage() {
                           </div>
                         ) : null}
                         {st === "REJECTED" && it.rejection_reason ? (
-                          <div className="mt-1 text-xs text-red-700">
-                            Rejection: {it.rejection_reason}
-                          </div>
+                          <div className="mt-1 text-xs text-red-700">Rejection: {it.rejection_reason}</div>
                         ) : null}
                       </td>
 
@@ -612,10 +593,18 @@ export default function MaintenanceRequestsPage() {
             Page {meta?.page || page} / {totalPages} • Total {meta?.total ?? filtered.length}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            <Button
+              variant="secondary"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
               Prev
             </Button>
-            <Button variant="secondary" disabled={page >= totalPages || loading} onClick={() => setPage((p) => p + 1)}>
+            <Button
+              variant="secondary"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage((p) => p + 1)}
+            >
               Next
             </Button>
           </div>

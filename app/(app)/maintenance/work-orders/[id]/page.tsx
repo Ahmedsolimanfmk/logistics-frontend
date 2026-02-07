@@ -184,9 +184,7 @@ type ReportResponse = {
 };
 
 type InventoryIssue = { id: string };
-
 type InstallationsListResponse = { items: any[] };
-
 type TabKey = "issues" | "installations" | "qa";
 
 const selectCls =
@@ -194,7 +192,16 @@ const selectCls =
 const optionCls = "bg-neutral-900 text-white";
 
 export default function WorkOrderDetailsPage() {
-  const { token, user } = useAuth() as any;
+  const token = useAuth((s: any) => s.token);
+  const user = useAuth((s: any) => s.user);
+
+  // ✅ hydrate (زي الداشبورد)
+  useEffect(() => {
+    try {
+      (useAuth as any).getState?.().hydrate?.();
+    } catch {}
+  }, []);
+
   const role = user?.role;
   const canManage = isAdminOrAccountant(role);
 
@@ -276,12 +283,26 @@ export default function WorkOrderDetailsPage() {
     if (!token || !id) return;
     setInstLoading(true);
     setInstMsg(null);
+
     try {
-      const res = await apiFetch<InstallationsListResponse>(
+      const res: any = await apiFetch<any>(
         `/maintenance/work-orders/${id}/installations`,
         { token }
       );
-      setInstItems(res.items || []);
+
+      // ✅ Accept multiple backend shapes:
+      // 1) { items: [...] }
+      // 2) { installations: [...] }
+      // 3) { data: [...] }
+      // 4) [...] (array)
+      const arr =
+        Array.isArray(res) ? res :
+        Array.isArray(res?.["items"]) ? res["items"] :
+        Array.isArray(res?.["installations"]) ? res["installations"] :
+        Array.isArray(res?.["data"]) ? res["data"] :
+        [];
+
+      setInstItems(arr);
     } catch (e: any) {
       setInstItems([]);
       setInstMsg(e?.message || "Failed to load installations");
@@ -297,7 +318,6 @@ export default function WorkOrderDetailsPage() {
   }, [token, id]);
 
   useEffect(() => {
-    // لما تفتح installations نزّل القائمة
     if (tab === "installations") loadInstallations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
@@ -395,7 +415,7 @@ export default function WorkOrderDetailsPage() {
       setLineUnitCost(0);
       setLineNotes("");
 
-      await load(); // refresh report runtime (issued lines / totals / reconciliation)
+      await load();
     } catch (e: any) {
       setLineMsg(`❌ Failed: ${e?.message || "Unknown error"}`);
     } finally {
@@ -415,8 +435,7 @@ export default function WorkOrderDetailsPage() {
       setInstMsg("qty_installed لازم > 0.");
       return;
     }
-    const odometer =
-      instOdo === "" ? null : Number(instOdo);
+    const odometer = instOdo === "" ? null : Number(instOdo);
     if (odometer !== null && (!Number.isFinite(odometer) || odometer < 0)) {
       setInstMsg("odometer لازم يكون رقم >= 0.");
       return;
@@ -525,6 +544,17 @@ export default function WorkOrderDetailsPage() {
     if (rs === "OK") return "✅ جاهز للإغلاق.";
     return null;
   }, [report, rs]);
+
+  // ✅ لو التوكن لسه null قبل الهيدريت
+  if (token === null) {
+    return (
+      <div className="space-y-4 p-4 text-white">
+        <Card title="Work Order Details">
+          <div className="text-sm text-white/70">Loading session…</div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 p-4 text-white">
@@ -660,7 +690,8 @@ export default function WorkOrderDetailsPage() {
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">Reconciliation (Issued vs Installed)</div>
                 <div className="text-xs text-white/60">
-                  matched: {recon.matched?.length || 0} | issued_not_installed: {recon.issued_not_installed?.length || 0} | installed_not_issued:{" "}
+                  matched: {recon.matched?.length || 0} | issued_not_installed:{" "}
+                  {recon.issued_not_installed?.length || 0} | installed_not_issued:{" "}
                   {recon.installed_not_issued?.length || 0}
                 </div>
               </div>
@@ -724,7 +755,8 @@ export default function WorkOrderDetailsPage() {
 
                     {((recon.matched || []).length +
                       (recon.issued_not_installed || []).length +
-                      (recon.installed_not_issued || []).length === 0) ? (
+                      (recon.installed_not_issued || []).length ===
+                      0) ? (
                       <tr className="border-t border-white/10">
                         <td className="p-3 text-white/70" colSpan={5}>
                           No reconciliation data
@@ -749,7 +781,8 @@ export default function WorkOrderDetailsPage() {
                 </div>
 
                 <div className="mt-2 text-xs text-white/60">
-                  Current issue_id: <span className="font-mono text-white">{issueId ? shortId(issueId) : "—"}</span>
+                  Current issue_id:{" "}
+                  <span className="font-mono text-white">{issueId ? shortId(issueId) : "—"}</span>
                 </div>
                 {issueMsg ? (
                   <div className={cn("mt-2 text-sm", issueMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
@@ -945,7 +978,8 @@ export default function WorkOrderDetailsPage() {
                           <tr key={x.id} className="border-t border-white/10">
                             <td className="p-3">{fmtDate(x.installed_at)}</td>
                             <td className="p-3">
-                              <div className="font-semibold">{x.part_id ? "—" : "—"}</div>
+                              {/* ✅ إصلاح: كان دايمًا — */}
+                              <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
                               <div className="text-xs text-white/50 font-mono">{shortId(x.part_id)}</div>
                             </td>
                             <td className="p-3">{x.qty_installed}</td>
@@ -982,7 +1016,7 @@ export default function WorkOrderDetailsPage() {
                           <tr key={x.id} className="border-t border-white/10">
                             <td className="p-3">{fmtDate(x.installed_at)}</td>
                             <td className="p-3">
-                              <div className="font-semibold">{x?.part?.name || "—"}</div>
+                              <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
                               <div className="text-xs text-white/50 font-mono">{shortId(x.part_id)}</div>
                             </td>
                             <td className="p-3">{x.qty_installed}</td>

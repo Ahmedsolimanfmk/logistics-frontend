@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useParams, useRouter } from "next/navigation";
+import { api, unwrapItems } from "@/src/lib/api";
 
 // =====================
 // Types
@@ -44,6 +45,13 @@ type MaintenanceAttachment = {
   created_at?: string | null;
 };
 
+type MaintenanceRequestDetailsResponse = {
+  request: MaintenanceRequest;
+  vehicles?: any;
+  requested_by_user?: any;
+  reviewed_by_user?: any;
+};
+
 // =====================
 // Helpers
 // =====================
@@ -81,87 +89,24 @@ function fmtBytes(n?: number | null) {
   return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
 // =====================
-// API
+// Upload
 // =====================
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3000";
-
-async function apiFetch<T>(
-  path: string,
-  opts: {
-    method?: string;
-    token?: string | null;
-    body?: any;
-    query?: Record<string, any>;
-  } = {}
-): Promise<T> {
-  const { method = "GET", token, body, query } = opts;
-
-  const url = new URL(path.startsWith("http") ? path : `${API_BASE}${path}`);
-  if (query) {
-    for (const [k, v] of Object.entries(query)) {
-      if (v === undefined || v === null || v === "") continue;
-      url.searchParams.set(k, String(v));
-    }
-  }
-
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  const txt = await res.text();
-  let json: any = null;
-  try {
-    json = txt ? JSON.parse(txt) : null;
-  } catch {
-    json = { message: txt || "Unknown response" };
-  }
-
-  if (!res.ok) {
-    const msg = json?.message || `Request failed (${res.status})`;
-    throw new Error(msg);
-  }
-
-  return json as T;
-}
-
 async function uploadFiles(
   requestId: string,
-  files: File[],
-  token?: string | null
-): Promise<{ items: MaintenanceAttachment[] }> {
-  const url = new URL(`${API_BASE}/maintenance/requests/${requestId}/attachments`);
+  files: File[]
+): Promise<any> {
   const fd = new FormData();
   for (const f of files) fd.append("files", f);
 
-  const res = await fetch(url.toString(), {
-    method: "POST",
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      // ⚠️ لا تضع Content-Type هنا (المتصفح يضبط boundary تلقائيًا)
-    },
-    body: fd,
+  // axios: لازم نسيب Content-Type فاضي عشان يضبط boundary
+  const res = await api.post(`/maintenance/requests/${requestId}/attachments`, fd, {
+    headers: { "Content-Type": undefined as any },
   });
 
-  const txt = await res.text();
-  let json: any = null;
-  try {
-    json = txt ? JSON.parse(txt) : null;
-  } catch {
-    json = { message: txt || "Unknown response" };
-  }
-
-  if (!res.ok) {
-    const msg = json?.message || `Upload failed (${res.status})`;
-    throw new Error(msg);
-  }
-
-  return json as { items: MaintenanceAttachment[] };
+  return res;
 }
 
 // =====================
@@ -187,8 +132,6 @@ function Card({
   );
 }
 
-
-
 function Button({
   children,
   onClick,
@@ -205,11 +148,11 @@ function Button({
   const base =
     "inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium transition border";
   const styles: Record<string, string> = {
-  primary: "bg-white text-black border-white hover:bg-neutral-200",
-  secondary: "bg-neutral-900/40 text-white border-white/15 hover:bg-neutral-900/60",
-  danger: "bg-red-600 text-white border-red-600 hover:bg-red-700",
-  ghost: "bg-transparent text-white border-transparent hover:bg-white/10",
-};
+    primary: "bg-white text-black border-white hover:bg-neutral-200",
+    secondary: "bg-neutral-900/40 text-white border-white/15 hover:bg-neutral-900/60",
+    danger: "bg-red-600 text-white border-red-600 hover:bg-red-700",
+    ghost: "bg-transparent text-white border-transparent hover:bg-white/10",
+  };
 
   return (
     <button
@@ -347,10 +290,8 @@ export default function MaintenanceRequestDetailsPage() {
   async function loadVehicleOptions() {
     setVehiclesLoading(true);
     try {
-      const res = await apiFetch<{ items: VehicleOption[] }>("/maintenance/vehicles/options", {
-        token,
-      });
-      setVehicleOptions(res.items || []);
+      const res = await api.get<any>("/maintenance/vehicles/options");
+      setVehicleOptions(unwrapItems<VehicleOption>(res));
     } catch (e: any) {
       setVehicleOptions([]);
       showToast(e?.message || "Failed to load vehicle options", "error");
@@ -359,39 +300,27 @@ export default function MaintenanceRequestDetailsPage() {
     }
   }
 
-  type MaintenanceRequestDetailsResponse = {
-  request: MaintenanceRequest;
-  vehicles?: any;
-  requested_by_user?: any;
-  reviewed_by_user?: any;
-};
-
-async function loadDetails() {
-  setLoading(true);
-  try {
-    const data = await apiFetch<MaintenanceRequestDetailsResponse>(
-      `/maintenance/requests/${id}`,
-      { token }
-    );
-    setRow(data?.request ?? null); // ✅ المهم هنا
-  } catch (e: any) {
-    setRow(null);
-    showToast(e?.message || "Failed to load request", "error");
-  } finally {
-    setLoading(false);
+  async function loadDetails() {
+    setLoading(true);
+    try {
+      const data = await api.get<MaintenanceRequestDetailsResponse>(
+        `/maintenance/requests/${id}`
+      );
+      setRow(data?.request ?? null);
+    } catch (e: any) {
+      setRow(null);
+      showToast(e?.message || "Failed to load request", "error");
+    } finally {
+      setLoading(false);
+    }
   }
-}
-
 
   async function loadAttachments() {
     if (!id) return;
     setAttLoading(true);
     try {
-      const res = await apiFetch<{ items: MaintenanceAttachment[] }>(
-        `/maintenance/requests/${id}/attachments`,
-        { token }
-      );
-      setAttachments(res.items || []);
+      const res = await api.get<any>(`/maintenance/requests/${id}/attachments`);
+      setAttachments(unwrapItems<MaintenanceAttachment>(res));
     } catch (e: any) {
       setAttachments([]);
       showToast(e?.message || "Failed to load attachments", "error");
@@ -415,10 +344,11 @@ async function loadDetails() {
     if (!row) return;
     setBusy(true);
     try {
-      await apiFetch<any>(`/maintenance/requests/${row.id}/approve`, {
-        token,
-        method: "POST",
-        body: { type: "CORRECTIVE", vendor_name: null, odometer: null, notes: null },
+      await api.post(`/maintenance/requests/${row.id}/approve`, {
+        type: "CORRECTIVE",
+        vendor_name: null,
+        odometer: null,
+        notes: null,
       });
       showToast("Approved", "success");
       await loadDetails();
@@ -436,11 +366,7 @@ async function loadDetails() {
 
     setBusy(true);
     try {
-      await apiFetch<any>(`/maintenance/requests/${row.id}/reject`, {
-        token,
-        method: "POST",
-        body: { reason },
-      });
+      await api.post(`/maintenance/requests/${row.id}/reject`, { reason });
       setRejectOpen(false);
       setRejectReason("");
       showToast("Rejected", "info");
@@ -457,12 +383,11 @@ async function loadDetails() {
     if (!list || list.length === 0) return;
 
     const files = Array.from(list);
-    ev.target.value = ""; // reset input
+    ev.target.value = "";
 
-    // ✅ ارفع باستخدام id الحقيقي (مش :id)
     setAttLoading(true);
     try {
-      await uploadFiles(id, files, token);
+      await uploadFiles(id, files);
       showToast("Uploaded", "success");
       await loadAttachments();
     } catch (e: any) {
@@ -473,10 +398,10 @@ async function loadDetails() {
   }
 
   async function onDeleteAttachment(attId: string) {
-    if (!canReview) return; // delete admin/accountant only (حسب backend)
+    if (!canReview) return;
     setAttLoading(true);
     try {
-      await apiFetch<any>(`/maintenance/attachments/${attId}`, { token, method: "DELETE" });
+      await api.delete(`/maintenance/attachments/${attId}`);
       showToast("Deleted", "info");
       await loadAttachments();
     } catch (e: any) {
@@ -488,7 +413,12 @@ async function loadDetails() {
 
   return (
     <div className="space-y-4 p-4">
-      <Toast open={toast.open} kind={toast.kind} message={toast.message} onClose={() => setToast((t) => ({ ...t, open: false }))} />
+      <Toast
+        open={toast.open}
+        kind={toast.kind}
+        message={toast.message}
+        onClose={() => setToast((t) => ({ ...t, open: false }))}
+      />
 
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
@@ -719,8 +649,7 @@ async function loadDetails() {
         )}
 
         <div className="mt-3 rounded-xl border bg-neutral-50 p-3 text-xs text-neutral-600">
-          • رفع الملفات يدعم صور/فيديو (حتى 8 ملفات) — حسب إعدادات السيرفر. <br />
-        
+          • رفع الملفات يدعم صور/فيديو (حتى 8 ملفات) — حسب إعدادات السيرفر.
         </div>
       </Card>
 

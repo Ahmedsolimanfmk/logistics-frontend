@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { api } from "@/src/lib/api";
+import { api, unwrapItems } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter } from "next/navigation";
 import { Toast } from "@/src/components/Toast";
@@ -62,8 +62,7 @@ export default function SitesPage() {
   async function loadClients() {
     try {
       const res = await api.get<any>("/clients");
-      const items = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
-      setClients(items);
+      setClients(unwrapItems(res));
     } catch {
       // ignore
     }
@@ -81,8 +80,7 @@ export default function SitesPage() {
       if (clientFilter) qs.set("client_id", clientFilter);
 
       const res = await api.get<any>(`/sites?${qs.toString()}`);
-      const items = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
-      setRawItems(items);
+      setRawItems(unwrapItems(res));
     } catch (e: any) {
       setErr(e?.message || "Failed to fetch sites");
     } finally {
@@ -210,11 +208,15 @@ export default function SitesPage() {
       </div>
 
       {err ? (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+          {err}
+        </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">Loading…</div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+          Loading…
+        </div>
       ) : (
         <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           <div className="overflow-auto">
@@ -277,7 +279,10 @@ export default function SitesPage() {
       )}
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={() => setModalOpen(false)}>
+        <div
+          className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
+          onClick={() => setModalOpen(false)}
+        >
           <div
             className="w-full max-w-xl rounded-2xl bg-slate-900 text-white border border-white/10 p-4"
             onClick={(e) => e.stopPropagation()}
