@@ -2,16 +2,20 @@
 import axios from "axios";
 import { useAuth } from "@/src/store/auth";
 
+declare global {
+  interface Window {
+    __ENV__?: Record<string, any>;
+  }
+}
+
 // =====================
 // Token helper
 // =====================
 function getToken(): string | null {
-  // 1) من الـ store
   const s: any = useAuth.getState?.();
   const t1 = s?.token || s?.access_token || s?.accessToken || null;
   if (t1) return String(t1);
 
-  // 2) fallback من localStorage
   if (typeof window !== "undefined") {
     const t2 =
       window.localStorage.getItem("token") ||
@@ -19,17 +23,15 @@ function getToken(): string | null {
       window.localStorage.getItem("accessToken");
     if (t2) return String(t2);
   }
-
   return null;
 }
 
 // =====================
-// Base URL resolver
+// API base (runtime first)
 // =====================
 function getRuntimeApiBase(): string {
-  // runtime (Cloud Run) via /public/env.js
   if (typeof window !== "undefined") {
-    const w: any = window as any;
+    const w: any = window;
     const v =
       w?.__ENV__?.NEXT_PUBLIC_API_BASE ||
       w?.__ENV__?.NEXT_PUBLIC_API_URL ||
@@ -37,7 +39,6 @@ function getRuntimeApiBase(): string {
     if (v) return String(v);
   }
 
-  // build-time fallback
   return (
     process.env.NEXT_PUBLIC_API_BASE ||
     process.env.NEXT_PUBLIC_API_URL ||
@@ -45,20 +46,16 @@ function getRuntimeApiBase(): string {
   );
 }
 
+// =====================
+// Axios instance (ONE ONLY)
+// =====================
 export const api = axios.create({
   baseURL: getRuntimeApiBase(),
-});
-
-// =====================
-// Axios instance
-// =====================
-export const api = axios.create({
-  baseURL: resolveApiBase(),
   withCredentials: true,
   timeout: 30000,
 });
 
-// Request: attach token
+// attach token
 api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
@@ -68,7 +65,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response: return data directly + normalize errors
+// normalize response
 api.interceptors.response.use(
   (res) => res.data,
   (err) => {
@@ -82,27 +79,19 @@ api.interceptors.response.use(
 );
 
 // =====================
-// Helpers (UI pages)
+// helpers
 // =====================
-
-// ✅ unwrap items: يدعم [] أو {items: []} أو {data:{items:[]}} ... الخ
-// ملاحظة: لأن interceptor بيرجع data مباشرة، فـ res هنا غالبًا هو "data"
 export function unwrapItems<T = any>(res: any): T[] {
-  if (Array.isArray(res)) return res as T[];
-
+  if (Array.isArray(res)) return res;
   const items =
     res?.items ??
     res?.data?.items ??
     res?.result?.items ??
     res?.payload?.items ??
     null;
-
-  if (Array.isArray(items)) return items as T[];
-
-  return [];
+  return Array.isArray(items) ? items : [];
 }
 
-// ✅ unwrap total: يدعم total في مستويات مختلفة
 export function unwrapTotal(res: any): number {
   const v =
     res?.total ??
@@ -111,20 +100,14 @@ export function unwrapTotal(res: any): number {
     res?.data?.meta?.total ??
     res?.result?.total ??
     0;
-
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
 
-// =======================
-// Convenience helpers
-// =======================
-// ✅ IMPORTANT: لأن interceptor بيرجع data مباشرة
-// فـ api.get/post/.. بيرجع data وليس AxiosResponse
+// convenience
 export async function apiGet<T = any>(path: string, config?: any): Promise<T> {
   return (await api.get(path, config)) as any as T;
 }
-
 export async function apiPost<T = any>(
   path: string,
   body?: any,
@@ -132,7 +115,6 @@ export async function apiPost<T = any>(
 ): Promise<T> {
   return (await api.post(path, body, config)) as any as T;
 }
-
 export async function apiPut<T = any>(
   path: string,
   body?: any,
@@ -140,7 +122,6 @@ export async function apiPut<T = any>(
 ): Promise<T> {
   return (await api.put(path, body, config)) as any as T;
 }
-
 export async function apiPatch<T = any>(
   path: string,
   body?: any,
@@ -148,10 +129,6 @@ export async function apiPatch<T = any>(
 ): Promise<T> {
   return (await api.patch(path, body, config)) as any as T;
 }
-
-export async function apiDelete<T = any>(
-  path: string,
-  config?: any
-): Promise<T> {
+export async function apiDelete<T = any>(path: string, config?: any): Promise<T> {
   return (await api.delete(path, config)) as any as T;
 }
