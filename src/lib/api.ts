@@ -26,24 +26,28 @@ function getToken(): string | null {
 // =====================
 // Base URL resolver
 // =====================
-function resolveApiBase(): string {
-  const fromEnv =
+function getRuntimeApiBase(): string {
+  // runtime (Cloud Run) via /public/env.js
+  if (typeof window !== "undefined") {
+    const w: any = window as any;
+    const v =
+      w?.__ENV__?.NEXT_PUBLIC_API_BASE ||
+      w?.__ENV__?.NEXT_PUBLIC_API_URL ||
+      null;
+    if (v) return String(v);
+  }
+
+  // build-time fallback
+  return (
     process.env.NEXT_PUBLIC_API_BASE ||
     process.env.NEXT_PUBLIC_API_URL ||
-    "";
-
-  const env = String(fromEnv || "").trim();
-
-  // ✅ إذا env موجود استخدمه (Production Cloud Run)
-  if (env) return env.replace(/\/+$/, "");
-
-  // ✅ في المتصفح: لو env مش موجود، استخدم نفس الدومين (relative)
-  // ده يمنع الضرب على localhost بالغلط في الإنتاج.
-  if (typeof window !== "undefined") return "";
-
-  // ✅ في السيرفر/لوكال فقط
-  return "http://localhost:3000";
+    "http://localhost:3000"
+  );
 }
+
+export const api = axios.create({
+  baseURL: getRuntimeApiBase(),
+});
 
 // =====================
 // Axios instance
