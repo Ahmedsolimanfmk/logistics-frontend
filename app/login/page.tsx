@@ -1,5 +1,5 @@
-// app/login/page.tsx
-"use client";
+
+1"use client";
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,13 +16,14 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    // ✅ restore session if exists
     try {
       hydrate();
     } catch {}
@@ -41,9 +42,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // ✅ api returns data directly (interceptor)
+      // ✅ normalize like backend
+      const emailNorm = email.trim().toLowerCase();
+
       const res = await api.post("/auth/login", {
-        email: email.trim(),
+        email: emailNorm,
         password,
       });
 
@@ -58,7 +61,6 @@ export default function LoginPage() {
       setAuth(String(token), user);
       router.replace("/dashboard");
     } catch (e: any) {
-      // ✅ interceptor throws Error(msg) so response may be missing
       setErr(e?.message || "Login failed");
     } finally {
       setLoading(false);
@@ -68,8 +70,11 @@ export default function LoginPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-3 border rounded-lg p-4">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-zinc-50">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-sm space-y-3 border rounded-lg p-4 bg-white"
+      >
         <h1 className="text-xl font-semibold">Login</h1>
 
         <input
@@ -80,21 +85,36 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        <input
-          className="w-full border rounded p-2"
-          placeholder="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="relative">
+          <input
+            className="w-full border rounded p-2 pr-10"
+            placeholder="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-black"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? "🙈" : "👁️"}
+          </button>
+        </div>
 
         {err ? <div className="text-sm text-red-600">{err}</div> : null}
 
-        <button type="submit" disabled={loading} className="w-full border rounded p-2 disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full border rounded p-2 disabled:opacity-60"
+        >
           {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>
     </div>
   );
 }
+
