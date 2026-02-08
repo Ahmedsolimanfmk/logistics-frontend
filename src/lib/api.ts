@@ -24,15 +24,34 @@ function getToken(): string | null {
 }
 
 // =====================
+// Base URL resolver
+// =====================
+function resolveApiBase(): string {
+  const fromEnv =
+    process.env.NEXT_PUBLIC_API_BASE ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "";
+
+  const env = String(fromEnv || "").trim();
+
+  // ✅ إذا env موجود استخدمه (Production Cloud Run)
+  if (env) return env.replace(/\/+$/, "");
+
+  // ✅ في المتصفح: لو env مش موجود، استخدم نفس الدومين (relative)
+  // ده يمنع الضرب على localhost بالغلط في الإنتاج.
+  if (typeof window !== "undefined") return "";
+
+  // ✅ في السيرفر/لوكال فقط
+  return "http://localhost:3000";
+}
+
+// =====================
 // Axios instance
 // =====================
 export const api = axios.create({
-  // ✅ استخدم نفس المتغير اللي بتحطه في Cloud Run
-  // NEXT_PUBLIC_API_BASE=https://.../run.app
-  baseURL:
-    process.env.NEXT_PUBLIC_API_BASE ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:3000",
+  baseURL: resolveApiBase(),
+  withCredentials: true,
+  timeout: 30000,
 });
 
 // Request: attach token
@@ -54,7 +73,7 @@ api.interceptors.response.use(
       err?.response?.data?.error ||
       err?.message ||
       "Request failed";
-    return Promise.reject(new Error(msg));
+    return Promise.reject(new Error(String(msg)));
   }
 );
 
@@ -126,6 +145,9 @@ export async function apiPatch<T = any>(
   return (await api.patch(path, body, config)) as any as T;
 }
 
-export async function apiDelete<T = any>(path: string, config?: any): Promise<T> {
+export async function apiDelete<T = any>(
+  path: string,
+  config?: any
+): Promise<T> {
   return (await api.delete(path, config)) as any as T;
 }
