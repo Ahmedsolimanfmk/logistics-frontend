@@ -1,0 +1,94 @@
+{
+  "common": {
+    "refresh": "Refresh",
+    "logout": "Logout",
+    "search": "Search…",
+    "rows": "rows",
+    "copy": "Copy",
+    "open": "Open →",
+    "lastRefresh": "Last refresh:"
+  },
+  "tabs": {
+    "operations": "Operations",
+    "finance": "Finance",
+    "maintenance": "Maintenance",
+    "dev": "Dev"
+  },
+  "dashboard": {
+    "title": "Dashboard"
+  },
+  "sections": {
+    "opsAction": "Operations – Action Required",
+    "quickKpis": "Quick KPIs",
+    "activeTripsNow": "Active Trips Now",
+    "tripsNeedingClose": "Trips Needing Finance Close",
+    "tripsTrend": "Trips Trend (Last 14 days)",
+    "financeAction": "Finance – Action Required",
+    "topExpenseTypes": "Top Expense Types (Today)",
+    "maintenanceAction": "Maintenance – Action Required",
+    "maintenanceKpis": "Maintenance KPIs (Today)",
+    "recentWorkOrders": "Recent Work Orders"
+  },
+  "tiles": {
+    "tripsNeedingClose": {
+      "title": "Trips Needing Finance Close",
+      "hintOn": "Completed trips are waiting reconciliation",
+      "hintOff": "✓ Everything is reconciled"
+    },
+    "activeTripsNow": {
+      "title": "Active Trips Now",
+      "hintOn": "Assigned / In progress (follow-up dispatch)",
+      "hintOff": "✓ All vehicles are idle"
+    },
+    "tripsToday": {
+      "title": "Trips Today",
+      "hint": "Open today trips list"
+    },
+    "pendingTooLong": {
+      "title": "Pending Expenses Too Long",
+      "hintOn": "Needs review/approval",
+      "hintOff": "✓ No delayed pending expenses"
+    },
+    "openAdvances": {
+      "title": "Open Advances",
+      "hintOn": "Advances need settlement",
+      "hintOff": "✓ No open advances"
+    },
+    "expensesTodayApproved": {
+      "title": "Expenses Today (Approved)",
+      "hint": "Approved amount today"
+    },
+    "openWorkOrders": {
+      "title": "Open Work Orders",
+      "hintOn": "Work orders in OPEN / IN_PROGRESS",
+      "hintOff": "✓ No open work orders"
+    },
+    "qaNeeds": {
+      "title": "QA Needs",
+      "hintOn": "Completed WOs missing post report",
+      "hintOff": "✓ QA is clean"
+    },
+    "qaFailed": {
+      "title": "QA Failed",
+      "hintOn": "Road test failed reports",
+      "hintOff": "✓ No QA failures"
+    },
+    "partsMismatch": {
+      "title": "Parts Mismatch",
+      "hintOn": "Issued vs installed mismatch",
+      "hintOff": "✓ No mismatches"
+    }
+  },
+  "empty": {
+    "noActiveTrips": "No active trips now",
+    "allIdle": "✓ All vehicles are idle",
+    "noTripsNeedClose": "No trips need close",
+    "allReconciled": "✓ Everything is reconciled",
+    "noApprovedExpensesToday": "No approved expenses today",
+    "noDataToShow": "No data to show",
+    "noWorkOrders": "No work orders",
+    "noRecentWorkOrders": "No recent work orders found.",
+    "devTab": "Dev tab",
+    "devHint": "Reserved for development diagnostics."
+  }
+}

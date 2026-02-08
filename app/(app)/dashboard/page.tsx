@@ -15,17 +15,25 @@ import {
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter } from "next/navigation";
+import LanguageSwitcher from "@/src/components/LanguageSwitcher";
+import { useT } from "@/src/i18n/useT";
 
 // =====================
 // Helpers
 // =====================
+function getCurrentLocale(): string {
+  if (typeof window === "undefined") return "ar-EG";
+  const v = localStorage.getItem("app_lang");
+  return v === "en" ? "en-US" : "ar-EG";
+}
+
 const fmtInt = (n: unknown) =>
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
+  new Intl.NumberFormat(getCurrentLocale(), { maximumFractionDigits: 0 }).format(
     Number(n ?? 0)
   );
 
 const fmtMoney = (n: unknown) =>
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
+  new Intl.NumberFormat(getCurrentLocale(), { maximumFractionDigits: 0 }).format(
     Number(n ?? 0)
   );
 
@@ -33,7 +41,7 @@ const fmtDate = (d: unknown) => {
   if (!d) return "—";
   const dt = new Date(String(d));
   if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
+  return dt.toLocaleString(getCurrentLocale());
 };
 
 const shortId = (id: unknown) => {
@@ -419,6 +427,7 @@ function CompactKpi({
 export default function DashboardPage() {
   const router = useRouter();
 
+  const t = useT();
   const token = useAuth((s) => s.token);
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
@@ -511,7 +520,8 @@ export default function DashboardPage() {
       if (cancel) return;
       await fetchBundleIfNeeded(tab);
     })();
-
+    
+    
     return () => {
       cancel = true;
     };
@@ -538,7 +548,7 @@ export default function DashboardPage() {
     const items: { key: TabKey; label: string; count?: number }[] = [];
 
     if (allowedTabs.includes("operations"))
-      items.push({ key: "operations", label: "Operations", count: opsCount });
+      items.push({ key: "operations", label: t("tabs.operations"), count: opsCount });
 
     if (allowedTabs.includes("finance"))
       items.push({ key: "finance", label: "Finance", count: finCount });
@@ -641,35 +651,38 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold">Dashboard</div>
-            <div className="text-sm text-slate-400">
-              {user?.full_name || "—"} — {user?.role || "—"}
-            </div>
-          </div>
+        {/* Header */}
+<div className="flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <div className="text-xl font-bold">{t("dashboard.title")}</div>
+    <div className="text-sm text-slate-400">
+      {user?.full_name || "—"} — {user?.role || "—"}
+    </div>
+  </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={reloadAll}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-            >
-              Refresh
-            </button>
+  <div className="flex items-center gap-2">
+    <LanguageSwitcher />
 
-            <button
-              type="button"
-              onClick={() => {
-                logout();
-                window.location.href = "/login";
-              }}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
+    <button
+      type="button"
+      onClick={reloadAll}
+      className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+    >
+      {t("common.refresh")}
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        logout();
+        window.location.href = "/login";
+      }}
+      className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+    >
+      {t("common.logout")}
+    </button>
+  </div>
+</div>
 
         {/* Error */}
         {err ? (

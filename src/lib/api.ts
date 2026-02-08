@@ -27,6 +27,7 @@ function getToken(): string | null {
 }
 
 // =====================
+<<<<<<< HEAD
 // API base (runtime first)
 // =====================
 function getRuntimeApiBase(): string {
@@ -51,6 +52,35 @@ function getRuntimeApiBase(): string {
 // =====================
 export const api = axios.create({
   baseURL: getRuntimeApiBase(),
+=======
+// Base URL resolver (runtime-first)
+// =====================
+function resolveApiBase(): string {
+  // 1) runtime injected (Cloud Run)
+  if (typeof window !== "undefined") {
+    const rt = window.__ENV__?.NEXT_PUBLIC_API_BASE;
+    const v = String(rt || "").trim();
+    if (v) return v.replace(/\/+$/, "");
+  }
+
+  // 2) build-time env (works locally/CI)
+  const env =
+    process.env.NEXT_PUBLIC_API_BASE ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "";
+  const v = String(env || "").trim();
+  if (v) return v.replace(/\/+$/, "");
+
+  // 3) local dev fallback only
+  return "http://localhost:3000";
+}
+
+// =====================
+// Axios instance
+// =====================
+export const api = axios.create({
+  baseURL: resolveApiBase(),
+>>>>>>> adcc011 (Add i18n and language switcher)
   withCredentials: true,
   timeout: 30000,
 });
@@ -79,7 +109,11 @@ api.interceptors.response.use(
 );
 
 // =====================
+<<<<<<< HEAD
 // helpers
+=======
+// Helpers
+>>>>>>> adcc011 (Add i18n and language switcher)
 // =====================
 export function unwrapItems<T = any>(res: any): T[] {
   if (Array.isArray(res)) return res;
@@ -89,7 +123,12 @@ export function unwrapItems<T = any>(res: any): T[] {
     res?.result?.items ??
     res?.payload?.items ??
     null;
+<<<<<<< HEAD
   return Array.isArray(items) ? items : [];
+=======
+
+  return Array.isArray(items) ? (items as T[]) : [];
+>>>>>>> adcc011 (Add i18n and language switcher)
 }
 
 export function unwrapTotal(res: any): number {
@@ -104,7 +143,10 @@ export function unwrapTotal(res: any): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+<<<<<<< HEAD
 // convenience
+=======
+>>>>>>> adcc011 (Add i18n and language switcher)
 export async function apiGet<T = any>(path: string, config?: any): Promise<T> {
   return (await api.get(path, config)) as any as T;
 }

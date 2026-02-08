@@ -1,0 +1,94 @@
+{
+  "common": {
+    "refresh": "تحديث",
+    "logout": "تسجيل الخروج",
+    "search": "بحث…",
+    "rows": "صف",
+    "copy": "نسخ",
+    "open": "فتح →",
+    "lastRefresh": "آخر تحديث:"
+  },
+  "tabs": {
+    "operations": "التشغيل",
+    "finance": "المالية",
+    "maintenance": "الصيانة",
+    "dev": "المطور"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم"
+  },
+  "sections": {
+    "opsAction": "التشغيل – إجراءات مطلوبة",
+    "quickKpis": "مؤشرات سريعة",
+    "activeTripsNow": "الرحلات النشطة الآن",
+    "tripsNeedingClose": "رحلات تحتاج إغلاق مالي",
+    "tripsTrend": "اتجاه الرحلات (آخر 14 يوم)",
+    "financeAction": "المالية – إجراءات مطلوبة",
+    "topExpenseTypes": "أعلى أنواع المصروفات (اليوم)",
+    "maintenanceAction": "الصيانة – إجراءات مطلوبة",
+    "maintenanceKpis": "مؤشرات الصيانة (اليوم)",
+    "recentWorkOrders": "أوامر العمل الأخيرة"
+  },
+  "tiles": {
+    "tripsNeedingClose": {
+      "title": "رحلات تحتاج إغلاق مالي",
+      "hintOn": "رحلات مكتملة تنتظر التسوية",
+      "hintOff": "✓ كل شيء تمت تسويته"
+    },
+    "activeTripsNow": {
+      "title": "الرحلات النشطة الآن",
+      "hintOn": "مُسندة / قيد التنفيذ (متابعة التشغيل)",
+      "hintOff": "✓ كل المركبات متوقفة"
+    },
+    "tripsToday": {
+      "title": "رحلات اليوم",
+      "hint": "فتح قائمة رحلات اليوم"
+    },
+    "pendingTooLong": {
+      "title": "مصروفات معلقة لفترة طويلة",
+      "hintOn": "تحتاج مراجعة/اعتماد",
+      "hintOff": "✓ لا توجد مصروفات معلقة متأخرة"
+    },
+    "openAdvances": {
+      "title": "سلف مفتوحة",
+      "hintOn": "السلف تحتاج تسوية",
+      "hintOff": "✓ لا توجد سلف مفتوحة"
+    },
+    "expensesTodayApproved": {
+      "title": "مصروفات اليوم (معتمدة)",
+      "hint": "إجمالي المعتمد اليوم"
+    },
+    "openWorkOrders": {
+      "title": "أوامر عمل مفتوحة",
+      "hintOn": "أوامر عمل في OPEN / IN_PROGRESS",
+      "hintOff": "✓ لا توجد أوامر عمل مفتوحة"
+    },
+    "qaNeeds": {
+      "title": "QA يحتاج إجراء",
+      "hintOn": "أوامر مكتملة بدون تقرير بعدي",
+      "hintOff": "✓ الجودة سليمة"
+    },
+    "qaFailed": {
+      "title": "QA فشل",
+      "hintOn": "تقارير اختبار طريق فاشلة",
+      "hintOff": "✓ لا توجد حالات فشل"
+    },
+    "partsMismatch": {
+      "title": "عدم تطابق قطع",
+      "hintOn": "اختلاف بين المصروف والمركّب",
+      "hintOff": "✓ لا توجد اختلافات"
+    }
+  },
+  "empty": {
+    "noActiveTrips": "لا توجد رحلات نشطة الآن",
+    "allIdle": "✓ كل المركبات متوقفة",
+    "noTripsNeedClose": "لا توجد رحلات تحتاج إغلاق",
+    "allReconciled": "✓ كل شيء تمت تسويته",
+    "noApprovedExpensesToday": "لا توجد مصروفات معتمدة اليوم",
+    "noDataToShow": "لا توجد بيانات للعرض",
+    "noWorkOrders": "لا توجد أوامر عمل",
+    "noRecentWorkOrders": "لم يتم العثور على أوامر عمل حديثة.",
+    "devTab": "تبويب المطور",
+    "devHint": "مخصص لتشخيصات التطوير."
+  }
+}

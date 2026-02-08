@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import LanguageInit from "@/src/components/LanguageInit";
+import LanguageSwitcher from "@/src/components/LanguageSwitcher";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,9 +26,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {/* ✅ يقرأ اللغة من localStorage ويظبط lang/dir على <html> */}
+        <LanguageInit />
+
+        {/* ✅ زر/أيقونة تغيير اللغة (حطّه في الهيدر الحقيقي عندك لو موجود) */}
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: 12 }}>
+          <LanguageSwitcher />
+        </div>
+
         {children}
 <script src="/env.js" />     
  </body>

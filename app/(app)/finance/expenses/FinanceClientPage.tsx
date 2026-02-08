@@ -50,11 +50,7 @@ function StatusBadge({ s }: { s: string }) {
 
 type TabKey = "PENDING" | "APPROVED" | "REJECTED" | "APPEALED" | "ALL";
 
-<<<<<<< HEAD
-export default function FinanceExpensesPage() {
-=======
 export default function ExpensesClientPage() {
->>>>>>> adcc011 (Add i18n and language switcher)
   const router = useRouter();
   const sp = useSearchParams();
 

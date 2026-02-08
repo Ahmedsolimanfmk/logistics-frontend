@@ -17,7 +17,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+<<<<<<< HEAD
   const [showPassword, setShowPassword] = useState(false);
+=======
+  // ✅ show/hide password
+  const [showPassword, setShowPassword] = useState(false);
+
+>>>>>>> adcc011 (Add i18n and language switcher)
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -85,6 +91,10 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
+<<<<<<< HEAD
+=======
+        {/* ✅ Password with show/hide */}
+>>>>>>> adcc011 (Add i18n and language switcher)
         <div className="relative">
           <input
             className="w-full border rounded p-2 pr-10"
@@ -94,6 +104,10 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+<<<<<<< HEAD
+=======
+
+>>>>>>> adcc011 (Add i18n and language switcher)
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
