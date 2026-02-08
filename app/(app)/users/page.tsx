@@ -56,29 +56,20 @@ export default function UsersPage() {
   const role = roleUpper(user?.role);
   const isAdmin = role === "ADMIN";
 
-<<<<<<< HEAD
-=======
   // Filters / Paging
->>>>>>> adcc011 (Add i18n and language switcher)
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("");
   const [take, setTake] = useState(50);
   const [skip, setSkip] = useState(0);
 
-<<<<<<< HEAD
-=======
   // Data
->>>>>>> adcc011 (Add i18n and language switcher)
   const [items, setItems] = useState<UserRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-<<<<<<< HEAD
-=======
   // Create Modal
->>>>>>> adcc011 (Add i18n and language switcher)
   const [openCreate, setOpenCreate] = useState(false);
   const [cFullName, setCFullName] = useState("");
   const [cEmail, setCEmail] = useState("");
@@ -128,7 +119,10 @@ export default function UsersPage() {
   }, [canRender, take, skip]);
 
   const page = useMemo(() => Math.floor(skip / take) + 1, [skip, take]);
-  const pages = useMemo(() => Math.max(1, Math.ceil((total || 0) / take)), [total, take]);
+  const pages = useMemo(
+    () => Math.max(1, Math.ceil((total || 0) / take)),
+    [total, take]
+  );
 
   function resetPaging() {
     setSkip(0);
@@ -211,14 +205,13 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-4">
-<<<<<<< HEAD
-=======
       {/* Header */}
->>>>>>> adcc011 (Add i18n and language switcher)
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <div className="text-2xl font-bold">Users</div>
-          <div className="text-sm text-white/60">Admin-only user management</div>
+          <div className="text-sm text-white/60">
+            Admin-only user management
+          </div>
         </div>
 
         <button
@@ -229,10 +222,7 @@ export default function UsersPage() {
         </button>
       </div>
 
-<<<<<<< HEAD
-=======
       {/* Filters */}
->>>>>>> adcc011 (Add i18n and language switcher)
       <Card
         title="Filters"
         right={
@@ -312,10 +302,7 @@ export default function UsersPage() {
         {err ? <div className="mt-3 text-sm text-red-300">⚠️ {err}</div> : null}
       </Card>
 
-<<<<<<< HEAD
-=======
       {/* Table */}
->>>>>>> adcc011 (Add i18n and language switcher)
       <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
           <div className="text-sm text-white/70">
@@ -357,9 +344,11 @@ export default function UsersPage() {
                   </td>
                 </tr>
               ) : (
-                items.map((u) => (
+                items.map((u: any) => (
                   <tr key={u.id} className="border-t border-white/10">
-                    <td className="px-4 py-3 font-medium text-white">{u.full_name}</td>
+                    <td className="px-4 py-3 font-medium text-white">
+                      {u.full_name}
+                    </td>
                     <td className="px-4 py-3 text-white/80">{u.email || "—"}</td>
                     <td className="px-4 py-3 text-white/80">{u.phone || "—"}</td>
                     <td className="px-4 py-3 text-white/80">{u.role}</td>
@@ -375,8 +364,12 @@ export default function UsersPage() {
                         {u.is_active ? "ACTIVE" : "DISABLED"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-white/70">{fmtDate(u.created_at)}</td>
-                    <td className="px-4 py-3 text-white/70">{fmtDate(u.updated_at)}</td>
+                    <td className="px-4 py-3 text-white/70">
+                      {fmtDate(u.created_at)}
+                    </td>
+                    <td className="px-4 py-3 text-white/70">
+                      {fmtDate(u.updated_at)}
+                    </td>
                     <td className="px-4 py-3 text-right space-x-2">
                       <button
                         onClick={() => onResetPassword(u)}
@@ -404,7 +397,9 @@ export default function UsersPage() {
             onClick={() => setSkip((s) => Math.max(0, s - take))}
             className={cn(
               "px-3 py-1 rounded-xl border border-white/10",
-              skip <= 0 ? "opacity-50 cursor-not-allowed" : "bg-white/5 hover:bg-white/10"
+              skip <= 0
+                ? "opacity-50 cursor-not-allowed"
+                : "bg-white/5 hover:bg-white/10"
             )}
           >
             Prev
@@ -414,7 +409,9 @@ export default function UsersPage() {
             onClick={() => setSkip((s) => s + take)}
             className={cn(
               "px-3 py-1 rounded-xl border border-white/10",
-              skip + take >= total ? "opacity-50 cursor-not-allowed" : "bg-white/5 hover:bg-white/10"
+              skip + take >= total
+                ? "opacity-50 cursor-not-allowed"
+                : "bg-white/5 hover:bg-white/10"
             )}
           >
             Next
@@ -422,10 +419,7 @@ export default function UsersPage() {
         </div>
       </div>
 
-<<<<<<< HEAD
-=======
       {/* Create Modal */}
->>>>>>> adcc011 (Add i18n and language switcher)
       {openCreate ? (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-950 text-white overflow-hidden">
