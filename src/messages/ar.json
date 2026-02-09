@@ -6,7 +6,12 @@
     "rows": "صف",
     "copy": "نسخ",
     "open": "فتح →",
-    "lastRefresh": "آخر تحديث:"
+    "lastRefresh": "آخر تحديث:",
+    "noData": "لا توجد بيانات",
+    "failed": "فشل",
+    "loading": "جار التحميل…",
+    "daily": "يومي",
+    "unavailable": "غير متاح"
   },
   "tabs": {
     "operations": "التشغيل",
@@ -15,7 +20,154 @@
     "dev": "المطور"
   },
   "dashboard": {
-    "title": "لوحة التحكم"
+    "title": "لوحة التحكم",
+    "columns": {
+      "trip": "الرحلة",
+      "status": "الحالة",
+      "client": "العميل",
+      "site": "الموقع",
+      "vehicle": "المركبة",
+      "driver": "السائق",
+      "created": "تاريخ الإنشاء",
+      "financial": "المالية",
+      "type": "النوع",
+      "amount": "المبلغ",
+      "wo": "أمر عمل",
+      "opened": "تاريخ الفتح",
+      "completed": "تاريخ الإنهاء"
+    },
+    "errors": {
+      "trendsUnavailable": "خدمة الاتجاهات غير متاحة."
+    },
+    "ops": {
+      "tripsNeedingFinanceClose": {
+        "title": "رحلات تحتاج إغلاق مالي",
+        "hintOn": "رحلات مكتملة تنتظر التسوية",
+        "hintOff": "✓ كل شيء تمت تسويته"
+      },
+      "activeTripsNow": {
+        "title": "الرحلات النشطة الآن",
+        "hintOn": "مُسندة / قيد التنفيذ (متابعة التشغيل)",
+        "hintOff": "✓ كل المركبات متوقفة"
+      },
+      "tripsToday": {
+        "title": "رحلات اليوم",
+        "hint": "فتح قائمة رحلات اليوم"
+      },
+      "quickKpis": "مؤشرات سريعة",
+      "kpis": {
+        "tripsToday": "رحلات اليوم",
+        "allStatuses": "كل الحالات",
+        "assignedToday": "مُسندة اليوم",
+        "assignedStatus": "حالة مُسندة",
+        "inProgressToday": "قيد التنفيذ اليوم",
+        "inProgressStatus": "قيد التنفيذ",
+        "completedToday": "مكتملة اليوم",
+        "completedStatus": "مكتملة"
+      },
+      "tables": {
+        "activeTripsNow": "الرحلات النشطة الآن",
+        "tripsNeedingClose": "رحلات تحتاج إغلاق مالي"
+      },
+      "empty": {
+        "activeTripsNow": {
+          "title": "لا توجد رحلات نشطة الآن",
+          "hint": "✓ كل المركبات متوقفة"
+        },
+        "tripsNeedingClose": {
+          "title": "لا توجد رحلات تحتاج إغلاق",
+          "hint": "✓ كل شيء تمت تسويته"
+        }
+      },
+      "trendTitle": "اتجاه الرحلات (آخر 14 يوم)",
+      "charts": {
+        "tripsCreated": "رحلات تم إنشاؤها",
+        "tripsAssigned": "رحلات تم إسنادها"
+      }
+    },
+    "finance": {
+      "actionRequired": "المالية – إجراءات مطلوبة",
+      "pendingTooLong": {
+        "title": "مصروفات معلقة لفترة طويلة",
+        "hintOn": "تحتاج مراجعة/اعتماد",
+        "hintOff": "✓ لا توجد مصروفات معلقة متأخرة"
+      },
+      "openAdvances": {
+        "title": "سلف مفتوحة",
+        "hintOn": "السلف تحتاج تسوية",
+        "hintOff": "✓ لا توجد سلف مفتوحة"
+      },
+      "expensesTodayApproved": {
+        "title": "مصروفات اليوم (معتمدة)",
+        "hint": "إجمالي المعتمد اليوم"
+      },
+      "topExpenseTypesToday": {
+        "sectionTitle": "أعلى أنواع المصروفات (اليوم)",
+        "tableTitle": "أعلى أنواع المصروفات اليوم"
+      },
+      "empty": {
+        "noApprovedToday": {
+          "title": "لا توجد مصروفات معتمدة اليوم",
+          "hint": "لا توجد بيانات للعرض"
+        }
+      }
+    },
+    "maintenance": {
+      "actionRequired": "الصيانة – إجراءات مطلوبة",
+      "openWorkOrders": {
+        "title": "أوامر عمل مفتوحة",
+        "hintOn": "أوامر عمل في OPEN / IN_PROGRESS",
+        "hintOff": "✓ لا توجد أوامر عمل مفتوحة"
+      },
+      "qaNeeds": {
+        "title": "QA يحتاج إجراء",
+        "hintOn": "أوامر مكتملة بدون تقرير بعدي",
+        "hintOff": "✓ الجودة سليمة"
+      },
+      "qaFailed": {
+        "title": "QA فشل",
+        "hintOn": "تقارير اختبار طريق فاشلة",
+        "hintOff": "✓ لا توجد حالات فشل"
+      },
+      "partsMismatch": {
+        "title": "عدم تطابق قطع",
+        "hintOn": "اختلاف بين المصروف والمركّب",
+        "hintOff": "✓ لا توجد اختلافات"
+      },
+      "supervisorNote": "ملاحظة: عرض Work Orders التفصيلي للأدمن/المحاسب — للمشرف هتفتح صفحة Requests كبديل.",
+      "kpisToday": "مؤشرات الصيانة (اليوم)",
+      "completedToday": {
+        "title": "مكتملة اليوم",
+        "sub": "أوامر عمل مكتملة"
+      },
+      "partsCostToday": {
+        "title": "تكلفة قطع اليوم",
+        "sub": "إجمالي أذونات الصرف"
+      },
+      "cashCostToday": {
+        "title": "تكلفة نقدية اليوم",
+        "sub": "مصروفات نقدية مرتبطة"
+      },
+      "totalCostToday": {
+        "title": "إجمالي التكلفة اليوم",
+        "sub": "قطع + نقدي"
+      },
+      "recentWorkOrders": {
+        "sectionTitle": "أوامر العمل الأخيرة",
+        "openList": "فتح القائمة",
+        "tableTitle": "أوامر عمل صيانة (الأحدث)"
+      },
+      "empty": {
+        "noWorkOrders": {
+          "title": "لا توجد أوامر عمل",
+          "hint": "لم يتم العثور على أوامر عمل حديثة."
+        }
+      }
+    },
+    "dev": {
+      "title": "تبويب المطور",
+      "hint": "مخصص لتشخيصات التطوير."
+    }
   },
   "sections": {
     "opsAction": "التشغيل – إجراءات مطلوبة",

@@ -6,7 +6,12 @@
     "rows": "rows",
     "copy": "Copy",
     "open": "Open →",
-    "lastRefresh": "Last refresh:"
+    "lastRefresh": "Last refresh:",
+    "noData": "No data",
+    "failed": "Failed",
+    "loading": "Loading…",
+    "daily": "Daily",
+    "unavailable": "Unavailable"
   },
   "tabs": {
     "operations": "Operations",
@@ -15,7 +20,154 @@
     "dev": "Dev"
   },
   "dashboard": {
-    "title": "Dashboard"
+    "title": "Dashboard",
+    "columns": {
+      "trip": "Trip",
+      "status": "Status",
+      "client": "Client",
+      "site": "Site",
+      "vehicle": "Vehicle",
+      "driver": "Driver",
+      "created": "Created",
+      "financial": "Financial",
+      "type": "Type",
+      "amount": "Amount",
+      "wo": "WO",
+      "opened": "Opened",
+      "completed": "Completed"
+    },
+    "errors": {
+      "trendsUnavailable": "Trends endpoint not available."
+    },
+    "ops": {
+      "tripsNeedingFinanceClose": {
+        "title": "Trips Needing Finance Close",
+        "hintOn": "Completed trips are waiting reconciliation",
+        "hintOff": "✓ Everything is reconciled"
+      },
+      "activeTripsNow": {
+        "title": "Active Trips Now",
+        "hintOn": "Assigned / In progress (follow-up dispatch)",
+        "hintOff": "✓ All vehicles are idle"
+      },
+      "tripsToday": {
+        "title": "Trips Today",
+        "hint": "Open today trips list"
+      },
+      "quickKpis": "Quick KPIs",
+      "kpis": {
+        "tripsToday": "Trips Today",
+        "allStatuses": "All statuses",
+        "assignedToday": "Assigned Today",
+        "assignedStatus": "Assigned status",
+        "inProgressToday": "In Progress Today",
+        "inProgressStatus": "In progress status",
+        "completedToday": "Completed Today",
+        "completedStatus": "Completed status"
+      },
+      "tables": {
+        "activeTripsNow": "Active Trips Now",
+        "tripsNeedingClose": "Trips Needing Finance Close"
+      },
+      "empty": {
+        "activeTripsNow": {
+          "title": "No active trips now",
+          "hint": "✓ All vehicles are idle"
+        },
+        "tripsNeedingClose": {
+          "title": "No trips need close",
+          "hint": "✓ Everything is reconciled"
+        }
+      },
+      "trendTitle": "Trips Trend (Last 14 days)",
+      "charts": {
+        "tripsCreated": "Trips Created",
+        "tripsAssigned": "Trips Assigned"
+      }
+    },
+    "finance": {
+      "actionRequired": "Finance – Action Required",
+      "pendingTooLong": {
+        "title": "Pending Expenses Too Long",
+        "hintOn": "Needs review/approval",
+        "hintOff": "✓ No delayed pending expenses"
+      },
+      "openAdvances": {
+        "title": "Open Advances",
+        "hintOn": "Advances need settlement",
+        "hintOff": "✓ No open advances"
+      },
+      "expensesTodayApproved": {
+        "title": "Expenses Today (Approved)",
+        "hint": "Approved amount today"
+      },
+      "topExpenseTypesToday": {
+        "sectionTitle": "Top Expense Types (Today)",
+        "tableTitle": "Top Expense Types Today"
+      },
+      "empty": {
+        "noApprovedToday": {
+          "title": "No approved expenses today",
+          "hint": "No data to show"
+        }
+      }
+    },
+    "maintenance": {
+      "actionRequired": "Maintenance – Action Required",
+      "openWorkOrders": {
+        "title": "Open Work Orders",
+        "hintOn": "Work orders in OPEN / IN_PROGRESS",
+        "hintOff": "✓ No open work orders"
+      },
+      "qaNeeds": {
+        "title": "QA Needs",
+        "hintOn": "Completed WOs missing post report",
+        "hintOff": "✓ QA is clean"
+      },
+      "qaFailed": {
+        "title": "QA Failed",
+        "hintOn": "Road test failed reports",
+        "hintOff": "✓ No QA failures"
+      },
+      "partsMismatch": {
+        "title": "Parts Mismatch",
+        "hintOn": "Issued vs installed mismatch",
+        "hintOff": "✓ No mismatches"
+      },
+      "supervisorNote": "Note: Detailed Work Orders are for Admin/Accountant — Supervisor will open Requests instead.",
+      "kpisToday": "Maintenance KPIs (Today)",
+      "completedToday": {
+        "title": "Completed Today",
+        "sub": "Completed work orders"
+      },
+      "partsCostToday": {
+        "title": "Parts Cost Today",
+        "sub": "Inventory issues total"
+      },
+      "cashCostToday": {
+        "title": "Cash Cost Today",
+        "sub": "WO linked cash expenses"
+      },
+      "totalCostToday": {
+        "title": "Total Cost Today",
+        "sub": "Parts + Cash"
+      },
+      "recentWorkOrders": {
+        "sectionTitle": "Recent Work Orders",
+        "openList": "Open list",
+        "tableTitle": "Maintenance Work Orders (Recent)"
+      },
+      "empty": {
+        "noWorkOrders": {
+          "title": "No work orders",
+          "hint": "No recent work orders found."
+        }
+      }
+    },
+    "dev": {
+      "title": "Dev tab",
+      "hint": "Reserved for development diagnostics."
+    }
   },
   "sections": {
     "opsAction": "Operations – Action Required",

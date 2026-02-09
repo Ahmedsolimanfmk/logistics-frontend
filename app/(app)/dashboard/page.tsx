@@ -201,7 +201,7 @@ function DataTable({
   title,
   rows,
   columns,
-  empty = "No data",
+  empty,
   searchable = false,
   onRowClick,
   right,
@@ -233,6 +233,9 @@ function DataTable({
 
   const clickable = Boolean(onRowClick);
 
+  const emptyNode =
+    typeof empty !== "undefined" ? empty : t("common.noData");
+
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
       <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-3">
@@ -256,7 +259,7 @@ function DataTable({
 
       {!filtered.length ? (
         <div className="p-5 text-sm text-slate-300">
-          {typeof empty === "string" ? empty : empty}
+          {typeof emptyNode === "string" ? emptyNode : emptyNode}
         </div>
       ) : (
         <div className="overflow-auto">
@@ -342,12 +345,14 @@ function ActionTile({
   hint,
   tone = "neutral",
   href,
+  openLabel,
 }: {
   title: string;
   value: React.ReactNode;
   hint?: React.ReactNode;
   tone?: "neutral" | "warn" | "danger" | "good";
   href?: string;
+  openLabel?: string;
 }) {
   const toneCls =
     tone === "danger"
@@ -370,14 +375,13 @@ function ActionTile({
       {href ? (
         <div className="mt-3">
           <span className="inline-flex text-xs text-orange-200/90 underline">
-            Open →
+            {openLabel || "Open →"}
           </span>
         </div>
       ) : null}
     </div>
   );
 
-  // ✅ Next Link instead of <a>
   return href ? (
     <Link href={href} className="block">
       {Body}
@@ -413,7 +417,6 @@ function CompactKpi({
     </div>
   );
 
-  // ✅ Next Link instead of <a>
   return href ? (
     <Link href={href} className="block">
       {Body}
@@ -446,7 +449,10 @@ export default function DashboardPage() {
   }, [token]);
 
   const allowedTabs = useMemo(() => getAllowedTabs(user?.role), [user?.role]);
-  const isAdminAcc = useMemo(() => isAdminOrAccountant(user?.role), [user?.role]);
+  const isAdminAcc = useMemo(
+    () => isAdminOrAccountant(user?.role),
+    [user?.role]
+  );
 
   const [tab, setTab] = useState<TabKey>("operations");
   const [summary, setSummary] = useState<any>(null);
@@ -467,11 +473,11 @@ export default function DashboardPage() {
     }
   }, [allowedTabs]);
 
-  const changeTab = (t: TabKey) => {
-    if (!allowedTabs.includes(t)) return;
-    setTab(t);
+  const changeTab = (k: TabKey) => {
+    if (!allowedTabs.includes(k)) return;
+    setTab(k);
     try {
-      localStorage.setItem(TAB_STORAGE_KEY, t);
+      localStorage.setItem(TAB_STORAGE_KEY, k);
     } catch {}
   };
 
@@ -480,10 +486,9 @@ export default function DashboardPage() {
     setErr(null);
     try {
       const data = await apiAuthGet(`/dashboard/summary`, { tab: activeTab });
-      
       setSummary(data);
     } catch (e: any) {
-      setErr(e?.message || "Failed");
+      setErr(e?.message || t("common.failed"));
       setSummary(null);
     } finally {
       setLoadingSummary(false);
@@ -523,8 +528,7 @@ export default function DashboardPage() {
       if (cancel) return;
       await fetchBundleIfNeeded(tab);
     })();
-    
-    
+
     return () => {
       cancel = true;
     };
@@ -545,25 +549,32 @@ export default function DashboardPage() {
       Number(alerts?.expenses_pending_too_long ?? 0);
 
     const m = cards?.maintenance || {};
-    const mntCount =
-      Number(m?.open_work_orders ?? 0) + Number(m?.qa_needs ?? 0);
+    const mntCount = Number(m?.open_work_orders ?? 0) + Number(m?.qa_needs ?? 0);
 
     const items: { key: TabKey; label: string; count?: number }[] = [];
 
     if (allowedTabs.includes("operations"))
-      items.push({ key: "operations", label: t("tabs.operations"), count: opsCount });
+      items.push({
+        key: "operations",
+        label: t("tabs.operations"),
+        count: opsCount,
+      });
 
     if (allowedTabs.includes("finance"))
-      items.push({ key: "finance", label: "Finance", count: finCount });
+      items.push({ key: "finance", label: t("tabs.finance"), count: finCount });
 
     if (allowedTabs.includes("maintenance"))
-      items.push({ key: "maintenance", label: "Maintenance", count: mntCount });
+      items.push({
+        key: "maintenance",
+        label: t("tabs.maintenance"),
+        count: mntCount,
+      });
 
     if (allowedTabs.includes("dev") && canSeeDev(user?.role))
-      items.push({ key: "dev", label: "Dev" });
+      items.push({ key: "dev", label: t("tabs.dev") });
 
     return items;
-  }, [allowedTabs, alerts, tables, cards, user?.role]);
+  }, [allowedTabs, alerts, tables, cards, user?.role, t]);
 
   const chartData = useMemo(() => {
     if (!bundle) return null;
@@ -587,7 +598,8 @@ export default function DashboardPage() {
     const activeNow = Number(tables?.active_trips_now?.length ?? 0);
     const needingClose = Number(tables?.trips_needing_finance_close?.length ?? 0);
 
-    const toneActive = activeNow >= 10 ? "warn" : activeNow > 0 ? "neutral" : "good";
+    const toneActive =
+      activeNow >= 10 ? "warn" : activeNow > 0 ? "neutral" : "good";
     const toneClose = needingClose > 0 ? "danger" : "good";
 
     return { tripsTodayTotal, activeNow, needingClose, toneActive, toneClose } as const;
@@ -636,7 +648,8 @@ export default function DashboardPage() {
   }, [isAdminAcc]);
 
   const maintenanceQaNeedsHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED&qa=needs";
+    if (isAdminAcc)
+      return "/maintenance/work-orders?status=COMPLETED&qa=needs";
     return "/maintenance/requests?status=APPROVED";
   }, [isAdminAcc]);
 
@@ -654,38 +667,37 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        {/* Header */}
-<div className="flex flex-wrap items-center justify-between gap-3">
-  <div>
-    <div className="text-xl font-bold">{t("dashboard.title")}</div>
-    <div className="text-sm text-slate-400">
-      {user?.full_name || "—"} — {user?.role || "—"}
-    </div>
-  </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xl font-bold">{t("dashboard.title")}</div>
+            <div className="text-sm text-slate-400">
+              {user?.full_name || "—"} — {user?.role || "—"}
+            </div>
+          </div>
 
-  <div className="flex items-center gap-2">
-    <LanguageSwitcher />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
 
-    <button
-      type="button"
-      onClick={reloadAll}
-      className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-    >
-      {t("common.refresh")}
-    </button>
+            <button
+              type="button"
+              onClick={reloadAll}
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+            >
+              {t("common.refresh")}
+            </button>
 
-    <button
-      type="button"
-      onClick={() => {
-        logout();
-        window.location.href = "/login";
-      }}
-      className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-    >
-      {t("common.logout")}
-    </button>
-  </div>
-</div>
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                window.location.href = "/login";
+              }}
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+            >
+              {t("common.logout")}
+            </button>
+          </div>
+        </div>
 
         {/* Error */}
         {err ? (
@@ -701,7 +713,10 @@ export default function DashboardPage() {
         {loadingSummary ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div
+                key={i}
+                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+              >
                 <div className="h-4 w-28 bg-white/10 rounded" />
                 <div className="mt-3 h-8 w-16 bg-white/10 rounded" />
                 <div className="mt-2 h-3 w-36 bg-white/10 rounded" />
@@ -717,70 +732,74 @@ export default function DashboardPage() {
                   title={t("sections.opsAction")}
                   right={
                     <span className="text-xs text-slate-400">
-                      Last refresh: {new Date().toLocaleTimeString("ar-EG")}
+                      {t("common.lastRefresh")}{" "}
+                      {new Date().toLocaleTimeString(getCurrentLocale())}
                     </span>
                   }
                 >
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <ActionTile
-                      title="Trips Needing Finance Close"
+                      title={t("dashboard.ops.tripsNeedingFinanceClose.title")}
                       value={fmtInt(ops.needingClose)}
                       hint={
                         ops.needingClose
-                          ? "Completed trips are waiting reconciliation"
-                          : "✓ Everything is reconciled"
+                          ? t("dashboard.ops.tripsNeedingFinanceClose.hintOn")
+                          : t("dashboard.ops.tripsNeedingFinanceClose.hintOff")
                       }
                       tone={ops.toneClose}
                       href="/trips?status=COMPLETED&financial_closed_at=null"
+                      openLabel={t("common.open")}
                     />
 
                     <ActionTile
-                      title="Active Trips Now"
+                      title={t("dashboard.ops.activeTripsNow.title")}
                       value={fmtInt(ops.activeNow)}
                       hint={
                         ops.activeNow
-                          ? "Assigned / In progress (follow-up dispatch)"
-                          : "✓ All vehicles are idle"
+                          ? t("dashboard.ops.activeTripsNow.hintOn")
+                          : t("dashboard.ops.activeTripsNow.hintOff")
                       }
                       tone={ops.toneActive as any}
                       href="/trips?status=ASSIGNED,IN_PROGRESS"
+                      openLabel={t("common.open")}
                     />
 
                     <ActionTile
-                      title="Trips Today"
+                      title={t("dashboard.ops.tripsToday.title")}
                       value={fmtInt(ops.tripsTodayTotal)}
-                      hint="Open today trips list"
+                      hint={t("dashboard.ops.tripsToday.hint")}
                       tone={ops.tripsTodayTotal ? "neutral" : "good"}
                       href="/trips?range=today"
+                      openLabel={t("common.open")}
                     />
                   </div>
                 </Section>
 
-                <Section title="Quick KPIs">
+                <Section title={t("dashboard.ops.quickKpis")}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <CompactKpi
-                      title="Trips Today"
+                      title={t("dashboard.ops.kpis.tripsToday")}
                       value={fmtInt(cards?.trips_today?.total)}
-                      sub="All statuses"
+                      sub={t("dashboard.ops.kpis.allStatuses")}
                       right={<DeltaBadge points={chartData?.trips_created} />}
                       href="/trips?range=today"
                     />
                     <CompactKpi
-                      title="Assigned Today"
+                      title={t("dashboard.ops.kpis.assignedToday")}
                       value={fmtInt(cards?.trips_today?.ASSIGNED ?? 0)}
-                      sub="Assigned status"
+                      sub={t("dashboard.ops.kpis.assignedStatus")}
                       href="/trips?range=today&status=ASSIGNED"
                     />
                     <CompactKpi
-                      title="In Progress Today"
+                      title={t("dashboard.ops.kpis.inProgressToday")}
                       value={fmtInt(cards?.trips_today?.IN_PROGRESS ?? 0)}
-                      sub="In progress status"
+                      sub={t("dashboard.ops.kpis.inProgressStatus")}
                       href="/trips?range=today&status=IN_PROGRESS"
                     />
                     <CompactKpi
-                      title="Completed Today"
+                      title={t("dashboard.ops.kpis.completedToday")}
                       value={fmtInt(cards?.trips_today?.COMPLETED ?? 0)}
-                      sub="Completed status"
+                      sub={t("dashboard.ops.kpis.completedStatus")}
                       href="/trips?range=today&status=COMPLETED"
                     />
                   </div>
@@ -788,17 +807,22 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   <DataTable
-                    title="Active Trips Now"
+                    title={t("dashboard.ops.tables.activeTripsNow")}
                     rows={tables?.active_trips_now || []}
                     searchable
-                    empty={<EmptyNice title="No active trips now" hint="✓ All vehicles are idle" />}
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.ops.empty.activeTripsNow.title")}
+                        hint={t("dashboard.ops.empty.activeTripsNow.hint")}
+                      />
+                    }
                     onRowClick={(r) => {
                       if (r?.trip_id) router.push(`/trips/${r.trip_id}`);
                     }}
                     columns={[
                       {
                         key: "trip_id",
-                        label: "Trip",
+                        label: t("dashboard.columns.trip"),
                         render: (r) => (
                           <div className="flex items-center gap-2">
                             <span className="font-mono">{shortId(r.trip_id)}</span>
@@ -810,45 +834,58 @@ export default function DashboardPage() {
                               }}
                               type="button"
                             >
-                              Copy
+                              {t("common.copy")}
                             </button>
                           </div>
                         ),
                       },
-                      { key: "trip_status", label: "Status" },
-                      { key: "client", label: "Client" },
-                      { key: "site", label: "Site" },
-                      { key: "vehicle_plate_number", label: "Vehicle" },
-                      { key: "driver_name", label: "Driver" },
+                      { key: "trip_status", label: t("dashboard.columns.status") },
+                      { key: "client", label: t("dashboard.columns.client") },
+                      { key: "site", label: t("dashboard.columns.site") },
+                      {
+                        key: "vehicle_plate_number",
+                        label: t("dashboard.columns.vehicle"),
+                      },
+                      { key: "driver_name", label: t("dashboard.columns.driver") },
                       {
                         key: "trip_created_at",
-                        label: "Created",
+                        label: t("dashboard.columns.created"),
                         render: (r) => fmtDate(r.trip_created_at),
                       },
                     ]}
                   />
 
                   <DataTable
-                    title="Trips Needing Finance Close"
+                    title={t("dashboard.ops.tables.tripsNeedingClose")}
                     rows={tables?.trips_needing_finance_close || []}
                     searchable
-                    empty={<EmptyNice title="No trips need close" hint="✓ Everything is reconciled" />}
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.ops.empty.tripsNeedingClose.title")}
+                        hint={t("dashboard.ops.empty.tripsNeedingClose.hint")}
+                      />
+                    }
                     onRowClick={(r) => {
                       if (r?.id) router.push(`/trips/${r.id}`);
                     }}
                     columns={[
                       {
                         key: "id",
-                        label: "Trip",
-                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
+                        label: t("dashboard.columns.trip"),
+                        render: (r) => (
+                          <span className="font-mono">{shortId(r.id)}</span>
+                        ),
                       },
-                      { key: "status", label: "Status" },
-                      { key: "financial_status", label: "Financial" },
-                      { key: "client", label: "Client" },
-                      { key: "site", label: "Site" },
+                      { key: "status", label: t("dashboard.columns.status") },
+                      {
+                        key: "financial_status",
+                        label: t("dashboard.columns.financial"),
+                      },
+                      { key: "client", label: t("dashboard.columns.client") },
+                      { key: "site", label: t("dashboard.columns.site") },
                       {
                         key: "created_at",
-                        label: "Created",
+                        label: t("dashboard.columns.created"),
                         render: (r) => fmtDate(r.created_at),
                       },
                     ]}
@@ -856,14 +893,20 @@ export default function DashboardPage() {
                 </div>
 
                 <Section
-                  title="Trips Trend (Last 14 days)"
+                  title={t("dashboard.ops.trendTitle")}
                   right={
                     loadingCharts ? (
-                      <span className="text-xs text-slate-400">Loading…</span>
+                      <span className="text-xs text-slate-400">
+                        {t("common.loading")}
+                      </span>
                     ) : chartData ? (
-                      <span className="text-xs text-slate-400">Daily</span>
+                      <span className="text-xs text-slate-400">
+                        {t("common.daily")}
+                      </span>
                     ) : (
-                      <span className="text-xs text-slate-400">Unavailable</span>
+                      <span className="text-xs text-slate-400">
+                        {t("common.unavailable")}
+                      </span>
                     )
                   }
                 >
@@ -880,12 +923,20 @@ export default function DashboardPage() {
                     </div>
                   ) : chartData ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <MiniChart title="Trips Created" points={chartData.trips_created} valueKey="value" />
-                      <MiniChart title="Trips Assigned" points={chartData.trips_assigned} valueKey="value" />
+                      <MiniChart
+                        title={t("dashboard.ops.charts.tripsCreated")}
+                        points={chartData.trips_created}
+                        valueKey="value"
+                      />
+                      <MiniChart
+                        title={t("dashboard.ops.charts.tripsAssigned")}
+                        points={chartData.trips_assigned}
+                        valueKey="value"
+                      />
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                      Trends endpoint not available.
+                      {t("dashboard.errors.trendsUnavailable")}
                     </div>
                   )}
                 </Section>
@@ -895,44 +946,70 @@ export default function DashboardPage() {
             {/* ===================== FINANCE ===================== */}
             {tab === "finance" && (
               <div className="space-y-6">
-                <Section title="Finance – Action Required">
+                <Section title={t("dashboard.finance.actionRequired")}>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <ActionTile
-                      title="Pending Expenses Too Long"
+                      title={t("dashboard.finance.pendingTooLong.title")}
                       value={fmtInt(fin.pendingTooLong)}
-                      hint={fin.pendingTooLong ? "Needs review/approval" : "✓ No delayed pending expenses"}
+                      hint={
+                        fin.pendingTooLong
+                          ? t("dashboard.finance.pendingTooLong.hintOn")
+                          : t("dashboard.finance.pendingTooLong.hintOff")
+                      }
                       tone={fin.tonePending as any}
-                     href="/finance?tab=pending"
-                  />
+                      href="/finance?tab=pending"
+                      openLabel={t("common.open")}
+                    />
 
                     <ActionTile
-                      title="Open Advances"
+                      title={t("dashboard.finance.openAdvances.title")}
                       value={fmtInt(fin.advancesOpen)}
-                      hint={fin.advancesOpen ? "Advances need settlement" : "✓ No open advances"}
+                      hint={
+                        fin.advancesOpen
+                          ? t("dashboard.finance.openAdvances.hintOn")
+                          : t("dashboard.finance.openAdvances.hintOff")
+                      }
                       tone={fin.toneAdv as any}
                       href="/finance?tab=advances"
-                  />
+                      openLabel={t("common.open")}
+                    />
 
                     <ActionTile
-                      title="Expenses Today (Approved)"
-                     value={fmtMoney(cards?.expenses_today?.APPROVED ?? 0)}
-                     hint="Approved amount today"
-                     tone={Number(cards?.expenses_today?.APPROVED ?? 0) > 0 ? "neutral" : "good"}
+                      title={t("dashboard.finance.expensesTodayApproved.title")}
+                      value={fmtMoney(cards?.expenses_today?.APPROVED ?? 0)}
+                      hint={t("dashboard.finance.expensesTodayApproved.hint")}
+                      tone={
+                        Number(cards?.expenses_today?.APPROVED ?? 0) > 0
+                          ? "neutral"
+                          : "good"
+                      }
                       href="/finance/expenses?status=APPROVED"
-                  />
-
+                      openLabel={t("common.open")}
+                    />
                   </div>
                 </Section>
 
-                <Section title="Top Expense Types (Today)">
+                <Section title={t("dashboard.finance.topExpenseTypesToday.sectionTitle")}>
                   <DataTable
-                    title="Top Expense Types Today"
+                    title={t("dashboard.finance.topExpenseTypesToday.tableTitle")}
                     rows={tables?.top_expense_types_today || []}
                     searchable
-                    empty={<EmptyNice title="No approved expenses today" hint="No data to show" />}
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.finance.empty.noApprovedToday.title")}
+                        hint={t("dashboard.finance.empty.noApprovedToday.hint")}
+                      />
+                    }
                     columns={[
-                      { key: "expense_type", label: "Type" },
-                      { key: "amount", label: "Amount", render: (r) => fmtMoney(r.amount) },
+                      {
+                        key: "expense_type",
+                        label: t("dashboard.columns.type"),
+                      },
+                      {
+                        key: "amount",
+                        label: t("dashboard.columns.amount"),
+                        render: (r) => fmtMoney(r.amount),
+                      },
                     ]}
                   />
                 </Section>
@@ -942,98 +1019,143 @@ export default function DashboardPage() {
             {/* ===================== MAINTENANCE ===================== */}
             {tab === "maintenance" && (
               <div className="space-y-6">
-                <Section title="Maintenance – Action Required">
+                <Section title={t("dashboard.maintenance.actionRequired")}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <ActionTile
-                      title="Open Work Orders"
+                      title={t("dashboard.maintenance.openWorkOrders.title")}
                       value={fmtInt(mnt.openWos)}
-                      hint={mnt.openWos ? "Work orders in OPEN / IN_PROGRESS" : "✓ No open work orders"}
+                      hint={
+                        mnt.openWos
+                          ? t("dashboard.maintenance.openWorkOrders.hintOn")
+                          : t("dashboard.maintenance.openWorkOrders.hintOff")
+                      }
                       tone={mnt.toneOpen as any}
                       href={maintenanceOpenHref}
+                      openLabel={t("common.open")}
                     />
                     <ActionTile
-                      title="QA Needs"
+                      title={t("dashboard.maintenance.qaNeeds.title")}
                       value={fmtInt(mnt.qaNeeds)}
-                      hint={mnt.qaNeeds ? "Completed WOs missing post report" : "✓ QA is clean"}
+                      hint={
+                        mnt.qaNeeds
+                          ? t("dashboard.maintenance.qaNeeds.hintOn")
+                          : t("dashboard.maintenance.qaNeeds.hintOff")
+                      }
                       tone={mnt.toneQa as any}
                       href={maintenanceQaNeedsHref}
+                      openLabel={t("common.open")}
                     />
                     <ActionTile
-                      title="QA Failed"
+                      title={t("dashboard.maintenance.qaFailed.title")}
                       value={fmtInt(mnt.qaFailed)}
-                      hint={mnt.qaFailed ? "Road test failed reports" : "✓ No QA failures"}
+                      hint={
+                        mnt.qaFailed
+                          ? t("dashboard.maintenance.qaFailed.hintOn")
+                          : t("dashboard.maintenance.qaFailed.hintOff")
+                      }
                       tone={mnt.toneFail as any}
                       href={maintenanceFailedHref}
+                      openLabel={t("common.open")}
                     />
                     <ActionTile
-                      title="Parts Mismatch"
+                      title={t("dashboard.maintenance.partsMismatch.title")}
                       value={fmtInt(mnt.mismatch)}
-                      hint={mnt.mismatch ? "Issued vs installed mismatch" : "✓ No mismatches"}
+                      hint={
+                        mnt.mismatch
+                          ? t("dashboard.maintenance.partsMismatch.hintOn")
+                          : t("dashboard.maintenance.partsMismatch.hintOff")
+                      }
                       tone={mnt.toneMismatch as any}
                       href={maintenanceMismatchHref}
+                      openLabel={t("common.open")}
                     />
                   </div>
 
                   {!isAdminAcc ? (
                     <div className="mt-2 text-xs text-slate-400">
-                      ملاحظة: عرض Work Orders التفصيلي للأدمن/المحاسب — للمشرف هتفتح صفحة Requests كبديل.
+                      {t("dashboard.maintenance.supervisorNote")}
                     </div>
                   ) : null}
                 </Section>
 
-                <Section title="Maintenance KPIs (Today)">
+                <Section title={t("dashboard.maintenance.kpisToday")}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <CompactKpi title="Completed Today" value={fmtInt(mnt.completedToday)} sub="Completed work orders" />
                     <CompactKpi
-                      title="Parts Cost Today"
-                      value={fmtMoney(cards?.maintenance?.maintenance_parts_cost_today ?? 0)}
-                      sub="Inventory issues total"
+                      title={t("dashboard.maintenance.completedToday.title")}
+                      value={fmtInt(mnt.completedToday)}
+                      sub={t("dashboard.maintenance.completedToday.sub")}
                     />
                     <CompactKpi
-                      title="Cash Cost Today"
-                      value={fmtMoney(cards?.maintenance?.maintenance_cash_cost_today ?? 0)}
-                      sub="WO linked cash expenses"
+                      title={t("dashboard.maintenance.partsCostToday.title")}
+                      value={fmtMoney(
+                        cards?.maintenance?.maintenance_parts_cost_today ?? 0
+                      )}
+                      sub={t("dashboard.maintenance.partsCostToday.sub")}
                     />
                     <CompactKpi
-                      title="Total Cost Today"
+                      title={t("dashboard.maintenance.cashCostToday.title")}
+                      value={fmtMoney(
+                        cards?.maintenance?.maintenance_cash_cost_today ?? 0
+                      )}
+                      sub={t("dashboard.maintenance.cashCostToday.sub")}
+                    />
+                    <CompactKpi
+                      title={t("dashboard.maintenance.totalCostToday.title")}
                       value={fmtMoney(cards?.maintenance?.maintenance_cost_today ?? 0)}
-                      sub="Parts + Cash"
+                      sub={t("dashboard.maintenance.totalCostToday.sub")}
                     />
                   </div>
                 </Section>
 
                 <Section
-                  title="Recent Work Orders"
+                  title={t("dashboard.maintenance.recentWorkOrders.sectionTitle")}
                   right={
                     <Link
                       href={isAdminAcc ? "/maintenance/work-orders" : "/maintenance/requests"}
                       className="text-xs text-orange-200/90 underline"
                     >
-                      Open list →
+                      {t("dashboard.maintenance.recentWorkOrders.openList")} →
                     </Link>
                   }
                 >
                   <DataTable
-                    title="Maintenance Work Orders (Recent)"
+                    title={t("dashboard.maintenance.recentWorkOrders.tableTitle")}
                     rows={tables?.maintenance_recent_work_orders || []}
                     searchable
-                    empty={<EmptyNice title="No work orders" hint="No recent work orders found." />}
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.maintenance.empty.noWorkOrders.title")}
+                        hint={t("dashboard.maintenance.empty.noWorkOrders.hint")}
+                      />
+                    }
                     onRowClick={(r) => {
-                      // Admin sees details, supervisor goes to requests as fallback
-                      if (isAdminAcc && r?.id) router.push(`/maintenance/work-orders/${r.id}`);
+                      if (isAdminAcc && r?.id)
+                        router.push(`/maintenance/work-orders/${r.id}`);
                       else router.push(`/maintenance/requests`);
                     }}
                     columns={[
-                      { key: "id", label: "WO", render: (r) => <span className="font-mono">{shortId(r.id)}</span> },
-                      { key: "status", label: "Status" },
-                      { key: "type", label: "Type" },
+                      {
+                        key: "id",
+                        label: t("dashboard.columns.wo"),
+                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
+                      },
+                      { key: "status", label: t("dashboard.columns.status") },
+                      { key: "type", label: t("dashboard.columns.type") },
                       {
                         key: "vehicle_id",
-                        label: "Vehicle",
+                        label: t("dashboard.columns.vehicle"),
                         render: (r) => <span className="font-mono">{shortId(r.vehicle_id)}</span>,
                       },
-                      { key: "opened_at", label: "Opened", render: (r) => fmtDate(r.opened_at) },
-                      { key: "completed_at", label: "Completed", render: (r) => fmtDate(r.completed_at) },
+                      {
+                        key: "opened_at",
+                        label: t("dashboard.columns.opened"),
+                        render: (r) => fmtDate(r.opened_at),
+                      },
+                      {
+                        key: "completed_at",
+                        label: t("dashboard.columns.completed"),
+                        render: (r) => fmtDate(r.completed_at),
+                      },
                     ]}
                   />
                 </Section>
@@ -1043,7 +1165,10 @@ export default function DashboardPage() {
             {/* ===================== DEV ===================== */}
             {tab === "dev" && (
               <div className="space-y-6">
-                <EmptyNice title="Dev tab" hint="Reserved for development diagnostics." />
+                <EmptyNice
+                  title={t("dashboard.dev.title")}
+                  hint={t("dashboard.dev.hint")}
+                />
               </div>
             )}
           </>
