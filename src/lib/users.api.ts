@@ -21,6 +21,7 @@ export type ListUsersParams = {
 
 export async function listUsers(params: ListUsersParams) {
   const sp = new URLSearchParams();
+
   if (params.q) sp.set("q", params.q);
   if (params.role) sp.set("role", params.role);
   if (params.is_active) sp.set("is_active", params.is_active);
@@ -48,5 +49,7 @@ export async function setUserStatus(id: string, is_active: boolean) {
 }
 
 export async function resetUserPassword(id: string, newPassword: string) {
-  return await apiPost<{ ok: true }>(`/users/${id}/reset-password`, { newPassword });
+  return await apiPost<{ ok: true }>(`/users/${id}/reset-password`, {
+    newPassword,
+  });
 }

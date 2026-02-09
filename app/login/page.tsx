@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+
+  // ✅ show/hide password
   const [showPassword, setShowPassword] = useState(false);
 
   const [err, setErr] = useState<string | null>(null);
@@ -49,6 +51,8 @@ export default function LoginPage() {
         password,
       });
 
+
+      // ✅ axios response data
       const data = (res as any)?.data ?? res;
       const { token: t, user } = data || {};
 
@@ -89,6 +93,8 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
+
+        {/* ✅ Password with show/hide */}
         <div className="relative">
           <input
             className="w-full border rounded p-2 pr-10"

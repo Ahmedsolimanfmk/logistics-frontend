@@ -1,29 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const STORAGE_KEY = "app_lang";
-type Lang = "ar" | "en";
-
-function applyLang(lang: Lang) {
-  const html = document.documentElement;
-  html.lang = lang;
-  html.dir = lang === "ar" ? "rtl" : "ltr";
-}
+import { getStoredLang, setAppLang, type Lang } from "@/src/i18n/lang";
 
 export default function LanguageSwitcher() {
   const [lang, setLang] = useState<Lang>("ar");
 
   useEffect(() => {
-    const saved = (localStorage.getItem(STORAGE_KEY) as Lang | null) || "ar";
-    setLang(saved);
+    setLang(getStoredLang());
   }, []);
 
   const toggle = () => {
     const next: Lang = lang === "ar" ? "en" : "ar";
     setLang(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    applyLang(next);
+    setAppLang(next); // ✅ ده اللي بيعمل rerender لكل الصفحات
   };
 
   return (

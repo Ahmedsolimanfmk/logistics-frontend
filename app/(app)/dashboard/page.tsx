@@ -17,6 +17,7 @@ import { useAuth } from "@/src/store/auth";
 import { useRouter } from "next/navigation";
 import LanguageSwitcher from "@/src/components/LanguageSwitcher";
 import { useT } from "@/src/i18n/useT";
+import { apiAuthGet } from "@/src/lib/api";
 
 // =====================
 // Helpers
@@ -218,6 +219,7 @@ function DataTable({
   onRowClick?: (r: any) => void;
   right?: React.ReactNode;
 }) {
+  const t = useT();
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -242,12 +244,12 @@ function DataTable({
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search…"
+              placeholder={t("common.search")}
               className="px-3 py-1.5 rounded-lg bg-slate-950/30 border border-white/10 text-sm text-slate-100 outline-none"
             />
           ) : null}
           <span className="text-xs text-slate-400">
-            {fmtInt(filtered.length)} rows
+            {fmtInt(filtered.length)} {t("common.rows")}
           </span>
         </div>
       </div>
@@ -477,7 +479,8 @@ export default function DashboardPage() {
     setLoadingSummary(true);
     setErr(null);
     try {
-      const data = await api.get(`/dashboard/summary?tab=${activeTab}`);
+      const data = await apiAuthGet(`/dashboard/summary`, { tab: activeTab });
+      
       setSummary(data);
     } catch (e: any) {
       setErr(e?.message || "Failed");
@@ -711,7 +714,7 @@ export default function DashboardPage() {
             {tab === "operations" && (
               <div className="space-y-6">
                 <Section
-                  title="Operations – Action Required"
+                  title={t("sections.opsAction")}
                   right={
                     <span className="text-xs text-slate-400">
                       Last refresh: {new Date().toLocaleTimeString("ar-EG")}
