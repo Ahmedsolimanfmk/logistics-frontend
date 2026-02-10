@@ -23,7 +23,17 @@
     "no": "No",
     "prev": "Prev",
     "next": "Next",
-    "role": "Role"
+    "role": "Role",
+    "login": "Login",
+    "reset": "Reset",
+    "all": "All",
+    "active": "Active",
+    "disabled": "Disabled",
+    "activeUpper": "ACTIVE",
+    "disabledUpper": "DISABLED",
+    "total": "Total",
+    "page": "Page",
+    "optional": "optional"
   },
   "tabs": {
     "operations": "Operations",
@@ -275,6 +285,17 @@
   "users": "Users",
   "supervisors": "Supervisors"
 },
+ "users": {
+    "title": "Users",
+    "subtitle": "Admin-only user management",
+    "mustLogin": "You must login first.",
+    "filters": {
+      "title": "Filters",
+      "searchPlaceholder": "name / email / phone",
+      "role": "Role",
+      "rolePlaceholder": "ADMIN / ACCOUNTANT / ...",
+      "status": "Status"
+    },
  "vehicles": {
     "title": "Vehicles",
     "subtitle": "Manage fleet",
@@ -287,7 +308,11 @@
       "inactiveOnly": "Inactive only"
     },
     "actions": {
-      "add": "+ Add Vehicle"
+      "add": "+ Add Vehicle",
+      "create": "+ Create User",
+      "resetPw": "Reset PW",
+      "disable": "Disable",
+      "enable": "Enable"
     },
     "meta": {
       "total": "Total",
@@ -299,14 +324,22 @@
       "vehicle": "Vehicle",
       "fleet": "Fleet",
       "plate": "Plate",
+      
       "status": "Status",
       "active": "Active",
       "created": "Created",
-      "actions": "Actions"
+      "actions": "Actions",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "role": "Role"
     },
     "empty": "No vehicles found.",
     "errors": {
       "loadFailed": "Failed to load vehicles"
+    },
+      "loadFailed": "Failed to load users",
+      "createFailed": "Failed to create user"
     },
     "toast": {
       "created": "Vehicle created",
@@ -317,7 +350,25 @@
     },
     "modal": {
       "addTitle": "Add Vehicle",
-      "editTitle": "Edit Vehicle"
+      "editTitle": "Edit Vehicle",
+      "title": "Create User",
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "role": "Role",
+      "password": "Password",
+      "passwordHint": "min 6 chars",
+      "creating": "Creating…",
+      "create": "Create"
+    },
+    "alert": {
+      "passwordChanged": "Password changed ✅"
+    },
+    "confirm": {
+      "toggleStatus": "Confirm changing user status: {name} ?"
+    },
+     "prompt": {
+      "newPassword": "Enter a new password for: {name}"
     },
     "fields": {
       "fleetNo": "Fleet No",

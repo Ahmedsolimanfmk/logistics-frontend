@@ -23,8 +23,29 @@
     "no": "لا",
     "prev": "السابق",
     "next": "التالي",
-    "role": "الدور"
+    "role": "الدور",
+    "login": "تسجيل الدخول",
+    "reset": "إعادة ضبط",
+    "all": "الكل",
+    "active": "نشط",
+    "disabled": "معطل",
+    "activeUpper": "نشط",
+    "disabledUpper": "معطل",
+    "total": "الإجمالي",
+    "page": "صفحة",
+    "optional": "اختياري"
   },
+  "users": {
+    "title": "المستخدمون",
+    "subtitle": "إدارة المستخدمين (للأدمن فقط)",
+    "mustLogin": "يجب تسجيل الدخول أولاً.",
+    "filters": {
+      "title": "الفلاتر",
+      "searchPlaceholder": "الاسم / البريد / الهاتف",
+      "role": "الدور",
+      "rolePlaceholder": "ADMIN / ACCOUNTANT / ...",
+      "status": "الحالة"
+    },
   "tabs": {
     "operations": "التشغيل",
     "finance": "المالية",
@@ -287,7 +308,20 @@
       "inactiveOnly": "غير المفعلة فقط"
     },
     "actions": {
-      "add": "+ إضافة مركبة"
+      "add": "+ إضافة مركبة",
+      "create": "+ إنشاء مستخدم",
+      "resetPw": "إعادة كلمة المرور",
+      "disable": "تعطيل",
+      "enable": "تفعيل"
+    },
+    "confirm": {
+      "toggleStatus": "تأكيد تغيير حالة المستخدم: {name} ؟"
+    },
+    "prompt": {
+      "newPassword": "اكتب كلمة مرور جديدة للمستخدم: {name}"
+    },
+     "alert": {
+      "passwordChanged": "تم تغيير كلمة المرور ✅"
     },
     "meta": {
       "total": "الإجمالي",
@@ -302,11 +336,16 @@
       "status": "الحالة",
       "active": "مفعّل",
       "created": "تاريخ الإنشاء",
-      "actions": "إجراءات"
+      "actions": "إجراءات",
+      "name": "الاسم",
+      "email": "البريد",
+      "phone": "الهاتف",
+      "role": "الدور"
     },
     "empty": "لا توجد مركبات مطابقة.",
     "errors": {
-      "loadFailed": "فشل تحميل المركبات"
+      "loadFailed": "فشل تحميل المركبات",
+      "createFailed": "فشل إنشاء المستخدم"
     },
     "toast": {
       "created": "تم إنشاء المركبة",
@@ -317,7 +356,16 @@
     },
     "modal": {
       "addTitle": "إضافة مركبة",
-      "editTitle": "تعديل مركبة"
+      "editTitle": "تعديل مركبة",
+      "title": "إنشاء مستخدم",
+      "fullName": "الاسم الكامل",
+      "email": "البريد",
+      "phone": "الهاتف",
+      "role": "الدور",
+      "password": "كلمة المرور",
+      "passwordHint": "6 أحرف على الأقل",
+      "creating": "جارٍ الإنشاء…",
+      "create": "إنشاء"
     },
     "fields": {
       "fleetNo": "رقم الأسطول",
@@ -340,4 +388,5 @@
       "MAINTENANCE": "صيانة"
     }
   }
+}
 }
