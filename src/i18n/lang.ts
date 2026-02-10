@@ -30,22 +30,25 @@ export function useLang() {
   const [lang, setLang] = useState<Lang>(() => getStoredLang());
 
   useEffect(() => {
-    // أول ما الصفحة تفتح طبّق dir/lang
+    // ✅ كل مرة lang تتغير طبّقها على html
     applyLangToHtml(lang);
+  }, [lang]);
 
+  useEffect(() => {
     const onChange = (e: any) => {
       const next = (e?.detail as Lang) || getStoredLang();
       setLang(next);
     };
 
+    const onStorage = () => setLang(getStoredLang());
+
     window.addEventListener(EVT, onChange as any);
-    window.addEventListener("storage", () => setLang(getStoredLang()));
+    window.addEventListener("storage", onStorage);
 
     return () => {
       window.removeEventListener(EVT, onChange as any);
-      window.removeEventListener("storage", () => setLang(getStoredLang()));
+      window.removeEventListener("storage", onStorage);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return lang;

@@ -11,7 +11,8 @@
     "failed": "Failed",
     "loading": "Loading…",
     "daily": "Daily",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "vsPrev": "vs prev"
   },
   "tabs": {
     "operations": "Operations",

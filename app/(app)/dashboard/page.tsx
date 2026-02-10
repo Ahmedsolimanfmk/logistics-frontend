@@ -89,7 +89,7 @@ function DeltaBadge({ points }: { points: TrendPoint[] | null | undefined }) {
       ? "bg-rose-500/10 text-rose-200 border-rose-400/20"
       : "bg-slate-500/10 text-slate-200 border-white/10";
   const icon = d.dir === "up" ? "↑" : d.dir === "down" ? "↓" : "•";
-
+const t = useT();
   return (
     <span
       className={cn(
@@ -99,7 +99,7 @@ function DeltaBadge({ points }: { points: TrendPoint[] | null | undefined }) {
     >
       <span>{icon}</span>
       <span>{d.pct}%</span>
-      <span className="opacity-70">vs prev</span>
+      <span className="opacity-70">{t("common.vsPrev")}</span>
     </span>
   );
 }
@@ -362,7 +362,7 @@ function ActionTile({
       : tone === "good"
       ? "border-emerald-500/20 bg-emerald-500/10"
       : "border-white/10 bg-white/5";
-
+const t = useT();
   const Body = (
     <div className={cn("rounded-2xl border p-4 shadow-sm", toneCls)}>
       <div className="text-xs text-slate-300">{title}</div>
@@ -375,7 +375,7 @@ function ActionTile({
       {href ? (
         <div className="mt-3">
           <span className="inline-flex text-xs text-orange-200/90 underline">
-            {openLabel || "Open →"}
+            {openLabel || t("common.open")}
           </span>
         </div>
       ) : null}
