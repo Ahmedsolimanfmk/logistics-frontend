@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   LineChart,
   Line,
@@ -12,9 +13,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { api } from "@/src/lib/api";
+
 import { useAuth } from "@/src/store/auth";
-import { useRouter } from "next/navigation";
 import LanguageSwitcher from "@/src/components/LanguageSwitcher";
 import { useT } from "@/src/i18n/useT";
 import { apiAuthGet } from "@/src/lib/api";
@@ -57,61 +57,17 @@ async function safeCopy(text: string) {
   } catch {}
 }
 
-type TabKey = "operations" | "finance" | "maintenance" | "dev";
-const TAB_STORAGE_KEY = "dash_active_tab_v1";
-
-type TrendPoint = { label: string; value: number };
-
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-// ===== KPI Delta (lightweight) =====
-function deltaFromSeries(points: TrendPoint[] | null | undefined) {
-  const arr = points || [];
-  const last = Number(arr[arr.length - 1]?.value ?? 0);
-  const prev = Number(arr[arr.length - 2]?.value ?? 0);
+// =====================
+// Types
+// =====================
+type TabKey = "operations" | "finance" | "maintenance" | "dev";
+const TAB_STORAGE_KEY = "dash_active_tab_v1";
 
-  if (!prev && !last) return { pct: 0, dir: "flat" as const, last, prev };
-  if (!prev && last) return { pct: 100, dir: "up" as const, last, prev };
-
-  const pct = Math.round(((last - prev) / Math.abs(prev)) * 100);
-  const dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
-  return { pct, dir, last, prev };
-}
-
-function DeltaBadge({ points }: { points: TrendPoint[] | null | undefined }) {
-  const d = deltaFromSeries(points);
-  const cls =
-    d.dir === "up"
-      ? "bg-emerald-500/10 text-emerald-200 border-emerald-400/20"
-      : d.dir === "down"
-      ? "bg-rose-500/10 text-rose-200 border-rose-400/20"
-      : "bg-slate-500/10 text-slate-200 border-white/10";
-  const icon = d.dir === "up" ? "↑" : d.dir === "down" ? "↓" : "•";
-const t = useT();
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
-        cls
-      )}
-    >
-      <span>{icon}</span>
-      <span>{d.pct}%</span>
-      <span className="opacity-70">{t("common.vsPrev")}</span>
-    </span>
-  );
-}
-
-function EmptyNice({ title, hint }: { title: string; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-      <div className="text-sm font-semibold text-white">{title}</div>
-      <div className="mt-1 text-sm text-slate-400">{hint}</div>
-    </div>
-  );
-}
+type TrendPoint = { label: string; value: number };
 
 // =====================
 // Role-based tabs
@@ -139,8 +95,60 @@ function isAdminOrAccountant(role?: string) {
 }
 
 // =====================
+// KPI Delta
+// =====================
+function deltaFromSeries(points: TrendPoint[] | null | undefined) {
+  const arr = points || [];
+  const last = Number(arr[arr.length - 1]?.value ?? 0);
+  const prev = Number(arr[arr.length - 2]?.value ?? 0);
+
+  if (!prev && !last) return { pct: 0, dir: "flat" as const, last, prev };
+  if (!prev && last) return { pct: 100, dir: "up" as const, last, prev };
+
+  const pct = Math.round(((last - prev) / Math.abs(prev)) * 100);
+  const dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+  return { pct, dir, last, prev };
+}
+
+function DeltaBadge({ points }: { points: TrendPoint[] | null | undefined }) {
+  const t = useT();
+  const d = deltaFromSeries(points);
+
+  const cls =
+    d.dir === "up"
+      ? "bg-emerald-500/10 text-emerald-200 border-emerald-400/20"
+      : d.dir === "down"
+      ? "bg-rose-500/10 text-rose-200 border-rose-400/20"
+      : "bg-slate-500/10 text-slate-200 border-white/10";
+
+  const icon = d.dir === "up" ? "↑" : d.dir === "down" ? "↓" : "•";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
+        cls
+      )}
+    >
+      <span>{icon}</span>
+      <span>{d.pct}%</span>
+      <span className="opacity-70">{t("common.vsPrev")}</span>
+    </span>
+  );
+}
+
+// =====================
 // UI atoms
 // =====================
+function EmptyNice({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <div className="mt-1 text-sm text-slate-400">{hint}</div>
+    </div>
+  );
+}
+
 function Section({
   title,
   right,
@@ -232,9 +240,7 @@ function DataTable({
   }, [rows, q, searchable]);
 
   const clickable = Boolean(onRowClick);
-
-  const emptyNode =
-    typeof empty !== "undefined" ? empty : t("common.noData");
+  const emptyNode = typeof empty !== "undefined" ? empty : t("common.noData");
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
@@ -279,6 +285,7 @@ function DataTable({
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {filtered.map((r, idx) => (
                 <tr
@@ -354,6 +361,8 @@ function ActionTile({
   href?: string;
   openLabel?: string;
 }) {
+  const t = useT();
+
   const toneCls =
     tone === "danger"
       ? "border-rose-500/20 bg-rose-500/10"
@@ -362,16 +371,14 @@ function ActionTile({
       : tone === "good"
       ? "border-emerald-500/20 bg-emerald-500/10"
       : "border-white/10 bg-white/5";
-const t = useT();
+
   const Body = (
     <div className={cn("rounded-2xl border p-4 shadow-sm", toneCls)}>
       <div className="text-xs text-slate-300">{title}</div>
       <div className="mt-1 text-2xl font-semibold tracking-tight text-white">
         {value}
       </div>
-      {hint ? (
-        <div className="mt-1 text-xs text-slate-300/80">{hint}</div>
-      ) : null}
+      {hint ? <div className="mt-1 text-xs text-slate-300/80">{hint}</div> : null}
       {href ? (
         <div className="mt-3">
           <span className="inline-flex text-xs text-orange-200/90 underline">
@@ -431,20 +438,22 @@ function CompactKpi({
 // =====================
 export default function DashboardPage() {
   const router = useRouter();
-
   const t = useT();
+
   const token = useAuth((s) => s.token);
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
 
+  // hydrate on mount
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
     } catch {}
   }, []);
 
+  // redirect if no token
   useEffect(() => {
-    if (token === null) return;
+    if (token === null) return; // still loading
     if (!token) window.location.href = "/login";
   }, [token]);
 
@@ -495,8 +504,8 @@ export default function DashboardPage() {
     }
   };
 
+  // charts only for operations
   const fetchBundleIfNeeded = async (activeTab: TabKey) => {
-    // charts only for Operations
     if (activeTab !== "operations") {
       setBundle(null);
       setLoadingCharts(false);
@@ -505,8 +514,13 @@ export default function DashboardPage() {
 
     setLoadingCharts(true);
     try {
-       const data = await apiAuthGet(`/dashboard/trends/bundle`, { bucket: "daily" });
-      setBundle(data);
+      const data = await apiAuthGet(`/dashboard/trends/bundle`, {
+        bucket: "daily",
+      });
+
+      // ✅ handle both shapes: {trips_created:...} OR {data:{trips_created:...}}
+      const normalized = (data && (data.data ?? data)) || null;
+      setBundle(normalized);
     } catch {
       setBundle(null);
     } finally {
@@ -544,6 +558,7 @@ export default function DashboardPage() {
     const opsCount = Number(
       alerts?.active_trips_now_count ?? tables?.active_trips_now?.length ?? 0
     );
+
     const finCount =
       Number(alerts?.advances_open ?? 0) +
       Number(alerts?.expenses_pending_too_long ?? 0);
@@ -554,11 +569,7 @@ export default function DashboardPage() {
     const items: { key: TabKey; label: string; count?: number }[] = [];
 
     if (allowedTabs.includes("operations"))
-      items.push({
-        key: "operations",
-        label: t("tabs.operations"),
-        count: opsCount,
-      });
+      items.push({ key: "operations", label: t("tabs.operations"), count: opsCount });
 
     if (allowedTabs.includes("finance"))
       items.push({ key: "finance", label: t("tabs.finance"), count: finCount });
@@ -617,7 +628,6 @@ export default function DashboardPage() {
     const m = cards?.maintenance || {};
     const openWos = Number(m.open_work_orders ?? 0);
     const completedToday = Number(m.completed_today ?? 0);
-    const costToday = Number(m.maintenance_cost_today ?? 0);
     const qaNeeds = Number(m.qa_needs ?? 0);
     const qaFailed = Number(m.qa_failed ?? 0);
     const mismatch = Number(m.parts_mismatch ?? 0);
@@ -630,7 +640,6 @@ export default function DashboardPage() {
     return {
       openWos,
       completedToday,
-      costToday,
       qaNeeds,
       qaFailed,
       mismatch,
@@ -641,15 +650,14 @@ export default function DashboardPage() {
     } as const;
   }, [cards]);
 
-  // ✅ Make Maintenance cards clickable for supervisors too
+  // ✅ supervisors open Requests instead
   const maintenanceOpenHref = useMemo(() => {
     if (isAdminAcc) return "/maintenance/work-orders?status=OPEN,IN_PROGRESS";
     return "/maintenance/requests?status=APPROVED";
   }, [isAdminAcc]);
 
   const maintenanceQaNeedsHref = useMemo(() => {
-    if (isAdminAcc)
-      return "/maintenance/work-orders?status=COMPLETED&qa=needs";
+    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED&qa=needs";
     return "/maintenance/requests?status=APPROVED";
   }, [isAdminAcc]);
 
@@ -713,10 +721,7 @@ export default function DashboardPage() {
         {loadingSummary ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-white/10 bg-white/5 p-4"
-              >
+              <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="h-4 w-28 bg-white/10 rounded" />
                 <div className="mt-3 h-8 w-16 bg-white/10 rounded" />
                 <div className="mt-2 h-3 w-36 bg-white/10 rounded" />
@@ -872,15 +877,10 @@ export default function DashboardPage() {
                       {
                         key: "id",
                         label: t("dashboard.columns.trip"),
-                        render: (r) => (
-                          <span className="font-mono">{shortId(r.id)}</span>
-                        ),
+                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
                       },
                       { key: "status", label: t("dashboard.columns.status") },
-                      {
-                        key: "financial_status",
-                        label: t("dashboard.columns.financial"),
-                      },
+                      { key: "financial_status", label: t("dashboard.columns.financial") },
                       { key: "client", label: t("dashboard.columns.client") },
                       { key: "site", label: t("dashboard.columns.site") },
                       {
@@ -896,17 +896,11 @@ export default function DashboardPage() {
                   title={t("dashboard.ops.trendTitle")}
                   right={
                     loadingCharts ? (
-                      <span className="text-xs text-slate-400">
-                        {t("common.loading")}
-                      </span>
+                      <span className="text-xs text-slate-400">{t("common.loading")}</span>
                     ) : chartData ? (
-                      <span className="text-xs text-slate-400">
-                        {t("common.daily")}
-                      </span>
+                      <span className="text-xs text-slate-400">{t("common.daily")}</span>
                     ) : (
-                      <span className="text-xs text-slate-400">
-                        {t("common.unavailable")}
-                      </span>
+                      <span className="text-xs text-slate-400">{t("common.unavailable")}</span>
                     )
                   }
                 >
@@ -978,11 +972,7 @@ export default function DashboardPage() {
                       title={t("dashboard.finance.expensesTodayApproved.title")}
                       value={fmtMoney(cards?.expenses_today?.APPROVED ?? 0)}
                       hint={t("dashboard.finance.expensesTodayApproved.hint")}
-                      tone={
-                        Number(cards?.expenses_today?.APPROVED ?? 0) > 0
-                          ? "neutral"
-                          : "good"
-                      }
+                      tone={Number(cards?.expenses_today?.APPROVED ?? 0) > 0 ? "neutral" : "good"}
                       href="/finance/expenses?status=APPROVED"
                       openLabel={t("common.open")}
                     />
@@ -1001,10 +991,7 @@ export default function DashboardPage() {
                       />
                     }
                     columns={[
-                      {
-                        key: "expense_type",
-                        label: t("dashboard.columns.type"),
-                      },
+                      { key: "expense_type", label: t("dashboard.columns.type") },
                       {
                         key: "amount",
                         label: t("dashboard.columns.amount"),
@@ -1033,6 +1020,7 @@ export default function DashboardPage() {
                       href={maintenanceOpenHref}
                       openLabel={t("common.open")}
                     />
+
                     <ActionTile
                       title={t("dashboard.maintenance.qaNeeds.title")}
                       value={fmtInt(mnt.qaNeeds)}
@@ -1045,6 +1033,7 @@ export default function DashboardPage() {
                       href={maintenanceQaNeedsHref}
                       openLabel={t("common.open")}
                     />
+
                     <ActionTile
                       title={t("dashboard.maintenance.qaFailed.title")}
                       value={fmtInt(mnt.qaFailed)}
@@ -1057,6 +1046,7 @@ export default function DashboardPage() {
                       href={maintenanceFailedHref}
                       openLabel={t("common.open")}
                     />
+
                     <ActionTile
                       title={t("dashboard.maintenance.partsMismatch.title")}
                       value={fmtInt(mnt.mismatch)}
@@ -1087,16 +1077,12 @@ export default function DashboardPage() {
                     />
                     <CompactKpi
                       title={t("dashboard.maintenance.partsCostToday.title")}
-                      value={fmtMoney(
-                        cards?.maintenance?.maintenance_parts_cost_today ?? 0
-                      )}
+                      value={fmtMoney(cards?.maintenance?.maintenance_parts_cost_today ?? 0)}
                       sub={t("dashboard.maintenance.partsCostToday.sub")}
                     />
                     <CompactKpi
                       title={t("dashboard.maintenance.cashCostToday.title")}
-                      value={fmtMoney(
-                        cards?.maintenance?.maintenance_cash_cost_today ?? 0
-                      )}
+                      value={fmtMoney(cards?.maintenance?.maintenance_cash_cost_today ?? 0)}
                       sub={t("dashboard.maintenance.cashCostToday.sub")}
                     />
                     <CompactKpi
@@ -1129,8 +1115,7 @@ export default function DashboardPage() {
                       />
                     }
                     onRowClick={(r) => {
-                      if (isAdminAcc && r?.id)
-                        router.push(`/maintenance/work-orders/${r.id}`);
+                      if (isAdminAcc && r?.id) router.push(`/maintenance/work-orders/${r.id}`);
                       else router.push(`/maintenance/requests`);
                     }}
                     columns={[
@@ -1165,10 +1150,7 @@ export default function DashboardPage() {
             {/* ===================== DEV ===================== */}
             {tab === "dev" && (
               <div className="space-y-6">
-                <EmptyNice
-                  title={t("dashboard.dev.title")}
-                  hint={t("dashboard.dev.hint")}
-                />
+                <EmptyNice title={t("dashboard.dev.title")} hint={t("dashboard.dev.hint")} />
               </div>
             )}
           </>
