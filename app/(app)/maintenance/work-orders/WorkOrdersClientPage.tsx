@@ -4,28 +4,26 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/src/store/auth";
 import { useSearchParams, useRouter } from "next/navigation";
-import { api, unwrapItems } from "@/src/lib/api";
+import { unwrapItems, unwrapTotal } from "@/src/lib/api";
+import { apiAuthGet } from "@/src/lib/api";
+import { useLang } from "@/src/i18n/lang";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
-function fmtDate(d?: string | null) {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
-}
-function shortId(id: any) {
-  const s = String(id ?? "");
-  if (s.length <= 14) return s;
-  return `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
+
 function roleUpper(r: any) {
   return String(r || "").trim().toUpperCase();
 }
 function isAdminOrAccountant(role: any) {
   const rr = roleUpper(role);
   return rr === "ADMIN" || rr === "ACCOUNTANT";
+}
+
+function shortId(id: any) {
+  const s = String(id ?? "");
+  if (s.length <= 14) return s;
+  return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
 // UI atoms
@@ -123,16 +121,18 @@ type WorkOrderRow = {
   } | null;
 };
 
-type ListResponse = {
-  page: number;
-  limit: number;
-  total: number;
-  items: WorkOrderRow[];
-};
-
 export default function WorkOrdersPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const lang = useLang();
+  const locale = lang === "en" ? "en-US" : "ar-EG";
+
+  const fmtDate = (d?: string | null) => {
+    if (!d) return "—";
+    const dt = new Date(String(d));
+    if (Number.isNaN(dt.getTime())) return String(d);
+    return dt.toLocaleString(locale);
+  };
 
   const token = useAuth((s) => s.token);
   const user = useAuth((s) => s.user);
@@ -147,22 +147,23 @@ export default function WorkOrdersPage() {
   const role = user?.role;
   const canSee = isAdminOrAccountant(role);
 
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<WorkOrderRow[]>([]);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [total, setTotal] = useState(0);
-
   // ✅ read from URL
   const initialStatus = searchParams.get("status") || "";
   const initialQ = searchParams.get("q") || "";
   const initialQa = searchParams.get("qa") || ""; // needs | failed
   const initialParts = searchParams.get("parts") || ""; // mismatch
 
+  // state
   const [status, setStatus] = useState<string>(initialStatus);
   const [q, setQ] = useState<string>(initialQ);
   const [qa, setQa] = useState<string>(initialQa);
   const [parts, setParts] = useState<string>(initialParts);
+
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<WorkOrderRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [total, setTotal] = useState(0);
 
   // ✅ لو الـ URL اتغير (بسبب كروت الداشبورد) نحدث state
   useEffect(() => {
@@ -174,41 +175,61 @@ export default function WorkOrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStatus, initialQ, initialQa, initialParts]);
 
-  async function load(p = page) {
+  // ✅ helper: push filters to URL (share/bookmark) بدون ما نكسر الـ back button
+  function pushUrl(next: { status?: string; q?: string; qa?: string; parts?: string; page?: number }) {
+    const p = new URLSearchParams(searchParams.toString());
+
+    const setOrDel = (k: string, v?: string) => {
+      const vv = String(v ?? "").trim();
+      if (vv) p.set(k, vv);
+      else p.delete(k);
+    };
+
+    setOrDel("status", next.status ?? status);
+    setOrDel("q", next.q ?? q);
+    setOrDel("qa", next.qa ?? qa);
+    setOrDel("parts", next.parts ?? parts);
+
+    // لو غيرت أي فلتر غير الصفحة → نرجع page=1
+    const pageVal = next.page ?? 1;
+    if (pageVal > 1) p.set("page", String(pageVal));
+    else p.delete("page");
+
+    router.push(`/maintenance/work-orders?${p.toString()}`);
+  }
+
+  // ✅ load using apiAuthGet (auth safe)
+  async function load(p = 1) {
     if (!token) return;
+
     setLoading(true);
     try {
-      const res: any = await api.get("/maintenance/work-orders", {
-        params: {
-          page: p,
-          limit,
-          status: status || undefined, // ممكن تكون "OPEN,IN_PROGRESS"
-          q: q || undefined,
-          qa: qa || undefined,
-          parts: parts || undefined,
-        },
+      const data: any = await apiAuthGet(`/maintenance/work-orders`, {
+        page: p,
+        limit,
+        status: status || undefined, // ممكن تكون "OPEN,IN_PROGRESS"
+        q: q.trim() || undefined,
+        qa: qa || undefined,
+        parts: parts || undefined,
       });
 
-      // unwrapItems يغطي لو السيرفر رجع items داخل data أو رجع array مباشرة
-      const list = unwrapItems<WorkOrderRow>(res);
-      const meta = (res?.meta || res?.data?.meta || null) as any;
+      // backend ممكن يرجع: {items,total} أو {data:{items,total}}.. unwrap helpers تغطي
+      const list = unwrapItems<WorkOrderRow>(data);
+      const totalOut = Number(unwrapTotal(data) ?? data?.total ?? 0);
 
-      // backend عندك غالباً بيرجع total/page/limit على root أو داخل meta
-      const pageOut = Number(res?.page ?? res?.data?.page ?? meta?.page ?? p);
-      const totalOut = Number(res?.total ?? res?.data?.total ?? meta?.total ?? 0);
-
-      setItems(list);
+      setItems(Array.isArray(list) ? list : []);
       setTotal(Number.isFinite(totalOut) ? totalOut : 0);
-      setPage(Number.isFinite(pageOut) ? pageOut : p);
+      setPage(p);
     } catch {
       setItems([]);
       setTotal(0);
+      setPage(p);
     } finally {
       setLoading(false);
     }
   }
 
-  // ✅ reload عند تغيّر token أو status/qa/parts (الفلترة السيرفرية)
+  // ✅ reload عند تغيّر token أو status/qa/parts  (فلترة سيرفرية)
   useEffect(() => {
     if (!token) return;
     load(1);
@@ -283,7 +304,15 @@ export default function WorkOrdersPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
             <div className="text-xs text-white/60 mb-1">Status</div>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
+            <select
+              value={status}
+              onChange={(e) => {
+                const v = e.target.value;
+                setStatus(v);
+                pushUrl({ status: v, page: 1 });
+              }}
+              className={selectCls}
+            >
               <option value="" className={optionCls}>
                 All
               </option>
@@ -310,7 +339,15 @@ export default function WorkOrdersPage() {
 
           <div>
             <div className="text-xs text-white/60 mb-1">QA</div>
-            <select value={qa} onChange={(e) => setQa(e.target.value)} className={selectCls}>
+            <select
+              value={qa}
+              onChange={(e) => {
+                const v = e.target.value;
+                setQa(v);
+                pushUrl({ qa: v, page: 1 });
+              }}
+              className={selectCls}
+            >
               <option value="" className={optionCls}>
                 All
               </option>
@@ -325,7 +362,15 @@ export default function WorkOrdersPage() {
 
           <div>
             <div className="text-xs text-white/60 mb-1">Parts</div>
-            <select value={parts} onChange={(e) => setParts(e.target.value)} className={selectCls}>
+            <select
+              value={parts}
+              onChange={(e) => {
+                const v = e.target.value;
+                setParts(v);
+                pushUrl({ parts: v, page: 1 });
+              }}
+              className={selectCls}
+            >
               <option value="" className={optionCls}>
                 All
               </option>
@@ -347,7 +392,7 @@ export default function WorkOrdersPage() {
               <Button
                 variant="primary"
                 onClick={() => {
-                  setPage(1);
+                  pushUrl({ q, page: 1 });
                   load(1);
                 }}
                 disabled={loading}
@@ -414,10 +459,28 @@ export default function WorkOrdersPage() {
             Page {page} / {pages}
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" disabled={loading || page <= 1} onClick={() => load(page - 1)}>
+            <Button
+              variant="secondary"
+              disabled={loading || page <= 1}
+              onClick={() => {
+                const next = page - 1;
+                setPage(next);
+                pushUrl({ page: next });
+                load(next);
+              }}
+            >
               Prev
             </Button>
-            <Button variant="secondary" disabled={loading || page >= pages} onClick={() => load(page + 1)}>
+            <Button
+              variant="secondary"
+              disabled={loading || page >= pages}
+              onClick={() => {
+                const next = page + 1;
+                setPage(next);
+                pushUrl({ page: next });
+                load(next);
+              }}
+            >
               Next
             </Button>
           </div>
