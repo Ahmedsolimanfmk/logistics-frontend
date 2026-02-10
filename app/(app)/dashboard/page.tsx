@@ -662,9 +662,10 @@ export default function DashboardPage() {
   }, [isAdminAcc]);
 
   const maintenanceFailedHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/reports?road_test_result=FAIL";
-    return "/maintenance/requests";
-  }, [isAdminAcc]);
+  if (isAdminAcc) return "/maintenance/reports?road_test_result=FAIL";
+  return "/maintenance/requests";
+}, [isAdminAcc]);
+
 
   const maintenanceMismatchHref = useMemo(() => {
     if (isAdminAcc) return "/maintenance/work-orders?parts=mismatch";
