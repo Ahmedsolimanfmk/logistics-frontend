@@ -677,7 +677,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <LanguageSwitcher />
+            
 
             <button
               type="button"

@@ -1,4 +1,3 @@
-// app/(app)/maintenance/work-orders/WorkOrdersClientPage.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -6,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/src/store/auth";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, unwrapItems } from "@/src/lib/api";
+import { useT } from "@/src/i18n/useT";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -123,6 +123,7 @@ type WorkOrderRow = {
 };
 
 export default function WorkOrdersClientPage() {
+  const t = useT();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -192,7 +193,7 @@ export default function WorkOrdersClientPage() {
 
         const merged = [...(a.items || []), ...(b.items || [])];
 
-        // dedupe by id (لو نفس WO ظهر مرتين)
+        // dedupe by id
         const map = new Map<string, WorkOrderRow>();
         for (const it of merged) map.set(it.id, it);
         const out = Array.from(map.values());
@@ -203,16 +204,12 @@ export default function WorkOrdersClientPage() {
         return;
       }
 
-      // ✅ العادي: status واحدة فقط
       const out = await fetchList({
         page: p,
         limit,
         status: status || undefined,
         q: q || undefined,
-
-        // ❌ لا نرسل qa/parts للباك لأنه غير مدعوم (هتعمل فلترة غلط)
-        // qa: qa || undefined,
-        // parts: parts || undefined,
+        // qa/parts display-only هنا
       });
 
       setItems(out.items);
@@ -237,8 +234,8 @@ export default function WorkOrdersClientPage() {
   if (token === null) {
     return (
       <div className="p-4 text-white">
-        <Card title="Work Orders">
-          <div className="text-sm text-white/70">Loading session…</div>
+        <Card title={t("workOrders.title")}>
+          <div className="text-sm text-white/70">{t("common.loadingSession")}</div>
         </Card>
       </div>
     );
@@ -247,10 +244,12 @@ export default function WorkOrdersClientPage() {
   if (!canSee) {
     return (
       <div className="p-4 text-white">
-        <Card title="Work Orders">
+        <Card title={t("workOrders.title")}>
           <div className="text-sm text-white/70">
-            هذه الصفحة متاحة فقط لـ ADMIN / ACCOUNTANT.
-            <div className="mt-2 text-xs text-white/50">role = {String(role ?? "—")}</div>
+            {t("workOrders.onlyAdminAccountant")}
+            <div className="mt-2 text-xs text-white/50">
+              {t("common.roleLabel")} = {String(role ?? "—")}
+            </div>
           </div>
         </Card>
       </div>
@@ -261,21 +260,21 @@ export default function WorkOrdersClientPage() {
     <div className="space-y-4 p-4 text-white">
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-1">
-          <div className="text-sm text-white/70">Maintenance</div>
-          <div className="text-xl font-semibold">Work Orders</div>
+          <div className="text-sm text-white/70">{t("maintenance.section")}</div>
+          <div className="text-xl font-semibold">{t("workOrders.title")}</div>
           <div className="text-xs text-white/50">
-            Filters from URL: status={statusLabel(status)} • qa={qa || "—"} • parts={parts || "—"}
+            {t("workOrders.filtersFromUrl")}{" "}
+            status={statusLabel(status)} • qa={qa || "—"} • parts={parts || "—"}
           </div>
+
           {(qa || parts) ? (
-            <div className="text-[11px] text-amber-200/80">
-              ملاحظة: qa/parts معروضة فقط (backend الحالي لا يدعم فلترتها في list).
-            </div>
+            <div className="text-[11px] text-amber-200/80">{t("workOrders.qaPartsDisplayOnly")}</div>
           ) : null}
         </div>
 
         <div className="flex items-center gap-2">
           <Link href="/maintenance/requests">
-            <Button variant="secondary">← Back to Requests</Button>
+            <Button variant="secondary">← {t("common.backToRequests")}</Button>
           </Link>
 
           <Button
@@ -284,87 +283,88 @@ export default function WorkOrdersClientPage() {
               router.push("/maintenance/work-orders");
             }}
           >
-            Clear URL Filters
+            {t("workOrders.clearUrlFilters")}
           </Button>
 
           <Button variant="secondary" onClick={() => load(page)} disabled={loading}>
-            Refresh
+            {t("common.refresh")}
           </Button>
         </div>
       </div>
 
       <Card
-        title="Filters"
+        title={t("common.filters")}
         right={
           <div className="text-xs text-white/60">
-            Total: <span className="text-white font-semibold">{total}</span>
+            {t("common.total")}: <span className="text-white font-semibold">{total}</span>
           </div>
         }
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
-            <div className="text-xs text-white/60 mb-1">Status</div>
+            <div className="text-xs text-white/60 mb-1">{t("common.status")}</div>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
               <option value="" className={optionCls}>
-                All
+                {t("common.all")}
               </option>
               <option value="OPEN" className={optionCls}>
-                OPEN
+                {t("status.open")}
               </option>
               <option value="IN_PROGRESS" className={optionCls}>
-                IN PROGRESS
+                {t("status.in_progress")}
               </option>
               <option value="COMPLETED" className={optionCls}>
-                COMPLETED
+                {t("status.completed")}
               </option>
               <option value="CANCELED" className={optionCls}>
-                CANCELED
+                {t("status.canceled")}
               </option>
 
-              {/* ✅ يشتغل هنا لأننا بنعمل طلبين */}
               <option value="OPEN,IN_PROGRESS" className={optionCls}>
-                OPEN + IN_PROGRESS
+                {t("workOrders.openPlusInProgress")}
               </option>
             </select>
+
             <div className="mt-1 text-[11px] text-white/50">
-              Selected: <span className="text-white/80">{statusLabel(status)}</span>
+              {t("common.selected")}:{" "}
+              <span className="text-white/80">{statusLabel(status)}</span>
             </div>
           </div>
 
           <div>
-            <div className="text-xs text-white/60 mb-1">QA (display only)</div>
+            <div className="text-xs text-white/60 mb-1">{t("workOrders.qaDisplayOnly")}</div>
             <select value={qa} onChange={(e) => setQa(e.target.value)} className={selectCls}>
               <option value="" className={optionCls}>
-                All
+                {t("common.all")}
               </option>
               <option value="needs" className={optionCls}>
-                needs
+                {t("workOrders.qaNeeds")}
               </option>
               <option value="failed" className={optionCls}>
-                failed
+                {t("workOrders.qaFailed")}
               </option>
             </select>
           </div>
 
           <div>
-            <div className="text-xs text-white/60 mb-1">Parts (display only)</div>
+            <div className="text-xs text-white/60 mb-1">{t("workOrders.partsDisplayOnly")}</div>
             <select value={parts} onChange={(e) => setParts(e.target.value)} className={selectCls}>
               <option value="" className={optionCls}>
-                All
+                {t("common.all")}
               </option>
               <option value="mismatch" className={optionCls}>
-                mismatch
+                {t("workOrders.partsMismatch")}
               </option>
             </select>
           </div>
 
           <div className="md:col-span-4">
-            <div className="text-xs text-white/60 mb-1">Search (vendor / notes)</div>
+            <div className="text-xs text-white/60 mb-1">{t("common.search")}</div>
             <div className="flex gap-2">
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="ابحث..."
+                placeholder={t("common.searchPlaceholder")}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white placeholder:text-white/40"
               />
               <Button
@@ -375,33 +375,31 @@ export default function WorkOrdersClientPage() {
                 }}
                 disabled={loading}
               >
-                Search
+                {t("common.search")}
               </Button>
             </div>
 
-            <div className="mt-2 text-[11px] text-white/50">
-              Tip: الكروت من الداشبورد بتبعت status في الـ URL — والصفحة دي بتقرأه وتفلتر صح.
-            </div>
+            <div className="mt-2 text-[11px] text-white/50">{t("workOrders.tipUrlFilters")}</div>
           </div>
         </div>
       </Card>
 
-      <Card title="List">
+      <Card title={t("common.list")}>
         {loading ? (
-          <div className="text-sm text-white/70">Loading…</div>
+          <div className="text-sm text-white/70">{t("common.loading")}</div>
         ) : items.length === 0 ? (
-          <div className="text-sm text-white/70">No work orders</div>
+          <div className="text-sm text-white/70">{t("workOrders.empty")}</div>
         ) : (
           <div className="overflow-auto rounded-2xl border border-white/10">
             <table className="min-w-[900px] w-full text-sm">
               <thead className="bg-white/5 text-white/70">
                 <tr>
-                  <th className="text-left p-3">Opened</th>
-                  <th className="text-left p-3">Vehicle</th>
-                  <th className="text-left p-3">Type</th>
-                  <th className="text-left p-3">Vendor</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Actions</th>
+                  <th className="text-left p-3">{t("workOrders.opened")}</th>
+                  <th className="text-left p-3">{t("workOrders.vehicle")}</th>
+                  <th className="text-left p-3">{t("workOrders.type")}</th>
+                  <th className="text-left p-3">{t("workOrders.vendor")}</th>
+                  <th className="text-left p-3">{t("common.status")}</th>
+                  <th className="text-left p-3">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -422,7 +420,7 @@ export default function WorkOrdersClientPage() {
                     </td>
                     <td className="p-3">
                       <Link href={`/maintenance/work-orders/${wo.id}`} className="underline text-white">
-                        View
+                        {t("common.view")}
                       </Link>
                     </td>
                   </tr>
@@ -434,14 +432,14 @@ export default function WorkOrdersClientPage() {
 
         <div className="mt-3 flex items-center justify-between text-xs text-white/60">
           <div>
-            Page {page} / {pages}
+            {t("common.page")} {page} / {pages}
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" disabled={loading || page <= 1} onClick={() => load(page - 1)}>
-              Prev
+              {t("common.prev")}
             </Button>
             <Button variant="secondary" disabled={loading || page >= pages} onClick={() => load(page + 1)}>
-              Next
+              {t("common.next")}
             </Button>
           </div>
         </div>

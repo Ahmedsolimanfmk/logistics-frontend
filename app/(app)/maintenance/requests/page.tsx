@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useRouter } from "next/navigation";
 import { api, unwrapItems } from "@/src/lib/api";
+import { useT } from "@/src/i18n/useT";
 
 // =====================
 // Types
@@ -243,11 +244,13 @@ function Modal({
 // Main Page
 // =====================
 export default function MaintenanceRequestsPage() {
+  const t = useT();
+
   const { token, user } = useAuth() as any;
   const role = user?.role;
   const router = useRouter();
 
-  // ✅ hydrate (زي باقي الصفحات) علشان token مايبقاش null وقت أول تحميل
+  // ✅ hydrate
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
@@ -271,11 +274,8 @@ export default function MaintenanceRequestsPage() {
     open: boolean;
     kind: "error" | "success" | "info";
     message: string;
-  }>({
-    open: false,
-    kind: "error",
-    message: "",
-  });
+  }>({ open: false, kind: "error", message: "" });
+
   const showToast = (message: string, kind: "error" | "success" | "info" = "error") =>
     setToast({ open: true, kind, message });
 
@@ -310,7 +310,7 @@ export default function MaintenanceRequestsPage() {
       setVehicleOptions(unwrapItems<VehicleOption>(res));
     } catch (e: any) {
       setVehicleOptions([]);
-      showToast(e?.message || "Failed to load vehicle options", "error");
+      showToast(e?.message || t("mr.failedLoadVehicles"), "error");
     } finally {
       setVehiclesLoading(false);
     }
@@ -336,7 +336,7 @@ export default function MaintenanceRequestsPage() {
       setMeta(m);
       if (m?.page) setPage(m.page);
     } catch (e: any) {
-      showToast(e?.message || "Failed to load requests", "error");
+      showToast(e?.message || t("mr.failedLoadRequests"), "error");
       setItems([]);
       setMeta(null);
     } finally {
@@ -389,10 +389,10 @@ export default function MaintenanceRequestsPage() {
       setFormDesc("");
       setPage(1);
 
-      showToast("Request created", "success");
+      showToast(t("mr.requestCreated"), "success");
       await loadRequests(1);
     } catch (e: any) {
-      showToast(e?.message || "Failed to create request", "error");
+      showToast(e?.message || t("mr.failedCreateRequest"), "error");
     } finally {
       setSubmitting(false);
     }
@@ -407,10 +407,10 @@ export default function MaintenanceRequestsPage() {
         notes: null,
       });
       setApproveTarget(null);
-      showToast("Approved", "success");
+      showToast(t("mr.approved"), "success");
       await loadRequests(1);
     } catch (e: any) {
-      showToast(e?.message || "Failed to approve", "error");
+      showToast(e?.message || t("mr.failedApprove"), "error");
     }
   }
 
@@ -418,21 +418,20 @@ export default function MaintenanceRequestsPage() {
     try {
       await api.post(`/maintenance/requests/${id}/reject`, { reason });
       setRejectTarget(null);
-      showToast("Rejected", "info");
+      showToast(t("mr.rejected"), "info");
       await loadRequests(1);
     } catch (e: any) {
-      showToast(e?.message || "Failed to reject", "error");
+      showToast(e?.message || t("mr.failedReject"), "error");
     }
   }
 
   const totalPages = meta?.pages || 1;
 
-  // ✅ لو token null (قبل hydrate) نعرض Loading بسيط
   if (token === null) {
     return (
       <div className="space-y-4 p-4">
-        <Card title="Maintenance Requests">
-          <div className="text-sm text-neutral-600">Checking session…</div>
+        <Card title={t("mr.title")}>
+          <div className="text-sm text-neutral-600">{t("common.loadingSession")}</div>
         </Card>
       </div>
     );
@@ -444,11 +443,11 @@ export default function MaintenanceRequestsPage() {
         open={toast.open}
         kind={toast.kind}
         message={toast.message}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
+        onClose={() => setToast((tt) => ({ ...tt, open: false }))}
       />
 
       <Card
-        title="Maintenance Requests"
+        title={t("mr.title")}
         right={
           <div className="flex items-center gap-2">
             <Button
@@ -459,15 +458,15 @@ export default function MaintenanceRequestsPage() {
               }}
               disabled={loading || vehiclesLoading}
             >
-              Refresh
+              {t("common.refresh")}
             </Button>
-            <Button onClick={() => setCreateOpen(true)}>+ Create Request</Button>
+            <Button onClick={() => setCreateOpen(true)}>{t("mr.createRequestBtn")}</Button>
           </div>
         }
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
-            <div className="mb-1 text-xs text-neutral-600">Status</div>
+            <div className="mb-1 text-xs text-neutral-600">{t("mr.status")}</div>
             <Select
               value={status}
               onChange={(v: string) => {
@@ -475,16 +474,16 @@ export default function MaintenanceRequestsPage() {
                 setPage(1);
               }}
               options={[
-                { label: "All", value: "" },
-                { label: "SUBMITTED", value: "SUBMITTED" },
-                { label: "APPROVED", value: "APPROVED" },
-                { label: "REJECTED", value: "REJECTED" },
+                { label: t("mr.all"), value: "" },
+                { label: t("mr.submitted"), value: "SUBMITTED" },
+                { label: t("mr.approvedStatus"), value: "APPROVED" },
+                { label: t("mr.rejectedStatus"), value: "REJECTED" },
               ]}
             />
           </div>
 
           <div>
-            <div className="mb-1 text-xs text-neutral-600">Vehicle</div>
+            <div className="mb-1 text-xs text-neutral-600">{t("mr.vehicle")}</div>
             <Select
               value={vehicleId}
               disabled={vehiclesLoading}
@@ -493,42 +492,41 @@ export default function MaintenanceRequestsPage() {
                 setPage(1);
               }}
               options={[
-                { label: vehiclesLoading ? "Loading vehicles..." : "All Vehicles", value: "" },
+                { label: vehiclesLoading ? t("mr.loadingVehicles") : t("mr.allVehicles"), value: "" },
                 ...vehicleOptions.map((v) => ({
                   label: `${v.label}${v.status ? ` (${String(v.status).toUpperCase()})` : ""}`,
                   value: v.id,
                 })),
               ]}
             />
-            <div className="mt-1 text-[11px] text-neutral-500">
-              المشرف: عربياته فقط • الأدمن/المحاسب: كل العربيات
-            </div>
+            <div className="mt-1 text-[11px] text-neutral-500">{t("mr.vehicleHint")}</div>
           </div>
 
           <div className="md:col-span-2">
-            <div className="mb-1 text-xs text-neutral-600">Search (local)</div>
-            <Input value={q} onChange={setQ} placeholder="بحث في العنوان/الوصف" />
+            <div className="mb-1 text-xs text-neutral-600">{t("mr.searchLocal")}</div>
+            <Input value={q} onChange={setQ} placeholder={t("mr.searchPlaceholder")} />
           </div>
         </div>
 
-        {loading ? <div className="mt-3 text-sm text-neutral-600">Loading…</div> : null}
+        {loading ? <div className="mt-3 text-sm text-neutral-600">{t("common.loading")}</div> : null}
 
         <div className="mt-4 overflow-x-auto rounded-2xl border">
           <table className="min-w-full text-sm">
             <thead className="bg-neutral-50 text-neutral-700">
               <tr>
-                <th className="px-3 py-2 text-left">Requested At</th>
-                <th className="px-3 py-2 text-left">Vehicle</th>
-                <th className="px-3 py-2 text-left">Title</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-left">Actions</th>
+                <th className="px-3 py-2 text-left">{t("mr.requestedAt")}</th>
+                <th className="px-3 py-2 text-left">{t("mr.vehicle")}</th>
+                <th className="px-3 py-2 text-left">{t("mr.titleCol")}</th>
+                <th className="px-3 py-2 text-left">{t("mr.status")}</th>
+                <th className="px-3 py-2 text-left">{t("mr.actions")}</th>
               </tr>
             </thead>
+
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-3 py-6 text-center text-neutral-500">
-                    No requests
+                    {t("mr.noRequests")}
                   </td>
                 </tr>
               ) : (
@@ -541,20 +539,18 @@ export default function MaintenanceRequestsPage() {
 
                       <td className="px-3 py-2">
                         <div className="font-medium">{vehicleLabelById(it.vehicle_id)}</div>
-                        <div className="mt-0.5 font-mono text-xs text-neutral-500">
-                          {shortId(it.vehicle_id)}
-                        </div>
+                        <div className="mt-0.5 font-mono text-xs text-neutral-500">{shortId(it.vehicle_id)}</div>
                       </td>
 
                       <td className="px-3 py-2">
                         <div className="font-medium">{it.problem_title}</div>
                         {it.problem_description ? (
-                          <div className="mt-0.5 line-clamp-2 text-xs text-neutral-600">
-                            {it.problem_description}
-                          </div>
+                          <div className="mt-0.5 line-clamp-2 text-xs text-neutral-600">{it.problem_description}</div>
                         ) : null}
                         {st === "REJECTED" && it.rejection_reason ? (
-                          <div className="mt-1 text-xs text-red-700">Rejection: {it.rejection_reason}</div>
+                          <div className="mt-1 text-xs text-red-700">
+                            {t("mr.rejection")}: {it.rejection_reason}
+                          </div>
                         ) : null}
                       </td>
 
@@ -565,16 +561,16 @@ export default function MaintenanceRequestsPage() {
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap gap-2">
                           <Button variant="ghost" onClick={() => router.push(`/maintenance/requests/${it.id}`)}>
-                            View
+                            {t("common.view")}
                           </Button>
 
                           {canApproveReject ? (
                             <>
                               <Button variant="secondary" onClick={() => setApproveTarget(it)}>
-                                Approve
+                                {t("mr.approve")}
                               </Button>
                               <Button variant="danger" onClick={() => setRejectTarget(it)}>
-                                Reject
+                                {t("mr.reject")}
                               </Button>
                             </>
                           ) : null}
@@ -590,22 +586,15 @@ export default function MaintenanceRequestsPage() {
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="text-xs text-neutral-600">
-            Page {meta?.page || page} / {totalPages} • Total {meta?.total ?? filtered.length}
+            {t("mr.page")} {meta?.page || page} / {totalPages} • {t("mr.total")}{" "}
+            {meta?.total ?? filtered.length}
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              disabled={page <= 1 || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Prev
+            <Button variant="secondary" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              {t("common.prev")}
             </Button>
-            <Button
-              variant="secondary"
-              disabled={page >= totalPages || loading}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
+            <Button variant="secondary" disabled={page >= totalPages || loading} onClick={() => setPage((p) => p + 1)}>
+              {t("common.next")}
             </Button>
           </div>
         </div>
@@ -614,28 +603,28 @@ export default function MaintenanceRequestsPage() {
       {/* Create Modal */}
       <Modal
         open={createOpen}
-        title="Create Maintenance Request"
+        title={t("mr.createModalTitle")}
         onClose={() => setCreateOpen(false)}
         footer={
           <div className="flex items-center justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)} disabled={submitting}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={onCreateSubmit} disabled={submitting || !formVehicleId}>
-              {submitting ? "Creating…" : "Create"}
+              {submitting ? t("mr.creating") : t("mr.create")}
             </Button>
           </div>
         }
       >
         <div className="grid grid-cols-1 gap-3">
           <div>
-            <div className="mb-1 text-xs text-neutral-600">Vehicle</div>
+            <div className="mb-1 text-xs text-neutral-600">{t("mr.vehicle")}</div>
             <Select
               value={formVehicleId}
               disabled={vehiclesLoading}
               onChange={(v: string) => setFormVehicleId(v)}
               options={[
-                { label: vehiclesLoading ? "Loading vehicles..." : "Select vehicle", value: "" },
+                { label: vehiclesLoading ? t("mr.loadingVehicles") : t("mr.selectVehicle"), value: "" },
                 ...vehicleOptions.map((v) => ({
                   label: `${v.label}${v.status ? ` (${String(v.status).toUpperCase()})` : ""}`,
                   value: v.id,
@@ -645,22 +634,22 @@ export default function MaintenanceRequestsPage() {
           </div>
 
           <div>
-            <div className="mb-1 text-xs text-neutral-600">Problem title</div>
-            <Input value={formTitle} onChange={setFormTitle} placeholder="مثال: تسريب زيت" />
+            <div className="mb-1 text-xs text-neutral-600">{t("mr.problemTitle")}</div>
+            <Input value={formTitle} onChange={setFormTitle} placeholder={t("mr.problemTitlePh")} />
           </div>
 
           <div>
-            <div className="mb-1 text-xs text-neutral-600">Description</div>
+            <div className="mb-1 text-xs text-neutral-600">{t("mr.description")}</div>
             <textarea
               value={formDesc}
               onChange={(e) => setFormDesc(e.target.value)}
-              placeholder="وصف العطل بالتفصيل…"
+              placeholder={t("mr.descriptionPh")}
               className="min-h-[110px] w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10 bg-white text-black placeholder:text-neutral-400"
             />
           </div>
 
           <div className="rounded-xl border bg-neutral-50 p-3 text-xs text-neutral-600">
-            ✅ المرفقات هتترفع من صفحة التفاصيل بعد إنشاء البلاغ.
+            ✅ {t("mr.attachmentsHint")}
           </div>
         </div>
       </Modal>
@@ -668,31 +657,30 @@ export default function MaintenanceRequestsPage() {
       {/* Approve Modal */}
       <Modal
         open={!!approveTarget}
-        title="Approve Request"
+        title={t("mr.approveModalTitle")}
         onClose={() => setApproveTarget(null)}
         footer={
           <div className="flex items-center justify-end gap-2">
             <Button variant="secondary" onClick={() => setApproveTarget(null)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
-            <Button onClick={() => approveTarget && onApprove(approveTarget.id)}>
-              Approve + Create Work Order
-            </Button>
+            <Button onClick={() => approveTarget && onApprove(approveTarget.id)}>{t("mr.approveAndCreateWo")}</Button>
           </div>
         }
       >
         <div className="text-sm">
-          هيتعمل:
+          {t("mr.willDo")}:
           <ul className="mt-2 list-disc space-y-1 pl-5 text-neutral-700">
-            <li>Approve للـ Request</li>
-            <li>Create Work Order (OPEN)</li>
-            <li>Vehicle status → MAINTENANCE</li>
+            <li>{t("mr.willApprove")}</li>
+            <li>{t("mr.willCreateWo")}</li>
+            <li>{t("mr.willSetVehicleMaintenance")}</li>
           </ul>
+
           {approveTarget ? (
             <div className="mt-3 rounded-xl border p-3">
               <div className="font-medium">{approveTarget.problem_title}</div>
               <div className="mt-1 text-xs text-neutral-600">
-                vehicle: <span className="font-mono">{approveTarget.vehicle_id}</span>
+                {t("mr.vehicle")}: <span className="font-mono">{approveTarget.vehicle_id}</span>
               </div>
             </div>
           ) : null}
@@ -703,7 +691,7 @@ export default function MaintenanceRequestsPage() {
       <RejectModal
         open={!!rejectTarget}
         onClose={() => setRejectTarget(null)}
-        title="Reject Request"
+        title={t("mr.rejectModalTitle")}
         request={rejectTarget}
         onSubmit={onReject}
       />
@@ -724,6 +712,7 @@ function RejectModal({
   request: MaintenanceRequest | null;
   onSubmit: (id: string, reason: string) => Promise<void>;
 }) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -739,7 +728,7 @@ function RejectModal({
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="danger"
@@ -754,7 +743,7 @@ function RejectModal({
               }
             }}
           >
-            {busy ? "Rejecting…" : "Reject"}
+            {busy ? t("mr.rejecting") : t("mr.reject")}
           </Button>
         </div>
       }
@@ -764,24 +753,22 @@ function RejectModal({
           <div className="rounded-xl border p-3">
             <div className="font-medium">{request.problem_title}</div>
             <div className="mt-1 text-xs text-neutral-600">
-              vehicle: <span className="font-mono">{request.vehicle_id}</span>
+              {t("mr.vehicle")}: <span className="font-mono">{request.vehicle_id}</span>
             </div>
           </div>
         ) : null}
 
         <div>
-          <div className="mb-1 text-xs text-neutral-600">Rejection reason</div>
+          <div className="mb-1 text-xs text-neutral-600">{t("mr.rejectionReason")}</div>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="min-h-[110px] w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10 bg-white text-black placeholder:text-neutral-400"
-            placeholder="سبب الرفض…"
+            placeholder={t("mr.rejectionReasonPh")}
           />
         </div>
 
-        <div className="text-xs text-neutral-600">
-          لازم السبب يبقى واضح عشان المشرف يعرف يعمل Request تاني بشكل صحيح.
-        </div>
+        <div className="text-xs text-neutral-600">{t("mr.rejectionHint")}</div>
       </div>
     </Modal>
   );

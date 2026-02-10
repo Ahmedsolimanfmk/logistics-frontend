@@ -33,7 +33,12 @@
     "disabledUpper": "DISABLED",
     "total": "Total",
     "page": "Page",
-    "optional": "optional"
+    "optional": "optional",
+
+    "back": "Back",
+    "clear": "Clear",
+    "notFound": "Not found",
+    "loadingSession": "Loading session…"
   },
 
   "tabs": {
@@ -337,6 +342,276 @@
       "AVAILABLE": "AVAILABLE",
       "IN_USE": "IN_USE",
       "MAINTENANCE": "MAINTENANCE"
+    }
+  },
+
+  "maintenanceRequests": {
+    "title": "Maintenance Requests",
+    "checkingSession": "Checking session…",
+    "filters": {
+      "status": "Status",
+      "vehicle": "Vehicle",
+      "searchLocal": "Search (local)",
+      "searchPlaceholder": "Search in title/description"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "create": "+ Create Request",
+      "view": "View",
+      "approve": "Approve",
+      "reject": "Reject"
+    },
+    "table": {
+      "requestedAt": "Requested At",
+      "vehicle": "Vehicle",
+      "title": "Title",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "empty": "No requests",
+    "pagination": {
+      "page": "Page",
+      "total": "Total"
+    },
+    "modals": {
+      "createTitle": "Create Maintenance Request",
+      "approveTitle": "Approve Request",
+      "approveCta": "Approve + Create Work Order",
+      "rejectTitle": "Reject Request",
+      "rejectReasonLabel": "Rejection reason",
+      "rejectHint": "Reason must be clear so supervisor can re-submit correctly."
+    },
+    "form": {
+      "vehicle": "Vehicle",
+      "problemTitle": "Problem title",
+      "description": "Description",
+      "vehicleLoading": "Loading vehicles...",
+      "vehicleSelect": "Select vehicle",
+      "attachmentsHint": "Attachments will be uploaded from details page after creating the request."
+    },
+    "toast": {
+      "requestCreated": "Request created",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "loadFailed": "Failed to load requests",
+      "vehiclesFailed": "Failed to load vehicle options",
+      "approveFailed": "Failed to approve",
+      "rejectFailed": "Failed to reject"
+    }
+  },
+
+  "maintenanceRequestDetails": {
+    "title": "Request Details",
+    "breadcrumb": "Maintenance / Requests",
+    "back": "Back",
+    "refresh": "Refresh",
+    "notFound": "Not found",
+    "sections": {
+      "vehicle": "Vehicle",
+      "problemTitle": "Problem title",
+      "description": "Description",
+      "requested": "Requested",
+      "reviewed": "Reviewed",
+      "system": "System",
+      "actions": "Actions",
+      "attachments": "Attachments"
+    },
+    "labels": {
+      "at": "At",
+      "by": "By",
+      "created": "Created",
+      "updated": "Updated",
+      "rejectionReason": "Rejection reason"
+    },
+    "actions": {
+      "approveCreateWO": "Approve + Create Work Order",
+      "reject": "Reject",
+      "upload": "+ Upload",
+      "delete": "Delete"
+    },
+    "attachments": {
+      "noAttachments": "No attachments",
+      "openFile": "Open file",
+      "uploadHint": "Upload supports images/videos (up to 8 files) depending on server settings."
+    },
+    "toast": {
+      "loadFailed": "Failed to load request",
+      "attachmentsFailed": "Failed to load attachments",
+      "uploaded": "Uploaded",
+      "uploadFailed": "Failed to upload",
+      "deleted": "Deleted",
+      "deleteFailed": "Failed to delete",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "approveFailed": "Failed to approve",
+      "rejectFailed": "Failed to reject"
+    },
+    "modals": {
+      "rejectTitle": "Reject Request",
+      "rejectCta": "Rejecting…"
+    }
+  },
+
+  "workOrders": {
+    "title": "Work Orders",
+    "breadcrumb": "Maintenance",
+    "roleOnly": "This page is available only for ADMIN / ACCOUNTANT.",
+    "filtersFromUrl": "Filters from URL",
+    "noteQaPartsDisplay": "Note: qa/parts are display-only (current backend does not filter them in list).",
+    "actions": {
+      "backToRequests": "← Back to Requests",
+      "clearUrlFilters": "Clear URL Filters",
+      "refresh": "Refresh"
+    },
+    "filters": {
+      "title": "Filters",
+      "status": "Status",
+      "qaDisplayOnly": "QA (display only)",
+      "partsDisplayOnly": "Parts (display only)",
+      "searchTitle": "Search (vendor / notes)",
+      "searchBtn": "Search",
+      "selected": "Selected"
+    },
+    "status": {
+      "all": "All",
+      "open": "OPEN",
+      "inProgress": "IN PROGRESS",
+      "completed": "COMPLETED",
+      "canceled": "CANCELED",
+      "openPlusInProgress": "OPEN + IN_PROGRESS"
+    },
+    "list": {
+      "title": "List",
+      "loading": "Loading…",
+      "empty": "No work orders",
+      "columns": {
+        "opened": "Opened",
+        "vehicle": "Vehicle",
+        "type": "Type",
+        "vendor": "Vendor",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "view": "View"
+    },
+    "pagination": {
+      "page": "Page"
+    },
+    "tips": {
+      "cardsSendStatusInUrl": "Tip: Dashboard cards send status in URL — this page reads it and filters correctly."
+    }
+  },
+
+  "workOrderDetails": {
+    "title": "Work Order Details",
+    "breadcrumb": "Maintenance / Work Orders",
+    "back": "← Back",
+    "refresh": "Refresh",
+    "notFound": "Not found",
+    "summary": {
+      "type": "Type",
+      "vendor": "Vendor",
+      "opened": "Opened",
+      "started": "Started",
+      "completed": "Completed",
+      "odometer": "Odometer",
+      "notes": "Notes",
+      "vehicle": "Vehicle",
+      "report": "Report",
+      "status": "Status",
+      "parts": "Parts",
+      "labor": "Labor",
+      "service": "Service",
+      "cashApproved": "Cash (Approved)",
+      "mismatches": "Reconciliation mismatches",
+      "grandTotal": "Grand Total"
+    },
+    "complete": {
+      "btn": "Complete Work Order",
+      "completing": "Completing…",
+      "ok": "✅ Work order completed",
+      "fail": "❌ Failed to complete",
+      "cannot": "Cannot complete now. Report Status must be OK."
+    },
+    "tabs": {
+      "issues": "Issues",
+      "installations": "Installations",
+      "qa": "QA"
+    },
+    "reconciliation": {
+      "title": "Reconciliation (Issued vs Installed)",
+      "matched": "MATCHED",
+      "issuedGtInstalled": "ISSUED > INSTALLED",
+      "installedGtIssued": "INSTALLED > ISSUED",
+      "noData": "No reconciliation data"
+    },
+    "issues": {
+      "title": "Issues",
+      "createIssue": "Create Issue",
+      "creating": "Creating…",
+      "currentIssueId": "Current issue_id",
+      "partId": "part_id (uuid)",
+      "qty": "qty",
+      "unitCost": "unit_cost",
+      "notes": "notes",
+      "addLine": "Add Line",
+      "saving": "Saving…",
+      "issuedLinesTitle": "Issued Lines (from report)",
+      "noIssuedLines": "No issued lines",
+      "msgs": {
+        "created": "✅ Issue created",
+        "createFailed": "❌ Failed",
+        "lineAdded": "✅ Line added",
+        "lineFailed": "❌ Failed",
+        "needIssueFirst": "You must Create Issue first.",
+        "partRequired": "part_id is required (UUID).",
+        "qtyInvalid": "qty must be > 0.",
+        "unitCostInvalid": "unit_cost must be >= 0.",
+        "forbidden": "Not allowed: ADMIN/ACCOUNTANT only."
+      }
+    },
+    "installations": {
+      "title": "Installations",
+      "refresh": "Refresh",
+      "loading": "Loading…",
+      "partId": "part_id (uuid)",
+      "qtyInstalled": "qty_installed",
+      "odometer": "odometer",
+      "notes": "notes",
+      "add": "Add Installation",
+      "saving": "Saving…",
+      "apiListTitle": "Installations (API list)",
+      "runtimeListTitle": "Installations (from report runtime)",
+      "empty": "No installations",
+      "msgs": {
+        "added": "✅ Installation added",
+        "failed": "Failed to load installations"
+      }
+    },
+    "qa": {
+      "title": "QA (Post Maintenance Report)",
+      "endpoint": "Endpoint",
+      "roadTest": "Road Test Result",
+      "remarks": "Remarks",
+      "save": "Save QA",
+      "clear": "Clear",
+      "select": "Select…",
+      "pass": "PASS",
+      "fail": "FAIL",
+      "msgs": {
+        "saved": "✅ QA saved",
+        "saveFailed": "❌ Failed to save QA",
+        "selectPassFail": "Choose PASS or FAIL.",
+        "fixMismatchFirst": "Fix mismatch first before QA.",
+        "qaRequiredBeforeClose": "QA is required before close.",
+        "qaFailedCannotClose": "QA FAILED. Cannot close."
+      }
+    },
+    "hints": {
+      "needMismatchFix": "⚠️ There is a mismatch between issued and installed parts. Fix it before QA/Complete.",
+      "needQa": "ℹ️ QA is required before closing.",
+      "qaFailed": "❌ QA FAILED. Cannot close.",
+      "okToClose": "✅ Ready to close."
     }
   }
 }

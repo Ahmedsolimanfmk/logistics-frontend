@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
+import { useT } from "@/src/i18n/useT";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -184,7 +185,6 @@ type ReportResponse = {
 };
 
 type InventoryIssue = { id: string };
-type InstallationsListResponse = { items: any[] };
 type TabKey = "issues" | "installations" | "qa";
 
 const selectCls =
@@ -192,10 +192,11 @@ const selectCls =
 const optionCls = "bg-neutral-900 text-white";
 
 export default function WorkOrderDetailsPage() {
+  const t = useT();
+
   const token = useAuth((s: any) => s.token);
   const user = useAuth((s: any) => s.user);
 
-  // ✅ hydrate (زي الداشبورد)
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
@@ -263,7 +264,6 @@ export default function WorkOrderDetailsPage() {
       setWo(woRes.work_order || null);
       setReport(repRes || null);
 
-      // preload QA
       const db = repRes?.post_report_db;
       if (db?.road_test_result) {
         const r = String(db.road_test_result).toUpperCase();
@@ -273,7 +273,7 @@ export default function WorkOrderDetailsPage() {
     } catch (e: any) {
       setWo(null);
       setReport(null);
-      setErr(e?.message || "Failed to load work order");
+      setErr(e?.message || t("woDetails.failedToLoad"));
     } finally {
       setLoading(false);
     }
@@ -285,27 +285,23 @@ export default function WorkOrderDetailsPage() {
     setInstMsg(null);
 
     try {
-      const res: any = await apiFetch<any>(
-        `/maintenance/work-orders/${id}/installations`,
-        { token }
-      );
+      const res: any = await apiFetch<any>(`/maintenance/work-orders/${id}/installations`, { token });
 
-      // ✅ Accept multiple backend shapes:
-      // 1) { items: [...] }
-      // 2) { installations: [...] }
-      // 3) { data: [...] }
-      // 4) [...] (array)
       const arr =
-        Array.isArray(res) ? res :
-        Array.isArray(res?.["items"]) ? res["items"] :
-        Array.isArray(res?.["installations"]) ? res["installations"] :
-        Array.isArray(res?.["data"]) ? res["data"] :
-        [];
+        Array.isArray(res)
+          ? res
+          : Array.isArray(res?.["items"])
+          ? res["items"]
+          : Array.isArray(res?.["installations"])
+          ? res["installations"]
+          : Array.isArray(res?.["data"])
+          ? res["data"]
+          : [];
 
       setInstItems(arr);
     } catch (e: any) {
       setInstItems([]);
-      setInstMsg(e?.message || "Failed to load installations");
+      setInstMsg(e?.message || t("woDetails.installationsLoadFailed"));
     } finally {
       setInstLoading(false);
     }
@@ -348,20 +344,21 @@ export default function WorkOrderDetailsPage() {
     setIssueMsg(null);
 
     if (!canManage) {
-      setIssueMsg("غير مسموح: Create Issue لـ ADMIN/ACCOUNTANT فقط.");
+      setIssueMsg(t("woDetails.onlyAdminAccountantCreateIssue"));
       return;
     }
 
     setIssueCreating(true);
     try {
-      const res = await apiFetch<{ issue: InventoryIssue }>(
-        `/maintenance/work-orders/${id}/issues`,
-        { method: "POST", token, body: { notes: null } }
-      );
+      const res = await apiFetch<{ issue: InventoryIssue }>(`/maintenance/work-orders/${id}/issues`, {
+        method: "POST",
+        token,
+        body: { notes: null },
+      });
       setIssueId(res?.issue?.id || null);
-      setIssueMsg("✅ Issue created");
+      setIssueMsg(t("woDetails.issueCreated"));
     } catch (e: any) {
-      setIssueMsg(`❌ Failed: ${e?.message || "Unknown error"}`);
+      setIssueMsg(`${t("common.failed")}: ${e?.message || t("common.unknownError")}`);
     } finally {
       setIssueCreating(false);
     }
@@ -372,23 +369,23 @@ export default function WorkOrderDetailsPage() {
     setLineMsg(null);
 
     if (!canManage) {
-      setLineMsg("غير مسموح: Add Lines لـ ADMIN/ACCOUNTANT فقط.");
+      setLineMsg(t("woDetails.onlyAdminAccountantAddLines"));
       return;
     }
     if (!issueId) {
-      setLineMsg("لازم تعمل Create Issue الأول.");
+      setLineMsg(t("woDetails.mustCreateIssueFirst"));
       return;
     }
     if (!linePartId.trim()) {
-      setLineMsg("part_id مطلوب (UUID).");
+      setLineMsg(t("woDetails.partIdRequired"));
       return;
     }
     if (!Number.isFinite(lineQty) || lineQty <= 0) {
-      setLineMsg("qty لازم > 0.");
+      setLineMsg(t("woDetails.qtyMustBeGt0"));
       return;
     }
     if (!Number.isFinite(lineUnitCost) || lineUnitCost < 0) {
-      setLineMsg("unit_cost لازم >= 0.");
+      setLineMsg(t("woDetails.unitCostMustBeGte0"));
       return;
     }
 
@@ -409,7 +406,7 @@ export default function WorkOrderDetailsPage() {
         },
       });
 
-      setLineMsg("✅ Line added");
+      setLineMsg(t("woDetails.lineAdded"));
       setLinePartId("");
       setLineQty(1);
       setLineUnitCost(0);
@@ -417,7 +414,7 @@ export default function WorkOrderDetailsPage() {
 
       await load();
     } catch (e: any) {
-      setLineMsg(`❌ Failed: ${e?.message || "Unknown error"}`);
+      setLineMsg(`${t("common.failed")}: ${e?.message || t("common.unknownError")}`);
     } finally {
       setLineSaving(false);
     }
@@ -428,16 +425,16 @@ export default function WorkOrderDetailsPage() {
     setInstMsg(null);
 
     if (!instPartId.trim()) {
-      setInstMsg("part_id مطلوب (UUID).");
+      setInstMsg(t("woDetails.partIdRequired"));
       return;
     }
     if (!Number.isFinite(instQty) || instQty <= 0) {
-      setInstMsg("qty_installed لازم > 0.");
+      setInstMsg(t("woDetails.qtyInstalledMustBeGt0"));
       return;
     }
     const odometer = instOdo === "" ? null : Number(instOdo);
     if (odometer !== null && (!Number.isFinite(odometer) || odometer < 0)) {
-      setInstMsg("odometer لازم يكون رقم >= 0.");
+      setInstMsg(t("woDetails.odometerMustBeGte0"));
       return;
     }
 
@@ -458,7 +455,7 @@ export default function WorkOrderDetailsPage() {
         },
       });
 
-      setInstMsg("✅ Installation added");
+      setInstMsg(t("woDetails.installationAdded"));
       setInstPartId("");
       setInstQty(1);
       setInstOdo("");
@@ -466,7 +463,7 @@ export default function WorkOrderDetailsPage() {
 
       await Promise.all([load(), loadInstallations()]);
     } catch (e: any) {
-      setInstMsg(`❌ Failed: ${e?.message || "Unknown error"}`);
+      setInstMsg(`${t("common.failed")}: ${e?.message || t("common.unknownError")}`);
     } finally {
       setInstSaving(false);
     }
@@ -477,15 +474,15 @@ export default function WorkOrderDetailsPage() {
     setQaMsg(null);
 
     if (!canManage) {
-      setQaMsg("غير مسموح: QA لـ ADMIN/ACCOUNTANT فقط.");
+      setQaMsg(t("woDetails.onlyAdminAccountantQa"));
       return;
     }
     if (!qaResult) {
-      setQaMsg("اختر PASS أو FAIL.");
+      setQaMsg(t("woDetails.selectPassOrFail"));
       return;
     }
     if (rs === "NEEDS_PARTS_RECONCILIATION") {
-      setQaMsg("حل mismatch الأول قبل QA.");
+      setQaMsg(t("woDetails.fixMismatchFirst"));
       return;
     }
 
@@ -501,10 +498,10 @@ export default function WorkOrderDetailsPage() {
         },
       });
 
-      setQaMsg("✅ تم حفظ QA");
+      setQaMsg(t("woDetails.qaSaved"));
       await load();
     } catch (e: any) {
-      setQaMsg(`❌ فشل حفظ QA: ${e?.message || "Unknown error"}`);
+      setQaMsg(`${t("woDetails.qaSaveFailed")}: ${e?.message || t("common.unknownError")}`);
     } finally {
       setQaSaving(false);
     }
@@ -515,7 +512,7 @@ export default function WorkOrderDetailsPage() {
     setCompleteMsg(null);
 
     if (!canComplete) {
-      setCompleteMsg("لا يمكن الإغلاق الآن. لازم Report Status = OK.");
+      setCompleteMsg(t("woDetails.cannotCompleteNow"));
       return;
     }
 
@@ -526,10 +523,10 @@ export default function WorkOrderDetailsPage() {
         token,
         body: { notes: null },
       });
-      setCompleteMsg("✅ تم إغلاق Work Order");
+      setCompleteMsg(t("woDetails.completed"));
       await load();
     } catch (e: any) {
-      setCompleteMsg(`❌ فشل الإغلاق: ${e?.message || "Unknown error"}`);
+      setCompleteMsg(`${t("woDetails.completeFailed")}: ${e?.message || t("common.unknownError")}`);
     } finally {
       setCompleting(false);
     }
@@ -537,20 +534,18 @@ export default function WorkOrderDetailsPage() {
 
   const reportHint = useMemo(() => {
     if (!report) return null;
-    if (rs === "NEEDS_PARTS_RECONCILIATION")
-      return "⚠️ فيه mismatch بين الصرف والتركيب. صحّحها قبل QA/Complete.";
-    if (rs === "NEEDS_QA") return "ℹ️ مطلوب QA قبل الإغلاق.";
-    if (rs === "QA_FAILED") return "❌ QA FAILED. لا يمكن الإغلاق.";
-    if (rs === "OK") return "✅ جاهز للإغلاق.";
+    if (rs === "NEEDS_PARTS_RECONCILIATION") return t("woDetails.hintMismatch");
+    if (rs === "NEEDS_QA") return t("woDetails.hintNeedsQa");
+    if (rs === "QA_FAILED") return t("woDetails.hintQaFailed");
+    if (rs === "OK") return t("woDetails.hintReady");
     return null;
-  }, [report, rs]);
+  }, [report, rs, t]);
 
-  // ✅ لو التوكن لسه null قبل الهيدريت
   if (token === null) {
     return (
       <div className="space-y-4 p-4 text-white">
-        <Card title="Work Order Details">
-          <div className="text-sm text-white/70">Loading session…</div>
+        <Card title={t("woDetails.title")}>
+          <div className="text-sm text-white/70">{t("common.loadingSession")}</div>
         </Card>
       </div>
     );
@@ -560,56 +555,61 @@ export default function WorkOrderDetailsPage() {
     <div className="space-y-4 p-4 text-white">
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-1">
-          <div className="text-sm text-white/70">Maintenance / Work Orders</div>
-          <div className="text-xl font-semibold">Work Order Details</div>
+          <div className="text-sm text-white/70">{t("woDetails.breadcrumb")}</div>
+          <div className="text-xl font-semibold">{t("woDetails.title")}</div>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/maintenance/work-orders">
-            <Button variant="secondary">← Back</Button>
+            <Button variant="secondary">← {t("common.back")}</Button>
           </Link>
           <Button variant="secondary" onClick={load} disabled={loading}>
-            Refresh
+            {t("common.refresh")}
           </Button>
         </div>
       </div>
 
-      <Card title={`WO #${shortId(id)}`} right={wo?.status ? <Badge value={wo.status} /> : null}>
+      <Card
+        title={`${t("woDetails.wo")} #${shortId(id)}`}
+        right={wo?.status ? <Badge value={wo.status} /> : null}
+      >
         {loading ? (
-          <div className="text-sm text-white/70">Loading…</div>
+          <div className="text-sm text-white/70">{t("common.loading")}</div>
         ) : err ? (
-          <div className="text-sm text-red-200">Error: {err}</div>
+          <div className="text-sm text-red-200">
+            {t("common.error")}: {err}
+          </div>
         ) : !wo ? (
-          <div className="text-sm text-white/70">Not found</div>
+          <div className="text-sm text-white/70">{t("common.notFound")}</div>
         ) : (
           <div className="space-y-4">
             {/* Summary */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <div className="text-sm">
-                  <span className="text-white/60">Type:</span> {wo.type || "—"}
+                  <span className="text-white/60">{t("woDetails.type")}:</span> {wo.type || "—"}
                 </div>
                 <div className="text-sm">
-                  <span className="text-white/60">Vendor:</span> {wo.vendor_name || "—"}
+                  <span className="text-white/60">{t("woDetails.vendor")}:</span> {wo.vendor_name || "—"}
                 </div>
                 <div className="text-sm">
-                  <span className="text-white/60">Opened:</span> {fmtDate(wo.opened_at)}
+                  <span className="text-white/60">{t("woDetails.opened")}:</span> {fmtDate(wo.opened_at)}
                 </div>
                 <div className="text-sm">
-                  <span className="text-white/60">Started:</span> {fmtDate(wo.started_at)}
+                  <span className="text-white/60">{t("woDetails.started")}:</span> {fmtDate(wo.started_at)}
                 </div>
                 <div className="text-sm">
-                  <span className="text-white/60">Completed:</span> {fmtDate(wo.completed_at)}
+                  <span className="text-white/60">{t("woDetails.completedAt")}:</span> {fmtDate(wo.completed_at)}
                 </div>
                 <div className="text-sm">
-                  <span className="text-white/60">Odometer:</span> {wo.odometer ?? "—"}
+                  <span className="text-white/60">{t("woDetails.odometer")}:</span> {wo.odometer ?? "—"}
                 </div>
                 <div className="text-sm">
-                  <span className="text-white/60">Notes:</span> {wo.notes || "—"}
+                  <span className="text-white/60">{t("woDetails.notes")}:</span> {wo.notes || "—"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <div className="text-sm font-semibold">Vehicle</div>
+                <div className="text-sm font-semibold">{t("woDetails.vehicle")}</div>
                 <div className="text-sm">
                   {wo.vehicles?.fleet_no ? `${wo.vehicles.fleet_no} - ` : ""}
                   {wo.vehicles?.plate_no || wo.vehicles?.display_name || "—"}
@@ -618,53 +618,64 @@ export default function WorkOrderDetailsPage() {
                   vehicle_id: {shortId(wo.vehicle_id)}
                 </div>
 
-                <div className="mt-3 text-sm font-semibold">Report</div>
+                <div className="mt-3 text-sm font-semibold">{t("woDetails.report")}</div>
                 <div className="text-sm">
-                  <span className="text-white/60">Status:</span> {report?.report_status || "—"}
+                  <span className="text-white/60">{t("woDetails.reportStatus")}:</span>{" "}
+                  {report?.report_status || "—"}
                   {reportHint ? <div className="mt-1 text-xs text-white/70">{reportHint}</div> : null}
                 </div>
 
                 {totals ? (
                   <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-white/60">Parts:</span>
+                      <span className="text-white/60">{t("woDetails.parts")}:</span>
                       <span>{totals.parts_cost_total}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">Labor:</span>
+                      <span className="text-white/60">{t("woDetails.labor")}:</span>
                       <span>{totals.labor_cost}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">Service:</span>
+                      <span className="text-white/60">{t("woDetails.service")}:</span>
                       <span>{totals.service_cost}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">Cash (Approved):</span>
+                      <span className="text-white/60">{t("woDetails.cashApproved")}:</span>
                       <span>{totals.maintenance_cash_cost_total ?? 0}</span>
                     </div>
 
                     <div className="mt-2 text-xs text-white/60">
-                      Reconciliation mismatches:{" "}
-                      <span className={cn("font-semibold", mismatchTotal > 0 ? "text-yellow-200" : "text-green-200")}>
+                      {t("woDetails.mismatches")}:{" "}
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          mismatchTotal > 0 ? "text-yellow-200" : "text-green-200"
+                        )}
+                      >
                         {mismatchTotal}
                       </span>
                     </div>
 
                     <div className="mt-2 flex justify-between font-semibold">
-                      <span>Grand Total:</span>
+                      <span>{t("woDetails.grandTotal")}:</span>
                       <span>{totals.grand_total}</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-white/70">No report totals</div>
+                  <div className="text-sm text-white/70">{t("woDetails.noTotals")}</div>
                 )}
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Button variant="primary" onClick={completeWO} disabled={completing || !canComplete}>
-                    {completing ? "Completing…" : "Complete Work Order"}
+                    {completing ? t("woDetails.completing") : t("woDetails.completeWo")}
                   </Button>
                   {completeMsg ? (
-                    <span className={cn("text-sm", completeMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
+                    <span
+                      className={cn(
+                        "text-sm",
+                        completeMsg.startsWith("✅") ? "text-green-200" : "text-red-200"
+                      )}
+                    >
                       {completeMsg}
                     </span>
                   ) : null}
@@ -675,24 +686,24 @@ export default function WorkOrderDetailsPage() {
             {/* Tabs */}
             <div className="flex flex-wrap gap-2">
               <Pill active={tab === "issues"} onClick={() => setTab("issues")}>
-                Issues
+                {t("woDetails.tabIssues")}
               </Pill>
               <Pill active={tab === "installations"} onClick={() => setTab("installations")}>
-                Installations
+                {t("woDetails.tabInstallations")}
               </Pill>
               <Pill active={tab === "qa"} onClick={() => setTab("qa")}>
-                QA
+                {t("woDetails.tabQa")}
               </Pill>
             </div>
 
-            {/* Reconciliation Table (always visible) */}
+            {/* Reconciliation Table */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold">Reconciliation (Issued vs Installed)</div>
+                <div className="text-sm font-semibold">{t("woDetails.reconTitle")}</div>
                 <div className="text-xs text-white/60">
-                  matched: {recon.matched?.length || 0} | issued_not_installed:{" "}
-                  {recon.issued_not_installed?.length || 0} | installed_not_issued:{" "}
-                  {recon.installed_not_issued?.length || 0}
+                  {t("woDetails.reconMatched")}: {recon.matched?.length || 0} |{" "}
+                  {t("woDetails.reconIssuedNotInstalled")}: {recon.issued_not_installed?.length || 0} |{" "}
+                  {t("woDetails.reconInstalledNotIssued")}: {recon.installed_not_issued?.length || 0}
                 </div>
               </div>
 
@@ -700,11 +711,11 @@ export default function WorkOrderDetailsPage() {
                 <table className="min-w-[900px] w-full text-sm">
                   <thead className="bg-white/5 text-white/70">
                     <tr>
-                      <th className="text-left p-3">Part</th>
-                      <th className="text-left p-3">Issued Qty</th>
-                      <th className="text-left p-3">Installed Qty</th>
-                      <th className="text-left p-3">Issued Cost</th>
-                      <th className="text-left p-3">Status</th>
+                      <th className="text-left p-3">{t("woDetails.part")}</th>
+                      <th className="text-left p-3">{t("woDetails.issuedQty")}</th>
+                      <th className="text-left p-3">{t("woDetails.installedQty")}</th>
+                      <th className="text-left p-3">{t("woDetails.issuedCost")}</th>
+                      <th className="text-left p-3">{t("common.status")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -718,7 +729,7 @@ export default function WorkOrderDetailsPage() {
                         <td className="p-3">{r.installed_qty}</td>
                         <td className="p-3">{r.issued_cost}</td>
                         <td className="p-3">
-                          <span className="text-green-200">MATCHED</span>
+                          <span className="text-green-200">{t("woDetails.matched")}</span>
                         </td>
                       </tr>
                     ))}
@@ -733,7 +744,7 @@ export default function WorkOrderDetailsPage() {
                         <td className="p-3">{r.installed_qty}</td>
                         <td className="p-3">{r.issued_cost}</td>
                         <td className="p-3">
-                          <span className="text-yellow-200">ISSUED &gt; INSTALLED</span>
+                          <span className="text-yellow-200">{t("woDetails.issuedGtInstalled")}</span>
                         </td>
                       </tr>
                     ))}
@@ -748,7 +759,7 @@ export default function WorkOrderDetailsPage() {
                         <td className="p-3">{r.installed_qty}</td>
                         <td className="p-3">—</td>
                         <td className="p-3">
-                          <span className="text-red-200">INSTALLED &gt; ISSUED</span>
+                          <span className="text-red-200">{t("woDetails.installedGtIssued")}</span>
                         </td>
                       </tr>
                     ))}
@@ -759,7 +770,7 @@ export default function WorkOrderDetailsPage() {
                       0) ? (
                       <tr className="border-t border-white/10">
                         <td className="p-3 text-white/70" colSpan={5}>
-                          No reconciliation data
+                          {t("woDetails.noReconData")}
                         </td>
                       </tr>
                     ) : null}
@@ -772,18 +783,19 @@ export default function WorkOrderDetailsPage() {
             {tab === "issues" ? (
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold">Issues</div>
+                  <div className="text-sm font-semibold">{t("woDetails.issuesTitle")}</div>
                   <div className="flex items-center gap-2">
                     <Button variant="secondary" onClick={createIssue} disabled={issueCreating || !canManage}>
-                      {issueCreating ? "Creating…" : "Create Issue"}
+                      {issueCreating ? t("common.creating") : t("woDetails.createIssue")}
                     </Button>
                   </div>
                 </div>
 
                 <div className="mt-2 text-xs text-white/60">
-                  Current issue_id:{" "}
+                  {t("woDetails.currentIssueId")}:{" "}
                   <span className="font-mono text-white">{issueId ? shortId(issueId) : "—"}</span>
                 </div>
+
                 {issueMsg ? (
                   <div className={cn("mt-2 text-sm", issueMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
                     {issueMsg}
@@ -792,17 +804,17 @@ export default function WorkOrderDetailsPage() {
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
                   <div className="md:col-span-2">
-                    <div className="text-xs text-white/60 mb-1">part_id (uuid)</div>
+                    <div className="text-xs text-white/60 mb-1">{t("woDetails.partIdUuid")}</div>
                     <input
                       value={linePartId}
                       onChange={(e) => setLinePartId(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder="uuid"
+                      placeholder={t("woDetails.uuidPlaceholder")}
                     />
                   </div>
 
                   <div>
-                    <div className="text-xs text-white/60 mb-1">qty</div>
+                    <div className="text-xs text-white/60 mb-1">{t("woDetails.qty")}</div>
                     <input
                       type="number"
                       value={lineQty}
@@ -812,7 +824,7 @@ export default function WorkOrderDetailsPage() {
                   </div>
 
                   <div>
-                    <div className="text-xs text-white/60 mb-1">unit_cost</div>
+                    <div className="text-xs text-white/60 mb-1">{t("woDetails.unitCost")}</div>
                     <input
                       type="number"
                       value={lineUnitCost}
@@ -822,18 +834,18 @@ export default function WorkOrderDetailsPage() {
                   </div>
 
                   <div className="md:col-span-4">
-                    <div className="text-xs text-white/60 mb-1">notes</div>
+                    <div className="text-xs text-white/60 mb-1">{t("woDetails.notesOpt")}</div>
                     <input
                       value={lineNotes}
                       onChange={(e) => setLineNotes(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder="اختياري"
+                      placeholder={t("common.optional")}
                     />
                   </div>
 
                   <div className="md:col-span-4 flex items-center gap-2">
                     <Button variant="primary" onClick={addIssueLine} disabled={lineSaving || !canManage}>
-                      {lineSaving ? "Saving…" : "Add Line"}
+                      {lineSaving ? t("common.saving") : t("woDetails.addLine")}
                     </Button>
                     {lineMsg ? (
                       <div className={cn("text-sm", lineMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
@@ -843,24 +855,24 @@ export default function WorkOrderDetailsPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 text-sm font-semibold">Issued Lines (from report)</div>
+                <div className="mt-4 text-sm font-semibold">{t("woDetails.issuedLinesFromReport")}</div>
                 <div className="mt-2 overflow-auto rounded-2xl border border-white/10">
                   <table className="min-w-[900px] w-full text-sm">
                     <thead className="bg-white/5 text-white/70">
                       <tr>
-                        <th className="text-left p-3">Part</th>
-                        <th className="text-left p-3">Qty</th>
-                        <th className="text-left p-3">Unit Cost</th>
-                        <th className="text-left p-3">Total</th>
-                        <th className="text-left p-3">Issue</th>
-                        <th className="text-left p-3">Notes</th>
+                        <th className="text-left p-3">{t("woDetails.part")}</th>
+                        <th className="text-left p-3">{t("woDetails.qty")}</th>
+                        <th className="text-left p-3">{t("woDetails.unitCost")}</th>
+                        <th className="text-left p-3">{t("woDetails.total")}</th>
+                        <th className="text-left p-3">{t("woDetails.issue")}</th>
+                        <th className="text-left p-3">{t("woDetails.notes")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {issuedLines.length === 0 ? (
                         <tr className="border-t border-white/10">
                           <td colSpan={6} className="p-3 text-white/70">
-                            No issued lines
+                            {t("woDetails.noIssuedLines")}
                           </td>
                         </tr>
                       ) : (
@@ -888,25 +900,25 @@ export default function WorkOrderDetailsPage() {
             {tab === "installations" ? (
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold">Installations</div>
+                  <div className="text-sm font-semibold">{t("woDetails.installationsTitle")}</div>
                   <Button variant="secondary" onClick={loadInstallations} disabled={instLoading}>
-                    {instLoading ? "Loading…" : "Refresh"}
+                    {instLoading ? t("common.loading") : t("common.refresh")}
                   </Button>
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
                   <div className="md:col-span-2">
-                    <div className="text-xs text-white/60 mb-1">part_id (uuid)</div>
+                    <div className="text-xs text-white/60 mb-1">{t("woDetails.partIdUuid")}</div>
                     <input
                       value={instPartId}
                       onChange={(e) => setInstPartId(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder="uuid"
+                      placeholder={t("woDetails.uuidPlaceholder")}
                     />
                   </div>
 
                   <div>
-                    <div className="text-xs text-white/60 mb-1">qty_installed</div>
+                    <div className="text-xs text-white/60 mb-1">{t("woDetails.qtyInstalled")}</div>
                     <input
                       type="number"
                       value={instQty}
@@ -916,29 +928,29 @@ export default function WorkOrderDetailsPage() {
                   </div>
 
                   <div>
-                    <div className="text-xs text-white/60 mb-1">odometer</div>
+                    <div className="text-xs text-white/60 mb-1">{t("woDetails.odometerOpt")}</div>
                     <input
                       type="number"
                       value={instOdo}
                       onChange={(e) => setInstOdo(e.target.value === "" ? "" : Number(e.target.value))}
                       className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder="اختياري"
+                      placeholder={t("common.optional")}
                     />
                   </div>
 
                   <div className="md:col-span-4">
-                    <div className="text-xs text-white/60 mb-1">notes</div>
+                    <div className="text-xs text-white/60 mb-1">{t("woDetails.notesOpt")}</div>
                     <input
                       value={instNotes}
                       onChange={(e) => setInstNotes(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder="اختياري"
+                      placeholder={t("common.optional")}
                     />
                   </div>
 
                   <div className="md:col-span-4 flex items-center gap-2">
                     <Button variant="primary" onClick={addInstallation} disabled={instSaving}>
-                      {instSaving ? "Saving…" : "Add Installation"}
+                      {instSaving ? t("common.saving") : t("woDetails.addInstallation")}
                     </Button>
                     {instMsg ? (
                       <div className={cn("text-sm", instMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
@@ -948,29 +960,29 @@ export default function WorkOrderDetailsPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 text-sm font-semibold">Installations (API list)</div>
+                <div className="mt-4 text-sm font-semibold">{t("woDetails.installationsApiList")}</div>
                 <div className="mt-2 overflow-auto rounded-2xl border border-white/10">
                   <table className="min-w-[900px] w-full text-sm">
                     <thead className="bg-white/5 text-white/70">
                       <tr>
-                        <th className="text-left p-3">Installed At</th>
-                        <th className="text-left p-3">Part</th>
-                        <th className="text-left p-3">Qty</th>
-                        <th className="text-left p-3">Odometer</th>
-                        <th className="text-left p-3">Notes</th>
+                        <th className="text-left p-3">{t("woDetails.installedAt")}</th>
+                        <th className="text-left p-3">{t("woDetails.part")}</th>
+                        <th className="text-left p-3">{t("woDetails.qty")}</th>
+                        <th className="text-left p-3">{t("woDetails.odometer")}</th>
+                        <th className="text-left p-3">{t("woDetails.notes")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {instLoading ? (
                         <tr className="border-t border-white/10">
                           <td colSpan={5} className="p-3 text-white/70">
-                            Loading…
+                            {t("common.loading")}
                           </td>
                         </tr>
                       ) : instItems.length === 0 ? (
                         <tr className="border-t border-white/10">
                           <td colSpan={5} className="p-3 text-white/70">
-                            No installations
+                            {t("woDetails.noInstallations")}
                           </td>
                         </tr>
                       ) : (
@@ -978,7 +990,6 @@ export default function WorkOrderDetailsPage() {
                           <tr key={x.id} className="border-t border-white/10">
                             <td className="p-3">{fmtDate(x.installed_at)}</td>
                             <td className="p-3">
-                              {/* ✅ إصلاح: كان دايمًا — */}
                               <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
                               <div className="text-xs text-white/50 font-mono">{shortId(x.part_id)}</div>
                             </td>
@@ -992,23 +1003,23 @@ export default function WorkOrderDetailsPage() {
                   </table>
                 </div>
 
-                <div className="mt-4 text-sm font-semibold">Installations (from report runtime)</div>
+                <div className="mt-4 text-sm font-semibold">{t("woDetails.installationsRuntimeList")}</div>
                 <div className="mt-2 overflow-auto rounded-2xl border border-white/10">
                   <table className="min-w-[900px] w-full text-sm">
                     <thead className="bg-white/5 text-white/70">
                       <tr>
-                        <th className="text-left p-3">Installed At</th>
-                        <th className="text-left p-3">Part</th>
-                        <th className="text-left p-3">Qty</th>
-                        <th className="text-left p-3">Odometer</th>
-                        <th className="text-left p-3">Notes</th>
+                        <th className="text-left p-3">{t("woDetails.installedAt")}</th>
+                        <th className="text-left p-3">{t("woDetails.part")}</th>
+                        <th className="text-left p-3">{t("woDetails.qty")}</th>
+                        <th className="text-left p-3">{t("woDetails.odometer")}</th>
+                        <th className="text-left p-3">{t("woDetails.notes")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {installationsRuntime.length === 0 ? (
                         <tr className="border-t border-white/10">
                           <td colSpan={5} className="p-3 text-white/70">
-                            No runtime installations
+                            {t("woDetails.noRuntimeInstallations")}
                           </td>
                         </tr>
                       ) : (
@@ -1035,56 +1046,52 @@ export default function WorkOrderDetailsPage() {
             {tab === "qa" ? (
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-center justify-between gap-3 mb-3">
-                  <div className="text-sm font-semibold">QA (Post Maintenance Report)</div>
-                  <div className="text-xs text-white/60">
-                    Endpoint: POST /maintenance/work-orders/:id/post-report
-                  </div>
+                  <div className="text-sm font-semibold">{t("woDetails.qaTitle")}</div>
+                  <div className="text-xs text-white/60">{t("woDetails.qaEndpoint")}</div>
                 </div>
 
                 {!canManage ? (
-                  <div className="text-sm text-white/70">
-                    هذه الخطوة متاحة لـ ADMIN/ACCOUNTANT فقط.
-                  </div>
+                  <div className="text-sm text-white/70">{t("woDetails.onlyAdminAccountantQa")}</div>
                 ) : (
                   <div className="space-y-3">
                     {rs === "NEEDS_PARTS_RECONCILIATION" ? (
                       <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
-                        حل mismatch الأول قبل QA.
+                        {t("woDetails.fixMismatchFirst")}
                       </div>
                     ) : null}
 
                     <div>
-                      <div className="text-xs text-white/60 mb-1">Road Test Result</div>
+                      <div className="text-xs text-white/60 mb-1">{t("woDetails.roadTestResult")}</div>
                       <select
                         value={qaResult}
                         onChange={(e) => setQaResult(e.target.value as any)}
                         className={selectCls}
                       >
                         <option value="" className={optionCls}>
-                          Select…
+                          {t("common.select")}
                         </option>
                         <option value="PASS" className={optionCls}>
-                          PASS
+                          {t("woDetails.pass")}
                         </option>
                         <option value="FAIL" className={optionCls}>
-                          FAIL
+                          {t("woDetails.fail")}
                         </option>
                       </select>
                     </div>
 
                     <div>
-                      <div className="text-xs text-white/60 mb-1">Remarks</div>
+                      <div className="text-xs text-white/60 mb-1">{t("woDetails.remarks")}</div>
                       <textarea
                         value={qaRemarks}
                         onChange={(e) => setQaRemarks(e.target.value)}
-                        placeholder="ملاحظات QA..."
+                        placeholder={t("woDetails.remarksPlaceholder")}
                         className="min-h-[90px] w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
                       />
                     </div>
 
                     <div className="flex items-center gap-2">
                       <Button variant="primary" onClick={saveQA} disabled={qaSaving}>
-                        {qaSaving ? "Saving…" : "Save QA"}
+                        {qaSaving ? t("common.saving") : t("woDetails.saveQa")}
                       </Button>
                       <Button
                         variant="secondary"
@@ -1094,7 +1101,7 @@ export default function WorkOrderDetailsPage() {
                           setQaRemarks("");
                         }}
                       >
-                        Clear
+                        {t("common.clear")}
                       </Button>
                     </div>
 

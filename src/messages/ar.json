@@ -33,7 +33,12 @@
     "disabledUpper": "معطل",
     "total": "الإجمالي",
     "page": "صفحة",
-    "optional": "اختياري"
+    "optional": "اختياري",
+
+    "back": "رجوع",
+    "clear": "مسح",
+    "notFound": "غير موجود",
+    "loadingSession": "جارٍ تحميل الجلسة…"
   },
 
   "tabs": {
@@ -337,6 +342,276 @@
       "AVAILABLE": "متاحة",
       "IN_USE": "قيد الاستخدام",
       "MAINTENANCE": "صيانة"
+    }
+  },
+
+  "maintenanceRequests": {
+    "title": "طلبات الصيانة",
+    "checkingSession": "جارٍ التحقق من الجلسة…",
+    "filters": {
+      "status": "الحالة",
+      "vehicle": "المركبة",
+      "searchLocal": "بحث (محلي)",
+      "searchPlaceholder": "بحث في العنوان/الوصف"
+    },
+    "actions": {
+      "refresh": "تحديث",
+      "create": "+ إنشاء طلب",
+      "view": "عرض",
+      "approve": "قبول",
+      "reject": "رفض"
+    },
+    "table": {
+      "requestedAt": "تاريخ الطلب",
+      "vehicle": "المركبة",
+      "title": "العنوان",
+      "status": "الحالة",
+      "actions": "إجراءات"
+    },
+    "empty": "لا توجد طلبات",
+    "pagination": {
+      "page": "صفحة",
+      "total": "الإجمالي"
+    },
+    "modals": {
+      "createTitle": "إنشاء طلب صيانة",
+      "approveTitle": "قبول الطلب",
+      "approveCta": "قبول + إنشاء أمر عمل",
+      "rejectTitle": "رفض الطلب",
+      "rejectReasonLabel": "سبب الرفض",
+      "rejectHint": "لازم السبب يبقى واضح عشان المشرف يعرف يعمل طلب جديد بشكل صحيح."
+    },
+    "form": {
+      "vehicle": "المركبة",
+      "problemTitle": "عنوان العطل",
+      "description": "الوصف",
+      "vehicleLoading": "جارٍ تحميل المركبات...",
+      "vehicleSelect": "اختر مركبة",
+      "attachmentsHint": "✅ المرفقات هتترفع من صفحة التفاصيل بعد إنشاء الطلب."
+    },
+    "toast": {
+      "requestCreated": "تم إنشاء الطلب",
+      "approved": "تم القبول",
+      "rejected": "تم الرفض",
+      "loadFailed": "فشل تحميل الطلبات",
+      "vehiclesFailed": "فشل تحميل قائمة المركبات",
+      "approveFailed": "فشل القبول",
+      "rejectFailed": "فشل الرفض"
+    }
+  },
+
+  "maintenanceRequestDetails": {
+    "title": "تفاصيل الطلب",
+    "breadcrumb": "الصيانة / الطلبات",
+    "back": "رجوع",
+    "refresh": "تحديث",
+    "notFound": "غير موجود",
+    "sections": {
+      "vehicle": "المركبة",
+      "problemTitle": "عنوان العطل",
+      "description": "الوصف",
+      "requested": "بيانات البلاغ",
+      "reviewed": "المراجعة",
+      "system": "النظام",
+      "actions": "الإجراءات",
+      "attachments": "المرفقات"
+    },
+    "labels": {
+      "at": "وقت",
+      "by": "بواسطة",
+      "created": "تاريخ الإنشاء",
+      "updated": "آخر تحديث",
+      "rejectionReason": "سبب الرفض"
+    },
+    "actions": {
+      "approveCreateWO": "قبول + إنشاء أمر عمل",
+      "reject": "رفض",
+      "upload": "+ رفع",
+      "delete": "حذف"
+    },
+    "attachments": {
+      "noAttachments": "لا توجد مرفقات",
+      "openFile": "فتح الملف",
+      "uploadHint": "• رفع الملفات يدعم صور/فيديو (حتى 8 ملفات) — حسب إعدادات السيرفر."
+    },
+    "toast": {
+      "loadFailed": "فشل تحميل الطلب",
+      "attachmentsFailed": "فشل تحميل المرفقات",
+      "uploaded": "تم الرفع",
+      "uploadFailed": "فشل الرفع",
+      "deleted": "تم الحذف",
+      "deleteFailed": "فشل الحذف",
+      "approved": "تم القبول",
+      "rejected": "تم الرفض",
+      "approveFailed": "فشل القبول",
+      "rejectFailed": "فشل الرفض"
+    },
+    "modals": {
+      "rejectTitle": "رفض الطلب",
+      "rejectCta": "جارٍ الرفض…"
+    }
+  },
+
+  "workOrders": {
+    "title": "أوامر العمل",
+    "breadcrumb": "الصيانة",
+    "roleOnly": "هذه الصفحة متاحة فقط لـ ADMIN / ACCOUNTANT.",
+    "filtersFromUrl": "فلاتر من الرابط",
+    "noteQaPartsDisplay": "ملاحظة: qa/parts للعرض فقط (الباك-إند الحالي لا يدعم فلترتها في القائمة).",
+    "actions": {
+      "backToRequests": "← رجوع للطلبات",
+      "clearUrlFilters": "مسح فلاتر الرابط",
+      "refresh": "تحديث"
+    },
+    "filters": {
+      "title": "الفلاتر",
+      "status": "الحالة",
+      "qaDisplayOnly": "QA (عرض فقط)",
+      "partsDisplayOnly": "Parts (عرض فقط)",
+      "searchTitle": "بحث (المورّد / الملاحظات)",
+      "searchBtn": "بحث",
+      "selected": "المحدد"
+    },
+    "status": {
+      "all": "الكل",
+      "open": "OPEN",
+      "inProgress": "IN PROGRESS",
+      "completed": "COMPLETED",
+      "canceled": "CANCELED",
+      "openPlusInProgress": "OPEN + IN_PROGRESS"
+    },
+    "list": {
+      "title": "القائمة",
+      "loading": "جارٍ التحميل…",
+      "empty": "لا توجد أوامر عمل",
+      "columns": {
+        "opened": "تاريخ الفتح",
+        "vehicle": "المركبة",
+        "type": "النوع",
+        "vendor": "المورّد",
+        "status": "الحالة",
+        "actions": "إجراءات"
+      },
+      "view": "عرض"
+    },
+    "pagination": {
+      "page": "صفحة"
+    },
+    "tips": {
+      "cardsSendStatusInUrl": "معلومة: كروت الداشبورد بتبعت status في الـ URL — الصفحة دي بتقرأه وتفلتر صح."
+    }
+  },
+
+  "workOrderDetails": {
+    "title": "تفاصيل أمر العمل",
+    "breadcrumb": "الصيانة / أوامر العمل",
+    "back": "← رجوع",
+    "refresh": "تحديث",
+    "notFound": "غير موجود",
+    "summary": {
+      "type": "النوع",
+      "vendor": "المورّد",
+      "opened": "تاريخ الفتح",
+      "started": "تاريخ البدء",
+      "completed": "تاريخ الإنهاء",
+      "odometer": "عداد",
+      "notes": "ملاحظات",
+      "vehicle": "المركبة",
+      "report": "التقرير",
+      "status": "الحالة",
+      "parts": "قطع",
+      "labor": "عمالة",
+      "service": "خدمة",
+      "cashApproved": "نقدي (معتمد)",
+      "mismatches": "اختلافات المطابقة",
+      "grandTotal": "الإجمالي النهائي"
+    },
+    "complete": {
+      "btn": "إغلاق أمر العمل",
+      "completing": "جارٍ الإغلاق…",
+      "ok": "✅ تم إغلاق أمر العمل",
+      "fail": "❌ فشل الإغلاق",
+      "cannot": "لا يمكن الإغلاق الآن. لازم Report Status = OK."
+    },
+    "tabs": {
+      "issues": "الصرف",
+      "installations": "التركيب",
+      "qa": "الجودة (QA)"
+    },
+    "reconciliation": {
+      "title": "مطابقة (المصروف مقابل المركّب)",
+      "matched": "متطابق",
+      "issuedGtInstalled": "مصروف > مركّب",
+      "installedGtIssued": "مركّب > مصروف",
+      "noData": "لا توجد بيانات مطابقة"
+    },
+    "issues": {
+      "title": "الصرف",
+      "createIssue": "إنشاء إذن صرف",
+      "creating": "جارٍ الإنشاء…",
+      "currentIssueId": "رقم الإذن الحالي",
+      "partId": "part_id (uuid)",
+      "qty": "الكمية",
+      "unitCost": "سعر الوحدة",
+      "notes": "ملاحظات",
+      "addLine": "إضافة بند",
+      "saving": "جارٍ الحفظ…",
+      "issuedLinesTitle": "بنود الصرف (من التقرير)",
+      "noIssuedLines": "لا توجد بنود صرف",
+      "msgs": {
+        "created": "✅ تم إنشاء الإذن",
+        "createFailed": "❌ فشل",
+        "lineAdded": "✅ تم إضافة البند",
+        "lineFailed": "❌ فشل",
+        "needIssueFirst": "لازم تعمل إنشاء إذن صرف الأول.",
+        "partRequired": "part_id مطلوب (UUID).",
+        "qtyInvalid": "الكمية لازم > 0.",
+        "unitCostInvalid": "سعر الوحدة لازم >= 0.",
+        "forbidden": "غير مسموح: ADMIN/ACCOUNTANT فقط."
+      }
+    },
+    "installations": {
+      "title": "التركيب",
+      "refresh": "تحديث",
+      "loading": "جارٍ التحميل…",
+      "partId": "part_id (uuid)",
+      "qtyInstalled": "الكمية المركبة",
+      "odometer": "عداد",
+      "notes": "ملاحظات",
+      "add": "إضافة تركيب",
+      "saving": "جارٍ الحفظ…",
+      "apiListTitle": "التركيب (قائمة API)",
+      "runtimeListTitle": "التركيب (من التقرير runtime)",
+      "empty": "لا توجد تركيبات",
+      "msgs": {
+        "added": "✅ تم إضافة تركيب",
+        "failed": "فشل تحميل التركيبات"
+      }
+    },
+    "qa": {
+      "title": "الجودة (Post Maintenance Report)",
+      "endpoint": "المسار",
+      "roadTest": "نتيجة اختبار الطريق",
+      "remarks": "ملاحظات",
+      "save": "حفظ QA",
+      "clear": "مسح",
+      "select": "اختر…",
+      "pass": "PASS",
+      "fail": "FAIL",
+      "msgs": {
+        "saved": "✅ تم حفظ QA",
+        "saveFailed": "❌ فشل حفظ QA",
+        "selectPassFail": "اختر PASS أو FAIL.",
+        "fixMismatchFirst": "حل mismatch الأول قبل QA.",
+        "qaRequiredBeforeClose": "مطلوب QA قبل الإغلاق.",
+        "qaFailedCannotClose": "QA FAILED. لا يمكن الإغلاق."
+      }
+    },
+    "hints": {
+      "needMismatchFix": "⚠️ يوجد mismatch بين الصرف والتركيب. صحّحها قبل QA/الإغلاق.",
+      "needQa": "ℹ️ مطلوب QA قبل الإغلاق.",
+      "qaFailed": "❌ QA FAILED. لا يمكن الإغلاق.",
+      "okToClose": "✅ جاهز للإغلاق."
     }
   }
 }
