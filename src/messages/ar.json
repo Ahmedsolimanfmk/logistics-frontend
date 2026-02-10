@@ -38,7 +38,14 @@
     "back": "رجوع",
     "clear": "مسح",
     "notFound": "غير موجود",
-    "loadingSession": "جارٍ تحميل الجلسة…"
+    "loadingSession": "جارٍ تحميل الجلسة…",
+
+    "filters": "الفلاتر",
+    "list": "القائمة",
+    "actions": "إجراءات",
+    "status": "الحالة",
+    "selected": "المحدد",
+    "view": "عرض"
   },
 
   "tabs": {

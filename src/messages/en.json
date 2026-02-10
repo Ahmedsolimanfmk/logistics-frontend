@@ -38,7 +38,14 @@
     "back": "Back",
     "clear": "Clear",
     "notFound": "Not found",
-    "loadingSession": "Loading session…"
+    "loadingSession": "Loading session…",
+
+    "filters": "Filters",
+    "list": "List",
+    "actions": "Actions",
+    "status": "Status",
+    "selected": "Selected",
+    "view": "View"
   },
 
   "tabs": {
