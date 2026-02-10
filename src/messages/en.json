@@ -12,7 +12,18 @@
     "loading": "Loading…",
     "daily": "Daily",
     "unavailable": "Unavailable",
-    "vsPrev": "vs prev"
+    "vsPrev": "vs prev",
+    "checkingSession": "Checking session…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "toggle": "Toggle",
+    "yes": "Yes",
+    "no": "No",
+    "prev": "Prev",
+    "next": "Next",
+    "role": "Role"
   },
   "tabs": {
     "operations": "Operations",
@@ -244,6 +255,7 @@
     "devTab": "Dev tab",
     "devHint": "Reserved for development diagnostics."
   },
+  
   "sidebar": {
   "appName": "Logistics",
   "dashboard": "Dashboard",
@@ -262,6 +274,71 @@
   "maintenanceWorkOrders": "Work Orders",
   "users": "Users",
   "supervisors": "Supervisors"
+},
+ "vehicles": {
+    "title": "Vehicles",
+    "subtitle": "Manage fleet",
+    "filters": {
+      "searchPlaceholder": "Search fleet/plate/name...",
+      "allStatus": "All status",
+      "activeStatus": "Active (AVAILABLE + IN_USE)",
+      "allActiveFlag": "All (active flag)",
+      "activeOnly": "Active only",
+      "inactiveOnly": "Inactive only"
+    },
+    "actions": {
+      "add": "+ Add Vehicle"
+    },
+    "meta": {
+      "total": "Total",
+      "page": "Page",
+      "showing": "Showing",
+      "of": "of"
+    },
+    "table": {
+      "vehicle": "Vehicle",
+      "fleet": "Fleet",
+      "plate": "Plate",
+      "status": "Status",
+      "active": "Active",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "empty": "No vehicles found.",
+    "errors": {
+      "loadFailed": "Failed to load vehicles"
+    },
+    "toast": {
+      "created": "Vehicle created",
+      "updated": "Vehicle updated",
+      "saveFailed": "Save failed",
+      "toggled": "Toggled",
+      "toggleFailed": "Toggle failed"
+    },
+    "modal": {
+      "addTitle": "Add Vehicle",
+      "editTitle": "Edit Vehicle"
+    },
+    "fields": {
+      "fleetNo": "Fleet No",
+      "plateNo": "Plate No",
+      "displayName": "Display Name (optional)",
+      "status": "Status",
+      "model": "Model (optional)",
+      "year": "Year (optional)",
+      "odometer": "Odometer (optional)",
+      "gps": "GPS Device ID (optional)"
+    },
+    "placeholders": {
+      "fleetNo": "Example: F-001",
+      "plateNo": "Example: 1234 ABC",
+      "displayName": "Example: Mercedes 1844"
+    },
+    "status": {
+      "AVAILABLE": "AVAILABLE",
+      "IN_USE": "IN_USE",
+      "MAINTENANCE": "MAINTENANCE"
+    }
 }
 }
 

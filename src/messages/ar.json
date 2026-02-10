@@ -12,7 +12,18 @@
     "loading": "جار التحميل…",
     "daily": "يومي",
     "vsPrev": "مقارنة بالسابق",
-    "unavailable": "غير متاح"
+    "unavailable": "غير متاح",
+    "checkingSession": "جارٍ التحقق من الجلسة…",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "toggle": "تفعيل/إلغاء",
+    "yes": "نعم",
+    "no": "لا",
+    "prev": "السابق",
+    "next": "التالي",
+    "role": "الدور"
   },
   "tabs": {
     "operations": "التشغيل",
@@ -263,6 +274,70 @@
   "maintenanceWorkOrders": "أوامر العمل",
   "users": "المستخدمين",
   "supervisors": "المشرفين"
-}
-
+},
+"vehicles": {
+    "title": "المركبات",
+    "subtitle": "إدارة الأسطول",
+    "filters": {
+      "searchPlaceholder": "بحث برقم الأسطول/اللوحة/الاسم...",
+      "allStatus": "كل الحالات",
+      "activeStatus": "نشط (AVAILABLE + IN_USE)",
+      "allActiveFlag": "الكل (حسب التفعيل)",
+      "activeOnly": "المفعلة فقط",
+      "inactiveOnly": "غير المفعلة فقط"
+    },
+    "actions": {
+      "add": "+ إضافة مركبة"
+    },
+    "meta": {
+      "total": "الإجمالي",
+      "page": "صفحة",
+      "showing": "عرض",
+      "of": "من"
+    },
+    "table": {
+      "vehicle": "المركبة",
+      "fleet": "رقم الأسطول",
+      "plate": "اللوحة",
+      "status": "الحالة",
+      "active": "مفعّل",
+      "created": "تاريخ الإنشاء",
+      "actions": "إجراءات"
+    },
+    "empty": "لا توجد مركبات مطابقة.",
+    "errors": {
+      "loadFailed": "فشل تحميل المركبات"
+    },
+    "toast": {
+      "created": "تم إنشاء المركبة",
+      "updated": "تم تحديث المركبة",
+      "saveFailed": "فشل الحفظ",
+      "toggled": "تم التغيير",
+      "toggleFailed": "فشل التغيير"
+    },
+    "modal": {
+      "addTitle": "إضافة مركبة",
+      "editTitle": "تعديل مركبة"
+    },
+    "fields": {
+      "fleetNo": "رقم الأسطول",
+      "plateNo": "رقم اللوحة",
+      "displayName": "اسم العرض (اختياري)",
+      "status": "الحالة",
+      "model": "الموديل (اختياري)",
+      "year": "السنة (اختياري)",
+      "odometer": "العداد (اختياري)",
+      "gps": "معرّف جهاز GPS (اختياري)"
+    },
+    "placeholders": {
+      "fleetNo": "مثال: F-001",
+      "plateNo": "مثال: 1234 د م ط",
+      "displayName": "مثال: مرسيدس 1844"
+    },
+    "status": {
+      "AVAILABLE": "متاحة",
+      "IN_USE": "قيد الاستخدام",
+      "MAINTENANCE": "صيانة"
+    }
+  }
 }

@@ -5,17 +5,12 @@ import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Toast } from "@/src/components/Toast";
+import { useT } from "@/src/i18n/useT";
+import { useLang } from "@/src/i18n/lang";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
-
-const fmtDate = (d: any) => {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
-};
 
 function shortId(id: any) {
   const s = String(id ?? "");
@@ -50,6 +45,10 @@ function VehicleModal({
   onSaved: () => void;
   showToast: (type: "success" | "error", msg: string) => void;
 }) {
+  const t = useT();
+  const lang = useLang();
+  const locale = lang === "en" ? "en-US" : "ar-EG";
+
   const [loading, setLoading] = useState(false);
 
   const [fleetNo, setFleetNo] = useState("");
@@ -95,84 +94,94 @@ function VehicleModal({
 
       if (mode === "create") {
         await api.post("/vehicles", payload);
-        showToast("success", "Vehicle created");
+        showToast("success", t("vehicles.toast.created"));
       } else {
         await api.put(`/vehicles/${initial.id}`, payload);
-        showToast("success", "Vehicle updated");
+        showToast("success", t("vehicles.toast.updated"));
       }
 
       onSaved();
       onClose();
     } catch (e: any) {
-      showToast("error", e?.message || "Save failed");
+      showToast("error", e?.message || t("vehicles.toast.saveFailed"));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-2xl rounded-2xl bg-slate-900 text-white border border-white/10 p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">{mode === "create" ? "Add Vehicle" : "Edit Vehicle"}</h3>
-          <button onClick={onClose} className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10">
+          <h3 className="text-lg font-bold">
+            {mode === "create" ? t("vehicles.modal.addTitle") : t("vehicles.modal.editTitle")}
+          </h3>
+
+          <button
+            onClick={onClose}
+            className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <label className="grid gap-2 text-sm">
-            Fleet No *
+            {t("vehicles.fields.fleetNo")} *
             <input
               value={fleetNo}
               onChange={(e) => setFleetNo(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-              placeholder="مثال: F-001"
+              placeholder={t("vehicles.placeholders.fleetNo")}
             />
           </label>
 
           <label className="grid gap-2 text-sm">
-            Plate No *
+            {t("vehicles.fields.plateNo")} *
             <input
               value={plateNo}
               onChange={(e) => setPlateNo(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-              placeholder="مثال: 1234 د م ط"
+              placeholder={t("vehicles.placeholders.plateNo")}
             />
           </label>
 
           <label className="grid gap-2 text-sm md:col-span-2">
-            Display Name (اختياري)
+            {t("vehicles.fields.displayName")}
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-              placeholder="مثال: مرسيدس 1844"
+              placeholder={t("vehicles.placeholders.displayName")}
             />
           </label>
 
           <label className="grid gap-2 text-sm">
-            Status
+            {t("vehicles.fields.status")}
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
             >
-              <option value="AVAILABLE">AVAILABLE</option>
-              <option value="IN_USE">IN_USE</option>
-              <option value="MAINTENANCE">MAINTENANCE</option>
+              <option value="AVAILABLE">{t("vehicles.status.AVAILABLE")}</option>
+              <option value="IN_USE">{t("vehicles.status.IN_USE")}</option>
+              <option value="MAINTENANCE">{t("vehicles.status.MAINTENANCE")}</option>
             </select>
           </label>
 
           <label className="grid gap-2 text-sm">
-            Model (اختياري)
+            {t("vehicles.fields.model")}
             <input
               value={model}
               onChange={(e) => setModel(e.target.value)}
@@ -182,7 +191,7 @@ function VehicleModal({
           </label>
 
           <label className="grid gap-2 text-sm">
-            Year (اختياري)
+            {t("vehicles.fields.year")}
             <input
               value={year}
               onChange={(e) => setYear(e.target.value)}
@@ -193,7 +202,7 @@ function VehicleModal({
           </label>
 
           <label className="grid gap-2 text-sm">
-            Odometer (اختياري)
+            {t("vehicles.fields.odometer")}
             <input
               value={odometer}
               onChange={(e) => setOdometer(e.target.value)}
@@ -204,7 +213,7 @@ function VehicleModal({
           </label>
 
           <label className="grid gap-2 text-sm md:col-span-2">
-            GPS Device ID (اختياري)
+            {t("vehicles.fields.gps")}
             <input
               value={gps}
               onChange={(e) => setGps(e.target.value)}
@@ -220,14 +229,15 @@ function VehicleModal({
             disabled={loading}
             className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
+
           <button
             onClick={submit}
             disabled={!canSubmit || loading}
             className="px-4 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-60 font-semibold"
           >
-            {loading ? "Saving…" : "Save"}
+            {loading ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>
@@ -236,7 +246,18 @@ function VehicleModal({
 }
 
 /* ---------------- Page ---------------- */
-export default function VehiclesPage() {
+export default function VehiclesClientPage() {
+  const t = useT();
+  const lang = useLang();
+  const locale = lang === "en" ? "en-US" : "ar-EG";
+
+  const fmtDate = (d: any) => {
+    if (!d) return "—";
+    const dt = new Date(String(d));
+    if (Number.isNaN(dt.getTime())) return String(d);
+    return dt.toLocaleString(locale);
+  };
+
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -304,9 +325,9 @@ export default function VehiclesPage() {
     setErr(null);
     try {
       const res = await api.get(`/vehicles?${qs}`);
-      setData(res);
+      setData(res.data); // ✅ important
     } catch (e: any) {
-      setErr(e?.message || "Failed to load vehicles");
+      setErr(e?.message || t("vehicles.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -338,10 +359,10 @@ export default function VehiclesPage() {
   async function toggle(v: any) {
     try {
       await api.patch(`/vehicles/${v.id}/toggle`, {});
-      showToast("success", "Toggled");
+      showToast("success", t("vehicles.toast.toggled"));
       load();
     } catch (e: any) {
-      showToast("error", e?.message || "Toggle failed");
+      showToast("error", e?.message || t("vehicles.toast.toggleFailed"));
     }
   }
 
@@ -350,7 +371,7 @@ export default function VehiclesPage() {
       <div className="min-h-screen bg-slate-950 text-white">
         <div className="max-w-7xl mx-auto p-4 md:p-6">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            Checking session…
+            {t("common.checkingSession")}
           </div>
         </div>
       </div>
@@ -362,11 +383,12 @@ export default function VehiclesPage() {
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xl font-bold">Vehicles</div>
-            <div className="text-sm text-slate-400">Manage fleet</div>
+            <div className="text-xl font-bold">{t("vehicles.title")}</div>
+            <div className="text-sm text-slate-400">{t("vehicles.subtitle")}</div>
           </div>
+
           <div className="text-xs text-slate-400">
-            Role: <span className="text-slate-200">{role || "—"}</span>
+            {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
           </div>
         </div>
 
@@ -375,7 +397,7 @@ export default function VehiclesPage() {
           <input
             value={q}
             onChange={(e) => setParam("q", e.target.value)}
-            placeholder="Search fleet/plate/name..."
+            placeholder={t("vehicles.filters.searchPlaceholder")}
             className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none w-64"
           />
 
@@ -384,11 +406,11 @@ export default function VehiclesPage() {
             onChange={(e) => setParam("status", e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
           >
-            <option value="">All status</option>
-            <option value="AVAILABLE">AVAILABLE</option>
-            <option value="IN_USE">IN_USE</option>
-            <option value="MAINTENANCE">MAINTENANCE</option>
-            <option value="AVAILABLE,IN_USE">Active (AVAILABLE + IN_USE)</option>
+            <option value="">{t("vehicles.filters.allStatus")}</option>
+            <option value="AVAILABLE">{t("vehicles.status.AVAILABLE")}</option>
+            <option value="IN_USE">{t("vehicles.status.IN_USE")}</option>
+            <option value="MAINTENANCE">{t("vehicles.status.MAINTENANCE")}</option>
+            <option value="AVAILABLE,IN_USE">{t("vehicles.filters.activeStatus")}</option>
           </select>
 
           <select
@@ -396,20 +418,20 @@ export default function VehiclesPage() {
             onChange={(e) => setParam("active", e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
           >
-            <option value="">All (active flag)</option>
-            <option value="1">Active only</option>
-            <option value="0">Inactive only</option>
+            <option value="">{t("vehicles.filters.allActiveFlag")}</option>
+            <option value="1">{t("vehicles.filters.activeOnly")}</option>
+            <option value="0">{t("vehicles.filters.inactiveOnly")}</option>
           </select>
 
           <span className="text-xs text-slate-400">
-            Total: {total} — Page {page}/{totalPages}
+            {t("vehicles.meta.total")}: {total} — {t("vehicles.meta.page")} {page}/{totalPages}
           </span>
 
           <button
             onClick={openCreate}
             className="ml-auto px-3 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 text-sm"
           >
-            + Add Vehicle
+            {t("vehicles.actions.add")}
           </button>
 
           <button
@@ -417,7 +439,7 @@ export default function VehiclesPage() {
             disabled={loading}
             className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-60"
           >
-            {loading ? "Loading…" : "Refresh"}
+            {loading ? t("common.loading") : t("common.refresh")}
           </button>
         </div>
 
@@ -426,20 +448,22 @@ export default function VehiclesPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">Loading…</div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+            {t("common.loading")}
+          </div>
         ) : (
           <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">Vehicle</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Fleet</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Plate</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Status</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Active</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Created</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Actions</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.vehicle")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.fleet")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.plate")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.status")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.active")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.created")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.actions")}</th>
                   </tr>
                 </thead>
 
@@ -449,8 +473,10 @@ export default function VehiclesPage() {
                       <td className="px-4 py-2 font-medium">{vehicleLabel(v)}</td>
                       <td className="px-4 py-2 font-mono">{v.fleet_no || "—"}</td>
                       <td className="px-4 py-2 font-mono">{v.plate_no || "—"}</td>
-                      <td className="px-4 py-2">{v.status || "—"}</td>
-                      <td className="px-4 py-2">{v.is_active ? "Yes" : "No"}</td>
+                      <td className="px-4 py-2">
+                        {t(`vehicles.status.${String(v.status || "").toUpperCase()}`) || (v.status || "—")}
+                      </td>
+                      <td className="px-4 py-2">{v.is_active ? t("common.yes") : t("common.no")}</td>
                       <td className="px-4 py-2">{fmtDate(v.created_at)}</td>
                       <td className="px-4 py-2">
                         <div className="flex gap-2">
@@ -458,13 +484,14 @@ export default function VehiclesPage() {
                             className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
                             onClick={() => openEdit(v)}
                           >
-                            Edit
+                            {t("common.edit")}
                           </button>
+
                           <button
                             className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
                             onClick={() => toggle(v)}
                           >
-                            Toggle
+                            {t("common.toggle")}
                           </button>
                         </div>
                       </td>
@@ -474,7 +501,7 @@ export default function VehiclesPage() {
                   {!items.length ? (
                     <tr>
                       <td className="px-4 py-6 text-slate-300" colSpan={7}>
-                        No vehicles found.
+                        {t("vehicles.empty")}
                       </td>
                     </tr>
                   ) : null}
@@ -488,11 +515,11 @@ export default function VehiclesPage() {
                 disabled={page <= 1}
                 onClick={() => setParam("page", String(page - 1))}
               >
-                Prev
+                {t("common.prev")}
               </button>
 
               <div className="text-xs text-slate-400">
-                Showing {items.length} of {total}
+                {t("vehicles.meta.showing")} {items.length} {t("vehicles.meta.of")} {total}
               </div>
 
               <button
@@ -500,7 +527,7 @@ export default function VehiclesPage() {
                 disabled={page >= totalPages}
                 onClick={() => setParam("page", String(page + 1))}
               >
-                Next
+                {t("common.next")}
               </button>
             </div>
           </div>
