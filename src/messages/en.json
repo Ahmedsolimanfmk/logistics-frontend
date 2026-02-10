@@ -35,14 +35,37 @@
     "page": "Page",
     "optional": "optional"
   },
+
   "tabs": {
     "operations": "Operations",
     "finance": "Finance",
     "maintenance": "Maintenance",
     "dev": "Dev"
   },
+
+  "sidebar": {
+    "appName": "Logistics",
+    "dashboard": "Dashboard",
+    "trips": "Trips",
+    "finance": "Finance",
+    "financeOverview": "Overview",
+    "financeExpenses": "Expenses",
+    "financeAdvances": "Advances",
+    "clients": "Clients",
+    "sites": "Sites",
+    "vehicles": "Vehicles",
+    "drivers": "Drivers",
+    "cash": "Cash",
+    "maintenance": "Maintenance",
+    "maintenanceRequests": "Requests",
+    "maintenanceWorkOrders": "Work Orders",
+    "users": "Users",
+    "supervisors": "Supervisors"
+  },
+
   "dashboard": {
     "title": "Dashboard",
+
     "columns": {
       "trip": "Trip",
       "status": "Status",
@@ -58,9 +81,11 @@
       "opened": "Opened",
       "completed": "Completed"
     },
+
     "errors": {
       "trendsUnavailable": "Trends endpoint not available."
     },
+
     "ops": {
       "tripsNeedingFinanceClose": {
         "title": "Trips Needing Finance Close",
@@ -107,6 +132,7 @@
         "tripsAssigned": "Trips Assigned"
       }
     },
+
     "finance": {
       "actionRequired": "Finance – Action Required",
       "pendingTooLong": {
@@ -134,6 +160,7 @@
         }
       }
     },
+
     "maintenance": {
       "actionRequired": "Maintenance – Action Required",
       "openWorkOrders": {
@@ -186,106 +213,14 @@
         }
       }
     },
+
     "dev": {
       "title": "Dev tab",
       "hint": "Reserved for development diagnostics."
     }
   },
-  "sections": {
-    "opsAction": "Operations – Action Required",
-    "quickKpis": "Quick KPIs",
-    "activeTripsNow": "Active Trips Now",
-    "tripsNeedingClose": "Trips Needing Finance Close",
-    "tripsTrend": "Trips Trend (Last 14 days)",
-    "financeAction": "Finance – Action Required",
-    "topExpenseTypes": "Top Expense Types (Today)",
-    "maintenanceAction": "Maintenance – Action Required",
-    "maintenanceKpis": "Maintenance KPIs (Today)",
-    "recentWorkOrders": "Recent Work Orders"
-  },
-  "tiles": {
-    "tripsNeedingClose": {
-      "title": "Trips Needing Finance Close",
-      "hintOn": "Completed trips are waiting reconciliation",
-      "hintOff": "✓ Everything is reconciled"
-    },
-    "activeTripsNow": {
-      "title": "Active Trips Now",
-      "hintOn": "Assigned / In progress (follow-up dispatch)",
-      "hintOff": "✓ All vehicles are idle"
-    },
-    "tripsToday": {
-      "title": "Trips Today",
-      "hint": "Open today trips list"
-    },
-    "pendingTooLong": {
-      "title": "Pending Expenses Too Long",
-      "hintOn": "Needs review/approval",
-      "hintOff": "✓ No delayed pending expenses"
-    },
-    "openAdvances": {
-      "title": "Open Advances",
-      "hintOn": "Advances need settlement",
-      "hintOff": "✓ No open advances"
-    },
-    "expensesTodayApproved": {
-      "title": "Expenses Today (Approved)",
-      "hint": "Approved amount today"
-    },
-    "openWorkOrders": {
-      "title": "Open Work Orders",
-      "hintOn": "Work orders in OPEN / IN_PROGRESS",
-      "hintOff": "✓ No open work orders"
-    },
-    "qaNeeds": {
-      "title": "QA Needs",
-      "hintOn": "Completed WOs missing post report",
-      "hintOff": "✓ QA is clean"
-    },
-    "qaFailed": {
-      "title": "QA Failed",
-      "hintOn": "Road test failed reports",
-      "hintOff": "✓ No QA failures"
-    },
-    "partsMismatch": {
-      "title": "Parts Mismatch",
-      "hintOn": "Issued vs installed mismatch",
-      "hintOff": "✓ No mismatches"
-    }
-  },
-  "empty": {
-    "noActiveTrips": "No active trips now",
-    "allIdle": "✓ All vehicles are idle",
-    "noTripsNeedClose": "No trips need close",
-    "allReconciled": "✓ Everything is reconciled",
-    "noApprovedExpensesToday": "No approved expenses today",
-    "noDataToShow": "No data to show",
-    "noWorkOrders": "No work orders",
-    "noRecentWorkOrders": "No recent work orders found.",
-    "devTab": "Dev tab",
-    "devHint": "Reserved for development diagnostics."
-  },
-  
-  "sidebar": {
-  "appName": "Logistics",
-  "dashboard": "Dashboard",
-  "trips": "Trips",
-  "finance": "Finance",
-  "financeOverview": "Overview",
-  "financeExpenses": "Expenses",
-  "financeAdvances": "Advances",
-  "clients": "Clients",
-  "sites": "Sites",
-  "vehicles": "Vehicles",
-  "drivers": "Drivers",
-  "cash": "Cash",
-  "maintenance": "Maintenance",
-  "maintenanceRequests": "Requests",
-  "maintenanceWorkOrders": "Work Orders",
-  "users": "Users",
-  "supervisors": "Supervisors"
-},
- "users": {
+
+  "users": {
     "title": "Users",
     "subtitle": "Admin-only user management",
     "mustLogin": "You must login first.",
@@ -296,7 +231,50 @@
       "rolePlaceholder": "ADMIN / ACCOUNTANT / ...",
       "status": "Status"
     },
- "vehicles": {
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "role": "Role",
+      "status": "Status",
+      "created": "Created",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "actions": {
+      "create": "+ Add User",
+      "resetPw": "Reset PW",
+      "disable": "Disable",
+      "enable": "Enable"
+    },
+    "modal": {
+      "title": "Create User",
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "role": "Role",
+      "password": "Password",
+      "passwordHint": "min 6 chars",
+      "creating": "Creating…",
+      "create": "Create"
+    },
+    "confirm": {
+      "toggleStatus": "Confirm changing user status: {name} ?"
+    },
+    "prompt": {
+      "newPassword": "Enter a new password for: {name}"
+    },
+    "alert": {
+      "passwordChanged": "Password changed ✅"
+    },
+    "empty": "No users found.",
+    "errors": {
+      "loadFailed": "Failed to load users",
+      "createFailed": "Failed to create user"
+    }
+  },
+
+  "vehicles": {
     "title": "Vehicles",
     "subtitle": "Manage fleet",
     "filters": {
@@ -308,11 +286,7 @@
       "inactiveOnly": "Inactive only"
     },
     "actions": {
-      "add": "+ Add Vehicle",
-      "create": "+ Create User",
-      "resetPw": "Reset PW",
-      "disable": "Disable",
-      "enable": "Enable"
+      "add": "+ Add Vehicle"
     },
     "meta": {
       "total": "Total",
@@ -324,22 +298,14 @@
       "vehicle": "Vehicle",
       "fleet": "Fleet",
       "plate": "Plate",
-      
       "status": "Status",
       "active": "Active",
       "created": "Created",
-      "actions": "Actions",
-      "name": "Name",
-      "email": "Email",
-      "phone": "Phone",
-      "role": "Role"
+      "actions": "Actions"
     },
     "empty": "No vehicles found.",
     "errors": {
       "loadFailed": "Failed to load vehicles"
-    },
-      "loadFailed": "Failed to load users",
-      "createFailed": "Failed to create user"
     },
     "toast": {
       "created": "Vehicle created",
@@ -350,25 +316,7 @@
     },
     "modal": {
       "addTitle": "Add Vehicle",
-      "editTitle": "Edit Vehicle",
-      "title": "Create User",
-      "fullName": "Full name",
-      "email": "Email",
-      "phone": "Phone",
-      "role": "Role",
-      "password": "Password",
-      "passwordHint": "min 6 chars",
-      "creating": "Creating…",
-      "create": "Create"
-    },
-    "alert": {
-      "passwordChanged": "Password changed ✅"
-    },
-    "confirm": {
-      "toggleStatus": "Confirm changing user status: {name} ?"
-    },
-     "prompt": {
-      "newPassword": "Enter a new password for: {name}"
+      "editTitle": "Edit Vehicle"
     },
     "fields": {
       "fleetNo": "Fleet No",
@@ -390,7 +338,5 @@
       "IN_USE": "IN_USE",
       "MAINTENANCE": "MAINTENANCE"
     }
+  }
 }
-}
-
-
