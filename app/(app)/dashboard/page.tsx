@@ -505,7 +505,7 @@ export default function DashboardPage() {
 
     setLoadingCharts(true);
     try {
-      const data = await api.get("/dashboard/trends/bundle?bucket=daily");
+       const data = await apiAuthGet(`/dashboard/trends/bundle`, { bucket: "daily" });
       setBundle(data);
     } catch {
       setBundle(null);
