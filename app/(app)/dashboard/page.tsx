@@ -66,7 +66,6 @@ function cn(...v: Array<string | false | null | undefined>) {
 // =====================
 type TabKey = "operations" | "finance" | "maintenance" | "dev";
 const TAB_STORAGE_KEY = "dash_active_tab_v1";
-
 type TrendPoint = { label: string; value: number };
 
 // =====================
@@ -444,16 +443,14 @@ export default function DashboardPage() {
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
 
-  // hydrate on mount
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
     } catch {}
   }, []);
 
-  // redirect if no token
   useEffect(() => {
-    if (token === null) return; // still loading
+    if (token === null) return;
     if (!token) window.location.href = "/login";
   }, [token]);
 
@@ -471,7 +468,6 @@ export default function DashboardPage() {
   const [loadingCharts, setLoadingCharts] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Restore tab
   useEffect(() => {
     try {
       const saved = localStorage.getItem(TAB_STORAGE_KEY) as TabKey | null;
@@ -504,7 +500,6 @@ export default function DashboardPage() {
     }
   };
 
-  // charts only for operations
   const fetchBundleIfNeeded = async (activeTab: TabKey) => {
     if (activeTab !== "operations") {
       setBundle(null);
@@ -518,7 +513,6 @@ export default function DashboardPage() {
         bucket: "daily",
       });
 
-      // ✅ handle both shapes: {trips_created:...} OR {data:{trips_created:...}}
       const normalized = (data && (data.data ?? data)) || null;
       setBundle(normalized);
     } catch {
@@ -532,7 +526,6 @@ export default function DashboardPage() {
     await Promise.all([fetchSummary(tab), fetchBundleIfNeeded(tab)]);
   };
 
-  // Load on tab change
   useEffect(() => {
     if (!token) return;
     let cancel = false;
@@ -553,7 +546,6 @@ export default function DashboardPage() {
   const tables = summary?.tables || {};
   const alerts = summary?.alerts || {};
 
-  // Tab counts
   const tabItems = useMemo(() => {
     const opsCount = Number(
       alerts?.active_trips_now_count ?? tables?.active_trips_now?.length ?? 0
@@ -603,7 +595,6 @@ export default function DashboardPage() {
     };
   }, [bundle]);
 
-  // ===== Derived numbers =====
   const ops = useMemo(() => {
     const tripsTodayTotal = Number(cards?.trips_today?.total ?? 0);
     const activeNow = Number(tables?.active_trips_now?.length ?? 0);
@@ -650,32 +641,33 @@ export default function DashboardPage() {
     } as const;
   }, [cards]);
 
-  // ✅ supervisors open Requests instead
+  // ✅ بدون تعديل باك: استخدم status واحدة فقط.
   const maintenanceOpenHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/work-orders?status=OPEN,IN_PROGRESS";
+    if (isAdminAcc) return "/maintenance/work-orders?status=OPEN";
     return "/maintenance/requests?status=APPROVED";
   }, [isAdminAcc]);
 
   const maintenanceQaNeedsHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED&qa=needs";
+    // ماعندناش QA filter في list endpoint
+    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
     return "/maintenance/requests?status=APPROVED";
   }, [isAdminAcc]);
 
   const maintenanceFailedHref = useMemo(() => {
-  if (isAdminAcc) return "/maintenance/reports?road_test_result=FAIL";
-  return "/maintenance/requests";
-}, [isAdminAcc]);
-
+    // route /maintenance/reports غير موجود عندك -> 404
+    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
+    return "/maintenance/requests";
+  }, [isAdminAcc]);
 
   const maintenanceMismatchHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/work-orders?parts=mismatch";
+    // mismatch filter مش مدعوم في list endpoint
+    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
     return "/maintenance/requests";
   }, [isAdminAcc]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-xl font-bold">{t("dashboard.title")}</div>
@@ -708,17 +700,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Error */}
         {err ? (
           <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
             {err}
           </div>
         ) : null}
 
-        {/* Tabs */}
         <Tabs value={tab} items={tabItems} onChange={changeTab} />
 
-        {/* Loading */}
         {loadingSummary ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -731,7 +720,6 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* ===================== OPERATIONS ===================== */}
             {tab === "operations" && (
               <div className="space-y-6">
                 <Section
@@ -848,10 +836,7 @@ export default function DashboardPage() {
                       { key: "trip_status", label: t("dashboard.columns.status") },
                       { key: "client", label: t("dashboard.columns.client") },
                       { key: "site", label: t("dashboard.columns.site") },
-                      {
-                        key: "vehicle_plate_number",
-                        label: t("dashboard.columns.vehicle"),
-                      },
+                      { key: "vehicle_plate_number", label: t("dashboard.columns.vehicle") },
                       { key: "driver_name", label: t("dashboard.columns.driver") },
                       {
                         key: "trip_created_at",
@@ -938,7 +923,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* ===================== FINANCE ===================== */}
             {tab === "finance" && (
               <div className="space-y-6">
                 <Section title={t("dashboard.finance.actionRequired")}>
@@ -1004,7 +988,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* ===================== MAINTENANCE ===================== */}
             {tab === "maintenance" && (
               <div className="space-y-6">
                 <Section title={t("dashboard.maintenance.actionRequired")}>
@@ -1148,7 +1131,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* ===================== DEV ===================== */}
             {tab === "dev" && (
               <div className="space-y-6">
                 <EmptyNice title={t("dashboard.dev.title")} hint={t("dashboard.dev.hint")} />

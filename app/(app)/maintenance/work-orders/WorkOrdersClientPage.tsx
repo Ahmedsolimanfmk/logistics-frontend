@@ -1,3 +1,4 @@
+// app/(app)/maintenance/work-orders/WorkOrdersClientPage.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -28,7 +29,6 @@ function isAdminOrAccountant(role: any) {
   return rr === "ADMIN" || rr === "ACCOUNTANT";
 }
 
-// UI atoms
 function Card({
   title,
   right,
@@ -95,7 +95,6 @@ function Badge({ value }: { value: string }) {
   return <span className={cn("rounded-full border px-2 py-0.5 text-xs", cls)}>{v}</span>;
 }
 
-// ✅ select styling fix (dark dropdown)
 const selectCls =
   "w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white";
 const optionCls = "bg-neutral-900 text-white";
@@ -123,21 +122,13 @@ type WorkOrderRow = {
   } | null;
 };
 
-type ListResponse = {
-  page: number;
-  limit: number;
-  total: number;
-  items: WorkOrderRow[];
-};
-
-export default function WorkOrdersPage() {
+export default function WorkOrdersClientPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const token = useAuth((s) => s.token);
   const user = useAuth((s) => s.user);
 
-  // ✅ hydrate (زي الداشبورد)
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
@@ -153,18 +144,16 @@ export default function WorkOrdersPage() {
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
 
-  // ✅ read from URL
   const initialStatus = searchParams.get("status") || "";
   const initialQ = searchParams.get("q") || "";
-  const initialQa = searchParams.get("qa") || ""; // needs | failed
-  const initialParts = searchParams.get("parts") || ""; // mismatch
+  const initialQa = searchParams.get("qa") || "";
+  const initialParts = searchParams.get("parts") || "";
 
   const [status, setStatus] = useState<string>(initialStatus);
   const [q, setQ] = useState<string>(initialQ);
   const [qa, setQa] = useState<string>(initialQa);
   const [parts, setParts] = useState<string>(initialParts);
 
-  // ✅ لو الـ URL اتغير (بسبب كروت الداشبورد) نحدث state
   useEffect(() => {
     setStatus(initialStatus);
     setQ(initialQ);
@@ -174,32 +163,61 @@ export default function WorkOrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStatus, initialQ, initialQa, initialParts]);
 
+  async function fetchList(params: any) {
+    const res: any = await api.get("/maintenance/work-orders", { params });
+    const list = unwrapItems<WorkOrderRow>(res);
+    const meta = (res?.meta || res?.data?.meta || null) as any;
+    const pageOut = Number(res?.page ?? res?.data?.page ?? meta?.page ?? params.page ?? 1);
+    const totalOut = Number(res?.total ?? res?.data?.total ?? meta?.total ?? 0);
+    return {
+      items: list,
+      page: Number.isFinite(pageOut) ? pageOut : 1,
+      total: Number.isFinite(totalOut) ? totalOut : 0,
+    };
+  }
+
   async function load(p = page) {
     if (!token) return;
     setLoading(true);
+
     try {
-      const res: any = await api.get("/maintenance/work-orders", {
-        params: {
-          page: p,
-          limit,
-          status: status || undefined, // ممكن تكون "OPEN,IN_PROGRESS"
-          q: q || undefined,
-          qa: qa || undefined,
-          parts: parts || undefined,
-        },
+      const normalizedStatus = String(status || "").toUpperCase().trim();
+
+      // ✅ بدون تعديل باك: لو "OPEN,IN_PROGRESS" نعمل طلبين ونضمهم
+      if (normalizedStatus === "OPEN,IN_PROGRESS") {
+        const [a, b] = await Promise.all([
+          fetchList({ page: p, limit, status: "OPEN", q: q || undefined }),
+          fetchList({ page: p, limit, status: "IN_PROGRESS", q: q || undefined }),
+        ]);
+
+        const merged = [...(a.items || []), ...(b.items || [])];
+
+        // dedupe by id (لو نفس WO ظهر مرتين)
+        const map = new Map<string, WorkOrderRow>();
+        for (const it of merged) map.set(it.id, it);
+        const out = Array.from(map.values());
+
+        setItems(out);
+        setTotal(out.length);
+        setPage(p);
+        return;
+      }
+
+      // ✅ العادي: status واحدة فقط
+      const out = await fetchList({
+        page: p,
+        limit,
+        status: status || undefined,
+        q: q || undefined,
+
+        // ❌ لا نرسل qa/parts للباك لأنه غير مدعوم (هتعمل فلترة غلط)
+        // qa: qa || undefined,
+        // parts: parts || undefined,
       });
 
-      // unwrapItems يغطي لو السيرفر رجع items داخل data أو رجع array مباشرة
-      const list = unwrapItems<WorkOrderRow>(res);
-      const meta = (res?.meta || res?.data?.meta || null) as any;
-
-      // backend عندك غالباً بيرجع total/page/limit على root أو داخل meta
-      const pageOut = Number(res?.page ?? res?.data?.page ?? meta?.page ?? p);
-      const totalOut = Number(res?.total ?? res?.data?.total ?? meta?.total ?? 0);
-
-      setItems(list);
-      setTotal(Number.isFinite(totalOut) ? totalOut : 0);
-      setPage(Number.isFinite(pageOut) ? pageOut : p);
+      setItems(out.items);
+      setTotal(out.total);
+      setPage(out.page);
     } catch {
       setItems([]);
       setTotal(0);
@@ -208,16 +226,14 @@ export default function WorkOrdersPage() {
     }
   }
 
-  // ✅ reload عند تغيّر token أو status/qa/parts (الفلترة السيرفرية)
   useEffect(() => {
     if (!token) return;
     load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, status, qa, parts]);
+  }, [token, status]);
 
   const pages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
 
-  // ✅ لو التوكن لسه null (قبل الهيدريت) ما نحكمش على الصلاحيات
   if (token === null) {
     return (
       <div className="p-4 text-white">
@@ -250,6 +266,11 @@ export default function WorkOrdersPage() {
           <div className="text-xs text-white/50">
             Filters from URL: status={statusLabel(status)} • qa={qa || "—"} • parts={parts || "—"}
           </div>
+          {(qa || parts) ? (
+            <div className="text-[11px] text-amber-200/80">
+              ملاحظة: qa/parts معروضة فقط (backend الحالي لا يدعم فلترتها في list).
+            </div>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
@@ -299,6 +320,8 @@ export default function WorkOrdersPage() {
               <option value="CANCELED" className={optionCls}>
                 CANCELED
               </option>
+
+              {/* ✅ يشتغل هنا لأننا بنعمل طلبين */}
               <option value="OPEN,IN_PROGRESS" className={optionCls}>
                 OPEN + IN_PROGRESS
               </option>
@@ -309,7 +332,7 @@ export default function WorkOrdersPage() {
           </div>
 
           <div>
-            <div className="text-xs text-white/60 mb-1">QA</div>
+            <div className="text-xs text-white/60 mb-1">QA (display only)</div>
             <select value={qa} onChange={(e) => setQa(e.target.value)} className={selectCls}>
               <option value="" className={optionCls}>
                 All
@@ -324,7 +347,7 @@ export default function WorkOrdersPage() {
           </div>
 
           <div>
-            <div className="text-xs text-white/60 mb-1">Parts</div>
+            <div className="text-xs text-white/60 mb-1">Parts (display only)</div>
             <select value={parts} onChange={(e) => setParts(e.target.value)} className={selectCls}>
               <option value="" className={optionCls}>
                 All
@@ -357,7 +380,7 @@ export default function WorkOrdersPage() {
             </div>
 
             <div className="mt-2 text-[11px] text-white/50">
-              Tip: الكروت من الداشبورد بتبعت status/qa/parts في الـ URL — الصفحة دي بتقرأهم وتفلتر صح.
+              Tip: الكروت من الداشبورد بتبعت status في الـ URL — والصفحة دي بتقرأه وتفلتر صح.
             </div>
           </div>
         </div>
