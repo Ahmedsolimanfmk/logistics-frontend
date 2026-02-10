@@ -243,5 +243,26 @@
     "noRecentWorkOrders": "No recent work orders found.",
     "devTab": "Dev tab",
     "devHint": "Reserved for development diagnostics."
-  }
+  },
+  "sidebar": {
+  "appName": "Logistics",
+  "dashboard": "Dashboard",
+  "trips": "Trips",
+  "finance": "Finance",
+  "financeOverview": "Overview",
+  "financeExpenses": "Expenses",
+  "financeAdvances": "Advances",
+  "clients": "Clients",
+  "sites": "Sites",
+  "vehicles": "Vehicles",
+  "drivers": "Drivers",
+  "cash": "Cash",
+  "maintenance": "Maintenance",
+  "maintenanceRequests": "Requests",
+  "maintenanceWorkOrders": "Work Orders",
+  "users": "Users",
+  "supervisors": "Supervisors"
 }
+}
+
+

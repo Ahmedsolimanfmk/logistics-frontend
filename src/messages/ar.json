@@ -243,5 +243,26 @@
     "noRecentWorkOrders": "لم يتم العثور على أوامر عمل حديثة.",
     "devTab": "تبويب المطور",
     "devHint": "مخصص لتشخيصات التطوير."
-  }
+  },
+
+  "sidebar": {
+  "appName": "النظام اللوجستي",
+  "dashboard": "لوحة التحكم",
+  "trips": "الرحلات",
+  "finance": "المالية",
+  "financeOverview": "نظرة عامة",
+  "financeExpenses": "المصروفات",
+  "financeAdvances": "السلف",
+  "clients": "العملاء",
+  "sites": "المواقع",
+  "vehicles": "المركبات",
+  "drivers": "السائقين",
+  "cash": "الكاش",
+  "maintenance": "الصيانة",
+  "maintenanceRequests": "طلبات الصيانة",
+  "maintenanceWorkOrders": "أوامر العمل",
+  "users": "المستخدمين",
+  "supervisors": "المشرفين"
+}
+
 }
