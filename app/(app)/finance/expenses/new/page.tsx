@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
+import { Toast } from "@/src/components/Toast";
 import { useT } from "@/src/i18n/useT";
 
 function roleUpper(r: any) {
@@ -32,10 +33,7 @@ export default function NewCashExpensePage() {
   }, [isSupervisor, isPrivileged]);
 
   const [paymentSource, setPaymentSource] = useState<string>(allowedSources[0] || "");
-
-  useEffect(() => {
-    setPaymentSource(allowedSources[0] || "");
-  }, [allowedSources]);
+  useEffect(() => setPaymentSource(allowedSources[0] || ""), [allowedSources]);
 
   const [loading, setLoading] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
@@ -44,6 +42,17 @@ export default function NewCashExpensePage() {
   const [advances, setAdvances] = useState<any[]>([]);
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
+
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToastType(type);
+    setToastMsg(msg);
+    setToastOpen(true);
+    setTimeout(() => setToastOpen(false), 2500);
+  }
 
   const [form, setForm] = useState({
     amount: "",
@@ -54,7 +63,7 @@ export default function NewCashExpensePage() {
     invoice_no: "",
     invoice_date: "",
     maintenance_work_order_id: "",
-    trip_id: ""
+    trip_id: "",
   });
 
   useEffect(() => {
@@ -89,7 +98,7 @@ export default function NewCashExpensePage() {
           if (mounted) setTrips([]);
         }
       } catch (e: any) {
-        if (mounted) setError(e?.message || t("financeExpenseNew.errors.loadFailed"));
+        if (mounted) setError(e.message || t("financeNewExpense.errors.loadFailed"));
       } finally {
         if (mounted) setBootLoading(false);
       }
@@ -103,31 +112,34 @@ export default function NewCashExpensePage() {
   }, [isSupervisor, user?.id]);
 
   function validate() {
-    if (!paymentSource) return t("financeExpenseNew.validation.noPaymentSource");
-    if (!form.expense_type) return t("financeExpenseNew.validation.expenseTypeRequired");
-    if (!form.amount || Number(form.amount) <= 0) return t("financeExpenseNew.validation.amountInvalid");
+  if (!paymentSource) return t("financeNewExpense.errors.notAllowed");
+  if (!form.expense_type) return t("financeNewExpense.errors.expenseTypeRequired");
+  if (!form.amount || Number(form.amount) <= 0) return t("financeNewExpense.errors.amountInvalid");
 
-    if (paymentSource === "ADVANCE") {
-      if (!isSupervisor) return t("financeExpenseNew.validation.advanceSupervisorOnly");
-      if (!isUuid(form.cash_advance_id)) return t("financeExpenseNew.validation.advancePickOpen");
-    }
-
-    if (paymentSource === "COMPANY") {
-      if (!isPrivileged) return t("financeExpenseNew.validation.companyPrivOnly");
-      if (!form.vendor_name || String(form.vendor_name).trim().length < 2) return t("financeExpenseNew.validation.vendorRequired");
-      if (!form.invoice_date) return t("financeExpenseNew.validation.invoiceDateRequired");
-    }
-
-    if (form.trip_id && !isUuid(form.trip_id)) return t("financeExpenseNew.validation.tripInvalid");
-    if (form.maintenance_work_order_id && !isUuid(form.maintenance_work_order_id)) return t("financeExpenseNew.validation.workOrderInvalid");
-
-    return null;
+  if (paymentSource === "ADVANCE") {
+    if (!isSupervisor) return t("financeNewExpense.errors.advanceOnlySupervisor");
+    if (!isUuid(form.cash_advance_id)) return t("financeNewExpense.errors.selectOpenAdvance");
   }
 
+  if (paymentSource === "COMPANY") {
+    if (!isPrivileged) return t("financeNewExpense.errors.companyOnlyPrivileged");
+    if (!form.vendor_name || String(form.vendor_name).trim().length < 2)
+      return t("financeNewExpense.errors.vendorRequired");
+    if (!form.invoice_date) return t("financeNewExpense.errors.invoiceDateRequired");
+  }
+
+  if (form.trip_id && !isUuid(form.trip_id)) return t("financeNewExpense.errors.tripInvalid");
+  if (form.maintenance_work_order_id && !isUuid(form.maintenance_work_order_id))
+    return t("financeNewExpense.errors.woInvalid");
+
+  return null;
+}
+
   async function submit() {
-    const err = validate();
-    if (err) {
-      setError(err);
+    const e = validate();
+    if (e) {
+      setError(e);
+      showToast("error", e);
       return;
     }
 
@@ -140,35 +152,33 @@ export default function NewCashExpensePage() {
         expense_type: form.expense_type,
         amount: Number(form.amount),
         notes: form.notes?.trim() ? form.notes.trim() : undefined,
-
         cash_advance_id: paymentSource === "ADVANCE" ? form.cash_advance_id : undefined,
-
         vendor_name: paymentSource === "COMPANY" ? String(form.vendor_name).trim() : undefined,
         invoice_no: paymentSource === "COMPANY" && form.invoice_no?.trim() ? form.invoice_no.trim() : undefined,
         invoice_date: paymentSource === "COMPANY" ? form.invoice_date : undefined,
-
         maintenance_work_order_id: form.maintenance_work_order_id || undefined,
-        trip_id: form.trip_id || undefined
+        trip_id: form.trip_id || undefined,
       });
 
+      showToast("success", t("financeNewExpense.toast.created"));
       router.push("/finance/expenses");
-    } catch (e: any) {
-      setError(e?.message || t("financeExpenseNew.errors.createFailed"));
+    } catch (err: any) {
+      const msg = err?.message || t("financeNewExpense.toast.createFailed");
+      setError(msg);
+      showToast("error", msg);
     } finally {
       setLoading(false);
     }
   }
 
-  if (bootLoading) {
-    return <div className="text-sm text-slate-300">{t("common.loading")}</div>;
-  }
+  if (bootLoading) return <div className="text-sm text-slate-300">{t("common.loading")}</div>;
 
   if (!paymentSource) {
     return (
       <div className="space-y-3">
-        <h1 className="text-xl font-bold">{t("financeExpenseNew.title")}</h1>
+        <h1 className="text-xl font-bold">{t("financeNewExpense.title")}</h1>
         <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-200">
-          {t("financeExpenseNew.errors.notAllowed")}
+          {t("financeNewExpense.notAllowedBanner")}
         </div>
       </div>
     );
@@ -178,7 +188,7 @@ export default function NewCashExpensePage() {
     <div className="max-w-3xl space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">{t("financeExpenseNew.title")}</h1>
+          <h1 className="text-xl font-bold">{t("financeNewExpense.title")}</h1>
           <div className="text-xs text-slate-400">
             {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
           </div>
@@ -193,7 +203,7 @@ export default function NewCashExpensePage() {
 
       <div className="space-y-4">
         <div className="space-y-1">
-          <div className="text-xs text-slate-400">{t("financeExpenseNew.fields.paymentSource")}</div>
+          <div className="text-xs text-slate-400">{t("financeNewExpense.fields.paymentSource")}</div>
           <select
             className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
             value={paymentSource}
@@ -207,15 +217,15 @@ export default function NewCashExpensePage() {
           </select>
 
           {paymentSource === "ADVANCE" ? (
-            <div className="text-xs text-slate-400">{t("financeExpenseNew.hints.advance")}</div>
+            <div className="text-xs text-slate-400">{t("financeNewExpense.hints.advance")}</div>
           ) : (
-            <div className="text-xs text-slate-400">{t("financeExpenseNew.hints.company")}</div>
+            <div className="text-xs text-slate-400">{t("financeNewExpense.hints.company")}</div>
           )}
         </div>
 
         <input
           className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-          placeholder={t("financeExpenseNew.fields.expenseType")}
+          placeholder={t("financeNewExpense.fields.expenseType")}
           value={form.expense_type}
           onChange={(e) => setForm({ ...form, expense_type: e.target.value })}
         />
@@ -223,7 +233,7 @@ export default function NewCashExpensePage() {
         <input
           type="number"
           className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-          placeholder={t("financeExpenseNew.fields.amount")}
+          placeholder={t("financeNewExpense.fields.amount")}
           value={form.amount}
           onChange={(e) => setForm({ ...form, amount: e.target.value })}
         />
@@ -234,7 +244,7 @@ export default function NewCashExpensePage() {
             value={form.cash_advance_id}
             onChange={(e) => setForm({ ...form, cash_advance_id: e.target.value })}
           >
-            <option value="">{t("financeExpenseNew.fields.selectCashAdvanceOpen")}</option>
+            <option value="">{t("financeNewExpense.fields.cashAdvance")}</option>
             {advances.map((a) => (
               <option key={a.id} value={a.id}>
                 {Number(a.amount || 0)} — {String(a.id).slice(0, 8)}…
@@ -247,14 +257,14 @@ export default function NewCashExpensePage() {
           <>
             <input
               className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-              placeholder={t("financeExpenseNew.fields.vendorName")}
+              placeholder={t("financeNewExpense.fields.vendorName")}
               value={form.vendor_name}
               onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
             />
 
             <input
               className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-              placeholder={t("financeExpenseNew.fields.invoiceNoOptional")}
+              placeholder={t("financeNewExpense.fields.invoiceNo")}
               value={form.invoice_no}
               onChange={(e) => setForm({ ...form, invoice_no: e.target.value })}
             />
@@ -273,7 +283,7 @@ export default function NewCashExpensePage() {
           value={form.maintenance_work_order_id}
           onChange={(e) => setForm({ ...form, maintenance_work_order_id: e.target.value })}
         >
-          <option value="">{t("financeExpenseNew.fields.linkWorkOrderOptional")}</option>
+          <option value="">{t("financeNewExpense.fields.linkWorkOrder")}</option>
           {workOrders.map((w) => (
             <option key={w.id} value={w.id}>
               {w.code || String(w.id).slice(0, 8) + "…"}
@@ -286,17 +296,17 @@ export default function NewCashExpensePage() {
           value={form.trip_id}
           onChange={(e) => setForm({ ...form, trip_id: e.target.value })}
         >
-          <option value="">{t("financeExpenseNew.fields.linkTripOptional")}</option>
-          {trips.map((ttt) => (
-            <option key={ttt.id} value={ttt.id}>
-              {ttt.code || String(ttt.id).slice(0, 8) + "…"}
+          <option value="">{t("financeNewExpense.fields.linkTrip")}</option>
+          {trips.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.code || String(x.id).slice(0, 8) + "…"}
             </option>
           ))}
         </select>
 
         <textarea
           className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-          placeholder={t("financeExpenseNew.fields.notes")}
+          placeholder={t("financeNewExpense.fields.notes")}
           value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
         />
@@ -309,9 +319,11 @@ export default function NewCashExpensePage() {
             loading ? "bg-indigo-600/60" : "bg-indigo-600 hover:bg-indigo-700"
           )}
         >
-          {loading ? t("common.saving") : t("financeExpenseNew.cta.create")}
+          {loading ? t("common.saving") : t("financeNewExpense.actions.create")}
         </button>
       </div>
+
+      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
     </div>
   );
 }

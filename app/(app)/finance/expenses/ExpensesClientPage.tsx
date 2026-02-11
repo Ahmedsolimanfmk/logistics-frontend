@@ -11,24 +11,29 @@ import { useT } from "@/src/i18n/useT";
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
+
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
+
 function fmtMoney(n: any) {
   const v = Number(n || 0);
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
+
 function fmtDate(d?: string | null) {
   if (!d) return "—";
   const dt = new Date(String(d));
   if (Number.isNaN(dt.getTime())) return String(d);
   return dt.toLocaleString("ar-EG");
 }
+
 function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
+
 function StatusBadge({ s }: { s: string }) {
   const st = String(s || "").toUpperCase();
   const cls =
@@ -41,6 +46,7 @@ function StatusBadge({ s }: { s: string }) {
       : st === "PENDING"
       ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
       : "bg-white/5 text-slate-200 border-white/10";
+
   return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
 }
 
@@ -73,6 +79,7 @@ export default function ExpensesClientPage() {
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
+
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
     setToastMsg(msg);
@@ -102,14 +109,13 @@ export default function ExpensesClientPage() {
       });
 
       const list = Array.isArray(data) ? data : (data as any)?.items || [];
-      const tt = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
+      const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
 
       setItems(list);
-      setTotal(tt);
+      setTotal(tTotal);
     } catch (e: any) {
-      const m = e?.message || t("financeExpenses.errors.loadFailed");
-      setErr(m);
-      showToast("error", m);
+      const msg = e?.message || t("financeExpenses.errors.loadFailed");
+      setErr(msg);
       setItems([]);
       setTotal(0);
     } finally {
@@ -124,47 +130,39 @@ export default function ExpensesClientPage() {
 
   async function approve(expenseId: string) {
     if (!canReview) return;
-    const notes = window.prompt(t("financeExpenses.prompts.notesOptional")) || "";
-    try {
-      await api.post(`/cash/cash-expenses/${expenseId}/approve`, { notes: notes || null });
-      showToast("success", t("financeExpenses.toast.approved"));
-      await load();
-    } catch (e: any) {
-      showToast("error", e?.message || t("financeExpenses.toast.approveFailed"));
-    }
+    const notes = window.prompt(t("financeExpenses.prompts.approveNotes")) || "";
+try {
+  await api.post(`/cash/cash-expenses/${expenseId}/approve`, { notes: notes || null });
+  showToast("success", t("common.save"));
+  await load();
+} catch (e: any) {
+  showToast("error", e?.message || t("financeExpenses.errors.approveFailed"));
+}
   }
 
   async function reject(expenseId: string) {
     if (!canReview) return;
-    const reason = window.prompt(t("financeExpenses.prompts.rejectReasonRequired"));
-    if (!reason || reason.trim().length < 2) return;
-    const notes = window.prompt(t("financeExpenses.prompts.notesOptional")) || "";
-    try {
-      await api.post(`/cash/cash-expenses/${expenseId}/reject`, { reason: reason.trim(), notes: notes || null });
-      showToast("success", t("financeExpenses.toast.rejected"));
-      await load();
-    } catch (e: any) {
-      showToast("error", e?.message || t("financeExpenses.toast.rejectFailed"));
-    }
+    const reason = window.prompt(t("financeExpenses.prompts.rejectReason"));
+if (!reason || reason.trim().length < 2) return;
+
+const notes = window.prompt(t("financeExpenses.prompts.rejectNotes")) || "";
+try {
+  await api.post(`/cash/cash-expenses/${expenseId}/reject`, { reason: reason.trim(), notes: notes || null });
+  showToast("success", t("common.save"));
+  await load();
+} catch (e: any) {
+  showToast("error", e?.message || t("financeExpenses.errors.rejectFailed"));
+}
   }
 
   const tabs: Array<{ key: TabKey; label: string }> = [
-    { key: "PENDING", label: t("financeExpenses.tabs.PENDING") },
-    { key: "APPROVED", label: t("financeExpenses.tabs.APPROVED") },
-    { key: "REJECTED", label: t("financeExpenses.tabs.REJECTED") },
-    { key: "APPEALED", label: t("financeExpenses.tabs.APPEALED") },
-    { key: "ALL", label: t("financeExpenses.tabs.ALL") },
-  ];
+  { key: "PENDING", label: t("financeExpenses.tabs.PENDING") },
+  { key: "APPROVED", label: t("financeExpenses.tabs.APPROVED") },
+  { key: "REJECTED", label: t("financeExpenses.tabs.REJECTED") },
+  { key: "APPEALED", label: t("financeExpenses.tabs.APPEALED") },
+  { key: "ALL", label: t("financeExpenses.tabs.ALL") },
+];
 
-  if (token === null) {
-    return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-          {t("common.checkingSession")}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -174,7 +172,7 @@ export default function ExpensesClientPage() {
             <div className="text-xl font-bold">{t("financeExpenses.title")}</div>
             <div className="text-xs text-slate-400">
               {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
-              {!canReview ? <span className="ml-2">{t("financeExpenses.viewOnly")}</span> : null}
+              {!canReview ? <span className="ml-2">({t("financeExpenses.viewOnly")})</span> : null}
             </div>
           </div>
 
@@ -183,7 +181,7 @@ export default function ExpensesClientPage() {
               href="/finance"
               className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
             >
-              {t("financeExpenses.actions.backToFinance")}
+              ← {t("sidebar.finance")}
             </Link>
             <button
               onClick={load}
@@ -195,23 +193,25 @@ export default function ExpensesClientPage() {
           </div>
         </div>
 
+        {/* Tabs */}
         <div className="flex flex-wrap gap-2">
-          {tabs.map((tt) => (
+          {tabs.map((x) => (
             <button
-              key={tt.key}
-              onClick={() => setParam("status", tt.key)}
+              key={x.key}
+              onClick={() => setParam("status", x.key)}
               className={cn(
                 "px-3 py-2 rounded-xl text-sm border transition",
-                status === tt.key
+                status === x.key
                   ? "bg-white/10 border-white/10 text-white"
                   : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
               )}
             >
-              {tt.label}
+              {x.label}
             </button>
           ))}
         </div>
 
+        {/* Search + meta */}
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={q}
@@ -221,8 +221,7 @@ export default function ExpensesClientPage() {
           />
 
           <div className="text-xs text-slate-400">
-            {t("financeExpenses.meta.total")} <span className="text-slate-200">{total}</span> —{" "}
-            {t("financeExpenses.meta.page")}{" "}
+            {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
             <span className="text-slate-200">
               {page}/{totalPages}
             </span>
@@ -245,6 +244,7 @@ export default function ExpensesClientPage() {
           <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
         ) : null}
 
+        {/* Table */}
         <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           {loading ? (
             <div className="p-4 text-sm text-slate-300">{t("common.loading")}</div>
@@ -308,7 +308,7 @@ export default function ExpensesClientPage() {
 
                             {st === "REJECTED" && x.rejection_reason ? (
                               <span className="text-xs text-slate-400">
-                                {t("financeExpenses.actions.reasonPrefix")}{" "}
+                                {t("financeExpenses.table.reason")}:{" "}
                                 <span className="text-slate-200">{String(x.rejection_reason)}</span>
                               </span>
                             ) : null}
@@ -322,6 +322,7 @@ export default function ExpensesClientPage() {
             </div>
           )}
 
+          {/* Pagination */}
           <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
             <button
               className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
@@ -332,7 +333,7 @@ export default function ExpensesClientPage() {
             </button>
 
             <div className="text-xs text-slate-400">
-              {t("financeExpenses.pagination.showing")} {items.length} {t("financeExpenses.pagination.of")} {total}
+              {t("financeExpenses.meta.showing", { count: items.length, total })}
             </div>
 
             <button
@@ -344,9 +345,9 @@ export default function ExpensesClientPage() {
             </button>
           </div>
         </div>
-      </div>
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+        <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+      </div>
     </div>
   );
 }

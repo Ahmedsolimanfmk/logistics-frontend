@@ -10,7 +10,18 @@ function get(obj: any, path: string) {
   return path.split(".").reduce((acc, k) => acc?.[k], obj);
 }
 
+function format(template: string, params?: Record<string, any>) {
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (_, k) =>
+    params[k] === undefined || params[k] === null ? `{${k}}` : String(params[k])
+  );
+}
+
 export function useT() {
-  const lang = useLang(); // ✅ الآن الصفحة هتعمل rerender عند تغيير اللغة
-  return (key: string) => get(dict[lang], key) ?? key;
+  const lang = useLang();
+  return (key: string, params?: Record<string, any>) => {
+    const v = get(dict[lang], key);
+    if (typeof v === "string") return format(v, params);
+    return key;
+  };
 }
