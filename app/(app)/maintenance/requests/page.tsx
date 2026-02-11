@@ -310,7 +310,7 @@ export default function MaintenanceRequestsPage() {
       setVehicleOptions(unwrapItems<VehicleOption>(res));
     } catch (e: any) {
       setVehicleOptions([]);
-      showToast(e?.message || t("mr.failedLoadVehicles"), "error");
+      showToast(e?.message || t("maintenanceRequests.toast.vehiclesFailed"), "error");
     } finally {
       setVehiclesLoading(false);
     }
@@ -336,7 +336,7 @@ export default function MaintenanceRequestsPage() {
       setMeta(m);
       if (m?.page) setPage(m.page);
     } catch (e: any) {
-      showToast(e?.message || t("mr.failedLoadRequests"), "error");
+      showToast(e?.message || t("maintenanceRequests.toast.loadFailed"), "error");
       setItems([]);
       setMeta(null);
     } finally {
@@ -389,10 +389,11 @@ export default function MaintenanceRequestsPage() {
       setFormDesc("");
       setPage(1);
 
-      showToast(t("mr.requestCreated"), "success");
+      showToast(t("maintenanceRequests.toast.requestCreated"), "success");
       await loadRequests(1);
     } catch (e: any) {
-      showToast(e?.message || t("mr.failedCreateRequest"), "error");
+      // لو تحب ترجمة خاصة للفشل، هنضيف مفتاح createFailed تحت
+      showToast(e?.message || t("maintenanceRequests.toast.createFailed"), "error");
     } finally {
       setSubmitting(false);
     }
@@ -407,10 +408,10 @@ export default function MaintenanceRequestsPage() {
         notes: null,
       });
       setApproveTarget(null);
-      showToast(t("mr.approved"), "success");
+      showToast(t("maintenanceRequests.toast.approved"), "success");
       await loadRequests(1);
     } catch (e: any) {
-      showToast(e?.message || t("mr.failedApprove"), "error");
+      showToast(e?.message || t("maintenanceRequests.toast.approveFailed"), "error");
     }
   }
 
@@ -418,10 +419,10 @@ export default function MaintenanceRequestsPage() {
     try {
       await api.post(`/maintenance/requests/${id}/reject`, { reason });
       setRejectTarget(null);
-      showToast(t("mr.rejected"), "info");
+      showToast(t("maintenanceRequests.toast.rejected"), "info");
       await loadRequests(1);
     } catch (e: any) {
-      showToast(e?.message || t("mr.failedReject"), "error");
+      showToast(e?.message || t("maintenanceRequests.toast.rejectFailed"), "error");
     }
   }
 
@@ -430,7 +431,7 @@ export default function MaintenanceRequestsPage() {
   if (token === null) {
     return (
       <div className="space-y-4 p-4">
-        <Card title={t("mr.title")}>
+        <Card title={t("maintenanceRequests.title")}>
           <div className="text-sm text-neutral-600">{t("common.loadingSession")}</div>
         </Card>
       </div>
@@ -447,7 +448,7 @@ export default function MaintenanceRequestsPage() {
       />
 
       <Card
-        title={t("mr.title")}
+        title={t("maintenanceRequests.title")}
         right={
           <div className="flex items-center gap-2">
             <Button
@@ -458,15 +459,15 @@ export default function MaintenanceRequestsPage() {
               }}
               disabled={loading || vehiclesLoading}
             >
-              {t("common.refresh")}
+              {t("maintenanceRequests.actions.refresh")}
             </Button>
-            <Button onClick={() => setCreateOpen(true)}>{t("mr.createRequestBtn")}</Button>
+            <Button onClick={() => setCreateOpen(true)}>{t("maintenanceRequests.actions.create")}</Button>
           </div>
         }
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
-            <div className="mb-1 text-xs text-neutral-600">{t("mr.status")}</div>
+            <div className="mb-1 text-xs text-neutral-600">{t("maintenanceRequests.filters.status")}</div>
             <Select
               value={status}
               onChange={(v: string) => {
@@ -474,16 +475,16 @@ export default function MaintenanceRequestsPage() {
                 setPage(1);
               }}
               options={[
-                { label: t("mr.all"), value: "" },
-                { label: t("mr.submitted"), value: "SUBMITTED" },
-                { label: t("mr.approvedStatus"), value: "APPROVED" },
-                { label: t("mr.rejectedStatus"), value: "REJECTED" },
+                { label: t("common.all"), value: "" },
+                { label: "SUBMITTED", value: "SUBMITTED" },
+                { label: "APPROVED", value: "APPROVED" },
+                { label: "REJECTED", value: "REJECTED" },
               ]}
             />
           </div>
 
           <div>
-            <div className="mb-1 text-xs text-neutral-600">{t("mr.vehicle")}</div>
+            <div className="mb-1 text-xs text-neutral-600">{t("maintenanceRequests.filters.vehicle")}</div>
             <Select
               value={vehicleId}
               disabled={vehiclesLoading}
@@ -492,19 +493,24 @@ export default function MaintenanceRequestsPage() {
                 setPage(1);
               }}
               options={[
-                { label: vehiclesLoading ? t("mr.loadingVehicles") : t("mr.allVehicles"), value: "" },
+                {
+                  label: vehiclesLoading
+                    ? t("maintenanceRequests.form.vehicleLoading")
+                    : t("maintenanceRequests.form.vehicleSelect"),
+                  value: "",
+                },
                 ...vehicleOptions.map((v) => ({
                   label: `${v.label}${v.status ? ` (${String(v.status).toUpperCase()})` : ""}`,
                   value: v.id,
                 })),
               ]}
             />
-            <div className="mt-1 text-[11px] text-neutral-500">{t("mr.vehicleHint")}</div>
+            <div className="mt-1 text-[11px] text-neutral-500">{t("maintenanceRequests.form.attachmentsHint")}</div>
           </div>
 
           <div className="md:col-span-2">
-            <div className="mb-1 text-xs text-neutral-600">{t("mr.searchLocal")}</div>
-            <Input value={q} onChange={setQ} placeholder={t("mr.searchPlaceholder")} />
+            <div className="mb-1 text-xs text-neutral-600">{t("maintenanceRequests.filters.searchLocal")}</div>
+            <Input value={q} onChange={setQ} placeholder={t("maintenanceRequests.filters.searchPlaceholder")} />
           </div>
         </div>
 
@@ -514,11 +520,11 @@ export default function MaintenanceRequestsPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-neutral-50 text-neutral-700">
               <tr>
-                <th className="px-3 py-2 text-left">{t("mr.requestedAt")}</th>
-                <th className="px-3 py-2 text-left">{t("mr.vehicle")}</th>
-                <th className="px-3 py-2 text-left">{t("mr.titleCol")}</th>
-                <th className="px-3 py-2 text-left">{t("mr.status")}</th>
-                <th className="px-3 py-2 text-left">{t("mr.actions")}</th>
+                <th className="px-3 py-2 text-left">{t("maintenanceRequests.table.requestedAt")}</th>
+                <th className="px-3 py-2 text-left">{t("maintenanceRequests.table.vehicle")}</th>
+                <th className="px-3 py-2 text-left">{t("maintenanceRequests.table.title")}</th>
+                <th className="px-3 py-2 text-left">{t("maintenanceRequests.table.status")}</th>
+                <th className="px-3 py-2 text-left">{t("maintenanceRequests.table.actions")}</th>
               </tr>
             </thead>
 
@@ -526,7 +532,7 @@ export default function MaintenanceRequestsPage() {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-3 py-6 text-center text-neutral-500">
-                    {t("mr.noRequests")}
+                    {t("maintenanceRequests.empty")}
                   </td>
                 </tr>
               ) : (
@@ -549,7 +555,7 @@ export default function MaintenanceRequestsPage() {
                         ) : null}
                         {st === "REJECTED" && it.rejection_reason ? (
                           <div className="mt-1 text-xs text-red-700">
-                            {t("mr.rejection")}: {it.rejection_reason}
+                            {t("maintenanceRequests.modals.rejectReasonLabel")}: {it.rejection_reason}
                           </div>
                         ) : null}
                       </td>
@@ -567,10 +573,10 @@ export default function MaintenanceRequestsPage() {
                           {canApproveReject ? (
                             <>
                               <Button variant="secondary" onClick={() => setApproveTarget(it)}>
-                                {t("mr.approve")}
+                                {t("maintenanceRequests.actions.approve")}
                               </Button>
                               <Button variant="danger" onClick={() => setRejectTarget(it)}>
-                                {t("mr.reject")}
+                                {t("maintenanceRequests.actions.reject")}
                               </Button>
                             </>
                           ) : null}
@@ -586,14 +592,22 @@ export default function MaintenanceRequestsPage() {
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="text-xs text-neutral-600">
-            {t("mr.page")} {meta?.page || page} / {totalPages} • {t("mr.total")}{" "}
-            {meta?.total ?? filtered.length}
+            {t("maintenanceRequests.pagination.page")} {meta?.page || page} / {totalPages} •{" "}
+            {t("maintenanceRequests.pagination.total")} {meta?.total ?? filtered.length}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            <Button
+              variant="secondary"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
               {t("common.prev")}
             </Button>
-            <Button variant="secondary" disabled={page >= totalPages || loading} onClick={() => setPage((p) => p + 1)}>
+            <Button
+              variant="secondary"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage((p) => p + 1)}
+            >
               {t("common.next")}
             </Button>
           </div>
@@ -603,7 +617,7 @@ export default function MaintenanceRequestsPage() {
       {/* Create Modal */}
       <Modal
         open={createOpen}
-        title={t("mr.createModalTitle")}
+        title={t("maintenanceRequests.modals.createTitle")}
         onClose={() => setCreateOpen(false)}
         footer={
           <div className="flex items-center justify-end gap-2">
@@ -611,20 +625,25 @@ export default function MaintenanceRequestsPage() {
               {t("common.cancel")}
             </Button>
             <Button onClick={onCreateSubmit} disabled={submitting || !formVehicleId}>
-              {submitting ? t("mr.creating") : t("mr.create")}
+              {submitting ? t("common.saving") : t("common.save")}
             </Button>
           </div>
         }
       >
         <div className="grid grid-cols-1 gap-3">
           <div>
-            <div className="mb-1 text-xs text-neutral-600">{t("mr.vehicle")}</div>
+            <div className="mb-1 text-xs text-neutral-600">{t("maintenanceRequests.form.vehicle")}</div>
             <Select
               value={formVehicleId}
               disabled={vehiclesLoading}
               onChange={(v: string) => setFormVehicleId(v)}
               options={[
-                { label: vehiclesLoading ? t("mr.loadingVehicles") : t("mr.selectVehicle"), value: "" },
+                {
+                  label: vehiclesLoading
+                    ? t("maintenanceRequests.form.vehicleLoading")
+                    : t("maintenanceRequests.form.vehicleSelect"),
+                  value: "",
+                },
                 ...vehicleOptions.map((v) => ({
                   label: `${v.label}${v.status ? ` (${String(v.status).toUpperCase()})` : ""}`,
                   value: v.id,
@@ -634,22 +653,26 @@ export default function MaintenanceRequestsPage() {
           </div>
 
           <div>
-            <div className="mb-1 text-xs text-neutral-600">{t("mr.problemTitle")}</div>
-            <Input value={formTitle} onChange={setFormTitle} placeholder={t("mr.problemTitlePh")} />
+            <div className="mb-1 text-xs text-neutral-600">{t("maintenanceRequests.form.problemTitle")}</div>
+            <Input
+              value={formTitle}
+              onChange={setFormTitle}
+              placeholder={t("maintenanceRequests.form.problemTitlePh")}
+            />
           </div>
 
           <div>
-            <div className="mb-1 text-xs text-neutral-600">{t("mr.description")}</div>
+            <div className="mb-1 text-xs text-neutral-600">{t("maintenanceRequests.form.description")}</div>
             <textarea
               value={formDesc}
               onChange={(e) => setFormDesc(e.target.value)}
-              placeholder={t("mr.descriptionPh")}
+              placeholder={t("maintenanceRequests.form.descriptionPh")}
               className="min-h-[110px] w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10 bg-white text-black placeholder:text-neutral-400"
             />
           </div>
 
           <div className="rounded-xl border bg-neutral-50 p-3 text-xs text-neutral-600">
-            ✅ {t("mr.attachmentsHint")}
+            ✅ {t("maintenanceRequests.form.attachmentsHint")}
           </div>
         </div>
       </Modal>
@@ -657,30 +680,26 @@ export default function MaintenanceRequestsPage() {
       {/* Approve Modal */}
       <Modal
         open={!!approveTarget}
-        title={t("mr.approveModalTitle")}
+        title={t("maintenanceRequests.modals.approveTitle")}
         onClose={() => setApproveTarget(null)}
         footer={
           <div className="flex items-center justify-end gap-2">
             <Button variant="secondary" onClick={() => setApproveTarget(null)}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => approveTarget && onApprove(approveTarget.id)}>{t("mr.approveAndCreateWo")}</Button>
+            <Button onClick={() => approveTarget && onApprove(approveTarget.id)}>
+              {t("maintenanceRequests.modals.approveCta")}
+            </Button>
           </div>
         }
       >
         <div className="text-sm">
-          {t("mr.willDo")}:
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-neutral-700">
-            <li>{t("mr.willApprove")}</li>
-            <li>{t("mr.willCreateWo")}</li>
-            <li>{t("mr.willSetVehicleMaintenance")}</li>
-          </ul>
-
           {approveTarget ? (
             <div className="mt-3 rounded-xl border p-3">
               <div className="font-medium">{approveTarget.problem_title}</div>
               <div className="mt-1 text-xs text-neutral-600">
-                {t("mr.vehicle")}: <span className="font-mono">{approveTarget.vehicle_id}</span>
+                {t("maintenanceRequests.form.vehicle")}:{" "}
+                <span className="font-mono">{approveTarget.vehicle_id}</span>
               </div>
             </div>
           ) : null}
@@ -691,7 +710,7 @@ export default function MaintenanceRequestsPage() {
       <RejectModal
         open={!!rejectTarget}
         onClose={() => setRejectTarget(null)}
-        title={t("mr.rejectModalTitle")}
+        title={t("maintenanceRequests.modals.rejectTitle")}
         request={rejectTarget}
         onSubmit={onReject}
       />
@@ -743,7 +762,7 @@ function RejectModal({
               }
             }}
           >
-            {busy ? t("mr.rejecting") : t("mr.reject")}
+            {busy ? t("common.saving") : t("maintenanceRequests.actions.reject")}
           </Button>
         </div>
       }
@@ -753,22 +772,22 @@ function RejectModal({
           <div className="rounded-xl border p-3">
             <div className="font-medium">{request.problem_title}</div>
             <div className="mt-1 text-xs text-neutral-600">
-              {t("mr.vehicle")}: <span className="font-mono">{request.vehicle_id}</span>
+              {t("maintenanceRequests.form.vehicle")}: <span className="font-mono">{request.vehicle_id}</span>
             </div>
           </div>
         ) : null}
 
         <div>
-          <div className="mb-1 text-xs text-neutral-600">{t("mr.rejectionReason")}</div>
+          <div className="mb-1 text-xs text-neutral-600">{t("maintenanceRequests.modals.rejectReasonLabel")}</div>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="min-h-[110px] w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10 bg-white text-black placeholder:text-neutral-400"
-            placeholder={t("mr.rejectionReasonPh")}
+            placeholder={t("maintenanceRequests.modals.rejectReasonPh")}
           />
         </div>
 
-        <div className="text-xs text-neutral-600">{t("mr.rejectionHint")}</div>
+        <div className="text-xs text-neutral-600">{t("maintenanceRequests.modals.rejectHint")}</div>
       </div>
     </Modal>
   );

@@ -386,7 +386,8 @@
       "approveCta": "Approve + Create Work Order",
       "rejectTitle": "Reject Request",
       "rejectReasonLabel": "Rejection reason",
-      "rejectHint": "Reason must be clear so supervisor can re-submit correctly."
+      "rejectHint": "Reason must be clear so supervisor can re-submit correctly.",
+      "rejectReasonPh": "Enter rejection reason..."
     },
     "form": {
       "vehicle": "Vehicle",
@@ -394,7 +395,9 @@
       "description": "Description",
       "vehicleLoading": "Loading vehicles...",
       "vehicleSelect": "Select vehicle",
-      "attachmentsHint": "Attachments will be uploaded from details page after creating the request."
+      "attachmentsHint": "Attachments will be uploaded from details page after creating the request.",
+      "problemTitlePh": "Example: Oil leak",
+      "descriptionPh": "Describe the problem..."
     },
     "toast": {
       "requestCreated": "Request created",
@@ -403,7 +406,8 @@
       "loadFailed": "Failed to load requests",
       "vehiclesFailed": "Failed to load vehicle options",
       "approveFailed": "Failed to approve",
-      "rejectFailed": "Failed to reject"
+      "rejectFailed": "Failed to reject",
+      "createFailed": "Failed to create request"
     }
   },
 

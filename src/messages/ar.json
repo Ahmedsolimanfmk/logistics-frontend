@@ -34,7 +34,7 @@
     "total": "الإجمالي",
     "page": "صفحة",
     "optional": "اختياري",
-
+    
     "back": "رجوع",
     "clear": "مسح",
     "notFound": "غير موجود",
@@ -386,6 +386,7 @@
       "approveCta": "قبول + إنشاء أمر عمل",
       "rejectTitle": "رفض الطلب",
       "rejectReasonLabel": "سبب الرفض",
+      "rejectReasonPh": "اكتب سبب الرفض...",
       "rejectHint": "لازم السبب يبقى واضح عشان المشرف يعرف يعمل طلب جديد بشكل صحيح."
     },
     "form": {
@@ -394,7 +395,9 @@
       "description": "الوصف",
       "vehicleLoading": "جارٍ تحميل المركبات...",
       "vehicleSelect": "اختر مركبة",
-      "attachmentsHint": "✅ المرفقات هتترفع من صفحة التفاصيل بعد إنشاء الطلب."
+      "attachmentsHint": "✅ المرفقات هتترفع من صفحة التفاصيل بعد إنشاء الطلب.",
+      "problemTitlePh": "مثال: تسريب زيت",
+      "descriptionPh": "اكتب وصف المشكلة..."
     },
     "toast": {
       "requestCreated": "تم إنشاء الطلب",
@@ -403,7 +406,8 @@
       "loadFailed": "فشل تحميل الطلبات",
       "vehiclesFailed": "فشل تحميل قائمة المركبات",
       "approveFailed": "فشل القبول",
-      "rejectFailed": "فشل الرفض"
+      "rejectFailed": "فشل الرفض",
+      "createFailed": "فشل إنشاء الطلب"
     }
   },
 
