@@ -702,273 +702,206 @@
       "loadFailed": "فشل تحميل العملاء"
     },
   "financeDashboard": {
-    "title": "Finance Dashboard",
-    "roleLabel": "Role",
+    "title": "المالية",
+    "roleLabel": "الدور",
+
     "actions": {
-      "expenses": "Expenses",
-      "advances": "Advances",
-      "refresh": "Refresh"
+      "refresh": "تحديث",
+      "expenses": "المصروفات",
+      "advances": "السلف",
+      "openList": "فتح القائمة",
+      "review": "مراجعة"
     },
+
+    "errors": {
+      "loadFailed": "فشل تحميل بيانات المالية"
+    },
+
     "tabs": {
-      "pending": "Pending Expenses",
-      "advances": "Open Advances",
-      "alerts": "Alerts"
+      "pending": "معلّق",
+      "advances": "السلف",
+      "alerts": "تنبيهات"
     },
+
     "kpis": {
-      "pendingCount": "Pending Count",
-      "pendingTotal": "Pending Total",
-      "openAdvances": "Open Advances",
-      "openAdvancesTotal": "Open Advances Total",
-      "pendingDays": "{days}+ days pending",
-      "advanceDays": "{days}+ days advances"
+      "pendingCount": "عدد المصروفات المعلّقة",
+      "pendingTotal": "إجمالي المعلّق",
+      "openAdvances": "عدد السلف المفتوحة",
+      "openAdvancesTotal": "إجمالي السلف المفتوحة",
+      "pendingDays": "معلّق {days}+ يوم",
+      "advanceDays": "سلف مفتوحة {days}+ يوم"
     },
+
     "sections": {
-      "pendingHeader": "Pending Expenses",
-      "advancesHeader": "Open / In Review Advances",
-      "alertsHeader": "Alerts",
-      "alertsHint": "(auto-generated from data)"
+      "pendingHeader": "مصروفات معلّقة",
+      "advancesHeader": "سلف مفتوحة",
+      "alertsHeader": "تنبيهات",
+      "alertsHint": "(تجاوز مدد المتابعة)"
     },
+
+    "meta": {
+      "days": "{n} يوم",
+      "showingFirst30": "عرض أول 30 عنصر فقط.",
+      "showingFirst20Pending": "عرض أول 20 عنصر فقط.",
+      "showingFirst20Adv": "عرض أول 20 عنصر فقط."
+    },
+
     "links": {
-      "openList": "Open list →",
-      "openFullList": "Open full list to see more.",
-      "showing": "(showing {count})"
+      "showing": "(عرض {count})",
+      "openList": "فتح القائمة"
     },
+
     "tables": {
       "pending": {
-        "amount": "Amount",
-        "type": "Type",
-        "source": "Source",
-        "age": "Age",
-        "created": "Created",
-        "view": "View"
+        "amount": "المبلغ",
+        "type": "النوع",
+        "source": "المصدر",
+        "age": "العمر",
+        "created": "تاريخ الإنشاء",
+        "view": "عرض"
       },
       "advances": {
-        "supervisor": "Supervisor",
-        "amount": "Amount",
-        "status": "Status",
-        "age": "Age",
-        "view": "View"
+        "supervisor": "المشرف",
+        "amount": "المبلغ",
+        "status": "الحالة",
+        "age": "العمر",
+        "view": "عرض"
       },
       "alertsPending": {
-        "age": "Age",
-        "amount": "Amount",
-        "type": "Type",
-        "source": "Source",
-        "created": "Created",
-        "view": "View"
+        "age": "العمر",
+        "amount": "المبلغ",
+        "type": "النوع",
+        "source": "المصدر",
+        "created": "تاريخ الإنشاء",
+        "view": "عرض"
       },
       "alertsAdvances": {
-        "age": "Age",
-        "supervisor": "Supervisor",
-        "amount": "Amount",
-        "status": "Status",
-        "view": "View"
+        "age": "العمر",
+        "supervisor": "المشرف",
+        "amount": "المبلغ",
+        "status": "الحالة",
+        "view": "عرض"
       }
     },
+
     "empty": {
-      "noPending": "No pending expenses.",
-      "noOpenAdvances": "No open advances.",
-      "noOverduePending": "No overdue pending expenses.",
-      "noOverdueAdvances": "No overdue advances."
+      "noPending": "لا توجد مصروفات معلّقة.",
+      "noOpenAdvances": "لا توجد سلف مفتوحة.",
+      "noOverduePending": "لا توجد مصروفات معلّقة متأخرة.",
+      "noOverdueAdvances": "لا توجد سلف متأخرة."
     },
+
     "notes": {
-      "supervisorLimited": "Note: supervisor sees only his data.",
-      "roleLimited": "This role does not have full finance permissions. (Dashboard may be limited)",
-      "tipPrivileged": "Tip: From Pending Expenses, open an expense then Approve/Reject. From Advances, close advances after review."
-    },
-    "errors": {
-      "loadFailed": "Failed to load finance dashboard"
-    },
-    "status": {
-      "APPROVED": "APPROVED",
-      "REAPPROVED": "REAPPROVED",
-      "REJECTED": "REJECTED",
-      "PENDING": "PENDING",
-      "IN_REVIEW": "IN_REVIEW"
-    },
-    "source": {
-      "COMPANY": "COMPANY",
-      "ADVANCE": "ADVANCE"
-    },
-    "meta": {
-      "days": "{n} days",
-      "showingFirst30": "Showing first 30. Open full list to see more.",
-      "showingFirst20Pending": "Showing first 20 overdue pending expenses.",
-      "showingFirst20Adv": "Showing first 20 overdue advances."
+      "roleLimited": "تنبيه: صلاحيات هذا المستخدم محدودة في شاشة المالية.",
+      "tipPrivileged": "نصيحة: الأدمن/المحاسب يقدروا اعتماد/رفض المصروفات."
     }
   },
 
   "financeExpenses": {
-    "title": "Expenses",
-    "roleLine": "Role: {role}",
-    "viewOnly": "(view only)",
-    "actions": {
-      "backFinance": "← Finance",
-      "refresh": "Refresh",
-      "approve": "Approve",
-      "reject": "Reject",
-      "view": "View",
-      "prev": "Prev",
-      "next": "Next"
-    },
+    "title": "المصروفات",
+    "viewOnly": "(عرض فقط)",
+    "roleLine": "الدور: {role}",
+
     "tabs": {
-      "PENDING": "Pending",
-      "APPROVED": "Approved",
-      "REJECTED": "Rejected",
-      "APPEALED": "Appealed",
-      "ALL": "All"
+      "PENDING": "معلّق",
+      "APPROVED": "معتمد",
+      "REJECTED": "مرفوض",
+      "APPEALED": "استئناف",
+      "ALL": "الكل"
     },
+
     "filters": {
-      "searchPlaceholder": "Search (type/description/reason)…",
-      "pageSize": "Page size"
+      "searchPlaceholder": "بحث... (النوع/المبلغ/الرحلة/المركبة)"
     },
-    "meta": {
-      "total": "Total",
-      "page": "Page",
-      "showing": "Showing {count} of {total}"
-    },
+
     "table": {
-      "id": "ID",
-      "amount": "Amount",
-      "type": "Type",
-      "status": "Status",
-      "trip": "Trip",
-      "vehicle": "Vehicle",
-      "created": "Created",
-      "actions": "Actions",
-      "reason": "Reason"
+      "id": "المعرف",
+      "amount": "المبلغ",
+      "type": "النوع",
+      "status": "الحالة",
+      "trip": "الرحلة",
+      "vehicle": "المركبة",
+      "created": "تاريخ الإنشاء",
+      "actions": "إجراءات",
+      "reason": "السبب"
     },
+
+    "actions": {
+      "backFinance": "← المالية",
+      "refresh": "تحديث",
+      "view": "عرض",
+      "approve": "اعتماد",
+      "reject": "رفض",
+      "prev": "السابق",
+      "next": "التالي"
+    },
+
     "prompts": {
-      "approveNotes": "Notes (optional):",
-      "rejectReason": "Rejection reason (required):",
-      "rejectNotes": "Notes (optional):"
+      "approveNotes": "ملاحظات (اختياري)؟",
+      "rejectReason": "سبب الرفض (مطلوب):",
+      "rejectNotes": "ملاحظات (اختياري)؟"
     },
-    "empty": "No expenses found.",
+
+    "meta": {
+      "total": "الإجمالي",
+      "page": "صفحة",
+      "showing": "عرض {count} من {total}"
+    },
+
+    "empty": "لا توجد مصروفات."
+    ,
     "errors": {
-      "loadFailed": "Failed to load expenses",
-      "approveFailed": "Approve failed",
-      "rejectFailed": "Reject failed"
+      "loadFailed": "فشل تحميل المصروفات",
+      "approveFailed": "فشل اعتماد المصروف",
+      "rejectFailed": "فشل رفض المصروف"
     }
   },
 
   "financeNewExpense": {
-    "title": "New Expense",
-    "roleLine": "Role: {role}",
-    "notAllowed": "This role is not allowed to create expenses.",
-    "fields": {
-      "paymentSource": "Payment Source",
-      "expenseType": "Expense type",
-      "amount": "Amount",
-      "cashAdvance": "Select cash advance (OPEN)",
-      "vendorName": "Vendor name",
-      "invoiceNo": "Invoice number (optional)",
-      "invoiceDate": "Invoice date",
-      "linkWorkOrder": "Link to Work Order (optional)",
-      "linkTrip": "Link to Trip (optional)",
-      "notes": "Notes"
-    },
-    "hints": {
-      "advanceOnly": "ADVANCE = cash expense from advance (Supervisor only)",
-      "companyOnly": "COMPANY = purchases/company expense (Accountant/Admin)"
-    },
-    "actions": {
-      "create": "Create Expense"
-    },
-    "toast": {
-      "created": "Expense created"
-    },
-    "errors": {
-      "loadFailed": "Failed to load form data",
-      "createFailed": "Failed to create expense",
-      "notAllowed": "Not allowed to create expenses",
-      "expenseTypeRequired": "Expense type is required",
-      "amountInvalid": "Amount is invalid",
-      "advanceOnlySupervisor": "ADVANCE allowed for supervisor only",
-      "selectOpenAdvance": "You must select a cash advance (OPEN)",
-      "companyOnlyPrivileged": "COMPANY allowed for accountant/admin only",
-      "vendorRequired": "Vendor name is required",
-      "invoiceDateRequired": "Invoice date is required",
-      "tripInvalid": "Trip id is invalid",
-      "woInvalid": "Work order id is invalid"
-    }
-  },
+    "title": "إضافة مصروف",
+    "notAllowedBanner": "لا تملك صلاحية إضافة مصروف.",
 
-  "financeExpenseDetails": {
-    "title": "Expense Details",
-    "idLine": "ID: {id}",
-    "sourceLine": "Source: {source}",
-    "notFoundHint": "Could not find expense details from advances list. If payment source is COMPANY, consider adding GET /cash/cash-expenses/:id or a list endpoint.",
-    "tabs": {
-      "overview": "Overview",
-      "audit": "Audit",
-      "actions": "Actions"
+    "fields": {
+      "paymentSource": "مصدر الدفع"
     },
+
+    "hints": {
+      "advance": "المشرف يسجل مصروفات من سلفة (ADVANCE).",
+      "company": "الأدمن/المحاسب يسجل مصروفات شركة (COMPANY)."
+    },
+
+    "placeholders": {
+      "type": "نوع المصروف",
+      "amount": "المبلغ",
+      "selectAdvance": "اختر سلفة مفتوحة",
+      "vendor": "اسم المورد",
+      "invoiceNo": "رقم الفاتورة (اختياري)",
+      "notes": "ملاحظات (اختياري)",
+      "linkWorkOrder": "ربط بأمر عمل (اختياري)",
+      "linkTrip": "ربط برحلة (اختياري)"
+    },
+
     "actions": {
-      "back": "Back",
-      "list": "List",
-      "approve": "Approve",
-      "reject": "Reject",
-      "appeal": "Appeal (Supervisor)",
-      "resolveApprove": "Resolve Appeal: Approve",
-      "resolveReject": "Resolve Appeal: Reject",
-      "reopen": "Reopen Rejected → PENDING",
-      "showDiff": "Show diff"
+      "create": "إنشاء"
     },
-    "sections": {
-      "amount": "Amount",
-      "expenseType": "Expense Type",
-      "createdAt": "Created At",
-      "creator": "Creator",
-      "notes": "Notes",
-      "context": "Context",
-      "trip": "Trip",
-      "vehicle": "Vehicle",
-      "workOrder": "Work Order",
-      "companyFields": "Company Fields",
-      "vendor": "Vendor",
-      "invoiceNo": "Invoice#",
-      "invoiceDate": "Invoice date",
-      "advance": "Advance",
-      "cashAdvanceId": "Cash advance ID",
-      "resolution": "Resolution",
-      "approvedAt": "Approved at",
-      "rejectedAt": "Rejected at",
-      "resolvedAt": "Resolved at",
-      "rejectionReason": "Rejection reason"
+
+    "toast": {
+      "created": "تم إنشاء المصروف ✅",
+      "createFailed": "فشل إنشاء المصروف"
     },
-    "audit": {
-      "title": "Audit Timeline",
-      "noRecords": "No audit records.",
-      "actor": "Actor",
-      "action": "ACTION",
-      "before": "Before",
-      "after": "After"
-    },
-    "meta": {
-      "availableActions": "Available Actions",
-      "roleStatus": "(Role: {role} / Status: {status})"
-    },
-    "prompts": {
-      "rejectReason": "Rejection reason (required):",
-      "appealNotes": "Appeal reason (required):",
-      "reopenNotes": "Note (optional):",
-      "resolveRejectReason": "Rejection reason (required):",
-      "resolveApproveNotes": "Note (optional):"
-    },
+
     "errors": {
-      "loadFailed": "Failed to load expense",
-      "auditFailed": "Failed to load audit",
-      "approveFailed": "Approve failed",
-      "rejectFailed": "Reject failed",
-      "appealFailed": "Appeal failed",
-      "reopenFailed": "Reopen failed",
-      "resolveFailed": "Resolve appeal failed"
-    },
-    "empty": {
-      "noActions": "No approve/reject actions available right now."
-    },
-    "note": {
-      "endpoints": "Note: Actions page is built based on existing endpoints: approve / reject / appeal / resolve-appeal / reopen."
+      "loadFailed": "فشل تحميل البيانات",
+      "notAllowed": "غير مسموح لك بهذه العملية",
+      "typeRequired": "نوع المصروف مطلوب",
+      "amountInvalid": "المبلغ غير صحيح",
+      "advanceOnlySupervisor": "مصروف السلفة للمشرف فقط",
+      "advanceRequired": "اختيار السلفة مطلوب",
+      "companyOnlyPrivileged": "مصروف الشركة للأدمن/المحاسب فقط",
+      "vendorRequired": "اسم المورد مطلوب",
+      "invoiceDateRequired": "تاريخ الفاتورة مطلوب",
+      "tripInvalid": "الرحلة غير صحيحة",
+      "workOrderInvalid": "أمر العمل غير صحيح"
     }
   }
 }
