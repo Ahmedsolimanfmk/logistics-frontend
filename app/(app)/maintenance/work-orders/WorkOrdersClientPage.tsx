@@ -101,7 +101,7 @@ const optionCls = "bg-neutral-900 text-white";
 
 function statusLabel(v: string) {
   const s = String(v || "").toUpperCase();
-  if (!s) return "All";
+  if (!s) return "ALL";
   return s.replace(/_/g, " ");
 }
 
@@ -246,9 +246,9 @@ export default function WorkOrdersClientPage() {
       <div className="p-4 text-white">
         <Card title={t("workOrders.title")}>
           <div className="text-sm text-white/70">
-            {t("workOrders.onlyAdminAccountant")}
+            {t("workOrders.roleOnly")}
             <div className="mt-2 text-xs text-white/50">
-              {t("common.roleLabel")} = {String(role ?? "—")}
+              {t("common.role")} = {String(role ?? "—")}
             </div>
           </div>
         </Card>
@@ -260,21 +260,21 @@ export default function WorkOrdersClientPage() {
     <div className="space-y-4 p-4 text-white">
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-1">
-          <div className="text-sm text-white/70">{t("maintenance.section")}</div>
+          <div className="text-sm text-white/70">{t("tabs.maintenance")}</div>
           <div className="text-xl font-semibold">{t("workOrders.title")}</div>
           <div className="text-xs text-white/50">
-            {t("workOrders.filtersFromUrl")}{" "}
-            status={statusLabel(status)} • qa={qa || "—"} • parts={parts || "—"}
+            {t("workOrders.filtersFromUrl")} status={statusLabel(status)} • qa={qa || "—"} • parts=
+            {parts || "—"}
           </div>
 
-          {(qa || parts) ? (
-            <div className="text-[11px] text-amber-200/80">{t("workOrders.qaPartsDisplayOnly")}</div>
+          {qa || parts ? (
+            <div className="text-[11px] text-amber-200/80">{t("workOrders.noteQaPartsDisplay")}</div>
           ) : null}
         </div>
 
         <div className="flex items-center gap-2">
           <Link href="/maintenance/requests">
-            <Button variant="secondary">← {t("common.backToRequests")}</Button>
+            <Button variant="secondary">{t("workOrders.actions.backToRequests")}</Button>
           </Link>
 
           <Button
@@ -283,17 +283,17 @@ export default function WorkOrdersClientPage() {
               router.push("/maintenance/work-orders");
             }}
           >
-            {t("workOrders.clearUrlFilters")}
+            {t("workOrders.actions.clearUrlFilters")}
           </Button>
 
           <Button variant="secondary" onClick={() => load(page)} disabled={loading}>
-            {t("common.refresh")}
+            {t("workOrders.actions.refresh")}
           </Button>
         </div>
       </div>
 
       <Card
-        title={t("common.filters")}
+        title={t("workOrders.filters.title")}
         right={
           <div className="text-xs text-white/60">
             {t("common.total")}: <span className="text-white font-semibold">{total}</span>
@@ -302,69 +302,71 @@ export default function WorkOrdersClientPage() {
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
-            <div className="text-xs text-white/60 mb-1">{t("common.status")}</div>
+            <div className="text-xs text-white/60 mb-1">{t("workOrders.filters.status")}</div>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
               <option value="" className={optionCls}>
-                {t("common.all")}
+                {t("workOrders.status.all")}
               </option>
               <option value="OPEN" className={optionCls}>
-                {t("status.open")}
+                {t("workOrders.status.open")}
               </option>
               <option value="IN_PROGRESS" className={optionCls}>
-                {t("status.in_progress")}
+                {t("workOrders.status.inProgress")}
               </option>
               <option value="COMPLETED" className={optionCls}>
-                {t("status.completed")}
+                {t("workOrders.status.completed")}
               </option>
               <option value="CANCELED" className={optionCls}>
-                {t("status.canceled")}
+                {t("workOrders.status.canceled")}
               </option>
 
               <option value="OPEN,IN_PROGRESS" className={optionCls}>
-                {t("workOrders.openPlusInProgress")}
+                {t("workOrders.status.openPlusInProgress")}
               </option>
             </select>
 
             <div className="mt-1 text-[11px] text-white/50">
-              {t("common.selected")}:{" "}
+              {t("workOrders.filters.selected")}:{" "}
               <span className="text-white/80">{statusLabel(status)}</span>
             </div>
           </div>
 
           <div>
-            <div className="text-xs text-white/60 mb-1">{t("workOrders.qaDisplayOnly")}</div>
+            <div className="text-xs text-white/60 mb-1">{t("workOrders.filters.qaDisplayOnly")}</div>
             <select value={qa} onChange={(e) => setQa(e.target.value)} className={selectCls}>
               <option value="" className={optionCls}>
-                {t("common.all")}
+                {t("workOrders.status.all")}
               </option>
               <option value="needs" className={optionCls}>
-                {t("workOrders.qaNeeds")}
+                {t("dashboard.maintenance.qaNeeds.title")}
               </option>
               <option value="failed" className={optionCls}>
-                {t("workOrders.qaFailed")}
+                {t("dashboard.maintenance.qaFailed.title")}
               </option>
             </select>
           </div>
 
           <div>
-            <div className="text-xs text-white/60 mb-1">{t("workOrders.partsDisplayOnly")}</div>
+            <div className="text-xs text-white/60 mb-1">
+              {t("workOrders.filters.partsDisplayOnly")}
+            </div>
             <select value={parts} onChange={(e) => setParts(e.target.value)} className={selectCls}>
               <option value="" className={optionCls}>
-                {t("common.all")}
+                {t("workOrders.status.all")}
               </option>
               <option value="mismatch" className={optionCls}>
-                {t("workOrders.partsMismatch")}
+                {t("dashboard.maintenance.partsMismatch.title")}
               </option>
             </select>
           </div>
 
           <div className="md:col-span-4">
-            <div className="text-xs text-white/60 mb-1">{t("common.search")}</div>
+            <div className="text-xs text-white/60 mb-1">{t("workOrders.filters.searchTitle")}</div>
             <div className="flex gap-2">
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder={t("common.searchPlaceholder")}
+                placeholder={t("common.search")}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white placeholder:text-white/40"
               />
               <Button
@@ -375,31 +377,33 @@ export default function WorkOrdersClientPage() {
                 }}
                 disabled={loading}
               >
-                {t("common.search")}
+                {t("workOrders.filters.searchBtn")}
               </Button>
             </div>
 
-            <div className="mt-2 text-[11px] text-white/50">{t("workOrders.tipUrlFilters")}</div>
+            <div className="mt-2 text-[11px] text-white/50">
+              {t("workOrders.tips.cardsSendStatusInUrl")}
+            </div>
           </div>
         </div>
       </Card>
 
-      <Card title={t("common.list")}>
+      <Card title={t("workOrders.list.title")}>
         {loading ? (
-          <div className="text-sm text-white/70">{t("common.loading")}</div>
+          <div className="text-sm text-white/70">{t("workOrders.list.loading")}</div>
         ) : items.length === 0 ? (
-          <div className="text-sm text-white/70">{t("workOrders.empty")}</div>
+          <div className="text-sm text-white/70">{t("workOrders.list.empty")}</div>
         ) : (
           <div className="overflow-auto rounded-2xl border border-white/10">
             <table className="min-w-[900px] w-full text-sm">
               <thead className="bg-white/5 text-white/70">
                 <tr>
-                  <th className="text-left p-3">{t("workOrders.opened")}</th>
-                  <th className="text-left p-3">{t("workOrders.vehicle")}</th>
-                  <th className="text-left p-3">{t("workOrders.type")}</th>
-                  <th className="text-left p-3">{t("workOrders.vendor")}</th>
-                  <th className="text-left p-3">{t("common.status")}</th>
-                  <th className="text-left p-3">{t("common.actions")}</th>
+                  <th className="text-left p-3">{t("workOrders.list.columns.opened")}</th>
+                  <th className="text-left p-3">{t("workOrders.list.columns.vehicle")}</th>
+                  <th className="text-left p-3">{t("workOrders.list.columns.type")}</th>
+                  <th className="text-left p-3">{t("workOrders.list.columns.vendor")}</th>
+                  <th className="text-left p-3">{t("workOrders.list.columns.status")}</th>
+                  <th className="text-left p-3">{t("workOrders.list.columns.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -420,7 +424,7 @@ export default function WorkOrdersClientPage() {
                     </td>
                     <td className="p-3">
                       <Link href={`/maintenance/work-orders/${wo.id}`} className="underline text-white">
-                        {t("common.view")}
+                        {t("workOrders.list.view")}
                       </Link>
                     </td>
                   </tr>
@@ -432,7 +436,7 @@ export default function WorkOrdersClientPage() {
 
         <div className="mt-3 flex items-center justify-between text-xs text-white/60">
           <div>
-            {t("common.page")} {page} / {pages}
+            {t("workOrders.pagination.page")} {page} / {pages}
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" disabled={loading || page <= 1} onClick={() => load(page - 1)}>
