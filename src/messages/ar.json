@@ -45,12 +45,14 @@
     "selected": "المحدد",
     "view": "عرض"
   },
+
   "tabs": {
     "operations": "التشغيل",
     "finance": "المالية",
     "maintenance": "الصيانة",
     "dev": "المطور"
   },
+
   "sidebar": {
     "appName": "النظام اللوجستي",
     "dashboard": "لوحة التحكم",
@@ -70,6 +72,7 @@
     "users": "المستخدمين",
     "supervisors": "المشرفين"
   },
+
   "dashboard": {
     "title": "لوحة التحكم",
     "columns": {
@@ -220,6 +223,7 @@
       "hint": "مخصص لتشخيصات التطوير."
     }
   },
+
   "users": {
     "title": "المستخدمون",
     "subtitle": "إدارة المستخدمين (للأدمن فقط)",
@@ -273,6 +277,7 @@
       "createFailed": "فشل إنشاء المستخدم"
     }
   },
+
   "vehicles": {
     "title": "المركبات",
     "subtitle": "إدارة الأسطول",
@@ -338,6 +343,7 @@
       "MAINTENANCE": "صيانة"
     }
   },
+
   "maintenanceRequests": {
     "title": "طلبات الصيانة",
     "checkingSession": "جارٍ التحقق من الجلسة…",
@@ -396,6 +402,7 @@
       "createFailed": "فشل إنشاء الطلب"
     }
   },
+
   "maintenanceRequestDetails": {
     "title": "تفاصيل الطلب",
     "breadcrumb": "الصيانة / الطلبات",
@@ -447,6 +454,7 @@
       "rejectCta": "جارٍ الرفض…"
     }
   },
+
   "workOrders": {
     "title": "أوامر العمل",
     "breadcrumb": "الصيانة",
@@ -496,6 +504,7 @@
       "cardsSendStatusInUrl": "معلومة: كروت الداشبورد بتبعت status في الـ URL — الصفحة دي بتقرأه وتفلتر صح."
     }
   },
+
   "workOrderDetails": {
     "title": "تفاصيل أمر العمل",
     "breadcrumb": "الصيانة / أوامر العمل",
@@ -608,6 +617,7 @@
       "okToClose": "✅ جاهز للإغلاق."
     }
   },
+
   "sites": {
     "title": "المواقع",
     "subtitle": "إدارة المواقع لكل عميل",
@@ -629,12 +639,14 @@
     "empty": "لا توجد مواقع.",
     "modal": {
       "createTitle": "إنشاء موقع",
-      "editTitle": "تعديل موقع"
+      "editTitle": "تعديل موقع",
+      "cancel": "إلغاء",
+      "save": "حفظ"
     },
     "fields": {
       "name": "اسم الموقع",
-      "client": "العميل",
-      "address": "العنوان"
+      "client": "العميل (اختياري)",
+      "address": "العنوان (اختياري)"
     },
     "placeholders": {
       "name": "اسم الموقع",
@@ -651,6 +663,43 @@
     },
     "errors": {
       "loadFailed": "فشل تحميل المواقع"
+    }
+  },
+
+  "clients": {
+    "title": "العملاء",
+    "subtitle": "إدارة العملاء",
+    "filters": {
+      "searchPlaceholder": "بحث عن عميل..."
+    },
+    "actions": {
+      "add": "+ إضافة عميل"
+    },
+    "table": {
+      "name": "الاسم",
+      "status": "الحالة",
+      "actions": "إجراءات"
+    },
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "modal": {
+      "addTitle": "إضافة عميل",
+      "editTitle": "تعديل عميل",
+      "namePlaceholder": "اسم العميل",
+      "cancel": "إلغاء",
+      "save": "حفظ"
+    },
+    "empty": "لا يوجد عملاء",
+    "toast": {
+      "created": "تم إنشاء العميل",
+      "updated": "تم تحديث العميل",
+      "saveFailed": "فشل الحفظ",
+      "toggleFailed": "فشل تغيير الحالة"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل العملاء"
     }
   }
 }
