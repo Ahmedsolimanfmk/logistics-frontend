@@ -10,18 +10,25 @@ function get(obj: any, path: string) {
   return path.split(".").reduce((acc, k) => acc?.[k], obj);
 }
 
-function format(template: string, params?: Record<string, any>) {
-  if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (_, k) =>
-    params[k] === undefined || params[k] === null ? `{${k}}` : String(params[k])
-  );
-}
-
 export function useT() {
   const lang = useLang();
-  return (key: string, params?: Record<string, any>) => {
-    const v = get(dict[lang], key);
-    if (typeof v === "string") return format(v, params);
-    return key;
+
+  return (key: string, vars?: Record<string, any>) => {
+    let text = get(dict[lang], key);
+
+    // fallback: return key if missing
+    if (text == null) return key;
+
+    // If not string, return as-is
+    if (typeof text !== "string") return String(text);
+
+    // Replace {var} placeholders
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+      }
+    }
+
+    return text;
   };
 }
