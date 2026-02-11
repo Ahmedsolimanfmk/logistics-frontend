@@ -4,10 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
+import { useT } from "@/src/i18n/useT";
 
-// ---------------------
-// Helpers
-// ---------------------
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
@@ -19,35 +17,26 @@ function isUuid(v: any) {
 }
 
 export default function NewCashExpensePage() {
+  const t = useT();
   const router = useRouter();
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
 
-  // Roles
   const isSupervisor = role === "FIELD_SUPERVISOR";
   const isPrivileged = role === "ADMIN" || role === "ACCOUNTANT";
 
-  // ---------------------
-  // Allowed sources by backend rules
-  // ---------------------
   const allowedSources = useMemo(() => {
     if (isSupervisor) return ["ADVANCE"] as const;
-    if (isPrivileged) return ["COMPANY"] as const; // backend allows COMPANY only for ADMIN/ACCOUNTANT
+    if (isPrivileged) return ["COMPANY"] as const;
     return [] as const;
   }, [isSupervisor, isPrivileged]);
 
-  const [paymentSource, setPaymentSource] = useState<string>(
-    allowedSources[0] || ""
-  );
+  const [paymentSource, setPaymentSource] = useState<string>(allowedSources[0] || "");
 
   useEffect(() => {
-    // keep in sync if role changes/hydrate
     setPaymentSource(allowedSources[0] || "");
   }, [allowedSources]);
 
-  // ---------------------
-  // State
-  // ---------------------
   const [loading, setLoading] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,23 +49,14 @@ export default function NewCashExpensePage() {
     amount: "",
     expense_type: "",
     notes: "",
-
-    // ADVANCE
     cash_advance_id: "",
-
-    // COMPANY
     vendor_name: "",
     invoice_no: "",
     invoice_date: "",
-
-    // Context
     maintenance_work_order_id: "",
-    trip_id: "",
+    trip_id: ""
   });
 
-  // ---------------------
-  // Load data
-  // ---------------------
   useEffect(() => {
     let mounted = true;
 
@@ -85,7 +65,6 @@ export default function NewCashExpensePage() {
       setError(null);
 
       try {
-        // Supervisor: load OPEN advances
         if (isSupervisor) {
           const list = (await api.get("/cash/cash-advances")) as any[];
           const openMine = list.filter(
@@ -96,7 +75,6 @@ export default function NewCashExpensePage() {
           if (mounted) setAdvances([]);
         }
 
-        // Work Orders + Trips (optional context)
         try {
           const wos = (await api.get("/maintenance/work-orders")) as any[];
           if (mounted) setWorkOrders(Array.isArray(wos) ? wos : []);
@@ -111,7 +89,7 @@ export default function NewCashExpensePage() {
           if (mounted) setTrips([]);
         }
       } catch (e: any) {
-        if (mounted) setError(e.message || "Failed to load form data");
+        if (mounted) setError(e?.message || t("financeExpenseNew.errors.loadFailed"));
       } finally {
         if (mounted) setBootLoading(false);
       }
@@ -124,35 +102,28 @@ export default function NewCashExpensePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSupervisor, user?.id]);
 
-  // ---------------------
-  // Validation
-  // ---------------------
   function validate() {
-    if (!paymentSource) return "غير مسموح لك بإنشاء مصروفات";
-    if (!form.expense_type) return "Expense type مطلوب";
-    if (!form.amount || Number(form.amount) <= 0) return "Amount غير صالح";
+    if (!paymentSource) return t("financeExpenseNew.validation.noPaymentSource");
+    if (!form.expense_type) return t("financeExpenseNew.validation.expenseTypeRequired");
+    if (!form.amount || Number(form.amount) <= 0) return t("financeExpenseNew.validation.amountInvalid");
 
     if (paymentSource === "ADVANCE") {
-      if (!isSupervisor) return "ADVANCE مسموح فقط لمسؤول الصيانة/المشرف";
-      if (!isUuid(form.cash_advance_id)) return "يجب اختيار عهدة كاش (OPEN)";
+      if (!isSupervisor) return t("financeExpenseNew.validation.advanceSupervisorOnly");
+      if (!isUuid(form.cash_advance_id)) return t("financeExpenseNew.validation.advancePickOpen");
     }
 
     if (paymentSource === "COMPANY") {
-      if (!isPrivileged) return "COMPANY مسموح فقط للمحاسب/الادمن";
-      if (!form.vendor_name || String(form.vendor_name).trim().length < 2) return "Vendor name مطلوب";
-      if (!form.invoice_date) return "Invoice date مطلوب";
+      if (!isPrivileged) return t("financeExpenseNew.validation.companyPrivOnly");
+      if (!form.vendor_name || String(form.vendor_name).trim().length < 2) return t("financeExpenseNew.validation.vendorRequired");
+      if (!form.invoice_date) return t("financeExpenseNew.validation.invoiceDateRequired");
     }
 
-    // uuids basic (optional)
-    if (form.trip_id && !isUuid(form.trip_id)) return "Trip id غير صالح";
-    if (form.maintenance_work_order_id && !isUuid(form.maintenance_work_order_id)) return "Work order id غير صالح";
+    if (form.trip_id && !isUuid(form.trip_id)) return t("financeExpenseNew.validation.tripInvalid");
+    if (form.maintenance_work_order_id && !isUuid(form.maintenance_work_order_id)) return t("financeExpenseNew.validation.workOrderInvalid");
 
     return null;
   }
 
-  // ---------------------
-  // Submit
-  // ---------------------
   async function submit() {
     const err = validate();
     if (err) {
@@ -166,45 +137,38 @@ export default function NewCashExpensePage() {
     try {
       await api.post("/cash/cash-expenses", {
         payment_source: paymentSource,
-
         expense_type: form.expense_type,
         amount: Number(form.amount),
         notes: form.notes?.trim() ? form.notes.trim() : undefined,
 
-        // ADVANCE fields
         cash_advance_id: paymentSource === "ADVANCE" ? form.cash_advance_id : undefined,
 
-        // COMPANY fields
         vendor_name: paymentSource === "COMPANY" ? String(form.vendor_name).trim() : undefined,
         invoice_no: paymentSource === "COMPANY" && form.invoice_no?.trim() ? form.invoice_no.trim() : undefined,
         invoice_date: paymentSource === "COMPANY" ? form.invoice_date : undefined,
 
-        // Context
         maintenance_work_order_id: form.maintenance_work_order_id || undefined,
-        trip_id: form.trip_id || undefined,
+        trip_id: form.trip_id || undefined
       });
 
       router.push("/finance/expenses");
     } catch (e: any) {
-      setError(e.message || "فشل إنشاء المصروف");
+      setError(e?.message || t("financeExpenseNew.errors.createFailed"));
     } finally {
       setLoading(false);
     }
   }
 
-  // ---------------------
-  // UI
-  // ---------------------
   if (bootLoading) {
-    return <div className="text-sm text-slate-300">Loading…</div>;
+    return <div className="text-sm text-slate-300">{t("common.loading")}</div>;
   }
 
   if (!paymentSource) {
     return (
       <div className="space-y-3">
-        <h1 className="text-xl font-bold">New Expense</h1>
+        <h1 className="text-xl font-bold">{t("financeExpenseNew.title")}</h1>
         <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-200">
-          هذا الدور غير مسموح له بإنشاء مصروفات.
+          {t("financeExpenseNew.errors.notAllowed")}
         </div>
       </div>
     );
@@ -214,9 +178,9 @@ export default function NewCashExpensePage() {
     <div className="max-w-3xl space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">New Expense</h1>
+          <h1 className="text-xl font-bold">{t("financeExpenseNew.title")}</h1>
           <div className="text-xs text-slate-400">
-            Role: <span className="text-slate-200">{role || "—"}</span>
+            {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
           </div>
         </div>
       </div>
@@ -228,9 +192,8 @@ export default function NewCashExpensePage() {
       )}
 
       <div className="space-y-4">
-        {/* Payment Source selector (filtered by allowed sources) */}
         <div className="space-y-1">
-          <div className="text-xs text-slate-400">Payment Source</div>
+          <div className="text-xs text-slate-400">{t("financeExpenseNew.fields.paymentSource")}</div>
           <select
             className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
             value={paymentSource}
@@ -244,19 +207,15 @@ export default function NewCashExpensePage() {
           </select>
 
           {paymentSource === "ADVANCE" ? (
-            <div className="text-xs text-slate-400">
-              ADVANCE = مصروفات كاش من العهدة (مسؤول الصيانة/المشرف فقط)
-            </div>
+            <div className="text-xs text-slate-400">{t("financeExpenseNew.hints.advance")}</div>
           ) : (
-            <div className="text-xs text-slate-400">
-              COMPANY = مصروفات مشتريات/شركة (المحاسب/الادمن)
-            </div>
+            <div className="text-xs text-slate-400">{t("financeExpenseNew.hints.company")}</div>
           )}
         </div>
 
         <input
           className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-          placeholder="Expense type"
+          placeholder={t("financeExpenseNew.fields.expenseType")}
           value={form.expense_type}
           onChange={(e) => setForm({ ...form, expense_type: e.target.value })}
         />
@@ -264,19 +223,18 @@ export default function NewCashExpensePage() {
         <input
           type="number"
           className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-          placeholder="Amount"
+          placeholder={t("financeExpenseNew.fields.amount")}
           value={form.amount}
           onChange={(e) => setForm({ ...form, amount: e.target.value })}
         />
 
-        {/* ADVANCE */}
         {paymentSource === "ADVANCE" && (
           <select
             className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
             value={form.cash_advance_id}
             onChange={(e) => setForm({ ...form, cash_advance_id: e.target.value })}
           >
-            <option value="">Select cash advance (OPEN)</option>
+            <option value="">{t("financeExpenseNew.fields.selectCashAdvanceOpen")}</option>
             {advances.map((a) => (
               <option key={a.id} value={a.id}>
                 {Number(a.amount || 0)} — {String(a.id).slice(0, 8)}…
@@ -285,19 +243,18 @@ export default function NewCashExpensePage() {
           </select>
         )}
 
-        {/* COMPANY */}
         {paymentSource === "COMPANY" && (
           <>
             <input
               className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-              placeholder="Vendor name"
+              placeholder={t("financeExpenseNew.fields.vendorName")}
               value={form.vendor_name}
               onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
             />
 
             <input
               className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-              placeholder="Invoice number (optional)"
+              placeholder={t("financeExpenseNew.fields.invoiceNoOptional")}
               value={form.invoice_no}
               onChange={(e) => setForm({ ...form, invoice_no: e.target.value })}
             />
@@ -311,13 +268,12 @@ export default function NewCashExpensePage() {
           </>
         )}
 
-        {/* Context */}
         <select
           className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
           value={form.maintenance_work_order_id}
           onChange={(e) => setForm({ ...form, maintenance_work_order_id: e.target.value })}
         >
-          <option value="">Link to Work Order (optional)</option>
+          <option value="">{t("financeExpenseNew.fields.linkWorkOrderOptional")}</option>
           {workOrders.map((w) => (
             <option key={w.id} value={w.id}>
               {w.code || String(w.id).slice(0, 8) + "…"}
@@ -330,17 +286,17 @@ export default function NewCashExpensePage() {
           value={form.trip_id}
           onChange={(e) => setForm({ ...form, trip_id: e.target.value })}
         >
-          <option value="">Link to Trip (optional)</option>
-          {trips.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.code || String(t.id).slice(0, 8) + "…"}
+          <option value="">{t("financeExpenseNew.fields.linkTripOptional")}</option>
+          {trips.map((ttt) => (
+            <option key={ttt.id} value={ttt.id}>
+              {ttt.code || String(ttt.id).slice(0, 8) + "…"}
             </option>
           ))}
         </select>
 
         <textarea
           className="w-full rounded-lg bg-slate-900 border border-white/10 px-3 py-2"
-          placeholder="Notes"
+          placeholder={t("financeExpenseNew.fields.notes")}
           value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
         />
@@ -353,7 +309,7 @@ export default function NewCashExpensePage() {
             loading ? "bg-indigo-600/60" : "bg-indigo-600 hover:bg-indigo-700"
           )}
         >
-          {loading ? "Saving..." : "Create Expense"}
+          {loading ? t("common.saving") : t("financeExpenseNew.cta.create")}
         </button>
       </div>
     </div>
