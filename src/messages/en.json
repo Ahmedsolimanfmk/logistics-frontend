@@ -34,12 +34,10 @@
     "total": "Total",
     "page": "Page",
     "optional": "optional",
-
     "back": "Back",
     "clear": "Clear",
     "notFound": "Not found",
     "loadingSession": "Loading session…",
-
     "filters": "Filters",
     "list": "List",
     "actions": "Actions",
@@ -47,14 +45,12 @@
     "selected": "Selected",
     "view": "View"
   },
-
   "tabs": {
     "operations": "Operations",
     "finance": "Finance",
     "maintenance": "Maintenance",
     "dev": "Dev"
   },
-
   "sidebar": {
     "appName": "Logistics",
     "dashboard": "Dashboard",
@@ -74,10 +70,8 @@
     "users": "Users",
     "supervisors": "Supervisors"
   },
-
   "dashboard": {
     "title": "Dashboard",
-
     "columns": {
       "trip": "Trip",
       "status": "Status",
@@ -93,11 +87,9 @@
       "opened": "Opened",
       "completed": "Completed"
     },
-
     "errors": {
       "trendsUnavailable": "Trends endpoint not available."
     },
-
     "ops": {
       "tripsNeedingFinanceClose": {
         "title": "Trips Needing Finance Close",
@@ -144,7 +136,6 @@
         "tripsAssigned": "Trips Assigned"
       }
     },
-
     "finance": {
       "actionRequired": "Finance – Action Required",
       "pendingTooLong": {
@@ -172,7 +163,6 @@
         }
       }
     },
-
     "maintenance": {
       "actionRequired": "Maintenance – Action Required",
       "openWorkOrders": {
@@ -225,13 +215,11 @@
         }
       }
     },
-
     "dev": {
       "title": "Dev tab",
       "hint": "Reserved for development diagnostics."
     }
   },
-
   "users": {
     "title": "Users",
     "subtitle": "Admin-only user management",
@@ -285,7 +273,6 @@
       "createFailed": "Failed to create user"
     }
   },
-
   "vehicles": {
     "title": "Vehicles",
     "subtitle": "Manage fleet",
@@ -351,7 +338,6 @@
       "MAINTENANCE": "MAINTENANCE"
     }
   },
-
   "maintenanceRequests": {
     "title": "Maintenance Requests",
     "checkingSession": "Checking session…",
@@ -410,7 +396,6 @@
       "createFailed": "Failed to create request"
     }
   },
-
   "maintenanceRequestDetails": {
     "title": "Request Details",
     "breadcrumb": "Maintenance / Requests",
@@ -462,7 +447,6 @@
       "rejectCta": "Rejecting…"
     }
   },
-
   "workOrders": {
     "title": "Work Orders",
     "breadcrumb": "Maintenance",
@@ -512,7 +496,6 @@
       "cardsSendStatusInUrl": "Tip: Dashboard cards send status in URL — this page reads it and filters correctly."
     }
   },
-
   "workOrderDetails": {
     "title": "Work Order Details",
     "breadcrumb": "Maintenance / Work Orders",
@@ -623,6 +606,51 @@
       "needQa": "ℹ️ QA is required before closing.",
       "qaFailed": "❌ QA FAILED. Cannot close.",
       "okToClose": "✅ Ready to close."
+    }
+  },
+  "sites": {
+    "title": "Sites",
+    "subtitle": "Manage sites per client",
+    "filters": {
+      "searchPlaceholder": "Search sites…",
+      "allClients": "All clients"
+    },
+    "actions": {
+      "add": "+ Add Site"
+    },
+    "table": {
+      "name": "Name",
+      "client": "Client",
+      "address": "Address",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "empty": "No sites found.",
+    "modal": {
+      "createTitle": "Create Site",
+      "editTitle": "Edit Site"
+    },
+    "fields": {
+      "name": "Name",
+      "client": "Client",
+      "address": "Address"
+    },
+    "placeholders": {
+      "name": "Site name",
+      "address": "Site address",
+      "noClient": "None"
+    },
+    "toast": {
+      "nameRequired": "Site name is required",
+      "created": "Site created",
+      "updated": "Site updated",
+      "saveFailed": "Save failed",
+      "toggled": "Site status changed",
+      "toggleFailed": "Toggle failed"
+    },
+    "errors": {
+      "loadFailed": "Failed to load sites"
     }
   }
 }

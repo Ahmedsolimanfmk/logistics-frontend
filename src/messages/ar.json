@@ -34,12 +34,10 @@
     "total": "الإجمالي",
     "page": "صفحة",
     "optional": "اختياري",
-    
     "back": "رجوع",
     "clear": "مسح",
     "notFound": "غير موجود",
     "loadingSession": "جارٍ تحميل الجلسة…",
-
     "filters": "الفلاتر",
     "list": "القائمة",
     "actions": "إجراءات",
@@ -47,14 +45,12 @@
     "selected": "المحدد",
     "view": "عرض"
   },
-
   "tabs": {
     "operations": "التشغيل",
     "finance": "المالية",
     "maintenance": "الصيانة",
     "dev": "المطور"
   },
-
   "sidebar": {
     "appName": "النظام اللوجستي",
     "dashboard": "لوحة التحكم",
@@ -74,10 +70,8 @@
     "users": "المستخدمين",
     "supervisors": "المشرفين"
   },
-
   "dashboard": {
     "title": "لوحة التحكم",
-
     "columns": {
       "trip": "الرحلة",
       "status": "الحالة",
@@ -93,11 +87,9 @@
       "opened": "تاريخ الفتح",
       "completed": "تاريخ الإنهاء"
     },
-
     "errors": {
       "trendsUnavailable": "خدمة الاتجاهات غير متاحة."
     },
-
     "ops": {
       "tripsNeedingFinanceClose": {
         "title": "رحلات تحتاج إغلاق مالي",
@@ -144,7 +136,6 @@
         "tripsAssigned": "رحلات تم إسنادها"
       }
     },
-
     "finance": {
       "actionRequired": "المالية – إجراءات مطلوبة",
       "pendingTooLong": {
@@ -172,7 +163,6 @@
         }
       }
     },
-
     "maintenance": {
       "actionRequired": "الصيانة – إجراءات مطلوبة",
       "openWorkOrders": {
@@ -225,13 +215,11 @@
         }
       }
     },
-
     "dev": {
       "title": "تبويب المطور",
       "hint": "مخصص لتشخيصات التطوير."
     }
   },
-
   "users": {
     "title": "المستخدمون",
     "subtitle": "إدارة المستخدمين (للأدمن فقط)",
@@ -285,7 +273,6 @@
       "createFailed": "فشل إنشاء المستخدم"
     }
   },
-
   "vehicles": {
     "title": "المركبات",
     "subtitle": "إدارة الأسطول",
@@ -351,7 +338,6 @@
       "MAINTENANCE": "صيانة"
     }
   },
-
   "maintenanceRequests": {
     "title": "طلبات الصيانة",
     "checkingSession": "جارٍ التحقق من الجلسة…",
@@ -410,7 +396,6 @@
       "createFailed": "فشل إنشاء الطلب"
     }
   },
-
   "maintenanceRequestDetails": {
     "title": "تفاصيل الطلب",
     "breadcrumb": "الصيانة / الطلبات",
@@ -462,7 +447,6 @@
       "rejectCta": "جارٍ الرفض…"
     }
   },
-
   "workOrders": {
     "title": "أوامر العمل",
     "breadcrumb": "الصيانة",
@@ -512,7 +496,6 @@
       "cardsSendStatusInUrl": "معلومة: كروت الداشبورد بتبعت status في الـ URL — الصفحة دي بتقرأه وتفلتر صح."
     }
   },
-
   "workOrderDetails": {
     "title": "تفاصيل أمر العمل",
     "breadcrumb": "الصيانة / أوامر العمل",
@@ -623,6 +606,51 @@
       "needQa": "ℹ️ مطلوب QA قبل الإغلاق.",
       "qaFailed": "❌ QA FAILED. لا يمكن الإغلاق.",
       "okToClose": "✅ جاهز للإغلاق."
+    }
+  },
+  "sites": {
+    "title": "المواقع",
+    "subtitle": "إدارة المواقع لكل عميل",
+    "filters": {
+      "searchPlaceholder": "بحث في المواقع…",
+      "allClients": "كل العملاء"
+    },
+    "actions": {
+      "add": "+ إضافة موقع"
+    },
+    "table": {
+      "name": "الاسم",
+      "client": "العميل",
+      "address": "العنوان",
+      "status": "الحالة",
+      "created": "تاريخ الإنشاء",
+      "actions": "إجراءات"
+    },
+    "empty": "لا توجد مواقع.",
+    "modal": {
+      "createTitle": "إنشاء موقع",
+      "editTitle": "تعديل موقع"
+    },
+    "fields": {
+      "name": "اسم الموقع",
+      "client": "العميل",
+      "address": "العنوان"
+    },
+    "placeholders": {
+      "name": "اسم الموقع",
+      "address": "عنوان الموقع",
+      "noClient": "بدون"
+    },
+    "toast": {
+      "nameRequired": "اسم الموقع مطلوب",
+      "created": "تم إضافة الموقع",
+      "updated": "تم تحديث الموقع",
+      "saveFailed": "فشل الحفظ",
+      "toggled": "تم تغيير حالة الموقع",
+      "toggleFailed": "فشل تغيير الحالة"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل المواقع"
     }
   }
 }

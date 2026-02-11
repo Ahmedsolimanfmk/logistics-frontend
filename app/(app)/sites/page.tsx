@@ -5,6 +5,7 @@ import { api, unwrapItems } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter } from "next/navigation";
 import { Toast } from "@/src/components/Toast";
+import { useT } from "@/src/i18n/useT";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -18,6 +19,8 @@ const fmtDate = (d: any) => {
 };
 
 export default function SitesPage() {
+  const t = useT();
+
   const router = useRouter();
   const token = useAuth((s) => s.token);
 
@@ -61,7 +64,6 @@ export default function SitesPage() {
 
   async function loadClients() {
     try {
-      // ✅ FIX: use unwrapItems on AxiosResponse (reads res.data safely)
       const res = await api.get<any>("/clients");
       const items = unwrapItems(res);
       setClients(Array.isArray(items) ? items : []);
@@ -84,7 +86,7 @@ export default function SitesPage() {
       const res = await api.get<any>(`/sites?${qs.toString()}`);
       setRawItems(unwrapItems(res));
     } catch (e: any) {
-      setErr(e?.message || "Failed to fetch sites");
+      setErr(e?.message || t("sites.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -118,7 +120,7 @@ export default function SitesPage() {
 
   async function submit() {
     const v = name.trim();
-    if (!v) return showToast("error", "اسم الموقع مطلوب");
+    if (!v) return showToast("error", t("sites.toast.nameRequired"));
 
     try {
       if (editing?.id) {
@@ -127,29 +129,29 @@ export default function SitesPage() {
           address: address.trim() || null,
           client_id: clientId || null,
         });
-        showToast("success", "تم تحديث الموقع");
+        showToast("success", t("sites.toast.updated"));
       } else {
         await api.post(`/sites`, {
           name: v,
           address: address.trim() || null,
           client_id: clientId || null,
         });
-        showToast("success", "تم إضافة الموقع");
+        showToast("success", t("sites.toast.created"));
       }
       setModalOpen(false);
       await loadSites();
     } catch (e: any) {
-      showToast("error", e?.message || "Save failed");
+      showToast("error", e?.message || t("sites.toast.saveFailed"));
     }
   }
 
   async function toggleActive(id: string) {
     try {
       await api.patch(`/sites/${id}/toggle`);
-      showToast("success", "تم تغيير حالة الموقع");
+      showToast("success", t("sites.toast.toggled"));
       await loadSites();
     } catch (e: any) {
-      showToast("error", e?.message || "Toggle failed");
+      showToast("error", e?.message || t("sites.toast.toggleFailed"));
     }
   }
 
@@ -157,7 +159,7 @@ export default function SitesPage() {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-          Checking session…
+          {t("common.checkingSession")}
         </div>
       </div>
     );
@@ -167,15 +169,15 @@ export default function SitesPage() {
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xl font-bold">Sites</div>
-          <div className="text-sm text-slate-400">Manage sites per client</div>
+          <div className="text-xl font-bold">{t("sites.title")}</div>
+          <div className="text-sm text-slate-400">{t("sites.subtitle")}</div>
         </div>
 
         <button
           onClick={openCreate}
           className="px-3 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 text-sm"
         >
-          + Add Site
+          {t("sites.actions.add")}
         </button>
       </div>
 
@@ -183,7 +185,7 @@ export default function SitesPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search site…"
+          placeholder={t("sites.filters.searchPlaceholder")}
           className="px-3 py-2 w-72 rounded-xl bg-slate-950/30 border border-white/10 outline-none text-sm"
         />
 
@@ -192,7 +194,7 @@ export default function SitesPage() {
           onChange={(e) => setClientFilter(e.target.value)}
           className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none text-sm"
         >
-          <option value="">All clients</option>
+          <option value="">{t("sites.filters.allClients")}</option>
           {clients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name || c.id}
@@ -205,7 +207,7 @@ export default function SitesPage() {
           disabled={loading}
           className="ml-auto px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-60"
         >
-          {loading ? "Loading…" : "Refresh"}
+          {loading ? t("common.loading") : t("common.refresh")}
         </button>
       </div>
 
@@ -217,7 +219,7 @@ export default function SitesPage() {
 
       {loading ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-          Loading…
+          {t("common.loading")}
         </div>
       ) : (
         <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
@@ -225,29 +227,26 @@ export default function SitesPage() {
             <table className="min-w-full text-sm">
               <thead className="bg-white/5">
                 <tr>
-                  <th className="px-4 py-2 text-left text-slate-200">Name</th>
-                  <th className="px-4 py-2 text-left text-slate-200">Client</th>
-                  <th className="px-4 py-2 text-left text-slate-200">Address</th>
-                  <th className="px-4 py-2 text-left text-slate-200">Status</th>
-                  <th className="px-4 py-2 text-left text-slate-200">Created</th>
-                  <th className="px-4 py-2 text-left text-slate-200">Actions</th>
+                  <th className="px-4 py-2 text-left text-slate-200">{t("sites.table.name")}</th>
+                  <th className="px-4 py-2 text-left text-slate-200">{t("sites.table.client")}</th>
+                  <th className="px-4 py-2 text-left text-slate-200">{t("sites.table.address")}</th>
+                  <th className="px-4 py-2 text-left text-slate-200">{t("sites.table.status")}</th>
+                  <th className="px-4 py-2 text-left text-slate-200">{t("sites.table.created")}</th>
+                  <th className="px-4 py-2 text-left text-slate-200">{t("sites.table.actions")}</th>
                 </tr>
               </thead>
 
               <tbody>
                 {items.map((s: any) => (
-                  <tr
-                    key={s.id}
-                    className={cn("border-t border-white/10 hover:bg-white/5")}
-                  >
+                  <tr key={s.id} className={cn("border-t border-white/10 hover:bg-white/5")}>
                     <td className="px-4 py-2 font-medium">{s.name || "—"}</td>
                     <td className="px-4 py-2">{s.clients?.name || "—"}</td>
                     <td className="px-4 py-2">{s.address || "—"}</td>
                     <td className="px-4 py-2">
                       {s.is_active === false ? (
-                        <span className="text-red-400">Inactive</span>
+                        <span className="text-red-400">{t("common.disabled")}</span>
                       ) : (
-                        <span className="text-emerald-400">Active</span>
+                        <span className="text-emerald-400">{t("common.active")}</span>
                       )}
                     </td>
                     <td className="px-4 py-2">{fmtDate(s.created_at)}</td>
@@ -257,13 +256,13 @@ export default function SitesPage() {
                           className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
                           onClick={() => openEdit(s)}
                         >
-                          Edit
+                          {t("common.edit")}
                         </button>
                         <button
                           className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
                           onClick={() => toggleActive(s.id)}
                         >
-                          Toggle
+                          {t("common.toggle")}
                         </button>
                       </div>
                     </td>
@@ -273,7 +272,7 @@ export default function SitesPage() {
                 {!items.length ? (
                   <tr>
                     <td className="px-4 py-6 text-slate-300" colSpan={6}>
-                      No sites found.
+                      {t("sites.empty")}
                     </td>
                   </tr>
                 ) : null}
@@ -294,7 +293,7 @@ export default function SitesPage() {
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold">
-                {editing ? "Edit Site" : "Create Site"}
+                {editing ? t("sites.modal.editTitle") : t("sites.modal.createTitle")}
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
@@ -306,23 +305,23 @@ export default function SitesPage() {
 
             <div className="mt-4 grid gap-3">
               <label className="grid gap-2 text-sm">
-                Name
+                {t("sites.fields.name")}
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-                  placeholder="اسم الموقع"
+                  placeholder={t("sites.placeholders.name")}
                 />
               </label>
 
               <label className="grid gap-2 text-sm">
-                Client (اختياري)
+                {t("sites.fields.client")} ({t("common.optional")})
                 <select
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
                   className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
                 >
-                  <option value="">بدون</option>
+                  <option value="">{t("sites.placeholders.noClient")}</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name || c.id}
@@ -332,12 +331,12 @@ export default function SitesPage() {
               </label>
 
               <label className="grid gap-2 text-sm">
-                Address (اختياري)
+                {t("sites.fields.address")} ({t("common.optional")})
                 <input
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-                  placeholder="عنوان الموقع"
+                  placeholder={t("sites.placeholders.address")}
                 />
               </label>
             </div>
@@ -347,13 +346,13 @@ export default function SitesPage() {
                 onClick={() => setModalOpen(false)}
                 className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={submit}
                 className="px-4 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 text-sm font-semibold"
               >
-                Save
+                {t("common.save")}
               </button>
             </div>
           </div>
