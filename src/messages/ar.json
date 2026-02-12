@@ -828,6 +828,49 @@
       "approveNotes": "ملاحظات (اختياري):",
       "rejectReason": "سبب الرفض (مطلوب):",
       "rejectNotes": "ملاحظات (اختياري):"
-    }
+    },
+    "financeExpenses": {
+  "title": "المصروفات",
+  "viewOnly": "عرض فقط",
+  "filters": {
+    "searchPlaceholder": "بحث (النوع/الوصف/سبب الرفض)…"
+  },
+  "tabs": {
+    "PENDING": "قيد الانتظار",
+    "APPROVED": "معتمد",
+    "REJECTED": "مرفوض",
+    "APPEALED": "تم الاستئناف",
+    "ALL": "الكل"
+  },
+  "table": {
+    "id": "المعرّف",
+    "amount": "المبلغ",
+    "type": "النوع",
+    "status": "الحالة",
+    "trip": "الرحلة",
+    "vehicle": "المركبة",
+    "created": "تاريخ الإنشاء",
+    "actions": "إجراءات",
+    "reason": "سبب الرفض"
+  },
+  "actions": {
+    "approve": "اعتماد",
+    "reject": "رفض"
+  },
+  "meta": {
+    "showing": "عرض {count} من {total}"
+  },
+  "empty": "لا توجد مصروفات.",
+  "errors": {
+    "loadFailed": "فشل تحميل المصروفات",
+    "approveFailed": "فشل الاعتماد",
+    "rejectFailed": "فشل الرفض"
+  },
+  "prompts": {
+    "approveNotes": "ملاحظات (اختياري):",
+    "rejectReason": "سبب الرفض (مطلوب):",
+    "rejectNotes": "ملاحظات (اختياري):"
   }
+}
+}
 }

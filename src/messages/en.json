@@ -828,6 +828,49 @@
       "approveNotes": "Notes (optional):",
       "rejectReason": "Rejection reason (required):",
       "rejectNotes": "Notes (optional):"
-    }
+    },
+    "financeExpenses": {
+  "title": "Expenses",
+  "viewOnly": "View only",
+  "filters": {
+    "searchPlaceholder": "Search (type/description/reason)…"
+  },
+  "tabs": {
+    "PENDING": "Pending",
+    "APPROVED": "Approved",
+    "REJECTED": "Rejected",
+    "APPEALED": "Appealed",
+    "ALL": "All"
+  },
+  "table": {
+    "id": "ID",
+    "amount": "Amount",
+    "type": "Type",
+    "status": "Status",
+    "trip": "Trip",
+    "vehicle": "Vehicle",
+    "created": "Created",
+    "actions": "Actions",
+    "reason": "Reason"
+  },
+  "actions": {
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+  "meta": {
+    "showing": "Showing {count} of {total}"
+  },
+  "empty": "No expenses found.",
+  "errors": {
+    "loadFailed": "Failed to load expenses",
+    "approveFailed": "Approve failed",
+    "rejectFailed": "Reject failed"
+  },
+  "prompts": {
+    "approveNotes": "Notes (optional):",
+    "rejectReason": "Rejection reason (required):",
+    "rejectNotes": "Notes (optional):"
   }
+}
+}
 }
