@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useT } from "@/src/i18n/useT";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -51,6 +52,7 @@ function StatusBadge({ s }: { s: string }) {
 type TabKey = "PENDING" | "APPROVED" | "REJECTED" | "APPEALED" | "ALL";
 
 export default function ExpensesClientPage() {
+  const t = useT();
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -97,12 +99,12 @@ export default function ExpensesClientPage() {
 
       // api.ts returns data directly
       const list = Array.isArray(data) ? data : (data as any)?.items || [];
-      const t = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
+      const tt = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
 
       setItems(list);
-      setTotal(t);
+      setTotal(tt);
     } catch (e: any) {
-      setErr(e?.message || "Failed to load expenses");
+      setErr(e?.message || t("financeExpenses.errors.loadFailed"));
       setItems([]);
       setTotal(0);
     } finally {
@@ -117,34 +119,34 @@ export default function ExpensesClientPage() {
 
   async function approve(expenseId: string) {
     if (!canReview) return;
-    const notes = window.prompt("Notes (اختياري):") || "";
+    const notes = window.prompt(t("financeExpenses.prompts.approveNotes")) || "";
     try {
       await api.post(`/cash/cash-expenses/${expenseId}/approve`, { notes: notes || null });
       await load();
     } catch (e: any) {
-      alert(e?.message || "Approve failed");
+      alert(e?.message || t("financeExpenses.errors.approveFailed"));
     }
   }
 
   async function reject(expenseId: string) {
     if (!canReview) return;
-    const reason = window.prompt("سبب الرفض (مطلوب):");
+    const reason = window.prompt(t("financeExpenses.prompts.rejectReason"));
     if (!reason || reason.trim().length < 2) return;
-    const notes = window.prompt("Notes (اختياري):") || "";
+    const notes = window.prompt(t("financeExpenses.prompts.rejectNotes")) || "";
     try {
       await api.post(`/cash/cash-expenses/${expenseId}/reject`, { reason: reason.trim(), notes: notes || null });
       await load();
     } catch (e: any) {
-      alert(e?.message || "Reject failed");
+      alert(e?.message || t("financeExpenses.errors.rejectFailed"));
     }
   }
 
   const tabs: Array<{ key: TabKey; label: string }> = [
-    { key: "PENDING", label: "Pending" },
-    { key: "APPROVED", label: "Approved" },
-    { key: "REJECTED", label: "Rejected" },
-    { key: "APPEALED", label: "Appealed" },
-    { key: "ALL", label: "All" },
+    { key: "PENDING", label: t("financeExpenses.tabs.PENDING") },
+    { key: "APPROVED", label: t("financeExpenses.tabs.APPROVED") },
+    { key: "REJECTED", label: t("financeExpenses.tabs.REJECTED") },
+    { key: "APPEALED", label: t("financeExpenses.tabs.APPEALED") },
+    { key: "ALL", label: t("financeExpenses.tabs.ALL") },
   ];
 
   return (
@@ -152,10 +154,10 @@ export default function ExpensesClientPage() {
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-xl font-bold">Expenses</div>
+            <div className="text-xl font-bold">{t("financeExpenses.title")}</div>
             <div className="text-xs text-slate-400">
-              Role: <span className="text-slate-200">{role || "—"}</span>
-              {!canReview ? <span className="ml-2">(view only)</span> : null}
+              {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
+              {!canReview ? <span className="ml-2">({t("financeExpenses.viewOnly")})</span> : null}
             </div>
           </div>
 
@@ -164,32 +166,33 @@ export default function ExpensesClientPage() {
               href="/finance"
               className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
             >
-              ← Finance
+              ← {t("sidebar.finance")}
             </Link>
+
             <button
               onClick={load}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm disabled:opacity-60"
             >
-              {loading ? "Loading…" : "Refresh"}
+              {loading ? t("common.loading") : t("common.refresh")}
             </button>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="flex flex-wrap gap-2">
-          {tabs.map((t) => (
+          {tabs.map((x) => (
             <button
-              key={t.key}
-              onClick={() => setParam("status", t.key)}
+              key={x.key}
+              onClick={() => setParam("status", x.key)}
               className={cn(
                 "px-3 py-2 rounded-xl text-sm border transition",
-                status === t.key
+                status === x.key
                   ? "bg-white/10 border-white/10 text-white"
                   : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
               )}
             >
-              {t.label}
+              {x.label}
             </button>
           ))}
         </div>
@@ -199,12 +202,12 @@ export default function ExpensesClientPage() {
           <input
             value={q}
             onChange={(e) => setParam("q", e.target.value)}
-            placeholder="Search (type/description/reason)…"
+            placeholder={t("financeExpenses.filters.searchPlaceholder")}
             className="w-full md:w-[420px] px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
           />
 
           <div className="text-xs text-slate-400">
-            Total: <span className="text-slate-200">{total}</span> — Page{" "}
+            {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
             <span className="text-slate-200">
               {page}/{totalPages}
             </span>
@@ -230,22 +233,22 @@ export default function ExpensesClientPage() {
         {/* Table */}
         <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           {loading ? (
-            <div className="p-4 text-sm text-slate-300">Loading…</div>
+            <div className="p-4 text-sm text-slate-300">{t("common.loading")}</div>
           ) : items.length === 0 ? (
-            <div className="p-4 text-sm text-slate-300">No expenses found.</div>
+            <div className="p-4 text-sm text-slate-300">{t("financeExpenses.empty")}</div>
           ) : (
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">ID</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Amount</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Type</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Status</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Trip</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Vehicle</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Created</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Actions</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.id")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.amount")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.type")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.status")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.trip")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.vehicle")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.created")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.actions")}</th>
                   </tr>
                 </thead>
 
@@ -269,7 +272,7 @@ export default function ExpensesClientPage() {
                               href={`/finance/expenses/${x.id}`}
                               className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
                             >
-                              View
+                              {t("common.view")}
                             </Link>
 
                             {canReview && st === "PENDING" ? (
@@ -278,20 +281,21 @@ export default function ExpensesClientPage() {
                                   onClick={() => approve(x.id)}
                                   className="px-3 py-1.5 rounded-lg border border-white/10 bg-emerald-600/70 hover:bg-emerald-600 text-xs"
                                 >
-                                  Approve
+                                  {t("financeExpenses.actions.approve")}
                                 </button>
                                 <button
                                   onClick={() => reject(x.id)}
                                   className="px-3 py-1.5 rounded-lg border border-white/10 bg-red-600/70 hover:bg-red-600 text-xs"
                                 >
-                                  Reject
+                                  {t("financeExpenses.actions.reject")}
                                 </button>
                               </>
                             ) : null}
 
                             {st === "REJECTED" && x.rejection_reason ? (
                               <span className="text-xs text-slate-400">
-                                Reason: <span className="text-slate-200">{String(x.rejection_reason)}</span>
+                                {t("financeExpenses.table.reason")}:{" "}
+                                <span className="text-slate-200">{String(x.rejection_reason)}</span>
                               </span>
                             ) : null}
                           </div>
@@ -311,19 +315,17 @@ export default function ExpensesClientPage() {
               disabled={page <= 1}
               onClick={() => setParam("page", String(page - 1))}
             >
-              Prev
+              {t("common.prev")}
             </button>
 
-            <div className="text-xs text-slate-400">
-              Showing {items.length} of {total}
-            </div>
+            <div className="text-xs text-slate-400">{t("financeExpenses.meta.showing", { count: items.length, total })}</div>
 
             <button
               className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
               disabled={page >= totalPages}
               onClick={() => setParam("page", String(page + 1))}
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>

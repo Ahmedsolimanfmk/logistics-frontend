@@ -45,14 +45,12 @@
     "selected": "Selected",
     "view": "View"
   },
-
   "tabs": {
     "operations": "Operations",
     "finance": "Finance",
     "maintenance": "Maintenance",
     "dev": "Dev"
   },
-
   "sidebar": {
     "appName": "Logistics",
     "dashboard": "Dashboard",
@@ -72,7 +70,6 @@
     "users": "Users",
     "supervisors": "Supervisors"
   },
-
   "dashboard": {
     "title": "Dashboard",
     "columns": {
@@ -223,7 +220,6 @@
       "hint": "Reserved for development diagnostics."
     }
   },
-
   "users": {
     "title": "Users",
     "subtitle": "Admin-only user management",
@@ -277,7 +273,6 @@
       "createFailed": "Failed to create user"
     }
   },
-
   "vehicles": {
     "title": "Vehicles",
     "subtitle": "Manage fleet",
@@ -343,7 +338,6 @@
       "MAINTENANCE": "MAINTENANCE"
     }
   },
-
   "maintenanceRequests": {
     "title": "Maintenance Requests",
     "checkingSession": "Checking session…",
@@ -402,7 +396,6 @@
       "createFailed": "Failed to create request"
     }
   },
-
   "maintenanceRequestDetails": {
     "title": "Request Details",
     "breadcrumb": "Maintenance / Requests",
@@ -454,7 +447,6 @@
       "rejectCta": "Rejecting…"
     }
   },
-
   "workOrders": {
     "title": "Work Orders",
     "breadcrumb": "Maintenance",
@@ -504,7 +496,6 @@
       "cardsSendStatusInUrl": "Tip: Dashboard cards send status in URL — this page reads it and filters correctly."
     }
   },
-
   "workOrderDetails": {
     "title": "Work Order Details",
     "breadcrumb": "Maintenance / Work Orders",
@@ -617,7 +608,6 @@
       "okToClose": "✅ Ready to close."
     }
   },
-
   "sites": {
     "title": "Sites",
     "subtitle": "Manage sites per client",
@@ -665,7 +655,6 @@
       "loadFailed": "Failed to load sites"
     }
   },
-
   "clients": {
     "title": "Clients",
     "subtitle": "Manage customers",
@@ -702,7 +691,6 @@
       "loadFailed": "Failed to load clients"
     }
   },
-
   "financeDashboard": {
     "title": "Finance Dashboard",
     "roleLabel": "Role",
@@ -786,7 +774,6 @@
       "tipPrivileged": "Tip: Admin & Accountant see all records."
     }
   },
-
   "financeExpenses": {
     "title": "Expenses",
     "viewOnly": "view only",
@@ -828,49 +815,6 @@
       "approveNotes": "Notes (optional):",
       "rejectReason": "Rejection reason (required):",
       "rejectNotes": "Notes (optional):"
-    },
-    "financeExpenses": {
-  "title": "Expenses",
-  "viewOnly": "View only",
-  "filters": {
-    "searchPlaceholder": "Search (type/description/reason)…"
-  },
-  "tabs": {
-    "PENDING": "Pending",
-    "APPROVED": "Approved",
-    "REJECTED": "Rejected",
-    "APPEALED": "Appealed",
-    "ALL": "All"
-  },
-  "table": {
-    "id": "ID",
-    "amount": "Amount",
-    "type": "Type",
-    "status": "Status",
-    "trip": "Trip",
-    "vehicle": "Vehicle",
-    "created": "Created",
-    "actions": "Actions",
-    "reason": "Reason"
-  },
-  "actions": {
-    "approve": "Approve",
-    "reject": "Reject"
-  },
-  "meta": {
-    "showing": "Showing {count} of {total}"
-  },
-  "empty": "No expenses found.",
-  "errors": {
-    "loadFailed": "Failed to load expenses",
-    "approveFailed": "Approve failed",
-    "rejectFailed": "Reject failed"
-  },
-  "prompts": {
-    "approveNotes": "Notes (optional):",
-    "rejectReason": "Rejection reason (required):",
-    "rejectNotes": "Notes (optional):"
+    }
   }
-}
-}
 }
