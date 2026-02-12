@@ -815,6 +815,37 @@
       "approveNotes": "Notes (optional):",
       "rejectReason": "Rejection reason (required):",
       "rejectNotes": "Notes (optional):"
+    },
+    "financeAdvances": {
+  "title": "Cash Advances",
+  "subtitle": "Showing your advances",
+  "subtitleAdmin": "Showing all advances (admin/accountant)",
+  "filters": {
+    "allStatuses": "All statuses",
+    "searchPlaceholder": "Search... (id / supervisor / amount)",
+    "status": {
+      "OPEN": "OPEN",
+      "PENDING": "PENDING",
+      "SETTLED": "SETTLED",
+      "CLOSED": "CLOSED",
+      "REJECTED": "REJECTED",
+      "CANCELED": "CANCELED"
     }
+  },
+  "table": {
+    "actions": "Actions",
+    "created": "Created",
+    "status": "Status",
+    "amount": "Amount",
+    "supervisor": "Supervisor"
+  },
+  "meta": {
+    "showing": "Showing {count} of {total}"
+  },
+  "empty": "No advances found",
+  "errors": {
+    "loadFailed": "Failed to load advances"
+  }
+}
   }
 }

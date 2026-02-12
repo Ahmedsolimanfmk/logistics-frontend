@@ -815,6 +815,37 @@
       "approveNotes": "ملاحظات (اختياري):",
       "rejectReason": "سبب الرفض (مطلوب):",
       "rejectNotes": "ملاحظات (اختياري):"
+    },
+    "financeAdvances": {
+  "title": "السلف النقدية",
+  "subtitle": "عرض السلف الخاصة بك",
+  "subtitleAdmin": "عرض جميع السلف (للأدمن/المحاسب)",
+  "filters": {
+    "allStatuses": "كل الحالات",
+    "searchPlaceholder": "بحث... (الرقم / المشرف / المبلغ)",
+    "status": {
+      "OPEN": "مفتوحة",
+      "PENDING": "قيد الانتظار",
+      "SETTLED": "تمت التسوية",
+      "CLOSED": "مغلقة",
+      "REJECTED": "مرفوضة",
+      "CANCELED": "ملغاة"
     }
+  },
+  "table": {
+    "actions": "إجراءات",
+    "created": "تاريخ الإنشاء",
+    "status": "الحالة",
+    "amount": "المبلغ",
+    "supervisor": "المشرف"
+  },
+  "meta": {
+    "showing": "عرض {count} من {total}"
+  },
+  "empty": "لا توجد سلف",
+  "errors": {
+    "loadFailed": "فشل تحميل السلف"
+  }
+}
   }
 }
