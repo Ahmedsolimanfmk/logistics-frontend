@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -10,23 +10,19 @@ import { useT } from "@/src/i18n/useT";
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
-
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
-
 function fmtMoney(n: any) {
   const v = Number(n || 0);
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
-
 function fmtDate(d?: string | null) {
   if (!d) return "—";
   const dt = new Date(String(d));
   if (Number.isNaN(dt.getTime())) return String(d);
   return dt.toLocaleString("ar-EG");
 }
-
 function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
@@ -53,7 +49,12 @@ function StatusBadge({ s }: { s: string }) {
 
 type TabKey = "ALL" | "OPEN" | "SETTLED" | "CANCELED";
 
-export default function AdvancesClientPage() {
+/**
+ * ✅ IMPORTANT:
+ * Next.js requires useSearchParams() to be inside a Suspense boundary.
+ * So we moved it into this inner component, and the default export wraps it in <Suspense>.
+ */
+function AdvancesInner() {
   const t = useT();
   const router = useRouter();
   const sp = useSearchParams();
@@ -222,9 +223,13 @@ export default function AdvancesClientPage() {
         {/* Table */}
         <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           {loading ? (
-            <div className="p-4 text-sm text-slate-300">{t("common.loading")}</div>
+            <div className="p-4 text-sm text-slate-300">
+              {t("common.loading")}
+            </div>
           ) : items.length === 0 ? (
-            <div className="p-4 text-sm text-slate-300">{t("financeAdvances.empty")}</div>
+            <div className="p-4 text-sm text-slate-300">
+              {t("financeAdvances.empty")}
+            </div>
           ) : (
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
@@ -253,7 +258,10 @@ export default function AdvancesClientPage() {
 
                 <tbody>
                   {items.map((x: any) => {
-                    const st = String(x.status || x.settlement_status || "").toUpperCase();
+                    const st = String(
+                      x.status || x.settlement_status || ""
+                    ).toUpperCase();
+
                     const supervisorName =
                       x.supervisors?.full_name ||
                       x.supervisor?.full_name ||
@@ -261,7 +269,10 @@ export default function AdvancesClientPage() {
                       "—";
 
                     return (
-                      <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
+                      <tr
+                        key={x.id}
+                        className="border-t border-white/10 hover:bg-white/5"
+                      >
                         <td className="px-4 py-2">
                           <Link
                             href={`/finance/advances/${x.id}`}
@@ -271,13 +282,17 @@ export default function AdvancesClientPage() {
                           </Link>
                         </td>
 
-                        <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
+                        <td className="px-4 py-2 text-slate-300">
+                          {fmtDate(x.created_at)}
+                        </td>
 
                         <td className="px-4 py-2">
                           <StatusBadge s={st} />
                         </td>
 
-                        <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
+                        <td className="px-4 py-2 font-semibold">
+                          {fmtMoney(x.amount)}
+                        </td>
 
                         <td className="px-4 py-2">{supervisorName}</td>
 
@@ -315,5 +330,19 @@ export default function AdvancesClientPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 text-white p-6">
+          <div className="text-sm text-slate-300">Loading…</div>
+        </div>
+      }
+    >
+      <AdvancesInner />
+    </Suspense>
   );
 }
