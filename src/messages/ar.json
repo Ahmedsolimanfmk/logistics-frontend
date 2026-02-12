@@ -834,52 +834,55 @@
     }
   },
 
-  "financeAdvances": {
-    "title": "السلف النقدية",
-    "subtitle": "عرض السلف الخاصة بك",
-    "subtitleAdmin": "عرض جميع السلف (للأدمن/المحاسب)",
-    "filters": {
-      "allStatuses": "كل الحالات",
-      "searchPlaceholder": "بحث... (الرقم / المشرف / المبلغ)",
-      "status": {
-        "OPEN": "مفتوحة",
-        "PENDING": "قيد الانتظار",
-        "SETTLED": "تمت التسوية",
-        "CLOSED": "مغلقة",
-        "REJECTED": "مرفوضة",
-        "CANCELED": "ملغاة"
-      },
-      "open": "مفتوحة",
-      "settled": "تمت التسوية",
-      "canceled": "ملغاة"
+ "financeAdvances": {
+  "title": "السلف النقدية",
+  "subtitle": "عرض السلف الخاصة بك",
+  "subtitleAdmin": "عرض جميع السلف (للأدمن/المحاسب)",
+  "actions": {
+    "issue": "+ صرف عهدة"
+  },
+  "filters": {
+    "allStatuses": "كل الحالات",
+    "searchPlaceholder": "بحث... (الرقم / المشرف / المبلغ)",
+    "status": {
+      "OPEN": "مفتوحة",
+      "PENDING": "قيد الانتظار",
+      "SETTLED": "تمت التسوية",
+      "CLOSED": "مغلقة",
+      "REJECTED": "مرفوضة",
+      "CANCELED": "ملغاة"
     },
-    "table": {
-      "actions": "إجراءات",
-      "created": "تاريخ الإنشاء",
-      "status": "الحالة",
-      "amount": "المبلغ",
-      "supervisor": "المشرف",
-      "id": "المعرّف"
-    },
-    "meta": {
-      "showing": "عرض {count} من {total}",
-      "showingAll": "عرض جميع السلف",
-      "showingMine": "عرض السلف الخاصة بك"
-    },
+    "open": "مفتوحة",
+    "settled": "تمت التسوية",
+    "canceled": "ملغاة"
+  },
+  "table": {
+    "actions": "إجراءات",
+    "created": "تاريخ الإنشاء",
+    "status": "الحالة",
+    "amount": "المبلغ",
+    "supervisor": "المشرف",
+    "id": "المعرّف"
+  },
+  "meta": {
+    "showing": "عرض {count} من {total}",
+    "showingAll": "عرض جميع السلف",
+    "showingMine": "عرض السلف الخاصة بك"
+  },
   "placeholders": {
     "selectSupervisor": "اختر مشرف"
   },
   "hints": {
     "issueHint": "سيتم إنشاء عُهدة جديدة للمشرف بحالة OPEN."
-  }, 
+  },
   "toast": {
     "issued": "تم صرف العُهدة ✅"
   },
-    "empty": "لا توجد سلف",
-    "errors": {
-      "loadFailed": "فشل تحميل السلف"
-    }
-  },
+  "empty": "لا توجد سلف",
+  "errors": {
+    "loadFailed": "فشل تحميل السلف"
+  }
+},
   "trips": {
     "title": "الرحلات",
     "subtitle": "قائمة الرحلات + الدخول للتفاصيل",
