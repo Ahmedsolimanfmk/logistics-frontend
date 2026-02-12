@@ -700,57 +700,46 @@
     },
     "errors": {
       "loadFailed": "فشل تحميل العملاء"
-    },
-  "financeDashboard": {
-    "title": "المالية",
-    "roleLabel": "الدور",
+    }
+  },
 
+  "financeDashboard": {
+    "title": "لوحة المالية",
+    "roleLabel": "الدور",
     "actions": {
-      "refresh": "تحديث",
       "expenses": "المصروفات",
       "advances": "السلف",
-      "openList": "فتح القائمة",
-      "review": "مراجعة"
+      "refresh": "تحديث"
     },
-
-    "errors": {
-      "loadFailed": "فشل تحميل بيانات المالية"
-    },
-
     "tabs": {
-      "pending": "معلّق",
-      "advances": "السلف",
+      "pending": "مصروفات معلقة",
+      "advances": "سلف مفتوحة",
       "alerts": "تنبيهات"
     },
-
     "kpis": {
-      "pendingCount": "عدد المصروفات المعلّقة",
+      "pendingCount": "عدد المعلّق",
       "pendingTotal": "إجمالي المعلّق",
       "openAdvances": "عدد السلف المفتوحة",
       "openAdvancesTotal": "إجمالي السلف المفتوحة",
-      "pendingDays": "معلّق {days}+ يوم",
-      "advanceDays": "سلف مفتوحة {days}+ يوم"
+      "pendingDays": "مصروفات ≥ {days} أيام",
+      "advanceDays": "سلف ≥ {days} أيام"
     },
-
     "sections": {
-      "pendingHeader": "مصروفات معلّقة",
-      "advancesHeader": "سلف مفتوحة",
-      "alertsHeader": "تنبيهات",
-      "alertsHint": "(تجاوز مدد المتابعة)"
+      "pendingHeader": "المصروفات المعلقة",
+      "advancesHeader": "السلف المفتوحة",
+      "alertsHeader": "تنبيهات التأخير",
+      "alertsHint": "العناصر التي تجاوزت المدة المسموحة"
     },
-
+    "links": {
+      "openList": "فتح القائمة",
+      "showing": "عرض {count}"
+    },
     "meta": {
       "days": "{n} يوم",
-      "showingFirst30": "عرض أول 30 عنصر فقط.",
-      "showingFirst20Pending": "عرض أول 20 عنصر فقط.",
-      "showingFirst20Adv": "عرض أول 20 عنصر فقط."
+      "showingFirst30": "عرض أول 30 سجل",
+      "showingFirst20Pending": "عرض أول 20 مصروف متأخر",
+      "showingFirst20Adv": "عرض أول 20 سلفة متأخرة"
     },
-
-    "links": {
-      "showing": "(عرض {count})",
-      "openList": "فتح القائمة"
-    },
-
     "tables": {
       "pending": {
         "amount": "المبلغ",
@@ -783,39 +772,36 @@
         "view": "عرض"
       }
     },
-
     "empty": {
-      "noPending": "لا توجد مصروفات معلّقة.",
-      "noOpenAdvances": "لا توجد سلف مفتوحة.",
-      "noOverduePending": "لا توجد مصروفات معلّقة متأخرة.",
-      "noOverdueAdvances": "لا توجد سلف متأخرة."
+      "noPending": "لا توجد مصروفات معلقة",
+      "noOpenAdvances": "لا توجد سلف مفتوحة",
+      "noOverduePending": "لا توجد مصروفات متأخرة",
+      "noOverdueAdvances": "لا توجد سلف متأخرة"
     },
-
+    "errors": {
+      "loadFailed": "فشل تحميل لوحة المالية"
+    },
     "notes": {
-      "roleLimited": "تنبيه: صلاحيات هذا المستخدم محدودة في شاشة المالية.",
-      "tipPrivileged": "نصيحة: الأدمن/المحاسب يقدروا اعتماد/رفض المصروفات."
+      "roleLimited": "الوصول محدود حسب الدور.",
+      "tipPrivileged": "معلومة: الأدمن والمحاسب يرون كل السجلات."
     }
   },
 
   "financeExpenses": {
     "title": "المصروفات",
-    "viewOnly": "(عرض فقط)",
-    "roleLine": "الدور: {role}",
-
+    "viewOnly": "عرض فقط",
+    "filters": {
+      "searchPlaceholder": "بحث (النوع/الوصف/سبب الرفض)…"
+    },
     "tabs": {
-      "PENDING": "معلّق",
+      "PENDING": "قيد الانتظار",
       "APPROVED": "معتمد",
       "REJECTED": "مرفوض",
-      "APPEALED": "استئناف",
+      "APPEALED": "تم الاستئناف",
       "ALL": "الكل"
     },
-
-    "filters": {
-      "searchPlaceholder": "بحث... (النوع/المبلغ/الرحلة/المركبة)"
-    },
-
     "table": {
-      "id": "المعرف",
+      "id": "المعرّف",
       "amount": "المبلغ",
       "type": "النوع",
       "status": "الحالة",
@@ -823,86 +809,25 @@
       "vehicle": "المركبة",
       "created": "تاريخ الإنشاء",
       "actions": "إجراءات",
-      "reason": "السبب"
+      "reason": "سبب الرفض"
     },
-
     "actions": {
-      "backFinance": "← المالية",
-      "refresh": "تحديث",
-      "view": "عرض",
       "approve": "اعتماد",
-      "reject": "رفض",
-      "prev": "السابق",
-      "next": "التالي"
+      "reject": "رفض"
     },
-
-    "prompts": {
-      "approveNotes": "ملاحظات (اختياري)؟",
-      "rejectReason": "سبب الرفض (مطلوب):",
-      "rejectNotes": "ملاحظات (اختياري)؟"
-    },
-
     "meta": {
-      "total": "الإجمالي",
-      "page": "صفحة",
       "showing": "عرض {count} من {total}"
     },
-
-    "empty": "لا توجد مصروفات."
-    ,
+    "empty": "لا توجد مصروفات.",
     "errors": {
       "loadFailed": "فشل تحميل المصروفات",
-      "approveFailed": "فشل اعتماد المصروف",
-      "rejectFailed": "فشل رفض المصروف"
-    }
-  },
-
-  "financeNewExpense": {
-    "title": "إضافة مصروف",
-    "notAllowedBanner": "لا تملك صلاحية إضافة مصروف.",
-
-    "fields": {
-      "paymentSource": "مصدر الدفع"
+      "approveFailed": "فشل الاعتماد",
+      "rejectFailed": "فشل الرفض"
     },
-
-    "hints": {
-      "advance": "المشرف يسجل مصروفات من سلفة (ADVANCE).",
-      "company": "الأدمن/المحاسب يسجل مصروفات شركة (COMPANY)."
-    },
-
-    "placeholders": {
-      "type": "نوع المصروف",
-      "amount": "المبلغ",
-      "selectAdvance": "اختر سلفة مفتوحة",
-      "vendor": "اسم المورد",
-      "invoiceNo": "رقم الفاتورة (اختياري)",
-      "notes": "ملاحظات (اختياري)",
-      "linkWorkOrder": "ربط بأمر عمل (اختياري)",
-      "linkTrip": "ربط برحلة (اختياري)"
-    },
-
-    "actions": {
-      "create": "إنشاء"
-    },
-
-    "toast": {
-      "created": "تم إنشاء المصروف ✅",
-      "createFailed": "فشل إنشاء المصروف"
-    },
-
-    "errors": {
-      "loadFailed": "فشل تحميل البيانات",
-      "notAllowed": "غير مسموح لك بهذه العملية",
-      "typeRequired": "نوع المصروف مطلوب",
-      "amountInvalid": "المبلغ غير صحيح",
-      "advanceOnlySupervisor": "مصروف السلفة للمشرف فقط",
-      "advanceRequired": "اختيار السلفة مطلوب",
-      "companyOnlyPrivileged": "مصروف الشركة للأدمن/المحاسب فقط",
-      "vendorRequired": "اسم المورد مطلوب",
-      "invoiceDateRequired": "تاريخ الفاتورة مطلوب",
-      "tripInvalid": "الرحلة غير صحيحة",
-      "workOrderInvalid": "أمر العمل غير صحيح"
+    "prompts": {
+      "approveNotes": "ملاحظات (اختياري):",
+      "rejectReason": "سبب الرفض (مطلوب):",
+      "rejectNotes": "ملاحظات (اختياري):"
     }
   }
-}
 }

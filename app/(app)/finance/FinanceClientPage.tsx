@@ -47,7 +47,12 @@ function StatusBadge({ s }: { s: string }) {
       : st === "PENDING" || st === "IN_REVIEW"
       ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
       : "bg-white/5 text-slate-200 border-white/10";
-  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
+
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
 }
 
 function SourceBadge({ s }: { s: string }) {
@@ -56,7 +61,12 @@ function SourceBadge({ s }: { s: string }) {
     st === "COMPANY"
       ? "bg-sky-500/15 text-sky-200 border-sky-500/20"
       : "bg-violet-500/15 text-violet-200 border-violet-500/20";
-  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
+
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
 }
 
 type TabKey = "pending" | "advances" | "alerts";
@@ -447,7 +457,9 @@ export default function FinanceClientPage() {
                       key={x.id}
                       className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
                     >
-                      <div className="col-span-2 text-amber-200">{t("financeDashboard.meta.days", { n: x.age_days })}</div>
+                      <div className="col-span-2 text-amber-200">
+                        {t("financeDashboard.meta.days", { n: x.age_days })}
+                      </div>
                       <div className="col-span-2 font-medium">{fmtMoney(x.amount)}</div>
                       <div className="col-span-3">{x.expense_type || "—"}</div>
                       <div className="col-span-2">
@@ -506,7 +518,9 @@ export default function FinanceClientPage() {
                         key={a.id}
                         className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
                       >
-                        <div className="col-span-2 text-amber-200">{t("financeDashboard.meta.days", { n: a.age_days })}</div>
+                        <div className="col-span-2 text-amber-200">
+                          {t("financeDashboard.meta.days", { n: a.age_days })}
+                        </div>
                         <div className="col-span-4">{sup}</div>
                         <div className="col-span-2 font-medium">{fmtMoney(a.amount)}</div>
                         <div className="col-span-2">
