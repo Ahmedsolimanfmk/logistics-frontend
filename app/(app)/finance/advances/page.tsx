@@ -5,7 +5,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Toast } from "@/src/components/Toast";
 import { useT } from "@/src/i18n/useT";
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -37,18 +36,22 @@ function shortId(id: any) {
 function StatusBadge({ s }: { s: string }) {
   const st = String(s || "").toUpperCase();
   const cls =
-    st === "SETTLED" || st === "CLOSED"
-      ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/20"
-      : st === "OPEN" || st === "PENDING"
+    st === "OPEN" || st === "PENDING"
       ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
-      : st === "REJECTED" || st === "CANCELED"
+      : st === "SETTLED" || st === "CLOSED"
+      ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/20"
+      : st === "CANCELED" || st === "REJECTED"
       ? "bg-red-500/15 text-red-200 border-red-500/20"
       : "bg-white/5 text-slate-200 border-white/10";
 
-  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
 }
 
-type TabKey = "ALL" | "OPEN" | "PENDING" | "SETTLED" | "CLOSED" | "REJECTED" | "CANCELED";
+type TabKey = "ALL" | "OPEN" | "SETTLED" | "CANCELED";
 
 export default function AdvancesClientPage() {
   const t = useT();
@@ -61,30 +64,20 @@ export default function AdvancesClientPage() {
   const role = roleUpper(user?.role);
   const canSeeAll = role === "ADMIN" || role === "ACCOUNTANT";
 
-  // query state
   const status = (sp.get("status") || "ALL").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
+  const pageSize = Math.min(
+    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
+    200
+  );
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
-
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState<"success" | "error">("success");
-
-  function showToast(type: "success" | "error", msg: string) {
-    setToastType(type);
-    setToastMsg(msg);
-    setToastOpen(true);
-    setTimeout(() => setToastOpen(false), 2500);
-  }
 
   const setParam = (k: string, v: string) => {
     const p = new URLSearchParams(sp.toString());
@@ -94,7 +87,10 @@ export default function AdvancesClientPage() {
     router.push(`/finance/advances?${p.toString()}`);
   };
 
-  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
+  const qsKey = useMemo(
+    () => `${status}|${page}|${pageSize}|${q}`,
+    [status, page, pageSize, q]
+  );
 
   async function load() {
     if (token === null) return;
@@ -104,9 +100,6 @@ export default function AdvancesClientPage() {
     setErr(null);
 
     try {
-      // NOTE: endpoint name depends on backend.
-      // If your backend uses /cash/cash-advances keep it.
-      // If it is different, just change this path.
       const data = await api.get("/cash/cash-advances", {
         params: {
           status: status === "ALL" ? undefined : status,
@@ -117,7 +110,9 @@ export default function AdvancesClientPage() {
       });
 
       const list = Array.isArray(data) ? data : (data as any)?.items || [];
-      const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
+      const tTotal = Array.isArray(data)
+        ? list.length
+        : Number((data as any)?.total || 0);
 
       setItems(list);
       setTotal(tTotal);
@@ -137,12 +132,9 @@ export default function AdvancesClientPage() {
 
   const statusOptions: Array<{ key: TabKey; label: string }> = [
     { key: "ALL", label: t("financeAdvances.filters.allStatuses") },
-    { key: "OPEN", label: t("financeAdvances.filters.status.OPEN") },
-    { key: "PENDING", label: t("financeAdvances.filters.status.PENDING") },
-    { key: "SETTLED", label: t("financeAdvances.filters.status.SETTLED") },
-    { key: "CLOSED", label: t("financeAdvances.filters.status.CLOSED") },
-    { key: "REJECTED", label: t("financeAdvances.filters.status.REJECTED") },
-    { key: "CANCELED", label: t("financeAdvances.filters.status.CANCELED") },
+    { key: "OPEN", label: t("financeAdvances.filters.open") },
+    { key: "SETTLED", label: t("financeAdvances.filters.settled") },
+    { key: "CANCELED", label: t("financeAdvances.filters.canceled") },
   ];
 
   return (
@@ -152,9 +144,12 @@ export default function AdvancesClientPage() {
           <div>
             <div className="text-xl font-bold">{t("financeAdvances.title")}</div>
             <div className="text-xs text-slate-400">
-              {canSeeAll ? t("financeAdvances.subtitleAdmin") : t("financeAdvances.subtitle")}
-              <span className="mx-2">•</span>
-              {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
+              {canSeeAll
+                ? t("financeAdvances.meta.showingAll")
+                : t("financeAdvances.meta.showingMine")}
+              {" — "}
+              {t("common.role")}:{" "}
+              <span className="text-slate-200">{role || "—"}</span>
             </div>
           </div>
 
@@ -169,7 +164,7 @@ export default function AdvancesClientPage() {
             <button
               onClick={load}
               disabled={loading}
-              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm disabled:opacity-60"
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-60"
             >
               {loading ? t("common.loading") : t("common.refresh")}
             </button>
@@ -197,8 +192,9 @@ export default function AdvancesClientPage() {
             className="w-full md:w-[420px] px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
           />
 
-          <div className="ml-auto text-xs text-slate-400">
-            {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
+          <div className="text-xs text-slate-400 ml-auto">
+            {t("common.total")}:{" "}
+            <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
             <span className="text-slate-200">
               {page}/{totalPages}
             </span>
@@ -218,7 +214,9 @@ export default function AdvancesClientPage() {
         </div>
 
         {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+            {err}
+          </div>
         ) : null}
 
         {/* Table */}
@@ -232,36 +230,45 @@ export default function AdvancesClientPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.actions")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.amount")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.supervisor")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.actions")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.created")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.status")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.amount")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.supervisor")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.id")}
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {items.map((x: any) => {
-                    const st = String(x.status || x.advance_status || "").toUpperCase();
+                    const st = String(x.status || x.settlement_status || "").toUpperCase();
                     const supervisorName =
                       x.supervisors?.full_name ||
                       x.supervisor?.full_name ||
                       x.supervisor_name ||
-                      x.supervisor_email ||
                       "—";
 
                     return (
                       <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
                         <td className="px-4 py-2">
-                          <div className="flex flex-wrap gap-2">
-                            <Link
-                              href={`/finance/advances/${x.id}`}
-                              className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                            >
-                              {t("common.view")}
-                            </Link>
-                            <span className="text-xs font-mono text-slate-400">{shortId(x.id)}</span>
-                          </div>
+                          <Link
+                            href={`/finance/advances/${x.id}`}
+                            className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
+                          >
+                            {t("common.view")}
+                          </Link>
                         </td>
 
                         <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
@@ -272,7 +279,9 @@ export default function AdvancesClientPage() {
 
                         <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
 
-                        <td className="px-4 py-2">{String(supervisorName)}</td>
+                        <td className="px-4 py-2">{supervisorName}</td>
+
+                        <td className="px-4 py-2 font-mono">{shortId(x.id)}</td>
                       </tr>
                     );
                   })}
@@ -291,7 +300,9 @@ export default function AdvancesClientPage() {
               {t("common.prev")}
             </button>
 
-            <div className="text-xs text-slate-400">{t("financeAdvances.meta.showing", { count: items.length, total })}</div>
+            <div className="text-xs text-slate-400">
+              {t("financeAdvances.meta.showing", { count: items.length, total })}
+            </div>
 
             <button
               className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
@@ -302,8 +313,6 @@ export default function AdvancesClientPage() {
             </button>
           </div>
         </div>
-
-        <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
       </div>
     </div>
   );
