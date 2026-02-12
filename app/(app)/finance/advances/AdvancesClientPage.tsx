@@ -7,6 +7,7 @@ import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
+import { Toast } from "@/src/components/Toast";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -50,6 +51,112 @@ function StatusBadge({ s }: { s: string }) {
 
 type TabKey = "ALL" | "OPEN" | "SETTLED" | "CANCELED";
 
+/* ---------------- Request Advance Modal (FRONT ONLY) ---------------- */
+function RequestAdvanceModal({
+  open,
+  onClose,
+  onSubmit,
+  title,
+  amountLabel,
+  notesLabel,
+  submitLabel,
+  cancelLabel,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (payload: { amount: number; notes?: string }) => void;
+  title: string;
+  amountLabel: string;
+  notesLabel: string;
+  submitLabel: string;
+  cancelLabel: string;
+}) {
+  const [amount, setAmount] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+
+  useEffect(() => {
+    if (!open) return;
+    setAmount("");
+    setNotes("");
+  }, [open]);
+
+  if (!open) return null;
+
+  const amt = Number(amount);
+  const canSubmit = Number.isFinite(amt) && amt > 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl bg-slate-900 text-white border border-white/10 p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <button
+            onClick={onClose}
+            className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-3">
+          <label className="grid gap-2 text-sm">
+            {amountLabel}
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              placeholder="0.00"
+            />
+          </label>
+
+          <label className="grid gap-2 text-sm">
+            {notesLabel}
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              rows={3}
+            />
+          </label>
+
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
+            ⚠️ تنبيه: هذه الواجهة فقط (Front-End). سيتم تفعيل الإرسال للسيرفر بعد إضافة
+            Endpoints في الباك-إند.
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
+          >
+            {cancelLabel}
+          </button>
+
+          <button
+            onClick={() => onSubmit({ amount: amt, notes: notes?.trim() || undefined })}
+            disabled={!canSubmit}
+            className="px-4 py-2 rounded-xl border border-white/10 bg-sky-600/80 hover:bg-sky-600 disabled:opacity-60 font-semibold"
+          >
+            {submitLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Page ---------------- */
 export default function AdvancesClientPage() {
   const t = useT();
   const router = useRouter();
@@ -60,6 +167,7 @@ export default function AdvancesClientPage() {
 
   const role = roleUpper(user?.role);
   const canSeeAll = role === "ADMIN" || role === "ACCOUNTANT";
+  const isSupervisor = role === "FIELD_SUPERVISOR";
 
   const status = (sp.get("status") || "ALL").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
@@ -75,6 +183,21 @@ export default function AdvancesClientPage() {
   const [total, setTotal] = useState(0);
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+
+  // Toast (use shared component)
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToastType(type);
+    setToastMsg(msg);
+    setToastOpen(true);
+    window.setTimeout(() => setToastOpen(false), 2500);
+  }
+
+  // Request advance modal (front only)
+  const [reqOpen, setReqOpen] = useState(false);
 
   const setParam = (k: string, v: string) => {
     const p = new URLSearchParams(sp.toString());
@@ -136,6 +259,27 @@ export default function AdvancesClientPage() {
     { key: "CANCELED", label: t("financeAdvances.filters.canceled") },
   ];
 
+  function handleSubmitRequest(payload: { amount: number; notes?: string }) {
+    // FRONT ONLY: copy a ready-to-send message + toast
+    const supervisorName = user?.full_name || user?.email || "FIELD_SUPERVISOR";
+    const msg = [
+      "طلب صرف عهدة (Manual until backend ready):",
+      `Supervisor: ${supervisorName}`,
+      `Amount: ${payload.amount}`,
+      `Notes: ${payload.notes || "-"}`,
+      `Date: ${new Date().toISOString()}`,
+    ].join("\n");
+
+    try {
+      navigator.clipboard?.writeText(msg);
+      showToast("success", "تم نسخ طلب العهدة — أرسله للمحاسب. (سيتم تفعيل الإرسال لاحقًا)");
+    } catch {
+      showToast("success", "تم تجهيز طلب العهدة. (سيتم تفعيل الإرسال لاحقًا)");
+    }
+
+    setReqOpen(false);
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
@@ -159,6 +303,16 @@ export default function AdvancesClientPage() {
             >
               ← {t("sidebar.finance")}
             </Link>
+
+            {/* ✅ NEW: Request Advance (Front only) */}
+            {isSupervisor ? (
+              <button
+                onClick={() => setReqOpen(true)}
+                className="px-3 py-2 rounded-xl border border-white/10 bg-sky-600/80 hover:bg-sky-600 text-sm"
+              >
+                طلب صرف عهدة
+              </button>
+            ) : null}
 
             <button
               onClick={load}
@@ -317,6 +471,25 @@ export default function AdvancesClientPage() {
           </div>
         </div>
       </div>
+
+      {/* ✅ Front-only Request Advance modal */}
+      <RequestAdvanceModal
+        open={reqOpen}
+        onClose={() => setReqOpen(false)}
+        onSubmit={handleSubmitRequest}
+        title="طلب صرف عهدة"
+        amountLabel="المبلغ"
+        notesLabel="ملاحظات (اختياري)"
+        submitLabel="إرسال الطلب (نسخ)"
+        cancelLabel={t("common.cancel")}
+      />
+
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

@@ -866,6 +866,15 @@
       "showingAll": "عرض جميع السلف",
       "showingMine": "عرض السلف الخاصة بك"
     },
+  "placeholders": {
+    "selectSupervisor": "اختر مشرف"
+  },
+  "hints": {
+    "issueHint": "سيتم إنشاء عُهدة جديدة للمشرف بحالة OPEN."
+  }, 
+  "toast": {
+    "issued": "تم صرف العُهدة ✅"
+  },
     "empty": "لا توجد سلف",
     "errors": {
       "loadFailed": "فشل تحميل السلف"
@@ -882,6 +891,10 @@
       "IN_PROGRESS": "قيد التنفيذ",
       "COMPLETED": "مكتملة"
     },
+     "fields": {
+    "supervisor": "المشرف",
+    "amount": "المبلغ"
+    },
     "meta": {
       "role": "الدور",
       "total": "الإجمالي",
@@ -894,7 +907,9 @@
       "assign": "تعيين",
       "start": "بدء",
       "finish": "إنهاء",
-      "finance": "مالية"
+      "finance": "مالية",
+       "issueAdvance": "صرف عُهدة",
+    "issue": "صرف"
     },
     "empty": "لا توجد رحلات.",
     "toast": {
