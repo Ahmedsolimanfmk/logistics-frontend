@@ -134,7 +134,13 @@
       "charts": {
         "tripsCreated": "Trips Created",
         "tripsAssigned": "Trips Assigned"
-      }
+      },
+      "language": {
+  "switch": "Switch language",
+  "ar": "Arabic",
+  "en": "English"
+}
+
     },
     "finance": {
       "actionRequired": "Finance – Action Required",
@@ -853,6 +859,138 @@
     "empty": "No advances found",
     "errors": {
       "loadFailed": "Failed to load advances"
+    }
+  },
+  "trips": {
+    "title": "Trips",
+    "subtitle": "Trips list + drill-down to details",
+    "filters": {
+      "allStatuses": "All statuses",
+      "active": "Active (ASSIGNED + IN_PROGRESS)",
+      "DRAFT": "DRAFT",
+      "ASSIGNED": "ASSIGNED",
+      "IN_PROGRESS": "IN_PROGRESS",
+      "COMPLETED": "COMPLETED"
+    },
+    "meta": {
+      "role": "Role",
+      "total": "Total",
+      "page": "Page",
+      "showing": "Showing {count} of {total}"
+    },
+    "actions": {
+      "createTrip": "+ Create Trip",
+      "refresh": "Refresh",
+      "assign": "Assign",
+      "start": "Start",
+      "finish": "Finish",
+      "finance": "Finance"
+    },
+    "empty": "No trips found.",
+    "toast": {
+      "tripCreated": "Trip created (DRAFT)",
+      "assigned": "Trip assigned",
+      "started": "Trip started",
+      "finished": "Trip finished"
+    },
+    "confirm": {
+      "finishTrip": "Confirm finishing the trip?"
+    },
+    "errors": {
+      "fetchFailed": "Failed to fetch trips",
+      "startFailed": "Start failed",
+      "finishFailed": "Finish failed"
+    },
+    "table": {
+      "trip": "Trip",
+      "status": "Status",
+      "client": "Client",
+      "site": "Site",
+      "scheduled": "Scheduled",
+      "created": "Created",
+      "actions": "Actions"
+    }
+  },
+
+  "tripModals": {
+    "assignTitle": "Assign Trip",
+    "createTitle": "Create Trip",
+    "vehicle": "Vehicle",
+    "driver": "Driver",
+    "fieldSupervisor": "Field Supervisor (optional)",
+    "availableOnly": "AVAILABLE only",
+    "activeOnly": "Active only",
+    "selectVehicle": "Select vehicle",
+    "selectDriver": "Select driver",
+    "none": "None",
+    "client": "Client",
+    "site": "Site",
+    "scheduledOptional": "Scheduled (optional)",
+    "notesOptional": "Notes (optional)",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "assign": "Assign",
+    "create": "Create",
+    "toastCloseHint": "Click to close"
+  },
+
+  "tripFinance": {
+    "title": "Trip Finance",
+    "tripId": "Trip ID",
+    "back": "Back",
+    "trips": "Trips",
+    "tabs": {
+      "summary": "Summary",
+      "expenses": "Expenses",
+      "actions": "Actions"
+    },
+    "kpis": {
+      "totalExpenses": "Total Expenses",
+      "advancesTotal": "Advances Total",
+      "companyTotal": "Company Total",
+      "partsCost": "Parts Cost",
+      "balance": "Balance"
+    },
+    "tripInfo": {
+      "title": "Trip Info",
+      "code": "Code",
+      "status": "Status",
+      "financeClosedAt": "Finance closed at",
+      "note": "Note"
+    },
+    "linkedAdvances": {
+      "title": "Linked Advances",
+      "openList": "Open advances list →",
+      "empty": "No advances linked."
+    },
+    "expensesTable": {
+      "title": "Trip Expenses",
+      "openList": "Expenses list →",
+      "empty": "No expenses found in summary.",
+      "amount": "Amount",
+      "type": "Type",
+      "source": "Source",
+      "status": "Status",
+      "created": "Created",
+      "view": "View"
+    },
+    "actions": {
+      "title": "Actions",
+      "noPerm": "You don't have permission to manage finance close.",
+      "openReview": "Open Finance Review",
+      "closeFinance": "Close Trip Finance (Lock)",
+      "refresh": "Refresh",
+      "endpointsHint": "Endpoints used: open-review / close / summary."
+    },
+    "confirm": {
+      "closeText": "Trip finance will be closed (Lock). Are you sure?",
+      "closeNotesPrompt": "Close note/reference (optional):"
+    },
+    "errors": {
+      "loadFailed": "Failed to load trip finance summary",
+      "openReviewFailed": "Failed to open finance review",
+      "closeFailed": "Failed to close trip finance"
     }
   }
 }

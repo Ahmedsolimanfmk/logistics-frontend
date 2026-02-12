@@ -134,7 +134,14 @@
       "charts": {
         "tripsCreated": "رحلات تم إنشاؤها",
         "tripsAssigned": "رحلات تم إسنادها"
-      }
+      },
+      "language": {
+  "switch": "تغيير اللغة",
+  "ar": "عربي",
+  "en": "English"
+}
+
+
     },
     "finance": {
       "actionRequired": "المالية – إجراءات مطلوبة",
@@ -862,6 +869,141 @@
     "empty": "لا توجد سلف",
     "errors": {
       "loadFailed": "فشل تحميل السلف"
+    }
+  },
+  "trips": {
+    "title": "الرحلات",
+    "subtitle": "قائمة الرحلات + الدخول للتفاصيل",
+    "filters": {
+      "allStatuses": "كل الحالات",
+      "active": "نشط (ASSIGNED + IN_PROGRESS)",
+      "DRAFT": "مسودة",
+      "ASSIGNED": "مُسندة",
+      "IN_PROGRESS": "قيد التنفيذ",
+      "COMPLETED": "مكتملة"
+    },
+    "meta": {
+      "role": "الدور",
+      "total": "الإجمالي",
+      "page": "صفحة",
+      "showing": "عرض {count} من {total}"
+    },
+    "actions": {
+      "createTrip": "+ إنشاء رحلة",
+      "refresh": "تحديث",
+      "assign": "تعيين",
+      "start": "بدء",
+      "finish": "إنهاء",
+      "finance": "مالية"
+    },
+    "empty": "لا توجد رحلات.",
+    "toast": {
+      "tripCreated": "تم إنشاء الرحلة (DRAFT)",
+      "assigned": "تم تعيين الرحلة",
+      "started": "تم بدء الرحلة",
+      "finished": "تم إنهاء الرحلة"
+    },
+    "confirm": {
+      "finishTrip": "تأكيد إنهاء الرحلة؟"
+    },
+    "errors": {
+      "fetchFailed": "فشل تحميل الرحلات",
+      "startFailed": "فشل بدء الرحلة",
+      "finishFailed": "فشل إنهاء الرحلة"
+    },
+    "table": {
+      "trip": "الرحلة",
+      "status": "الحالة",
+      "client": "العميل",
+      "site": "الموقع",
+      "scheduled": "الموعد",
+      "created": "تاريخ الإنشاء",
+      "actions": "إجراءات"
+    }
+  },
+
+  "tripModals": {
+    "assignTitle": "تعيين رحلة",
+    "createTitle": "إنشاء رحلة",
+    "vehicle": "المركبة",
+    "driver": "السائق",
+    "fieldSupervisor": "مشرف ميداني (اختياري)",
+    "availableOnly": "AVAILABLE فقط",
+    "activeOnly": "Active فقط",
+    "selectVehicle": "اختر عربية",
+    "selectDriver": "اختر سائق",
+    "none": "بدون",
+    "client": "العميل",
+    "site": "الموقع",
+    "scheduledOptional": "الموعد (اختياري)",
+    "notesOptional": "ملاحظات (اختياري)",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…",
+    "assign": "تعيين",
+    "create": "إنشاء",
+    "toastCloseHint": "اضغط لإغلاق",
+    "selectClient": "اختر عميل",
+    "selectSite": "اختر موقع"
+
+  },
+
+  "tripFinance": {
+    "title": "مالية الرحلة",
+    "tripId": "رقم الرحلة",
+    "back": "رجوع",
+    "trips": "الرحلات",
+    "tabs": {
+      "summary": "ملخص",
+      "expenses": "مصروفات",
+      "actions": "إجراءات"
+    },
+    "kpis": {
+      "totalExpenses": "إجمالي المصروفات",
+      "advancesTotal": "إجمالي السلف",
+      "companyTotal": "إجمالي الشركة",
+      "partsCost": "تكلفة القطع",
+      "balance": "الرصيد"
+    },
+    "tripInfo": {
+      "title": "بيانات الرحلة",
+      "code": "الكود",
+      "status": "الحالة",
+      "financeClosedAt": "تاريخ الإغلاق المالي",
+      "note": "ملاحظة"
+    },
+    "linkedAdvances": {
+      "title": "السلف المرتبطة",
+      "openList": "فتح قائمة السلف →",
+      "empty": "لا توجد سلف مرتبطة."
+    },
+    "expensesTable": {
+      "title": "مصروفات الرحلة",
+      "openList": "قائمة المصروفات →",
+      "empty": "لا توجد مصروفات في الملخص.",
+      "amount": "المبلغ",
+      "type": "النوع",
+      "source": "المصدر",
+      "status": "الحالة",
+      "created": "تاريخ الإنشاء",
+      "view": "عرض"
+    },
+    "actions": {
+      "title": "إجراءات",
+      "noPerm": "لا توجد صلاحيات لإدارة إغلاق الرحلة ماليًا.",
+      "openReview": "فتح مراجعة مالية",
+      "closeFinance": "إغلاق مالي (Lock)",
+      "refresh": "تحديث",
+      "endpointsHint": "المسارات المستخدمة: open-review / close / summary."
+    },
+    "confirm": {
+      "closeText": "سيتم إغلاق الرحلة ماليًا (Lock). هل أنت متأكد؟",
+      "closeNotesPrompt": "ملاحظة/مرجع الإغلاق (اختياري):"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل ملخص مالية الرحلة",
+      "openReviewFailed": "فشل فتح المراجعة المالية",
+      "closeFailed": "فشل إغلاق مالية الرحلة"
     }
   }
 }

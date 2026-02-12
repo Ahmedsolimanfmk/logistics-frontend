@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
+import { useT } from "@/src/i18n/useT"; // ✅ عدّل المسار لو مختلف عندك
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -43,6 +44,8 @@ function StatusBadge({ s }: { s: string }) {
 }
 
 export default function TripFinancePage() {
+  const t = useT();
+
   const params = useParams();
   const router = useRouter();
   const tripId = String((params as any)?.id || "");
@@ -64,10 +67,14 @@ export default function TripFinancePage() {
     setLoading(true);
     setError(null);
     try {
-      const r = await api.get(`/cash/trips/${tripId}/finance/summary`);
-      setSummary(r as any);
+      const res = await api.get(`/cash/trips/${tripId}/finance/summary`);
+      setSummary(res.data ?? res);
     } catch (e: any) {
-      setError(e.message || "Failed to load trip finance summary");
+      setError(
+        e?.response?.data?.message ||
+          e?.message ||
+          t("tripFinance.errors.loadFailed")
+      );
       setSummary(null);
     } finally {
       setLoading(false);
@@ -81,7 +88,6 @@ export default function TripFinancePage() {
   }, [tripId]);
 
   const financeStatus = useMemo(() => {
-    // try common field names
     return (
       summary?.finance_status ||
       summary?.financial_status ||
@@ -92,28 +98,45 @@ export default function TripFinancePage() {
   }, [summary]);
 
   const totals = useMemo(() => {
-    // Try to read totals in a tolerant way
     const totalExpenses =
-      Number(summary?.totals?.expenses_total ?? summary?.expenses_total ?? summary?.total_expenses ?? 0) || 0;
+      Number(
+        summary?.totals?.expenses_total ??
+          summary?.expenses_total ??
+          summary?.total_expenses ??
+          0
+      ) || 0;
 
     const advanceTotal =
-      Number(summary?.totals?.advances_total ?? summary?.advances_total ?? summary?.total_advances ?? 0) || 0;
+      Number(
+        summary?.totals?.advances_total ??
+          summary?.advances_total ??
+          summary?.total_advances ??
+          0
+      ) || 0;
 
     const companyTotal =
-      Number(summary?.totals?.company_total ?? summary?.company_total ?? summary?.total_company ?? 0) || 0;
+      Number(
+        summary?.totals?.company_total ??
+          summary?.company_total ??
+          summary?.total_company ??
+          0
+      ) || 0;
 
     const partsTotal =
-      Number(summary?.totals?.parts_cost ?? summary?.parts_cost ?? summary?.total_parts_cost ?? 0) || 0;
+      Number(
+        summary?.totals?.parts_cost ??
+          summary?.parts_cost ??
+          summary?.total_parts_cost ??
+          0
+      ) || 0;
 
     const maintenanceTotal =
-      Number(summary?.totals?.maintenance_total ?? summary?.maintenance_total ?? 0) || 0;
+      Number(
+        summary?.totals?.maintenance_total ?? summary?.maintenance_total ?? 0
+      ) || 0;
 
-    const balanceRaw =
-  summary?.totals?.balance ?? summary?.balance;
-
-    const balance =
-    Number(balanceRaw ?? (advanceTotal - totalExpenses)) || 0;
-
+    const balanceRaw = summary?.totals?.balance ?? summary?.balance;
+    const balance = Number(balanceRaw ?? advanceTotal - totalExpenses) || 0;
 
     return {
       totalExpenses,
@@ -126,11 +149,7 @@ export default function TripFinancePage() {
   }, [summary]);
 
   const expenses: any[] = useMemo(() => {
-    const arr =
-      summary?.expenses ||
-      summary?.items ||
-      summary?.details?.expenses ||
-      [];
+    const arr = summary?.expenses || summary?.items || summary?.details?.expenses || [];
     return Array.isArray(arr) ? arr : [];
   }, [summary]);
 
@@ -152,7 +171,11 @@ export default function TripFinancePage() {
       await load();
       setTab("summary");
     } catch (e: any) {
-      setError(e.message || "Failed to open finance review");
+      setError(
+        e?.response?.data?.message ||
+          e?.message ||
+          t("tripFinance.errors.openReviewFailed")
+      );
     } finally {
       setBusy(false);
     }
@@ -161,11 +184,11 @@ export default function TripFinancePage() {
   async function closeFinance() {
     if (!isPrivileged) return;
 
-    const confirmText =
-      "سيتم إغلاق الرحلة ماليًا (Lock). هل أنت متأكد؟";
+    const confirmText = t("tripFinance.confirm.closeText");
     if (!window.confirm(confirmText)) return;
 
-    const notes = window.prompt("ملاحظة/مرجع الإغلاق (اختياري):") || "";
+    const notes =
+      window.prompt(t("tripFinance.confirm.closeNotesPrompt")) || "";
 
     setBusy(true);
     setError(null);
@@ -176,16 +199,20 @@ export default function TripFinancePage() {
       await load();
       setTab("summary");
     } catch (e: any) {
-      setError(e.message || "Failed to close trip finance");
+      setError(
+        e?.response?.data?.message ||
+          e?.message ||
+          t("tripFinance.errors.closeFailed")
+      );
     } finally {
       setBusy(false);
     }
   }
 
   const tabs = [
-    { key: "summary" as const, label: "Summary" },
-    { key: "expenses" as const, label: "Expenses" },
-    { key: "actions" as const, label: "Actions" },
+    { key: "summary" as const, label: t("tripFinance.tabs.summary") },
+    { key: "expenses" as const, label: t("tripFinance.tabs.expenses") },
+    { key: "actions" as const, label: t("tripFinance.tabs.actions") },
   ];
 
   return (
@@ -193,11 +220,12 @@ export default function TripFinancePage() {
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">Trip Finance</h1>
+            <h1 className="text-xl font-bold">{t("tripFinance.title")}</h1>
             <StatusBadge s={financeStatus} />
           </div>
           <div className="text-xs text-slate-400">
-            Trip ID: <span className="text-slate-200">{tripId}</span>
+            {t("tripFinance.tripId")}:{" "}
+            <span className="text-slate-200">{tripId}</span>
           </div>
         </div>
 
@@ -206,14 +234,14 @@ export default function TripFinancePage() {
             onClick={() => router.back()}
             className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
           >
-            Back
+            {t("common.back")}
           </button>
 
           <Link
             href="/trips"
             className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
           >
-            Trips
+            {t("tripFinance.trips")}
           </Link>
         </div>
       </div>
@@ -226,98 +254,140 @@ export default function TripFinancePage() {
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2">
-        {tabs.map((t) => (
+        {tabs.map((tt) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tt.key}
+            onClick={() => setTab(tt.key)}
             className={cn(
               "px-3 py-2 rounded-lg text-sm border transition",
-              tab === t.key
+              tab === tt.key
                 ? "bg-white/10 border-white/10 text-white"
                 : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
             )}
           >
-            {t.label}
+            {tt.label}
           </button>
         ))}
       </div>
 
       <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
         {loading ? (
-          <div className="text-sm text-slate-300">Loading…</div>
+          <div className="text-sm text-slate-300">{t("common.loading")}</div>
         ) : tab === "summary" ? (
           <div className="space-y-4">
             {/* KPI cards */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">Total Expenses</div>
-                <div className="text-lg font-semibold">{fmtMoney(totals.totalExpenses)}</div>
+                <div className="text-xs text-slate-400">
+                  {t("tripFinance.kpis.totalExpenses")}
+                </div>
+                <div className="text-lg font-semibold">
+                  {fmtMoney(totals.totalExpenses)}
+                </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">Advances Total</div>
-                <div className="text-lg font-semibold">{fmtMoney(totals.advanceTotal)}</div>
+                <div className="text-xs text-slate-400">
+                  {t("tripFinance.kpis.advancesTotal")}
+                </div>
+                <div className="text-lg font-semibold">
+                  {fmtMoney(totals.advanceTotal)}
+                </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">Company Total</div>
-                <div className="text-lg font-semibold">{fmtMoney(totals.companyTotal)}</div>
+                <div className="text-xs text-slate-400">
+                  {t("tripFinance.kpis.companyTotal")}
+                </div>
+                <div className="text-lg font-semibold">
+                  {fmtMoney(totals.companyTotal)}
+                </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">Parts Cost</div>
-                <div className="text-lg font-semibold">{fmtMoney(totals.partsTotal)}</div>
+                <div className="text-xs text-slate-400">
+                  {t("tripFinance.kpis.partsCost")}
+                </div>
+                <div className="text-lg font-semibold">
+                  {fmtMoney(totals.partsTotal)}
+                </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">Balance</div>
-                <div className="text-lg font-semibold">{fmtMoney(totals.balance)}</div>
+                <div className="text-xs text-slate-400">
+                  {t("tripFinance.kpis.balance")}
+                </div>
+                <div className="text-lg font-semibold">
+                  {fmtMoney(totals.balance)}
+                </div>
               </div>
             </div>
 
-            {/* meta (tolerant) */}
+            {/* meta */}
             <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-1">
-              <div className="text-xs text-slate-400">Trip Info</div>
-              <div className="text-sm text-slate-200">
-                Code: <span className="text-slate-300">{summary?.trip?.code || "—"}</span>
+              <div className="text-xs text-slate-400">
+                {t("tripFinance.tripInfo.title")}
               </div>
+
               <div className="text-sm text-slate-200">
-                Status: <span className="text-slate-300">{String(summary?.trip?.status || "—")}</span>
+                {t("tripFinance.tripInfo.code")}:{" "}
+                <span className="text-slate-300">{summary?.trip?.code || "—"}</span>
               </div>
+
               <div className="text-sm text-slate-200">
-                Finance closed at:{" "}
+                {t("tripFinance.tripInfo.status")}:{" "}
                 <span className="text-slate-300">
-                  {fmtDate(summary?.trip?.financial_closed_at || summary?.trip?.finance_closed_at || null)}
+                  {String(summary?.trip?.status || "—")}
+                </span>
+              </div>
+
+              <div className="text-sm text-slate-200">
+                {t("tripFinance.tripInfo.financeClosedAt")}:{" "}
+                <span className="text-slate-300">
+                  {fmtDate(
+                    summary?.trip?.financial_closed_at ||
+                      summary?.trip?.finance_closed_at ||
+                      null
+                  )}
                 </span>
               </div>
 
               {summary?.note ? (
                 <div className="mt-2 text-xs text-slate-400">
-                  Note: <span className="text-slate-200">{String(summary.note)}</span>
+                  {t("tripFinance.tripInfo.note")}:{" "}
+                  <span className="text-slate-200">{String(summary.note)}</span>
                 </div>
               ) : null}
             </div>
 
-            {/* Advances quick */}
+            {/* Advances */}
             <div className="rounded-lg border border-white/10 bg-white/5 p-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-200">Linked Advances</div>
+                <div className="text-sm text-slate-200">
+                  {t("tripFinance.linkedAdvances.title")}
+                </div>
                 <Link
                   href="/finance/advances"
                   className="text-xs text-slate-300 hover:text-white"
                 >
-                  Open advances list →
+                  {t("tripFinance.linkedAdvances.openList")}
                 </Link>
               </div>
 
               {advances.length === 0 ? (
-                <div className="mt-2 text-sm text-slate-300">No advances linked.</div>
+                <div className="mt-2 text-sm text-slate-300">
+                  {t("tripFinance.linkedAdvances.empty")}
+                </div>
               ) : (
                 <div className="mt-2 space-y-2">
                   {advances.slice(0, 6).map((a) => (
-                    <div key={a.id} className="flex items-center justify-between text-sm">
+                    <div
+                      key={a.id}
+                      className="flex items-center justify-between text-sm"
+                    >
                       <div className="text-slate-200">
-                        {String(a.id).slice(0, 8)}… — {String(a.status || "").toUpperCase()}
+                        {String(a.id).slice(0, 8)}… —{" "}
+                        {String(a.status || "").toUpperCase()}
                       </div>
                       <div className="text-slate-300">{fmtMoney(a.amount)}</div>
                     </div>
@@ -334,26 +404,30 @@ export default function TripFinancePage() {
         ) : tab === "expenses" ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-200">Trip Expenses</div>
+              <div className="text-sm text-slate-200">
+                {t("tripFinance.expensesTable.title")}
+              </div>
               <Link
                 href="/finance/expenses"
                 className="text-xs text-slate-300 hover:text-white"
               >
-                Expenses list →
+                {t("tripFinance.expensesTable.openList")}
               </Link>
             </div>
 
             {expenses.length === 0 ? (
-              <div className="text-sm text-slate-300">No expenses found in summary.</div>
+              <div className="text-sm text-slate-300">
+                {t("tripFinance.expensesTable.empty")}
+              </div>
             ) : (
               <div className="rounded-xl border border-white/10 overflow-hidden">
                 <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                  <div className="col-span-2">Amount</div>
-                  <div className="col-span-3">Type</div>
-                  <div className="col-span-2">Source</div>
-                  <div className="col-span-2">Status</div>
-                  <div className="col-span-2">Created</div>
-                  <div className="col-span-1 text-right">View</div>
+                  <div className="col-span-2">{t("tripFinance.expensesTable.amount")}</div>
+                  <div className="col-span-3">{t("tripFinance.expensesTable.type")}</div>
+                  <div className="col-span-2">{t("tripFinance.expensesTable.source")}</div>
+                  <div className="col-span-2">{t("tripFinance.expensesTable.status")}</div>
+                  <div className="col-span-2">{t("tripFinance.expensesTable.created")}</div>
+                  <div className="col-span-1 text-right">{t("tripFinance.expensesTable.view")}</div>
                 </div>
 
                 {expenses.map((x) => (
@@ -386,15 +460,16 @@ export default function TripFinancePage() {
         ) : (
           <div className="space-y-3">
             <div className="text-sm text-slate-200">
-              Actions{" "}
+              {t("tripFinance.actions.title")}{" "}
               <span className="text-xs text-slate-400">
-                (Role: {role || "—"} / Finance: {String(financeStatus).toUpperCase()})
+                (Role: {role || "—"} / Finance:{" "}
+                {String(financeStatus).toUpperCase()})
               </span>
             </div>
 
             {!isPrivileged ? (
               <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-slate-300">
-                لا توجد صلاحيات لإدارة إغلاق الرحلة ماليًا.
+                {t("tripFinance.actions.noPerm")}
               </div>
             ) : (
               <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">
@@ -403,7 +478,7 @@ export default function TripFinancePage() {
                   onClick={openReview}
                   className="px-3 py-2 rounded-lg border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/20 text-sm disabled:opacity-50"
                 >
-                  Open Finance Review
+                  {t("tripFinance.actions.openReview")}
                 </button>
 
                 <button
@@ -411,7 +486,7 @@ export default function TripFinancePage() {
                   onClick={closeFinance}
                   className="px-3 py-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm disabled:opacity-50"
                 >
-                  Close Trip Finance (Lock)
+                  {t("tripFinance.actions.closeFinance")}
                 </button>
 
                 <button
@@ -419,11 +494,11 @@ export default function TripFinancePage() {
                   onClick={load}
                   className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
                 >
-                  Refresh
+                  {t("tripFinance.actions.refresh")}
                 </button>
 
                 <div className="text-xs text-slate-400">
-                  Endpoints used: open-review / close / summary. 
+                  {t("tripFinance.actions.endpointsHint")}
                 </div>
               </div>
             )}

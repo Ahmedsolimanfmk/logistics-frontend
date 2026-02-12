@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useT } from "@/src/i18n/useT";
 
 const fmtDate = (d: any) => {
   if (!d) return "—";
@@ -41,11 +42,13 @@ function Toast({
   message,
   type,
   onClose,
+  t,
 }: {
   open: boolean;
   message: string;
   type: "success" | "error";
   onClose: () => void;
+  t: (k: string, vars?: Record<string, any>) => string;
 }) {
   if (!open) return null;
   return (
@@ -58,7 +61,7 @@ function Toast({
       role="alert"
     >
       <div className="font-semibold">{message}</div>
-      <div className="mt-1 text-xs opacity-80">اضغط لإغلاق</div>
+      <div className="mt-1 text-xs opacity-80">{t("tripModals.toastCloseHint")}</div>
     </div>
   );
 }
@@ -77,6 +80,8 @@ function AssignTripModal({
   onAssigned: () => void;
   showToast: (type: "success" | "error", msg: string) => void;
 }) {
+  const t = useT();
+
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -110,10 +115,6 @@ function AssignTripModal({
     (async () => {
       setLoading(true);
       try {
-        // ✅ IMPORTANT:
-        // - vehicles: from /vehicles
-        // - drivers: from /drivers/active (Active only)
-        // - users: from /users then filter role FIELD_SUPERVISOR
         const [vRes, dRes, uRes] = await Promise.all([
           api.get("/vehicles"),
           api.get("/drivers/active"),
@@ -125,29 +126,25 @@ function AssignTripModal({
         const uItems = unwrapItems(uRes);
 
         // ✅ Vehicles UI filter:
-        // - is_active !== false
-        // - status === AVAILABLE (if status exists)
         const filteredVehicles = vItems.filter((v: any) => {
           if (v?.is_active === false) return false;
           if (v?.status) return String(v.status).toUpperCase() === "AVAILABLE";
-          return true; // لو مفيش status في schema عندك
+          return true;
         });
 
         setVehicles(filteredVehicles);
-
-        // ✅ drivers already active-only from backend
         setDrivers(dItems);
-
         setSupervisors(
           uItems.filter((x: any) => String(x.role || "").toUpperCase() === "FIELD_SUPERVISOR")
         );
       } catch (e: any) {
-        showToast("error", e?.response?.data?.message || e?.message || "Failed to load lists");
+        showToast("error", e?.response?.data?.message || e?.message || t("common.failed"));
       } finally {
         setLoading(false);
       }
     })();
-  }, [open, showToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open || !tripId) return null;
 
@@ -163,11 +160,11 @@ function AssignTripModal({
         field_supervisor_id: supervisorId || null,
       });
 
-      showToast("success", "تم تعيين الرحلة");
+      showToast("success", t("trips.toast.assigned"));
       onAssigned();
       onClose();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || "Assign failed");
+      showToast("error", e?.response?.data?.message || e?.message || t("common.failed"));
     } finally {
       setLoading(false);
     }
@@ -183,7 +180,7 @@ function AssignTripModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">Assign Trip</h3>
+          <h3 className="text-lg font-bold">{t("tripModals.assignTitle")}</h3>
           <button
             onClick={onClose}
             className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
@@ -194,14 +191,14 @@ function AssignTripModal({
 
         <div className="mt-4 grid gap-3">
           <label className="grid gap-2 text-sm">
-            Vehicle (AVAILABLE فقط)
+            {t("tripModals.vehicle")} ({t("tripModals.availableOnly")})
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
             >
-              <option value="">اختر عربية</option>
+              <option value="">{t("tripModals.selectVehicle")}</option>
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
                   {vehicleLabel(v)}
@@ -211,14 +208,14 @@ function AssignTripModal({
           </label>
 
           <label className="grid gap-2 text-sm">
-            Driver (Active فقط)
+            {t("tripModals.driver")} ({t("tripModals.activeOnly")})
             <select
               value={driverId}
               onChange={(e) => setDriverId(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
             >
-              <option value="">اختر سائق</option>
+              <option value="">{t("tripModals.selectDriver")}</option>
               {drivers.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.full_name || d.name || d.phone || d.id}
@@ -228,14 +225,14 @@ function AssignTripModal({
           </label>
 
           <label className="grid gap-2 text-sm">
-            Field Supervisor (اختياري)
+            {t("tripModals.fieldSupervisor")}
             <select
               value={supervisorId}
               onChange={(e) => setSupervisorId(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
             >
-              <option value="">بدون</option>
+              <option value="">{t("tripModals.none")}</option>
               {supervisors.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.full_name || s.email || s.id}
@@ -251,14 +248,14 @@ function AssignTripModal({
             disabled={loading}
             className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60"
           >
-            Cancel
+            {t("tripModals.cancel")}
           </button>
           <button
             onClick={submit}
             disabled={!canSubmit || loading}
             className="px-4 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-60 font-semibold"
           >
-            {loading ? "Saving…" : "Assign"}
+            {loading ? t("tripModals.saving") : t("tripModals.assign")}
           </button>
         </div>
       </div>
@@ -278,6 +275,8 @@ function CreateTripModal({
   onCreated: () => void;
   showToast: (type: "success" | "error", msg: string) => void;
 }) {
+  const t = useT();
+
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [sites, setSites] = useState<any[]>([]);
@@ -299,18 +298,16 @@ function CreateTripModal({
       setLoading(true);
       try {
         const [cRes, sRes] = await Promise.all([api.get("/clients"), api.get("/sites")]);
-        const cItems = unwrapItems(cRes);
-        const sItems = unwrapItems(sRes);
-
-        setClients(cItems);
-        setSites(sItems);
+        setClients(unwrapItems(cRes));
+        setSites(unwrapItems(sRes));
       } catch (e: any) {
-        showToast("error", e?.response?.data?.message || e?.message || "Failed to load clients/sites");
+        showToast("error", e?.response?.data?.message || e?.message || t("common.failed"));
       } finally {
         setLoading(false);
       }
     })();
-  }, [open, showToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
@@ -327,11 +324,11 @@ function CreateTripModal({
         notes: notes || null,
       });
 
-      showToast("success", "تم إنشاء الرحلة (DRAFT)");
+      showToast("success", t("trips.toast.tripCreated"));
       onCreated();
       onClose();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || "Create trip failed");
+      showToast("error", e?.response?.data?.message || e?.message || t("common.failed"));
     } finally {
       setLoading(false);
     }
@@ -344,7 +341,7 @@ function CreateTripModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">Create Trip</h3>
+          <h3 className="text-lg font-bold">{t("tripModals.createTitle")}</h3>
           <button onClick={onClose} className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10">
             ✕
           </button>
@@ -352,14 +349,14 @@ function CreateTripModal({
 
         <div className="mt-4 grid gap-3">
           <label className="grid gap-2 text-sm">
-            Client
+            {t("tripModals.client")}
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
             >
-              <option value="">اختر عميل</option>
+              <option value="">{t("common.search")}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name || c.company_name || c.id}
@@ -369,14 +366,14 @@ function CreateTripModal({
           </label>
 
           <label className="grid gap-2 text-sm">
-            Site
+            {t("tripModals.site")}
             <select
               value={siteId}
               onChange={(e) => setSiteId(e.target.value)}
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
             >
-              <option value="">اختر موقع</option>
+              <option value="">{t("common.search")}</option>
               {sites.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name || s.address || s.id}
@@ -386,7 +383,7 @@ function CreateTripModal({
           </label>
 
           <label className="grid gap-2 text-sm">
-            Scheduled (اختياري)
+            {t("tripModals.scheduledOptional")}
             <input
               type="datetime-local"
               value={scheduledAt}
@@ -396,7 +393,7 @@ function CreateTripModal({
           </label>
 
           <label className="grid gap-2 text-sm">
-            Notes (اختياري)
+            {t("tripModals.notesOptional")}
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -412,14 +409,14 @@ function CreateTripModal({
             disabled={loading}
             className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60"
           >
-            Cancel
+            {t("tripModals.cancel")}
           </button>
           <button
             onClick={submit}
             disabled={!canSubmit || loading}
             className="px-4 py-2 rounded-xl border border-white/10 bg-sky-600/80 hover:bg-sky-600 disabled:opacity-60 font-semibold"
           >
-            {loading ? "Saving…" : "Create"}
+            {loading ? t("tripModals.saving") : t("tripModals.create")}
           </button>
         </div>
       </div>
@@ -429,6 +426,8 @@ function CreateTripModal({
 
 /* ---------------- Page ---------------- */
 export default function TripsPage() {
+  const t = useT();
+
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -436,7 +435,6 @@ export default function TripsPage() {
   const user = useAuth((s) => s.user);
   const role = String(user?.role || "").toUpperCase();
 
-  // ✅ Finance button permission
   const canSeeFinance = useMemo(() => role === "ADMIN" || role === "ACCOUNTANT", [role]);
 
   const [loading, setLoading] = useState(true);
@@ -501,10 +499,9 @@ export default function TripsPage() {
     setErr(null);
     try {
       const res = await api.get(`/trips?${qs}`);
-      const body = unwrap(res);
-      setData(body);
+      setData(unwrap(res));
     } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "Failed to fetch trips");
+      setErr(e?.response?.data?.message || e?.message || t("trips.errors.fetchFailed"));
     } finally {
       setLoading(false);
     }
@@ -524,23 +521,23 @@ export default function TripsPage() {
   async function startTrip(tripId: string) {
     try {
       await api.post(`/trips/${tripId}/start`);
-      showToast("success", "تم بدء الرحلة");
+      showToast("success", t("trips.toast.started"));
       loadTrips();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || "Start failed");
+      showToast("error", e?.response?.data?.message || e?.message || t("trips.errors.startFailed"));
     }
   }
 
   async function finishTrip(tripId: string) {
-    const ok = window.confirm("تأكيد إنهاء الرحلة؟");
+    const ok = window.confirm(t("trips.confirm.finishTrip"));
     if (!ok) return;
 
     try {
       await api.post(`/trips/${tripId}/finish`);
-      showToast("success", "تم إنهاء الرحلة");
+      showToast("success", t("trips.toast.finished"));
       loadTrips();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || "Finish failed");
+      showToast("error", e?.response?.data?.message || e?.message || t("trips.errors.finishFailed"));
     }
   }
 
@@ -554,7 +551,7 @@ export default function TripsPage() {
       <div className="min-h-screen bg-slate-950 text-white">
         <div className="max-w-7xl mx-auto p-4 md:p-6">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            Checking session…
+            {t("common.checkingSession")}
           </div>
         </div>
       </div>
@@ -566,12 +563,12 @@ export default function TripsPage() {
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xl font-bold">Trips</div>
-            <div className="text-sm text-slate-400">Trips list + drill-down to details</div>
+            <div className="text-xl font-bold">{t("trips.title")}</div>
+            <div className="text-sm text-slate-400">{t("trips.subtitle")}</div>
           </div>
 
           <div className="text-xs text-slate-400">
-            Role: <span className="text-slate-200">{role || "—"}</span>
+            {t("trips.meta.role")}: <span className="text-slate-200">{role || "—"}</span>
           </div>
         </div>
 
@@ -582,23 +579,23 @@ export default function TripsPage() {
             onChange={(e) => setParam("status", e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
           >
-            <option value="">All statuses</option>
-            <option value="ASSIGNED,IN_PROGRESS">Active (ASSIGNED + IN_PROGRESS)</option>
-            <option value="DRAFT">DRAFT</option>
-            <option value="ASSIGNED">ASSIGNED</option>
-            <option value="IN_PROGRESS">IN_PROGRESS</option>
-            <option value="COMPLETED">COMPLETED</option>
+            <option value="">{t("trips.filters.allStatuses")}</option>
+            <option value="ASSIGNED,IN_PROGRESS">{t("trips.filters.active")}</option>
+            <option value="DRAFT">{t("trips.filters.DRAFT")}</option>
+            <option value="ASSIGNED">{t("trips.filters.ASSIGNED")}</option>
+            <option value="IN_PROGRESS">{t("trips.filters.IN_PROGRESS")}</option>
+            <option value="COMPLETED">{t("trips.filters.COMPLETED")}</option>
           </select>
 
           <span className="text-xs text-slate-400">
-            Total: {total} — Page {page}/{totalPages}
+            {t("trips.meta.total")}: {total} — {t("trips.meta.page")} {page}/{totalPages}
           </span>
 
           <button
             onClick={() => setCreateOpen(true)}
             className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
           >
-            + Create Trip
+            {t("trips.actions.createTrip")}
           </button>
 
           <button
@@ -606,31 +603,29 @@ export default function TripsPage() {
             disabled={loading}
             className="ml-auto px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-60"
           >
-            {loading ? "Loading…" : "Refresh"}
+            {loading ? t("common.loading") : t("trips.actions.refresh")}
           </button>
         </div>
 
         {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
-            {err}
-          </div>
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">Loading…</div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">{t("common.loading")}</div>
         ) : (
           <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">Trip</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Status</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Client</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Site</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Scheduled</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Created</th>
-                    <th className="px-4 py-2 text-left text-slate-200">Actions</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.trip")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.status")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.client")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.site")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.scheduled")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.created")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.actions")}</th>
                   </tr>
                 </thead>
 
@@ -645,7 +640,7 @@ export default function TripsPage() {
                         onClick={() => router.push(`/trips/${r.id}`)}
                       >
                         <td className="px-4 py-2 font-mono">{shortId(r.id)}</td>
-                        <td className="px-4 py-2">{r.status}</td>
+                        <td className="px-4 py-2">{String(r.status || "—")}</td>
                         <td className="px-4 py-2">{r.clients?.name || "—"}</td>
                         <td className="px-4 py-2">{r.sites?.name || "—"}</td>
                         <td className="px-4 py-2">{fmtDate(r.scheduled_at)}</td>
@@ -653,15 +648,15 @@ export default function TripsPage() {
 
                         <td className="px-4 py-2">
                           <div className="flex gap-2 flex-wrap">
-                            {/* ✅ NEW: Finance button in list */}
+                            {/* ✅ Finance link FIXED to /trips/:id/finance */}
                             {canSeeFinance ? (
                               <Link
-                                href={`/finance/trips/${r.id}/finance`}
+                                href={`/trips/${r.id}/finance`}
                                 onClick={(e) => e.stopPropagation()}
                                 className="px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs"
-                                title="Trip Finance Close"
+                                title={t("tripFinance.title")}
                               >
-                                Finance
+                                {t("trips.actions.finance")}
                               </Link>
                             ) : null}
 
@@ -673,7 +668,7 @@ export default function TripsPage() {
                                   openAssign(r.id);
                                 }}
                               >
-                                Assign
+                                {t("trips.actions.assign")}
                               </button>
                             ) : null}
 
@@ -685,7 +680,7 @@ export default function TripsPage() {
                                   startTrip(r.id);
                                 }}
                               >
-                                Start
+                                {t("trips.actions.start")}
                               </button>
                             ) : null}
 
@@ -697,7 +692,7 @@ export default function TripsPage() {
                                   finishTrip(r.id);
                                 }}
                               >
-                                Finish
+                                {t("trips.actions.finish")}
                               </button>
                             ) : null}
                           </div>
@@ -709,7 +704,7 @@ export default function TripsPage() {
                   {!items.length ? (
                     <tr>
                       <td className="px-4 py-6 text-slate-300" colSpan={7}>
-                        No trips found.
+                        {t("trips.empty")}
                       </td>
                     </tr>
                   ) : null}
@@ -723,19 +718,17 @@ export default function TripsPage() {
                 disabled={page <= 1}
                 onClick={() => setParam("page", String(page - 1))}
               >
-                Prev
+                {t("common.prev")}
               </button>
 
-              <div className="text-xs text-slate-400">
-                Showing {items.length} of {total}
-              </div>
+              <div className="text-xs text-slate-400">{t("trips.meta.showing", { count: items.length, total })}</div>
 
               <button
                 className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
                 disabled={page >= totalPages}
                 onClick={() => setParam("page", String(page + 1))}
               >
-                Next
+                {t("common.next")}
               </button>
             </div>
           </div>
@@ -757,7 +750,13 @@ export default function TripsPage() {
         showToast={showToast}
       />
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        onClose={() => setToastOpen(false)}
+        t={t}
+      />
     </div>
   );
 }
