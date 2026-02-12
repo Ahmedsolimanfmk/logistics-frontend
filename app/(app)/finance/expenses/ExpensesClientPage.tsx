@@ -1,3 +1,4 @@
+// app/(app)/finance/expenses/ExpensesClientPage.tsx
 "use client";
 
 import Link from "next/link";
@@ -47,7 +48,11 @@ function StatusBadge({ s }: { s: string }) {
       ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
       : "bg-white/5 text-slate-200 border-white/10";
 
-  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
 }
 
 type TabKey = "PENDING" | "APPROVED" | "REJECTED" | "APPEALED" | "ALL";
@@ -65,7 +70,10 @@ export default function ExpensesClientPage() {
 
   const status = (sp.get("status") || "PENDING").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
+  const pageSize = Math.min(
+    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
+    200
+  );
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
@@ -95,7 +103,10 @@ export default function ExpensesClientPage() {
     router.push(`/finance/expenses?${p.toString()}`);
   };
 
-  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
+  const qsKey = useMemo(
+    () => `${status}|${page}|${pageSize}|${q}`,
+    [status, page, pageSize, q]
+  );
 
   async function load() {
     if (token === null) return;
@@ -104,12 +115,16 @@ export default function ExpensesClientPage() {
     setLoading(true);
     setErr(null);
     try {
-      const data = await api.get("/cash/cash-expenses", {
+      const res = await api.get("/cash/cash-expenses", {
         params: { status, page, page_size: pageSize, q: q || undefined },
       });
 
+      const data = (res as any)?.data ?? res;
+
       const list = Array.isArray(data) ? data : (data as any)?.items || [];
-      const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
+      const tTotal = Array.isArray(data)
+        ? list.length
+        : Number((data as any)?.total || 0);
 
       setItems(list);
       setTotal(tTotal);
@@ -131,38 +146,42 @@ export default function ExpensesClientPage() {
   async function approve(expenseId: string) {
     if (!canReview) return;
     const notes = window.prompt(t("financeExpenses.prompts.approveNotes")) || "";
-try {
-  await api.post(`/cash/cash-expenses/${expenseId}/approve`, { notes: notes || null });
-  showToast("success", t("common.save"));
-  await load();
-} catch (e: any) {
-  showToast("error", e?.message || t("financeExpenses.errors.approveFailed"));
-}
+    try {
+      await api.post(`/cash/cash-expenses/${expenseId}/approve`, {
+        notes: notes || null,
+      });
+      showToast("success", t("common.save"));
+      await load();
+    } catch (e: any) {
+      showToast("error", e?.message || t("financeExpenses.errors.approveFailed"));
+    }
   }
 
   async function reject(expenseId: string) {
     if (!canReview) return;
     const reason = window.prompt(t("financeExpenses.prompts.rejectReason"));
-if (!reason || reason.trim().length < 2) return;
+    if (!reason || reason.trim().length < 2) return;
 
-const notes = window.prompt(t("financeExpenses.prompts.rejectNotes")) || "";
-try {
-  await api.post(`/cash/cash-expenses/${expenseId}/reject`, { reason: reason.trim(), notes: notes || null });
-  showToast("success", t("common.save"));
-  await load();
-} catch (e: any) {
-  showToast("error", e?.message || t("financeExpenses.errors.rejectFailed"));
-}
+    const notes = window.prompt(t("financeExpenses.prompts.rejectNotes")) || "";
+    try {
+      await api.post(`/cash/cash-expenses/${expenseId}/reject`, {
+        reason: reason.trim(),
+        notes: notes || null,
+      });
+      showToast("success", t("common.save"));
+      await load();
+    } catch (e: any) {
+      showToast("error", e?.message || t("financeExpenses.errors.rejectFailed"));
+    }
   }
 
   const tabs: Array<{ key: TabKey; label: string }> = [
-  { key: "PENDING", label: t("financeExpenses.tabs.PENDING") },
-  { key: "APPROVED", label: t("financeExpenses.tabs.APPROVED") },
-  { key: "REJECTED", label: t("financeExpenses.tabs.REJECTED") },
-  { key: "APPEALED", label: t("financeExpenses.tabs.APPEALED") },
-  { key: "ALL", label: t("financeExpenses.tabs.ALL") },
-];
-
+    { key: "PENDING", label: t("financeExpenses.tabs.PENDING") },
+    { key: "APPROVED", label: t("financeExpenses.tabs.APPROVED") },
+    { key: "REJECTED", label: t("financeExpenses.tabs.REJECTED") },
+    { key: "APPEALED", label: t("financeExpenses.tabs.APPEALED") },
+    { key: "ALL", label: t("financeExpenses.tabs.ALL") },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -171,8 +190,11 @@ try {
           <div>
             <div className="text-xl font-bold">{t("financeExpenses.title")}</div>
             <div className="text-xs text-slate-400">
-              {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
-              {!canReview ? <span className="ml-2">({t("financeExpenses.viewOnly")})</span> : null}
+              {t("common.role")}:{" "}
+              <span className="text-slate-200">{role || "—"}</span>
+              {!canReview ? (
+                <span className="ml-2">({t("financeExpenses.viewOnly")})</span>
+              ) : null}
             </div>
           </div>
 
@@ -221,7 +243,9 @@ try {
           />
 
           <div className="text-xs text-slate-400">
-            {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
+            {t("common.total")}:{" "}
+            <span className="text-slate-200">{total}</span> —{" "}
+            {t("common.page")}{" "}
             <span className="text-slate-200">
               {page}/{totalPages}
             </span>
@@ -241,7 +265,9 @@ try {
         </div>
 
         {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+            {err}
+          </div>
         ) : null}
 
         {/* Table */}
@@ -255,14 +281,30 @@ try {
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.id")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.amount")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.type")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.trip")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.vehicle")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.actions")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.id")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.amount")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.type")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.status")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.trip")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.vehicle")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.created")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.actions")}
+                    </th>
                   </tr>
                 </thead>
 
@@ -277,8 +319,12 @@ try {
                         <td className="px-4 py-2">
                           <StatusBadge s={st} />
                         </td>
-                        <td className="px-4 py-2 font-mono">{x.trip_id ? shortId(x.trip_id) : "—"}</td>
-                        <td className="px-4 py-2">{x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}</td>
+                        <td className="px-4 py-2 font-mono">
+                          {x.trip_id ? shortId(x.trip_id) : "—"}
+                        </td>
+                        <td className="px-4 py-2">
+                          {x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}
+                        </td>
                         <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
                         <td className="px-4 py-2">
                           <div className="flex flex-wrap gap-2">
@@ -309,7 +355,9 @@ try {
                             {st === "REJECTED" && x.rejection_reason ? (
                               <span className="text-xs text-slate-400">
                                 {t("financeExpenses.table.reason")}:{" "}
-                                <span className="text-slate-200">{String(x.rejection_reason)}</span>
+                                <span className="text-slate-200">
+                                  {String(x.rejection_reason)}
+                                </span>
                               </span>
                             ) : null}
                           </div>
@@ -346,7 +394,12 @@ try {
           </div>
         </div>
 
-        <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+        <Toast
+          open={toastOpen}
+          message={toastMsg}
+          type={toastType}
+          onClose={() => setToastOpen(false)}
+        />
       </div>
     </div>
   );

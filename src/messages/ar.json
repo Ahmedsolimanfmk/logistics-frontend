@@ -273,6 +273,7 @@
       "createFailed": "فشل إنشاء المستخدم"
     }
   },
+
   "vehicles": {
     "title": "المركبات",
     "subtitle": "إدارة الأسطول",
@@ -338,6 +339,7 @@
       "MAINTENANCE": "صيانة"
     }
   },
+
   "maintenanceRequests": {
     "title": "طلبات الصيانة",
     "checkingSession": "جارٍ التحقق من الجلسة…",
@@ -396,6 +398,7 @@
       "createFailed": "فشل إنشاء الطلب"
     }
   },
+
   "maintenanceRequestDetails": {
     "title": "تفاصيل الطلب",
     "breadcrumb": "الصيانة / الطلبات",
@@ -447,6 +450,7 @@
       "rejectCta": "جارٍ الرفض…"
     }
   },
+
   "workOrders": {
     "title": "أوامر العمل",
     "breadcrumb": "الصيانة",
@@ -496,6 +500,7 @@
       "cardsSendStatusInUrl": "معلومة: كروت الداشبورد بتبعت status في الـ URL — الصفحة دي بتقرأه وتفلتر صح."
     }
   },
+
   "workOrderDetails": {
     "title": "تفاصيل أمر العمل",
     "breadcrumb": "الصيانة / أوامر العمل",
@@ -608,6 +613,7 @@
       "okToClose": "✅ جاهز للإغلاق."
     }
   },
+
   "sites": {
     "title": "المواقع",
     "subtitle": "إدارة المواقع لكل عميل",
@@ -655,6 +661,7 @@
       "loadFailed": "فشل تحميل المواقع"
     }
   },
+
   "clients": {
     "title": "العملاء",
     "subtitle": "إدارة العملاء",
@@ -691,6 +698,7 @@
       "loadFailed": "فشل تحميل العملاء"
     }
   },
+
   "financeDashboard": {
     "title": "لوحة المالية",
     "roleLabel": "الدور",
@@ -774,6 +782,7 @@
       "tipPrivileged": "معلومة: الأدمن والمحاسب يرون كل السجلات."
     }
   },
+
   "financeExpenses": {
     "title": "المصروفات",
     "viewOnly": "عرض فقط",
@@ -815,37 +824,44 @@
       "approveNotes": "ملاحظات (اختياري):",
       "rejectReason": "سبب الرفض (مطلوب):",
       "rejectNotes": "ملاحظات (اختياري):"
-    },
-    "financeAdvances": {
-  "title": "السلف النقدية",
-  "subtitle": "عرض السلف الخاصة بك",
-  "subtitleAdmin": "عرض جميع السلف (للأدمن/المحاسب)",
-  "filters": {
-    "allStatuses": "كل الحالات",
-    "searchPlaceholder": "بحث... (الرقم / المشرف / المبلغ)",
-    "status": {
-      "OPEN": "مفتوحة",
-      "PENDING": "قيد الانتظار",
-      "SETTLED": "تمت التسوية",
-      "CLOSED": "مغلقة",
-      "REJECTED": "مرفوضة",
-      "CANCELED": "ملغاة"
     }
   },
-  "table": {
-    "actions": "إجراءات",
-    "created": "تاريخ الإنشاء",
-    "status": "الحالة",
-    "amount": "المبلغ",
-    "supervisor": "المشرف"
-  },
-  "meta": {
-    "showing": "عرض {count} من {total}"
-  },
-  "empty": "لا توجد سلف",
-  "errors": {
-    "loadFailed": "فشل تحميل السلف"
-  }
-}
+
+  "financeAdvances": {
+    "title": "السلف النقدية",
+    "subtitle": "عرض السلف الخاصة بك",
+    "subtitleAdmin": "عرض جميع السلف (للأدمن/المحاسب)",
+    "filters": {
+      "allStatuses": "كل الحالات",
+      "searchPlaceholder": "بحث... (الرقم / المشرف / المبلغ)",
+      "status": {
+        "OPEN": "مفتوحة",
+        "PENDING": "قيد الانتظار",
+        "SETTLED": "تمت التسوية",
+        "CLOSED": "مغلقة",
+        "REJECTED": "مرفوضة",
+        "CANCELED": "ملغاة"
+      },
+      "open": "مفتوحة",
+      "settled": "تمت التسوية",
+      "canceled": "ملغاة"
+    },
+    "table": {
+      "actions": "إجراءات",
+      "created": "تاريخ الإنشاء",
+      "status": "الحالة",
+      "amount": "المبلغ",
+      "supervisor": "المشرف",
+      "id": "المعرّف"
+    },
+    "meta": {
+      "showing": "عرض {count} من {total}",
+      "showingAll": "عرض جميع السلف",
+      "showingMine": "عرض السلف الخاصة بك"
+    },
+    "empty": "لا توجد سلف",
+    "errors": {
+      "loadFailed": "فشل تحميل السلف"
+    }
   }
 }

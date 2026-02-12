@@ -1,3 +1,4 @@
+// src/i18n/useT.ts
 "use client";
 
 import ar from "@/src/messages/ar.json";
