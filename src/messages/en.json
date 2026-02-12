@@ -992,5 +992,39 @@
       "openReviewFailed": "Failed to open finance review",
       "closeFailed": "Failed to close trip finance"
     }
+  },
+  "tripDetails": {
+  "title": "Trip Details",
+  "actions": {
+    "financeClose": "Finance Close",
+    "back": "Back"
+  },
+  "sections": {
+    "trip": "Trip",
+    "assignmentLatest": "Assignment (latest)"
+  },
+  "fields": {
+    "status": "Status",
+    "financial": "Financial",
+    "scheduled": "Scheduled",
+    "created": "Created",
+    "notes": "Notes",
+    "vehicle": "Vehicle",
+    "driver": "Driver",
+    "supervisor": "Supervisor",
+    "assigned": "Assigned",
+    "active": "Active"
+  },
+  "hints": {
+    "financeTip": "Tip: Use Finance Close to review and lock trip financially."
+  },
+  "states": {
+    "loading": "Loading…",
+    "notFound": "Trip not found"
+  },
+  "errors": {
+    "loadFailed": "Failed to load trip details"
   }
+}
+
 }

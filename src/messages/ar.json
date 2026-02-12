@@ -1005,5 +1005,39 @@
       "openReviewFailed": "فشل فتح المراجعة المالية",
       "closeFailed": "فشل إغلاق مالية الرحلة"
     }
+  },
+  "tripDetails": {
+  "title": "تفاصيل الرحلة",
+  "actions": {
+    "financeClose": "إغلاق مالي",
+    "back": "رجوع"
+  },
+  "sections": {
+    "trip": "الرحلة",
+    "assignmentLatest": "التعيين (الأحدث)"
+  },
+  "fields": {
+    "status": "الحالة",
+    "financial": "المالية",
+    "scheduled": "الموعد",
+    "created": "تاريخ الإنشاء",
+    "notes": "ملاحظات",
+    "vehicle": "المركبة",
+    "driver": "السائق",
+    "supervisor": "المشرف",
+    "assigned": "وقت التعيين",
+    "active": "نشط"
+  },
+  "hints": {
+    "financeTip": "معلومة: استخدم زر إغلاق مالي لمراجعة الرحلة وقفلها ماليًا."
+  },
+  "states": {
+    "loading": "جار التحميل…",
+    "notFound": "الرحلة غير موجودة"
+  },
+  "errors": {
+    "loadFailed": "فشل تحميل تفاصيل الرحلة"
   }
+}
+
 }

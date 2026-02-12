@@ -18,11 +18,6 @@ function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
 
-// ✅ helper: supports axios (res.data) + custom wrapper (res)
-function unwrap(res: any) {
-  return res?.data ?? res;
-}
-
 export default function TripDetailsPage() {
   const t = useT();
   const router = useRouter();
@@ -49,14 +44,10 @@ export default function TripDetailsPage() {
       setLoading(true);
       setErr(null);
       try {
-        const res = await api.get(`/trips/${id}`);
-        const data = unwrap(res);
+        const data = await api.get(`/trips/${id}`);
         if (!cancel) setTrip(data);
       } catch (e: any) {
-        const msg =
-          e?.response?.data?.message ||
-          e?.message ||
-          t("common.failed");
+        const msg = e?.response?.data?.message || e?.message || t("tripDetails.errors.loadFailed");
         if (!cancel) setErr(msg);
       } finally {
         if (!cancel) setLoading(false);
@@ -70,19 +61,6 @@ export default function TripDetailsPage() {
 
   const lastAssign = useMemo(() => trip?.trip_assignments?.[0], [trip]);
 
-  // ✅ Optional: show session loading state like other pages
-  if (token === null) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white">
-        <div className="max-w-5xl mx-auto p-4 md:p-6">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            {t("common.loadingSession")}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
@@ -94,8 +72,7 @@ export default function TripDetailsPage() {
 
           <div className="flex items-center gap-2">
             {canSeeFinance && id ? (
-              <Link
-                href={`/trips/${id}/finance`}
+              <Link href={`/trips/${id}/finance`}  // ✅ ده الصح حسب فولدر: trips/[id]/finance
                 className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm"
               >
                 {t("tripDetails.actions.financeClose")}
@@ -106,7 +83,7 @@ export default function TripDetailsPage() {
               className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
               onClick={() => router.push("/trips")}
             >
-              {t("common.back")}
+              {t("tripDetails.actions.back")}
             </button>
           </div>
         </div>
@@ -119,11 +96,11 @@ export default function TripDetailsPage() {
 
         {loading ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            {t("common.loading")}
+            {t("tripDetails.states.loading")}
           </div>
         ) : !trip ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            {t("tripDetails.notFound")}
+            {t("tripDetails.states.notFound")}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -131,8 +108,7 @@ export default function TripDetailsPage() {
               <div className="text-sm font-semibold">{t("tripDetails.sections.trip")}</div>
               <div className="mt-2 text-sm text-slate-300 space-y-1">
                 <div>
-                  {t("tripDetails.fields.status")}:{" "}
-                  <span className="text-white">{trip.status}</span>
+                  {t("tripDetails.fields.status")}: <span className="text-white">{trip.status}</span>
                 </div>
                 <div>
                   {t("tripDetails.fields.financial")}:{" "}
@@ -153,9 +129,7 @@ export default function TripDetailsPage() {
               </div>
 
               {canSeeFinance ? (
-                <div className="mt-3 text-xs text-slate-400">
-                  {t("tripDetails.hints.financeTip")}
-                </div>
+                <div className="mt-3 text-xs text-slate-400">{t("tripDetails.hints.financeTip")}</div>
               ) : null}
             </div>
 
@@ -167,8 +141,8 @@ export default function TripDetailsPage() {
                   <div>
                     {t("tripDetails.fields.vehicle")}:{" "}
                     <span className="text-white">
-                      {lastAssign.vehicles?.plate_number ||
-                        lastAssign.vehicles?.plate_no ||
+                      {lastAssign.vehicles?.plate_no ||
+                        lastAssign.vehicles?.plate_number ||
                         "—"}
                     </span>
                   </div>
@@ -190,9 +164,7 @@ export default function TripDetailsPage() {
                   </div>
                 </div>
               ) : (
-                <div className="mt-2 text-sm text-slate-300">
-                  {t("tripDetails.empty.noAssignment")}
-                </div>
+                <div className="mt-2 text-sm text-slate-300">—</div>
               )}
             </div>
           </div>
