@@ -75,14 +75,18 @@ export default function NewCashExpensePage() {
 
       try {
         if (isSupervisor) {
-          const list = (await api.get("/cash/cash-advances")) as any[];
-          const openMine = list.filter(
-            (a) => String(a.status).toUpperCase() === "OPEN" && a.field_supervisor_id === user?.id
-          );
-          if (mounted) setAdvances(openMine);
-        } else {
-          if (mounted) setAdvances([]);
-        }
+  const res = await api.get("/cash/cash-advances");
+  const list = Array.isArray(res.data) ? res.data : [];
+
+  const openMine = list.filter(
+    (a) =>
+      String(a.status).toUpperCase() === "OPEN" &&
+      a.field_supervisor_id === user?.id
+  );
+
+  if (mounted) setAdvances(openMine);
+}
+
 
         try {
           const wos = (await api.get("/maintenance/work-orders")) as any[];
