@@ -1056,6 +1056,107 @@
   "errors": {
     "loadFailed": "فشل تحميل تفاصيل الرحلة"
   }
+},
+"financeNewExpense": {
+  "title": "إنشاء مصروف",
+  "notAllowedBanner": "غير مسموح لك بإنشاء مصروف على هذه الصفحة.",
+  "fields": {
+    "paymentSource": "مصدر الدفع",
+    "expenseType": "نوع المصروف",
+    "amount": "المبلغ",
+    "cashAdvance": "اختر عُهدة مفتوحة",
+    "vendorName": "اسم المورد",
+    "invoiceNo": "رقم الفاتورة",
+    "linkWorkOrder": "ربط بأمر صيانة (اختياري)",
+    "linkTrip": "ربط برحلة (اختياري)",
+    "notes": "ملاحظات (اختياري)"
+  },
+  "hints": {
+    "advance": "سيتم خصم المصروف من العُهدة المفتوحة الخاصة بك.",
+    "company": "مصروفات الشركة تتطلب بيانات المورد والفاتورة."
+  },
+  "actions": {
+    "create": "حفظ المصروف"
+  },
+  "toast": {
+    "created": "تم إنشاء المصروف ✅",
+    "createFailed": "فشل إنشاء المصروف"
+  },
+  "errors": {
+    "loadFailed": "فشل تحميل البيانات",
+    "notAllowed": "غير مسموح",
+    "expenseTypeRequired": "نوع المصروف مطلوب",
+    "amountInvalid": "المبلغ غير صحيح",
+    "advanceOnlySupervisor": "مصروفات العُهدة للمشرف فقط",
+    "selectOpenAdvance": "اختر عُهدة مفتوحة",
+    "companyOnlyPrivileged": "مصروفات الشركة للمحاسب/الأدمن فقط",
+    "vendorRequired": "اسم المورد مطلوب",
+    "invoiceDateRequired": "تاريخ الفاتورة مطلوب",
+    "tripInvalid": "الرحلة غير صحيحة",
+    "woInvalid": "أمر الصيانة غير صحيح"
+  }
+},
+"financeAdvanceDetails": {
+  "title": "تفاصيل العُهدة",
+  "tabs": {
+    "overview": "نظرة عامة",
+    "expenses": "المصروفات",
+    "actions": "إجراءات"
+  },
+  "buttons": {
+    "back": "رجوع",
+    "list": "القائمة",
+    "refresh": "تحديث",
+    "newExpense": "مصروف جديد"
+  },
+  "labels": {
+    "id": "المعرّف",
+    "supervisor": "المشرف",
+    "createdAt": "تاريخ الإنشاء",
+    "notes": "ملاحظات"
+  },
+  "kpis": {
+    "advanceAmount": "قيمة العُهدة",
+    "approvedUsed": "المعتمد المصروف",
+    "remaining": "المتبقي",
+    "pending": "قيد الانتظار",
+    "rejected": "مرفوض"
+  },
+  "expenses": {
+    "title": "المصروفات المرتبطة بهذه العُهدة",
+    "empty": "لا توجد مصروفات.",
+    "table": {
+      "amount": "المبلغ",
+      "type": "النوع",
+      "status": "الحالة",
+      "created": "تاريخ الإنشاء",
+      "link": "الرابط"
+    }
+  },
+  "actions": {
+    "title": "الإجراءات",
+    "role": "الدور",
+    "status": "الحالة",
+    "notAvailable": "لا توجد إجراءات متاحة لهذا الدور.",
+    "submitReview": "إرسال للمراجعة (OPEN → IN_REVIEW)",
+    "close": "إغلاق العُهدة",
+    "reopen": "إعادة فتح (CLOSED → OPEN)"
+  },
+  "prompts": {
+    "closeNotesOptional": "ملاحظة/مرجع إغلاق (اختياري):",
+    "reopenNotesOptional": "ملاحظة (اختياري):"
+  },
+  "hints": {
+    "endpoints": "المسارات: submit-review / close / reopen."
+  },
+  "errors": {
+    "loadFailed": "فشل تحميل العُهدة",
+    "forbiddenNotYours": "غير مسموح: هذه العُهدة ليست خاصة بك.",
+    "submitReviewFailed": "فشل إرسال العُهدة للمراجعة",
+    "closeFailed": "فشل إغلاق العُهدة",
+    "reopenFailed": "فشل إعادة فتح العُهدة"
+  }
 }
+
 
 }
