@@ -47,7 +47,11 @@ export default function AdvanceDetailsPage() {
   const t = useT();
   const params = useParams();
   const router = useRouter();
-  const id = String((params as any)?.id || "");
+  const rawId = (params as any)?.id;
+const id = Array.isArray(rawId) ? rawId[0] : rawId;
+const safeId = typeof id === "string" ? id : "";
+const advanceId = safeId && safeId !== "undefined" && safeId !== "null" ? safeId : "";
+
 
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
@@ -69,9 +73,13 @@ export default function AdvanceDetailsPage() {
 
     try {
       const [aRes, exRes] = await Promise.all([
-        api.get(`/cash/cash-advances/${id}`),
-        api.get(`/cash/cash-advances/${id}/expenses`).catch(() => ({ data: [] })),
-      ]);
+  api.get(`/cash/cash-advances/${advanceId}`),
+  api
+    .get(`/cash/cash-advances/${advanceId}/expenses`)
+    .then((r) => r)
+    .catch(() => ({ data: [] })),
+]);
+
 
       const a = (aRes as any)?.data ?? aRes;
       const ex = (exRes as any)?.data ?? exRes;
@@ -86,10 +94,15 @@ export default function AdvanceDetailsPage() {
   }
 
   useEffect(() => {
-    if (!id) return;
-    loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  if (!advanceId) {
+    setLoading(false);
+    setError(t("financeAdvanceDetails.errors.invalidId"));
+    return;
+  }
+  loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [advanceId]);
+
 
   // computed totals
   const totals = useMemo(() => {
