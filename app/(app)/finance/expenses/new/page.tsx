@@ -75,34 +75,40 @@ export default function NewCashExpensePage() {
 
       try {
         if (isSupervisor) {
-  const res = await api.get("/cash/cash-advances");
-  const list = Array.isArray(res.data) ? res.data : [];
+          const res = await api.get("/cash/cash-advances");
+          const data = (res as any)?.data ?? res;
+          const list = Array.isArray(data) ? data : (data as any)?.items || [];
 
-  const openMine = list.filter(
-    (a) =>
-      String(a.status).toUpperCase() === "OPEN" &&
-      a.field_supervisor_id === user?.id
-  );
+          const openMine = list.filter(
+            (a: any) =>
+              String(a.status).toUpperCase() === "OPEN" &&
+              a.field_supervisor_id === user?.id
+          );
 
-  if (mounted) setAdvances(openMine);
-}
-
+          if (mounted) setAdvances(openMine);
+        } else {
+          if (mounted) setAdvances([]);
+        }
 
         try {
-          const wos = (await api.get("/maintenance/work-orders")) as any[];
-          if (mounted) setWorkOrders(Array.isArray(wos) ? wos : []);
+          const wosRes = await api.get("/maintenance/work-orders");
+          const wosData = (wosRes as any)?.data ?? wosRes;
+          const wosList = Array.isArray(wosData) ? wosData : (wosData as any)?.items || [];
+          if (mounted) setWorkOrders(Array.isArray(wosList) ? wosList : []);
         } catch {
           if (mounted) setWorkOrders([]);
         }
 
         try {
-          const ts = (await api.get("/trips")) as any[];
-          if (mounted) setTrips(Array.isArray(ts) ? ts : []);
+          const tsRes = await api.get("/trips");
+          const tsData = (tsRes as any)?.data ?? tsRes;
+          const tsList = Array.isArray(tsData) ? tsData : (tsData as any)?.items || [];
+          if (mounted) setTrips(Array.isArray(tsList) ? tsList : []);
         } catch {
           if (mounted) setTrips([]);
         }
       } catch (e: any) {
-        if (mounted) setError(e.message || t("financeNewExpense.errors.loadFailed"));
+        if (mounted) setError(e?.message || t("financeNewExpense.errors.loadFailed"));
       } finally {
         if (mounted) setBootLoading(false);
       }
@@ -113,31 +119,31 @@ export default function NewCashExpensePage() {
       mounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSupervisor, user?.id]);
+  }, [isSupervisor, user?.id, t]);
 
   function validate() {
-  if (!paymentSource) return t("financeNewExpense.errors.notAllowed");
-  if (!form.expense_type) return t("financeNewExpense.errors.expenseTypeRequired");
-  if (!form.amount || Number(form.amount) <= 0) return t("financeNewExpense.errors.amountInvalid");
+    if (!paymentSource) return t("financeNewExpense.errors.notAllowed");
+    if (!form.expense_type) return t("financeNewExpense.errors.expenseTypeRequired");
+    if (!form.amount || Number(form.amount) <= 0) return t("financeNewExpense.errors.amountInvalid");
 
-  if (paymentSource === "ADVANCE") {
-    if (!isSupervisor) return t("financeNewExpense.errors.advanceOnlySupervisor");
-    if (!isUuid(form.cash_advance_id)) return t("financeNewExpense.errors.selectOpenAdvance");
+    if (paymentSource === "ADVANCE") {
+      if (!isSupervisor) return t("financeNewExpense.errors.advanceOnlySupervisor");
+      if (!isUuid(form.cash_advance_id)) return t("financeNewExpense.errors.selectOpenAdvance");
+    }
+
+    if (paymentSource === "COMPANY") {
+      if (!isPrivileged) return t("financeNewExpense.errors.companyOnlyPrivileged");
+      if (!form.vendor_name || String(form.vendor_name).trim().length < 2)
+        return t("financeNewExpense.errors.vendorRequired");
+      if (!form.invoice_date) return t("financeNewExpense.errors.invoiceDateRequired");
+    }
+
+    if (form.trip_id && !isUuid(form.trip_id)) return t("financeNewExpense.errors.tripInvalid");
+    if (form.maintenance_work_order_id && !isUuid(form.maintenance_work_order_id))
+      return t("financeNewExpense.errors.woInvalid");
+
+    return null;
   }
-
-  if (paymentSource === "COMPANY") {
-    if (!isPrivileged) return t("financeNewExpense.errors.companyOnlyPrivileged");
-    if (!form.vendor_name || String(form.vendor_name).trim().length < 2)
-      return t("financeNewExpense.errors.vendorRequired");
-    if (!form.invoice_date) return t("financeNewExpense.errors.invoiceDateRequired");
-  }
-
-  if (form.trip_id && !isUuid(form.trip_id)) return t("financeNewExpense.errors.tripInvalid");
-  if (form.maintenance_work_order_id && !isUuid(form.maintenance_work_order_id))
-    return t("financeNewExpense.errors.woInvalid");
-
-  return null;
-}
 
   async function submit() {
     const e = validate();
@@ -167,7 +173,10 @@ export default function NewCashExpensePage() {
       showToast("success", t("financeNewExpense.toast.created"));
       router.push("/finance/expenses");
     } catch (err: any) {
-      const msg = err?.message || t("financeNewExpense.toast.createFailed");
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        t("financeNewExpense.toast.createFailed");
       setError(msg);
       showToast("error", msg);
     } finally {

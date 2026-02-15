@@ -129,10 +129,14 @@ export default function ExpensesClientPage() {
       setItems(list);
       setTotal(tTotal);
     } catch (e: any) {
-      const msg = e?.message || t("financeExpenses.errors.loadFailed");
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeExpenses.errors.loadFailed");
       setErr(msg);
       setItems([]);
       setTotal(0);
+      showToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -153,7 +157,12 @@ export default function ExpensesClientPage() {
       showToast("success", t("common.save"));
       await load();
     } catch (e: any) {
-      showToast("error", e?.message || t("financeExpenses.errors.approveFailed"));
+      showToast(
+        "error",
+        e?.response?.data?.message ||
+          e?.message ||
+          t("financeExpenses.errors.approveFailed")
+      );
     }
   }
 
@@ -171,7 +180,12 @@ export default function ExpensesClientPage() {
       showToast("success", t("common.save"));
       await load();
     } catch (e: any) {
-      showToast("error", e?.message || t("financeExpenses.errors.rejectFailed"));
+      showToast(
+        "error",
+        e?.response?.data?.message ||
+          e?.message ||
+          t("financeExpenses.errors.rejectFailed")
+      );
     }
   }
 
@@ -243,9 +257,8 @@ export default function ExpensesClientPage() {
           />
 
           <div className="text-xs text-slate-400">
-            {t("common.total")}:{" "}
-            <span className="text-slate-200">{total}</span> —{" "}
-            {t("common.page")}{" "}
+            {t("common.total")}: <span className="text-slate-200">{total}</span>{" "}
+            — {t("common.page")}{" "}
             <span className="text-slate-200">
               {page}/{totalPages}
             </span>
@@ -281,30 +294,14 @@ export default function ExpensesClientPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.id")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.amount")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.type")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.status")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.trip")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.vehicle")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.created")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.actions")}
-                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.id")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.amount")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.type")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.status")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.trip")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.vehicle")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.created")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.actions")}</th>
                   </tr>
                 </thead>
 
@@ -319,12 +316,8 @@ export default function ExpensesClientPage() {
                         <td className="px-4 py-2">
                           <StatusBadge s={st} />
                         </td>
-                        <td className="px-4 py-2 font-mono">
-                          {x.trip_id ? shortId(x.trip_id) : "—"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}
-                        </td>
+                        <td className="px-4 py-2 font-mono">{x.trip_id ? shortId(x.trip_id) : "—"}</td>
+                        <td className="px-4 py-2">{x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}</td>
                         <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
                         <td className="px-4 py-2">
                           <div className="flex flex-wrap gap-2">
@@ -355,9 +348,7 @@ export default function ExpensesClientPage() {
                             {st === "REJECTED" && x.rejection_reason ? (
                               <span className="text-xs text-slate-400">
                                 {t("financeExpenses.table.reason")}:{" "}
-                                <span className="text-slate-200">
-                                  {String(x.rejection_reason)}
-                                </span>
+                                <span className="text-slate-200">{String(x.rejection_reason)}</span>
                               </span>
                             ) : null}
                           </div>

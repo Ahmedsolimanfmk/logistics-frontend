@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
+import { useT } from "@/src/i18n/useT";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -35,15 +36,16 @@ function StatusBadge({ s }: { s: string }) {
       ? "bg-red-500/15 text-red-200 border-red-500/20"
       : st === "APPEALED"
       ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
+      : st === "PENDING"
+      ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
       : "bg-slate-500/15 text-slate-200 border-white/10";
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st}</span>
-  );
+  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
 }
 
 type TabKey = "overview" | "audit" | "actions";
 
 export default function ExpenseDetailsPage() {
+  const t = useT();
   const params = useParams();
   const router = useRouter();
   const id = String((params as any)?.id || "");
@@ -115,7 +117,7 @@ export default function ExpenseDetailsPage() {
     } catch (e: any) {
       // audit is optional (table may not exist)
       setAudits([]);
-      setAuditNote(e?.message || "Failed to load audit");
+      setAuditNote(e?.message || t("financeExpenseDetails.errors.auditFailed"));
     }
   }
 
@@ -129,7 +131,7 @@ export default function ExpenseDetailsPage() {
 
       await fetchAudit(id);
     } catch (e: any) {
-      setError(e?.message || "Failed to load expense");
+      setError(e?.message || t("financeExpenseDetails.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -162,7 +164,7 @@ export default function ExpenseDetailsPage() {
       await loadAll();
       setTab("overview");
     } catch (e: any) {
-      setError(e.message || "Approve failed");
+      setError(e.message || t("financeExpenseDetails.errors.approveFailed"));
     } finally {
       setBusy(false);
     }
@@ -170,7 +172,7 @@ export default function ExpenseDetailsPage() {
 
   async function reject() {
     if (!canApproveReject) return;
-    const reason = window.prompt("سبب الرفض (مطلوب):");
+    const reason = window.prompt(t("financeExpenseDetails.prompts.rejectReasonRequired"));
     if (!reason || reason.trim().length < 2) return;
 
     setBusy(true);
@@ -180,7 +182,7 @@ export default function ExpenseDetailsPage() {
       await loadAll();
       setTab("overview");
     } catch (e: any) {
-      setError(e.message || "Reject failed");
+      setError(e.message || t("financeExpenseDetails.errors.rejectFailed"));
     } finally {
       setBusy(false);
     }
@@ -188,7 +190,7 @@ export default function ExpenseDetailsPage() {
 
   async function appeal() {
     if (!canAppeal) return;
-    const notes = window.prompt("سبب الاستئناف (مطلوب):");
+    const notes = window.prompt(t("financeExpenseDetails.prompts.appealReasonRequired"));
     if (!notes || notes.trim().length < 2) return;
 
     setBusy(true);
@@ -198,7 +200,7 @@ export default function ExpenseDetailsPage() {
       await loadAll();
       setTab("overview");
     } catch (e: any) {
-      setError(e.message || "Appeal failed");
+      setError(e.message || t("financeExpenseDetails.errors.appealFailed"));
     } finally {
       setBusy(false);
     }
@@ -206,7 +208,7 @@ export default function ExpenseDetailsPage() {
 
   async function reopenRejected() {
     if (!canReopenRejected) return;
-    const notes = window.prompt("ملاحظة (اختياري):") || "";
+    const notes = window.prompt(t("financeExpenseDetails.prompts.optionalNote")) || "";
 
     setBusy(true);
     setError(null);
@@ -215,7 +217,7 @@ export default function ExpenseDetailsPage() {
       await loadAll();
       setTab("overview");
     } catch (e: any) {
-      setError(e.message || "Reopen failed");
+      setError(e.message || t("financeExpenseDetails.errors.reopenFailed"));
     } finally {
       setBusy(false);
     }
@@ -226,11 +228,11 @@ export default function ExpenseDetailsPage() {
 
     let payload: any = { decision };
     if (decision === "REJECT") {
-      const reason = window.prompt("سبب الرفض (مطلوب):");
+      const reason = window.prompt(t("financeExpenseDetails.prompts.rejectReasonRequired"));
       if (!reason || reason.trim().length < 2) return;
       payload.reason = reason.trim();
     } else {
-      const notes = window.prompt("ملاحظة (اختياري):");
+      const notes = window.prompt(t("financeExpenseDetails.prompts.optionalNote"));
       if (notes && notes.trim()) payload.notes = notes.trim();
     }
 
@@ -241,7 +243,7 @@ export default function ExpenseDetailsPage() {
       await loadAll();
       setTab("overview");
     } catch (e: any) {
-      setError(e.message || "Resolve appeal failed");
+      setError(e.message || t("financeExpenseDetails.errors.resolveAppealFailed"));
     } finally {
       setBusy(false);
     }
@@ -250,11 +252,11 @@ export default function ExpenseDetailsPage() {
   // ---------- UI ----------
   const tabs = useMemo(
     () => [
-      { key: "overview" as const, label: "Overview" },
-      { key: "audit" as const, label: "Audit" },
-      { key: "actions" as const, label: "Actions" },
+      { key: "overview" as const, label: t("financeExpenseDetails.tabs.overview") },
+      { key: "audit" as const, label: t("financeExpenseDetails.tabs.audit") },
+      { key: "actions" as const, label: t("financeExpenseDetails.tabs.actions") },
     ],
-    []
+    [t]
   );
 
   return (
@@ -262,24 +264,24 @@ export default function ExpenseDetailsPage() {
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">Expense Details</h1>
+            <h1 className="text-xl font-bold">{t("financeExpenseDetails.title")}</h1>
             {expense?.approval_status ? <StatusBadge s={expense.approval_status} /> : null}
           </div>
 
           <div className="text-xs text-slate-400">
-            ID: <span className="text-slate-200">{id}</span>
+            {t("financeExpenseDetails.meta.id")}: <span className="text-slate-200">{id}</span>
             {paymentSource ? (
               <>
                 {" "}
-                — Source: <span className="text-slate-200">{paymentSource}</span>
+                — {t("financeExpenseDetails.meta.source")}:{" "}
+                <span className="text-slate-200">{paymentSource}</span>
               </>
             ) : null}
           </div>
 
           {!loading && !expense ? (
             <div className="text-xs text-amber-300">
-              لم يتم العثور على تفاصيل المصروف من قائمة العُهد. لو المصروف COMPANY، الأفضل إضافة endpoint
-              GET /cash/cash-expenses/:id أو list endpoint.
+              {t("financeExpenseDetails.meta.notFoundHint")}
             </div>
           ) : null}
         </div>
@@ -289,13 +291,13 @@ export default function ExpenseDetailsPage() {
             onClick={() => router.back()}
             className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
           >
-            Back
+            {t("common.back")}
           </button>
           <Link
             href="/finance/expenses"
             className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
           >
-            List
+            {t("common.list")}
           </Link>
         </div>
       </div>
@@ -308,18 +310,18 @@ export default function ExpenseDetailsPage() {
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2">
-        {tabs.map((t) => (
+        {tabs.map((tt) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tt.key}
+            onClick={() => setTab(tt.key)}
             className={cn(
               "px-3 py-2 rounded-lg text-sm border transition",
-              tab === t.key
+              tab === tt.key
                 ? "bg-white/10 border-white/10 text-white"
                 : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
             )}
           >
-            {t.label}
+            {tt.label}
           </button>
         ))}
       </div>
@@ -327,71 +329,75 @@ export default function ExpenseDetailsPage() {
       {/* Tab content */}
       <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
         {loading ? (
-          <div className="text-sm text-slate-300">Loading…</div>
+          <div className="text-sm text-slate-300">{t("common.loading")}</div>
         ) : tab === "overview" ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">Amount</div>
+                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.amount")}</div>
                 <div className="text-lg font-semibold">{fmtMoney(expense?.amount)}</div>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">Expense Type</div>
+                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.type")}</div>
                 <div className="text-sm text-slate-200">{expense?.expense_type || "—"}</div>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">Created At</div>
+                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.createdAt")}</div>
                 <div className="text-sm text-slate-200">{fmtDate(expense?.created_at)}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-1">
-                <div className="text-xs text-slate-400">Creator</div>
+                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.creator")}</div>
                 <div className="text-sm text-slate-200">
                   {expense?.users_cash_expenses_created_byTousers?.full_name ||
                     expense?.users_cash_expenses_created_byTousers?.email ||
                     expense?.created_by ||
                     "—"}
                 </div>
-                <div className="text-xs text-slate-400 mt-2">Notes</div>
+                <div className="text-xs text-slate-400 mt-2">{t("financeExpenseDetails.overview.notes")}</div>
                 <div className="text-sm text-slate-200 whitespace-pre-wrap">
                   {expense?.notes || "—"}
                 </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-1">
-                <div className="text-xs text-slate-400">Context</div>
+                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.context")}</div>
                 <div className="text-sm text-slate-200">
-                  Trip: <span className="text-slate-300">{expense?.trip_id || "—"}</span>
+                  {t("financeExpenseDetails.overview.trip")}:{" "}
+                  <span className="text-slate-300">{expense?.trip_id || "—"}</span>
                 </div>
                 <div className="text-sm text-slate-200">
-                  Vehicle: <span className="text-slate-300">{expense?.vehicle_id || "—"}</span>
+                  {t("financeExpenseDetails.overview.vehicle")}:{" "}
+                  <span className="text-slate-300">{expense?.vehicle_id || "—"}</span>
                 </div>
                 <div className="text-sm text-slate-200">
-                  Work Order:{" "}
+                  {t("financeExpenseDetails.overview.workOrder")}:{" "}
                   <span className="text-slate-300">{expense?.maintenance_work_order_id || "—"}</span>
                 </div>
 
                 {paymentSource === "COMPANY" ? (
                   <>
-                    <div className="mt-2 text-xs text-slate-400">Company Fields</div>
+                    <div className="mt-2 text-xs text-slate-400">{t("financeExpenseDetails.overview.companyFields")}</div>
                     <div className="text-sm text-slate-200">
-                      Vendor: <span className="text-slate-300">{expense?.vendor_name || "—"}</span>
+                      {t("financeExpenseDetails.overview.vendor")}:{" "}
+                      <span className="text-slate-300">{expense?.vendor_name || "—"}</span>
                     </div>
                     <div className="text-sm text-slate-200">
-                      Invoice#: <span className="text-slate-300">{expense?.invoice_no || "—"}</span>
+                      {t("financeExpenseDetails.overview.invoiceNo")}:{" "}
+                      <span className="text-slate-300">{expense?.invoice_no || "—"}</span>
                     </div>
                     <div className="text-sm text-slate-200">
-                      Invoice date:{" "}
+                      {t("financeExpenseDetails.overview.invoiceDate")}:{" "}
                       <span className="text-slate-300">{fmtDate(expense?.invoice_date || null)}</span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="mt-2 text-xs text-slate-400">Advance</div>
+                    <div className="mt-2 text-xs text-slate-400">{t("financeExpenseDetails.overview.advance")}</div>
                     <div className="text-sm text-slate-200">
-                      Cash advance ID:{" "}
+                      {t("financeExpenseDetails.overview.cashAdvanceId")}:{" "}
                       <span className="text-slate-300">{expense?.cash_advance_id || "—"}</span>
                     </div>
                   </>
@@ -400,19 +406,23 @@ export default function ExpenseDetailsPage() {
             </div>
 
             <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-              <div className="text-xs text-slate-400">Resolution</div>
+              <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.resolution")}</div>
               <div className="text-sm text-slate-200">
-                Approved at: <span className="text-slate-300">{fmtDate(expense?.approved_at || null)}</span>
+                {t("financeExpenseDetails.overview.approvedAt")}:{" "}
+                <span className="text-slate-300">{fmtDate(expense?.approved_at || null)}</span>
               </div>
               <div className="text-sm text-slate-200">
-                Rejected at: <span className="text-slate-300">{fmtDate(expense?.rejected_at || null)}</span>
+                {t("financeExpenseDetails.overview.rejectedAt")}:{" "}
+                <span className="text-slate-300">{fmtDate(expense?.rejected_at || null)}</span>
               </div>
               <div className="text-sm text-slate-200">
-                Resolved at: <span className="text-slate-300">{fmtDate(expense?.resolved_at || null)}</span>
+                {t("financeExpenseDetails.overview.resolvedAt")}:{" "}
+                <span className="text-slate-300">{fmtDate(expense?.resolved_at || null)}</span>
               </div>
               {expense?.rejection_reason ? (
                 <div className="text-sm text-red-200 mt-2">
-                  Rejection reason: <span className="text-red-300">{expense.rejection_reason}</span>
+                  {t("financeExpenseDetails.overview.rejectionReason")}:{" "}
+                  <span className="text-red-300">{expense.rejection_reason}</span>
                 </div>
               ) : null}
             </div>
@@ -420,12 +430,12 @@ export default function ExpenseDetailsPage() {
         ) : tab === "audit" ? (
           <div className="space-y-3">
             <div className="text-sm text-slate-200">
-              Audit Timeline
+              {t("financeExpenseDetails.audit.title")}
               {auditNote ? <span className="ml-2 text-xs text-slate-400">({auditNote})</span> : null}
             </div>
 
             {audits.length === 0 ? (
-              <div className="text-sm text-slate-300">No audit records.</div>
+              <div className="text-sm text-slate-300">{t("financeExpenseDetails.audit.empty")}</div>
             ) : (
               <div className="space-y-2">
                 {audits.map((a) => (
@@ -437,19 +447,18 @@ export default function ExpenseDetailsPage() {
                       <div className="text-xs text-slate-400">{fmtDate(a.created_at)}</div>
                     </div>
                     <div className="mt-1 text-xs text-slate-400">
-                      Actor: <span className="text-slate-200">{a.actor_id || "—"}</span>
+                      {t("financeExpenseDetails.audit.actor")}:{" "}
+                      <span className="text-slate-200">{a.actor_id || "—"}</span>
                     </div>
 
                     {a.notes ? (
-                      <div className="mt-2 text-sm text-slate-200 whitespace-pre-wrap">
-                        {a.notes}
-                      </div>
+                      <div className="mt-2 text-sm text-slate-200 whitespace-pre-wrap">{a.notes}</div>
                     ) : null}
 
-                    {(a.before || a.after) ? (
+                    {a.before || a.after ? (
                       <details className="mt-2">
                         <summary className="cursor-pointer text-xs text-slate-300 hover:text-white">
-                          Show diff
+                          {t("financeExpenseDetails.audit.showDiff")}
                         </summary>
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                           <pre className="text-xs overflow-auto rounded-lg border border-white/10 bg-slate-900 p-2">
@@ -470,9 +479,10 @@ export default function ExpenseDetailsPage() {
           // actions tab
           <div className="space-y-3">
             <div className="text-sm text-slate-200">
-              Available Actions
+              {t("financeExpenseDetails.actions.title")}
               <span className="ml-2 text-xs text-slate-400">
-                (Role: {role || "—"} / Status: {approvalStatus || "—"})
+                ({t("financeExpenseDetails.actions.metaRole")}: {role || "—"} /{" "}
+                {t("financeExpenseDetails.actions.metaStatus")}: {approvalStatus || "—"})
               </span>
             </div>
 
@@ -484,20 +494,18 @@ export default function ExpenseDetailsPage() {
                     onClick={approve}
                     className="px-3 py-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm disabled:opacity-50"
                   >
-                    Approve
+                    {t("financeExpenseDetails.actions.approve")}
                   </button>
                   <button
                     disabled={busy}
                     onClick={reject}
                     className="px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-sm disabled:opacity-50"
                   >
-                    Reject
+                    {t("financeExpenseDetails.actions.reject")}
                   </button>
                 </div>
               ) : (
-                <div className="text-sm text-slate-300">
-                  لا توجد إجراءات اعتماد/رفض متاحة الآن.
-                </div>
+                <div className="text-sm text-slate-300">{t("financeExpenseDetails.actions.none")}</div>
               )}
 
               {canAppeal ? (
@@ -507,7 +515,7 @@ export default function ExpenseDetailsPage() {
                     onClick={appeal}
                     className="px-3 py-2 rounded-lg border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/20 text-sm disabled:opacity-50"
                   >
-                    Appeal (Supervisor)
+                    {t("financeExpenseDetails.actions.appeal")}
                   </button>
                 </div>
               ) : null}
@@ -519,14 +527,14 @@ export default function ExpenseDetailsPage() {
                     onClick={() => resolveAppeal("APPROVE")}
                     className="px-3 py-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm disabled:opacity-50"
                   >
-                    Resolve Appeal: Approve
+                    {t("financeExpenseDetails.actions.resolveApprove")}
                   </button>
                   <button
                     disabled={busy}
                     onClick={() => resolveAppeal("REJECT")}
                     className="px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-sm disabled:opacity-50"
                   >
-                    Resolve Appeal: Reject
+                    {t("financeExpenseDetails.actions.resolveReject")}
                   </button>
                 </div>
               ) : null}
@@ -538,15 +546,14 @@ export default function ExpenseDetailsPage() {
                     onClick={reopenRejected}
                     className="px-3 py-2 rounded-lg border border-white/10 bg-white/10 hover:bg-white/15 text-sm disabled:opacity-50"
                   >
-                    Reopen Rejected → PENDING
+                    {t("financeExpenseDetails.actions.reopenToPending")}
                   </button>
                 </div>
               ) : null}
             </div>
 
             <div className="text-xs text-slate-400">
-              ملاحظة: صفحة Actions مبنية على endpoints الموجودة عندك:
-              approve / reject / appeal / resolve-appeal / reopen. 
+              {t("financeExpenseDetails.actions.hint")}
             </div>
           </div>
         )}
