@@ -1020,6 +1020,56 @@
   "errors": {
     "loadFailed": "Failed to load trip details"
   }
+},
+"financeExpenseDetails": {
+  "title": "Expense Details",
+  "meta": {
+    "id": "ID:"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "audit": "Audit",
+    "actions": "Actions"
+  },
+  "overview": {
+    "createdAt": "Created At",
+    "type": "Expense Type",
+    "amount": "Amount",
+    "context": "Context",
+    "trip": "Trip",
+    "vehicle": "Vehicle",
+    "workOrder": "Work Order",
+    "creator": "Creator",
+    "notes": "Notes",
+    "advance": "Advance",
+    "cashAdvanceId": "Cash Advance ID",
+    "resolution": "Resolution",
+    "approvedAt": "Approved At",
+    "rejectedAt": "Rejected At",
+    "resolvedAt": "Resolved At"
+  },
+  "audit": {
+    "title": "Audit Timeline",
+    "noRecords": "No audit records.",
+    "actor": "Actor",
+    "showDiff": "Show diff",
+    "before": "Before",
+    "after": "After"
+  },
+  "actions": {
+    "available": "Available Actions",
+    "none": "No approve/reject actions available right now.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "appeal": "Appeal",
+    "resolveApprove": "Resolve Appeal: Approve",
+    "resolveReject": "Resolve Appeal: Reject",
+    "reopen": "Reopen (REJECTED → PENDING)"
+  },
+  "hints": {
+    "endpoints": "Note: Actions are based on endpoints: approve / reject / appeal / resolve-appeal / reopen."
+  }
 }
+
 
 }

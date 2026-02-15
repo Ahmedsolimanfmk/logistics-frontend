@@ -1156,7 +1156,57 @@
     "closeFailed": "فشل إغلاق العُهدة",
     "reopenFailed": "فشل إعادة فتح العُهدة"
   }
+},
+"financeExpenseDetails": {
+  "title": "تفاصيل المصروف",
+  "meta": {
+    "id": "المعرّف:"
+  },
+  "tabs": {
+    "overview": "نظرة عامة",
+    "audit": "سجل التغييرات",
+    "actions": "الإجراءات"
+  },
+  "overview": {
+    "createdAt": "تاريخ الإنشاء",
+    "type": "نوع المصروف",
+    "amount": "المبلغ",
+    "context": "الربط",
+    "trip": "الرحلة",
+    "vehicle": "المركبة",
+    "workOrder": "أمر الصيانة",
+    "creator": "المنشئ",
+    "notes": "ملاحظات",
+    "advance": "العُهدة",
+    "cashAdvanceId": "معرّف العُهدة",
+    "resolution": "الاعتماد/الرفض",
+    "approvedAt": "تاريخ الاعتماد",
+    "rejectedAt": "تاريخ الرفض",
+    "resolvedAt": "تاريخ الحسم"
+  },
+  "audit": {
+    "title": "سجل التغييرات",
+    "noRecords": "لا توجد سجلات.",
+    "actor": "المنفّذ",
+    "showDiff": "عرض الفرق",
+    "before": "قبل",
+    "after": "بعد"
+  },
+  "actions": {
+    "available": "الإجراءات المتاحة",
+    "none": "لا توجد إجراءات اعتماد/رفض متاحة الآن.",
+    "approve": "اعتماد",
+    "reject": "رفض",
+    "appeal": "استئناف",
+    "resolveApprove": "حسم الاستئناف: اعتماد",
+    "resolveReject": "حسم الاستئناف: رفض",
+    "reopen": "إعادة فتح (REJECTED → PENDING)"
+  },
+  "hints": {
+    "endpoints": "ملاحظة: صفحة الإجراءات مبنية على المسارات: approve / reject / appeal / resolve-appeal / reopen."
+  }
 }
+
 
 
 }
