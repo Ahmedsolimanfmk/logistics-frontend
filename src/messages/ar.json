@@ -45,12 +45,14 @@
     "selected": "المحدد",
     "view": "عرض"
   },
+
   "tabs": {
     "operations": "التشغيل",
     "finance": "المالية",
     "maintenance": "الصيانة",
     "dev": "المطور"
   },
+
   "sidebar": {
     "appName": "النظام اللوجستي",
     "dashboard": "لوحة التحكم",
@@ -68,8 +70,15 @@
     "maintenanceRequests": "طلبات الصيانة",
     "maintenanceWorkOrders": "أوامر العمل",
     "users": "المستخدمين",
-    "supervisors": "المشرفين"
+    "supervisors": "المشرفين",
+
+    "inventory": "المخازن",
+    "inventoryRequests": "طلبات المخزن",
+    "inventoryIssues": "أذون الصرف",
+    "inventoryReceipts": "الإضافة المخزنية",
+    "inventoryPartItems": "السيريالات"
   },
+
   "dashboard": {
     "title": "لوحة التحكم",
     "columns": {
@@ -90,6 +99,7 @@
     "errors": {
       "trendsUnavailable": "خدمة الاتجاهات غير متاحة."
     },
+
     "ops": {
       "tripsNeedingFinanceClose": {
         "title": "رحلات تحتاج إغلاق مالي",
@@ -134,15 +144,9 @@
       "charts": {
         "tripsCreated": "رحلات تم إنشاؤها",
         "tripsAssigned": "رحلات تم إسنادها"
-      },
-      "language": {
-  "switch": "تغيير اللغة",
-  "ar": "عربي",
-  "en": "English"
-}
-
-
+      }
     },
+
     "finance": {
       "actionRequired": "المالية – إجراءات مطلوبة",
       "pendingTooLong": {
@@ -170,6 +174,7 @@
         }
       }
     },
+
     "maintenance": {
       "actionRequired": "الصيانة – إجراءات مطلوبة",
       "openWorkOrders": {
@@ -222,11 +227,13 @@
         }
       }
     },
+
     "dev": {
       "title": "تبويب المطور",
       "hint": "مخصص لتشخيصات التطوير."
     }
   },
+
   "users": {
     "title": "المستخدمون",
     "subtitle": "إدارة المستخدمين (للأدمن فقط)",
@@ -304,7 +311,7 @@
     "table": {
       "vehicle": "المركبة",
       "fleet": "رقم الأسطول",
-      "plate": "اللوحة",
+      "plate": "رقم اللوحة",
       "status": "الحالة",
       "active": "مفعّل",
       "created": "تاريخ الإنشاء",
@@ -734,7 +741,7 @@
       "alertsHint": "العناصر التي تجاوزت المدة المسموحة"
     },
     "links": {
-      "openList": "فتح القائمة",
+      "openList": "فتح القائمة →",
       "showing": "عرض {count}"
     },
     "meta": {
@@ -834,55 +841,56 @@
     }
   },
 
- "financeAdvances": {
-  "title": "السلف النقدية",
-  "subtitle": "عرض السلف الخاصة بك",
-  "subtitleAdmin": "عرض جميع السلف (للأدمن/المحاسب)",
-  "actions": {
-    "issue": "+ صرف عهدة"
-  },
-  "filters": {
-    "allStatuses": "كل الحالات",
-    "searchPlaceholder": "بحث... (الرقم / المشرف / المبلغ)",
-    "status": {
-      "OPEN": "مفتوحة",
-      "PENDING": "قيد الانتظار",
-      "SETTLED": "تمت التسوية",
-      "CLOSED": "مغلقة",
-      "REJECTED": "مرفوضة",
-      "CANCELED": "ملغاة"
+  "financeAdvances": {
+    "title": "السلف النقدية",
+    "subtitle": "عرض السلف الخاصة بك",
+    "subtitleAdmin": "عرض جميع السلف (للأدمن/المحاسب)",
+    "actions": {
+      "issue": "+ صرف عهدة"
     },
-    "open": "مفتوحة",
-    "settled": "تمت التسوية",
-    "canceled": "ملغاة"
+    "filters": {
+      "allStatuses": "كل الحالات",
+      "searchPlaceholder": "بحث... (الرقم / المشرف / المبلغ)",
+      "status": {
+        "OPEN": "مفتوحة",
+        "PENDING": "قيد الانتظار",
+        "SETTLED": "تمت التسوية",
+        "CLOSED": "مغلقة",
+        "REJECTED": "مرفوضة",
+        "CANCELED": "ملغاة"
+      },
+      "open": "مفتوحة",
+      "settled": "تمت التسوية",
+      "canceled": "ملغاة"
+    },
+    "table": {
+      "actions": "إجراءات",
+      "created": "تاريخ الإنشاء",
+      "status": "الحالة",
+      "amount": "المبلغ",
+      "supervisor": "المشرف",
+      "id": "المعرّف"
+    },
+    "meta": {
+      "showing": "عرض {count} من {total}",
+      "showingAll": "عرض جميع السلف",
+      "showingMine": "عرض السلف الخاصة بك"
+    },
+    "placeholders": {
+      "selectSupervisor": "اختر مشرف"
+    },
+    "hints": {
+      "issueHint": "سيتم إنشاء عُهدة جديدة للمشرف بحالة OPEN."
+    },
+    "toast": {
+      "issued": "تم صرف العُهدة ✅"
+    },
+    "empty": "لا توجد سلف",
+    "errors": {
+      "loadFailed": "فشل تحميل السلف"
+    }
   },
-  "table": {
-    "actions": "إجراءات",
-    "created": "تاريخ الإنشاء",
-    "status": "الحالة",
-    "amount": "المبلغ",
-    "supervisor": "المشرف",
-    "id": "المعرّف"
-  },
-  "meta": {
-    "showing": "عرض {count} من {total}",
-    "showingAll": "عرض جميع السلف",
-    "showingMine": "عرض السلف الخاصة بك"
-  },
-  "placeholders": {
-    "selectSupervisor": "اختر مشرف"
-  },
-  "hints": {
-    "issueHint": "سيتم إنشاء عُهدة جديدة للمشرف بحالة OPEN."
-  },
-  "toast": {
-    "issued": "تم صرف العُهدة ✅"
-  },
-  "empty": "لا توجد سلف",
-  "errors": {
-    "loadFailed": "فشل تحميل السلف"
-  }
-},
+
   "trips": {
     "title": "الرحلات",
     "subtitle": "قائمة الرحلات + الدخول للتفاصيل",
@@ -894,9 +902,9 @@
       "IN_PROGRESS": "قيد التنفيذ",
       "COMPLETED": "مكتملة"
     },
-     "fields": {
-    "supervisor": "المشرف",
-    "amount": "المبلغ"
+    "fields": {
+      "supervisor": "المشرف",
+      "amount": "المبلغ"
     },
     "meta": {
       "role": "الدور",
@@ -911,8 +919,8 @@
       "start": "بدء",
       "finish": "إنهاء",
       "finance": "مالية",
-       "issueAdvance": "صرف عُهدة",
-    "issue": "صرف"
+      "issueAdvance": "صرف عُهدة",
+      "issue": "صرف"
     },
     "empty": "لا توجد رحلات.",
     "toast": {
@@ -963,7 +971,6 @@
     "toastCloseHint": "اضغط لإغلاق",
     "selectClient": "اختر عميل",
     "selectSite": "اختر موقع"
-
   },
 
   "tripFinance": {
@@ -1024,189 +1031,324 @@
       "closeFailed": "فشل إغلاق مالية الرحلة"
     }
   },
+
   "tripDetails": {
-  "title": "تفاصيل الرحلة",
-  "actions": {
-    "financeClose": "إغلاق مالي",
-    "back": "رجوع"
-  },
-  "sections": {
-    "trip": "الرحلة",
-    "assignmentLatest": "التعيين (الأحدث)"
-  },
-  "fields": {
-    "status": "الحالة",
-    "financial": "المالية",
-    "scheduled": "الموعد",
-    "created": "تاريخ الإنشاء",
-    "notes": "ملاحظات",
-    "vehicle": "المركبة",
-    "driver": "السائق",
-    "supervisor": "المشرف",
-    "assigned": "وقت التعيين",
-    "active": "نشط"
-  },
-  "hints": {
-    "financeTip": "معلومة: استخدم زر إغلاق مالي لمراجعة الرحلة وقفلها ماليًا."
-  },
-  "states": {
-    "loading": "جار التحميل…",
-    "notFound": "الرحلة غير موجودة"
-  },
-  "errors": {
-    "loadFailed": "فشل تحميل تفاصيل الرحلة"
-  }
-},
-"financeNewExpense": {
-  "title": "إنشاء مصروف",
-  "notAllowedBanner": "غير مسموح لك بإنشاء مصروف على هذه الصفحة.",
-  "fields": {
-    "paymentSource": "مصدر الدفع",
-    "expenseType": "نوع المصروف",
-    "amount": "المبلغ",
-    "cashAdvance": "اختر عُهدة مفتوحة",
-    "vendorName": "اسم المورد",
-    "invoiceNo": "رقم الفاتورة",
-    "linkWorkOrder": "ربط بأمر صيانة (اختياري)",
-    "linkTrip": "ربط برحلة (اختياري)",
-    "notes": "ملاحظات (اختياري)"
-  },
-  "hints": {
-    "advance": "سيتم خصم المصروف من العُهدة المفتوحة الخاصة بك.",
-    "company": "مصروفات الشركة تتطلب بيانات المورد والفاتورة."
-  },
-  "actions": {
-    "create": "حفظ المصروف"
-  },
-  "toast": {
-    "created": "تم إنشاء المصروف ✅",
-    "createFailed": "فشل إنشاء المصروف"
-  },
-  "errors": {
-    "loadFailed": "فشل تحميل البيانات",
-    "notAllowed": "غير مسموح",
-    "expenseTypeRequired": "نوع المصروف مطلوب",
-    "amountInvalid": "المبلغ غير صحيح",
-    "advanceOnlySupervisor": "مصروفات العُهدة للمشرف فقط",
-    "selectOpenAdvance": "اختر عُهدة مفتوحة",
-    "companyOnlyPrivileged": "مصروفات الشركة للمحاسب/الأدمن فقط",
-    "vendorRequired": "اسم المورد مطلوب",
-    "invoiceDateRequired": "تاريخ الفاتورة مطلوب",
-    "tripInvalid": "الرحلة غير صحيحة",
-    "woInvalid": "أمر الصيانة غير صحيح"
-  }
-},
-"financeAdvanceDetails": {
-  "title": "تفاصيل العُهدة",
-  "tabs": {
-    "overview": "نظرة عامة",
-    "expenses": "المصروفات",
-    "actions": "إجراءات"
-  },
-  "buttons": {
-    "back": "رجوع",
-    "list": "القائمة",
-    "refresh": "تحديث",
-    "newExpense": "مصروف جديد"
-  },
-  "labels": {
-    "id": "المعرّف",
-    "supervisor": "المشرف",
-    "createdAt": "تاريخ الإنشاء",
-    "notes": "ملاحظات"
-  },
-  "kpis": {
-    "advanceAmount": "قيمة العُهدة",
-    "approvedUsed": "المعتمد المصروف",
-    "remaining": "المتبقي",
-    "pending": "قيد الانتظار",
-    "rejected": "مرفوض"
-  },
-  "expenses": {
-    "title": "المصروفات المرتبطة بهذه العُهدة",
-    "empty": "لا توجد مصروفات.",
-    "table": {
-      "amount": "المبلغ",
-      "type": "النوع",
+    "title": "تفاصيل الرحلة",
+    "actions": {
+      "financeClose": "إغلاق مالي",
+      "back": "رجوع"
+    },
+    "sections": {
+      "trip": "الرحلة",
+      "assignmentLatest": "التعيين (الأحدث)"
+    },
+    "fields": {
       "status": "الحالة",
+      "financial": "المالية",
+      "scheduled": "الموعد",
       "created": "تاريخ الإنشاء",
-      "link": "الرابط"
+      "notes": "ملاحظات",
+      "vehicle": "المركبة",
+      "driver": "السائق",
+      "supervisor": "المشرف",
+      "assigned": "وقت التعيين",
+      "active": "نشط"
+    },
+    "hints": {
+      "financeTip": "معلومة: استخدم زر إغلاق مالي لمراجعة الرحلة وقفلها ماليًا."
+    },
+    "states": {
+      "loading": "جار التحميل…",
+      "notFound": "الرحلة غير موجودة"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل تفاصيل الرحلة"
     }
   },
-  "actions": {
-    "title": "الإجراءات",
-    "role": "الدور",
-    "status": "الحالة",
-    "notAvailable": "لا توجد إجراءات متاحة لهذا الدور.",
-    "submitReview": "إرسال للمراجعة (OPEN → IN_REVIEW)",
-    "close": "إغلاق العُهدة",
-    "reopen": "إعادة فتح (CLOSED → OPEN)"
+
+  "financeNewExpense": {
+    "title": "إنشاء مصروف",
+    "notAllowedBanner": "غير مسموح لك بإنشاء مصروف على هذه الصفحة.",
+    "fields": {
+      "paymentSource": "مصدر الدفع",
+      "expenseType": "نوع المصروف",
+      "amount": "المبلغ",
+      "cashAdvance": "اختر عُهدة مفتوحة",
+      "vendorName": "اسم المورد",
+      "invoiceNo": "رقم الفاتورة",
+      "linkWorkOrder": "ربط بأمر صيانة (اختياري)",
+      "linkTrip": "ربط برحلة (اختياري)",
+      "notes": "ملاحظات (اختياري)"
+    },
+    "hints": {
+      "advance": "سيتم خصم المصروف من العُهدة المفتوحة الخاصة بك.",
+      "company": "مصروفات الشركة تتطلب بيانات المورد والفاتورة."
+    },
+    "actions": {
+      "create": "حفظ المصروف"
+    },
+    "toast": {
+      "created": "تم إنشاء المصروف ✅",
+      "createFailed": "فشل إنشاء المصروف"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل البيانات",
+      "notAllowed": "غير مسموح",
+      "expenseTypeRequired": "نوع المصروف مطلوب",
+      "amountInvalid": "المبلغ غير صحيح",
+      "advanceOnlySupervisor": "مصروفات العُهدة للمشرف فقط",
+      "selectOpenAdvance": "اختر عُهدة مفتوحة",
+      "companyOnlyPrivileged": "مصروفات الشركة للمحاسب/الأدمن فقط",
+      "vendorRequired": "اسم المورد مطلوب",
+      "invoiceDateRequired": "تاريخ الفاتورة مطلوب",
+      "tripInvalid": "الرحلة غير صحيحة",
+      "woInvalid": "أمر الصيانة غير صحيح"
+    }
   },
-  "prompts": {
-    "closeNotesOptional": "ملاحظة/مرجع إغلاق (اختياري):",
-    "reopenNotesOptional": "ملاحظة (اختياري):"
+
+  "financeAdvanceDetails": {
+    "title": "تفاصيل العُهدة",
+    "tabs": {
+      "overview": "نظرة عامة",
+      "expenses": "المصروفات",
+      "actions": "إجراءات"
+    },
+    "buttons": {
+      "back": "رجوع",
+      "list": "القائمة",
+      "refresh": "تحديث",
+      "newExpense": "مصروف جديد"
+    },
+    "labels": {
+      "id": "المعرّف",
+      "supervisor": "المشرف",
+      "createdAt": "تاريخ الإنشاء",
+      "notes": "ملاحظات"
+    },
+    "kpis": {
+      "advanceAmount": "قيمة العُهدة",
+      "approvedUsed": "المعتمد المصروف",
+      "remaining": "المتبقي",
+      "pending": "قيد الانتظار",
+      "rejected": "مرفوض"
+    },
+    "expenses": {
+      "title": "المصروفات المرتبطة بهذه العُهدة",
+      "empty": "لا توجد مصروفات.",
+      "table": {
+        "amount": "المبلغ",
+        "type": "النوع",
+        "status": "الحالة",
+        "created": "تاريخ الإنشاء",
+        "link": "الرابط"
+      }
+    },
+    "actions": {
+      "title": "الإجراءات",
+      "role": "الدور",
+      "status": "الحالة",
+      "notAvailable": "لا توجد إجراءات متاحة لهذا الدور.",
+      "submitReview": "إرسال للمراجعة (OPEN → IN_REVIEW)",
+      "close": "إغلاق العُهدة",
+      "reopen": "إعادة فتح (CLOSED → OPEN)"
+    },
+    "prompts": {
+      "closeNotesOptional": "ملاحظة/مرجع إغلاق (اختياري):",
+      "reopenNotesOptional": "ملاحظة (اختياري):"
+    },
+    "hints": {
+      "endpoints": "المسارات: submit-review / close / reopen."
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل العُهدة",
+      "forbiddenNotYours": "غير مسموح: هذه العُهدة ليست خاصة بك.",
+      "submitReviewFailed": "فشل إرسال العُهدة للمراجعة",
+      "closeFailed": "فشل إغلاق العُهدة",
+      "reopenFailed": "فشل إعادة فتح العُهدة"
+    }
   },
-  "hints": {
-    "endpoints": "المسارات: submit-review / close / reopen."
-  },
-  "errors": {
-    "loadFailed": "فشل تحميل العُهدة",
-    "forbiddenNotYours": "غير مسموح: هذه العُهدة ليست خاصة بك.",
-    "submitReviewFailed": "فشل إرسال العُهدة للمراجعة",
-    "closeFailed": "فشل إغلاق العُهدة",
-    "reopenFailed": "فشل إعادة فتح العُهدة"
-  }
-},
-"financeExpenseDetails": {
-  "title": "تفاصيل المصروف",
-  "meta": {
-    "id": "المعرّف:"
-  },
-  "tabs": {
-    "overview": "نظرة عامة",
-    "audit": "سجل التغييرات",
-    "actions": "الإجراءات"
-  },
-  "overview": {
-    "createdAt": "تاريخ الإنشاء",
-    "type": "نوع المصروف",
-    "amount": "المبلغ",
-    "context": "الربط",
-    "trip": "الرحلة",
-    "vehicle": "المركبة",
-    "workOrder": "أمر الصيانة",
-    "creator": "المنشئ",
+
+  "inventory": {
+    "requestsTitle": "طلبات المخزن",
+    "requestsSubtitle": "عرض طلبات الصرف والحجز ومتابعة حالتها",
+    "filterStatus": "الحالة (PENDING/APPROVED/REJECTED/ISSUED)",
+    "filterWarehouseId": "warehouse_id",
+    "filterWorkOrderId": "work_order_id",
+    "colId": "ID",
+    "colWarehouse": "المخزن",
+    "colStatus": "الحالة",
+    "colLines": "عدد البنود",
+    "colCreatedAt": "تاريخ الإنشاء",
+    "colOpen": "فتح",
+    "requestDetailsTitle": "تفاصيل طلب مخزني",
+    "createdAt": "تم الإنشاء",
+    "warehouse": "المخزن",
+    "workOrderId": "Work Order",
     "notes": "ملاحظات",
-    "advance": "العُهدة",
-    "cashAdvanceId": "معرّف العُهدة",
-    "resolution": "الاعتماد/الرفض",
-    "approvedAt": "تاريخ الاعتماد",
-    "rejectedAt": "تاريخ الرفض",
-    "resolvedAt": "تاريخ الحسم"
-  },
-  "audit": {
-    "title": "سجل التغييرات",
-    "noRecords": "لا توجد سجلات.",
-    "actor": "المنفّذ",
-    "showDiff": "عرض الفرق",
-    "before": "قبل",
-    "after": "بعد"
-  },
-  "actions": {
-    "available": "الإجراءات المتاحة",
-    "none": "لا توجد إجراءات اعتماد/رفض متاحة الآن.",
-    "approve": "اعتماد",
+    "approve": "موافقة + حجز",
     "reject": "رفض",
-    "appeal": "استئناف",
-    "resolveApprove": "حسم الاستئناف: اعتماد",
-    "resolveReject": "حسم الاستئناف: رفض",
-    "reopen": "إعادة فتح (REJECTED → PENDING)"
+    "unreserve": "إلغاء الحجز",
+    "createIssue": "إنشاء إذن صرف",
+    "approvedOk": "تمت الموافقة وتم حجز السيريالات بنجاح",
+    "rejectedOk": "تم رفض الطلب",
+    "rejectPrompt": "سبب الرفض:",
+    "unreservedOk": "تم إلغاء الحجز وإرجاع {n} سيريال للمخزون",
+    "lines": "بنود الطلب",
+    "colPart": "القطعة",
+    "colNeededQty": "الكمية المطلوبة",
+    "colLineNotes": "ملاحظات البند",
+    "reservations": "السيريالات المحجوزة",
+    "colInternalSerial": "سيريال داخلي",
+    "colManufacturerSerial": "سيريال المصنع",
+    "colItemStatus": "حالة القطعة"
   },
-  "hints": {
-    "endpoints": "ملاحظة: صفحة الإجراءات مبنية على المسارات: approve / reject / appeal / resolve-appeal / reopen."
+
+  "issues": {
+    "title": "أذون الصرف",
+    "subtitle": "إدارة وإصدار أذون الصرف من المخزن",
+    "new": "إذن صرف جديد",
+    "filterStatus": "الحالة (DRAFT/POSTED/CANCELLED)",
+    "filterWarehouseId": "warehouse_id",
+    "filterRequestId": "request_id",
+    "filterWorkOrderId": "work_order_id",
+    "colId": "ID",
+    "colStatus": "الحالة",
+    "colWarehouse": "المخزن",
+    "colRequest": "الطلب",
+    "colWorkOrder": "Work Order",
+    "colLines": "عدد البنود",
+    "colCreatedAt": "تاريخ الإنشاء",
+    "colOpen": "فتح",
+    "newTitle": "إنشاء إذن صرف (Draft)",
+    "newSubtitle": "سيتم إنشاء Draft من السيريالات المحجوزة للطلب",
+    "requestId": "Request ID",
+    "warehouseId": "Warehouse ID",
+    "workOrderId": "Work Order ID",
+    "notes": "ملاحظات",
+    "notesPh": "ملاحظات (اختياري للطلب المرتبط) — وإجباري للصرف المباشر",
+    "createDraft": "إنشاء Draft",
+    "createdOk": "تم إنشاء إذن الصرف Draft بنجاح",
+    "reservedCount": "عدد السيريالات المحجوزة: {n}",
+    "errWarehouse": "warehouse_id مطلوب",
+    "errWorkOrder": "work_order_id مطلوب",
+    "errRequestId": "requestId مفقود",
+    "errNoReserved": "لا توجد سيريالات محجوزة لهذا الطلب",
+    "linesPreview": "معاينة البنود (السيريالات)",
+    "noReserved": "لا توجد سيريالات محجوزة",
+    "noRequest": "يمكنك فتح هذه الصفحة من داخل طلب APPROVED",
+    "detailsTitle": "تفاصيل إذن الصرف",
+    "createdAt": "تم الإنشاء",
+    "postedAt": "تم الترحيل",
+    "post": "ترحيل (Post)",
+    "postedOk": "تم ترحيل إذن الصرف بنجاح",
+    "lines": "بنود الإذن",
+    "colPart": "القطعة",
+    "colSerial": "السيريال",
+    "colPartItemId": "Part Item ID",
+    "colQty": "الكمية",
+    "colUnitCost": "سعر الوحدة",
+    "colTotalCost": "الإجمالي"
+  },
+
+  "receipts": {
+    "title": "الإضافة المخزنية (Receipts)",
+    "subtitle": "تسجيل مشتريات قطع الغيار وربطها بالمصروفات",
+    "new": "إضافة جديدة",
+    "filterStatus": "الحالة (DRAFT/POSTED/CANCELLED)",
+    "filterWarehouseId": "warehouse_id",
+    "colId": "ID",
+    "colStatus": "الحالة",
+    "colWarehouse": "المخزن",
+    "colSupplier": "المورد",
+    "colInvoice": "الفاتورة",
+    "colItems": "عدد السيريالات",
+    "colTotal": "الإجمالي",
+    "colCreatedAt": "تاريخ الإنشاء",
+    "colOpen": "فتح",
+    "newTitle": "إنشاء إضافة مخزنية (DRAFT)",
+    "newSubtitle": "ادخل بيانات الفاتورة والسيريالات ثم قم بالترحيل",
+    "warehouseId": "Warehouse ID",
+    "supplier": "اسم المورد",
+    "supplierPh": "مثال: ABC Spare Parts",
+    "invoiceNo": "رقم الفاتورة",
+    "invoiceNoPh": "اختياري",
+    "invoiceDate": "تاريخ الفاتورة",
+    "items": "العناصر (سيريالات)",
+    "addRow": "إضافة سطر",
+    "remove": "حذف",
+    "notesPh": "ملاحظات (اختياري)",
+    "createDraft": "حفظ DRAFT",
+    "createdOk": "تم إنشاء الإضافة المخزنية DRAFT بنجاح",
+    "errWarehouse": "warehouse_id مطلوب",
+    "errSupplier": "اسم المورد مطلوب",
+    "errItems": "أدخل عنصر واحد على الأقل",
+    "errPartId": "part_id مطلوب في السطر رقم {i}",
+    "errInternalSerial": "internal_serial مطلوب في السطر رقم {i}",
+    "errManufacturerSerial": "manufacturer_serial مطلوب في السطر رقم {i}",
+    "detailsTitle": "تفاصيل الإضافة المخزنية",
+    "createdAt": "تم الإنشاء",
+    "postedAt": "تم الترحيل",
+    "post": "ترحيل (Post)",
+    "postedOk": "تم ترحيل الإضافة بنجاح وإضافة السيريالات للمخزون وإنشاء مصروف",
+    "warehouse": "المخزن",
+    "invoice": "الفاتورة",
+    "totalAmount": "إجمالي الفاتورة",
+    "colPart": "القطعة",
+    "colPartId": "part_id",
+    "colInternalSerial": "سيريال داخلي",
+    "colManufacturerSerial": "سيريال المصنع",
+    "colUnitCost": "سعر الوحدة",
+    "colNotes": "ملاحظات",
+    "colRemove": "حذف",
+    "cashExpenseTitle": "مصروف تلقائي (Cash Expense)",
+    "cashExpenseNone": "لا يوجد مصروف مرتبط (سيظهر بعد الترحيل)",
+    "cashExpenseAmount": "القيمة",
+    "cashExpenseStatus": "حالة الاعتماد",
+    "cashExpenseType": "نوع المصروف"
+  },
+
+  "partItems": {
+    "title": "السيريالات (Part Items)",
+    "subtitle": "بحث وتتبع السيريالات حسب المخزن/القطعة/الحالة",
+    "directIssue": "صرف مباشر",
+    "filterQ": "بحث (سيريال/اسم قطعة/رقم قطعة/مخزن)",
+    "filterWarehouseId": "warehouse_id",
+    "filterPartId": "part_id",
+    "filterStatus": "status (IN_STOCK/RESERVED/ISSUED/INSTALLED/SCRAPPED)",
+    "colSerial": "السيريالات",
+    "colStatus": "الحالة",
+    "colPart": "القطعة",
+    "colWarehouse": "المخزن",
+    "colReceivedAt": "تاريخ الإدخال",
+    "colLastMovedAt": "آخر حركة",
+    "colIds": "IDs"
+  },
+
+  "directIssue": {
+    "title": "صرف مباشر (بدون طلب)",
+    "subtitle": "اختيار سيريالات IN_STOCK وإصدار إذن صرف Draft",
+    "warehouseId": "Warehouse ID",
+    "workOrderId": "Work Order ID",
+    "notes": "سبب الصرف (إجباري)",
+    "notesPh": "اكتب سبب واضح (على الأقل 5 حروف) — مثال: صرف عاجل بدون طلب بسبب توقف السيارة",
+    "search": "بحث في السيريالات المتاحة",
+    "searchPh": "ابحث بسيريال / اسم قطعة / part number / brand ...",
+    "loadStock": "تحميل المتاح",
+    "selectedCount": "المحدد: {n} سيريال",
+    "createDraft": "إنشاء Draft",
+    "stockTitle": "المتاح IN_STOCK",
+    "colPick": "اختيار",
+    "colSerial": "السيريال",
+    "colPart": "القطعة",
+    "colWarehouse": "المخزن",
+    "colStatus": "الحالة",
+    "pick": "اختيار",
+    "picked": "تم",
+    "noStock": "لا يوجد عناصر — اختر warehouse_id ثم اضغط تحميل المتاح",
+    "errWarehouse": "warehouse_id مطلوب",
+    "errWorkOrder": "work_order_id مطلوب",
+    "errNotes": "سبب الصرف مطلوب (5 حروف على الأقل)",
+    "errPick": "اختر سيريال واحد على الأقل",
+    "createdOk": "تم إنشاء إذن صرف Draft للصرف المباشر"
   }
-}
-
-
-
 }

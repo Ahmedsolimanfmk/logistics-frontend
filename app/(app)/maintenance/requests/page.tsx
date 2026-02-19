@@ -400,20 +400,37 @@ export default function MaintenanceRequestsPage() {
   }
 
   async function onApprove(id: string) {
-    try {
-      await api.post(`/maintenance/requests/${id}/approve`, {
-        type: "CORRECTIVE",
-        vendor_name: null,
-        odometer: null,
-        notes: null,
-      });
-      setApproveTarget(null);
-      showToast(t("maintenanceRequests.toast.approved"), "success");
-      await loadRequests(1);
-    } catch (e: any) {
-      showToast(e?.message || t("maintenanceRequests.toast.approveFailed"), "error");
+  try {
+    const res: any = await api.post(`/maintenance/requests/${id}/approve`, {
+      type: "CORRECTIVE",
+      vendor_name: null,
+      odometer: null,
+      notes: null,
+    });
+
+    // ✅ حاول نقرأ work_order_id من أي شكل response
+    const woId =
+      res?.work_order?.id ||
+      res?.data?.work_order?.id ||
+      res?.work_order_id ||
+      res?.data?.work_order_id ||
+      res?.id || // بعض الباك-إند بيرجع WO مباشرة
+      res?.data?.id ||
+      null;
+
+    setApproveTarget(null);
+    showToast(t("maintenanceRequests.toast.approved"), "success");
+    await loadRequests(1);
+
+    // ✅ لو رجّع WO id افتحه مباشرة
+    if (woId) {
+      router.push(`/maintenance/work-orders/${woId}`);
     }
+  } catch (e: any) {
+    showToast(e?.message || t("maintenanceRequests.toast.approveFailed"), "error");
   }
+}
+
 
   async function onReject(id: string, reason: string) {
     try {
@@ -569,6 +586,14 @@ export default function MaintenanceRequestsPage() {
                           <Button variant="ghost" onClick={() => router.push(`/maintenance/requests/${it.id}`)}>
                             {t("common.view")}
                           </Button>
+                        {String(it.status || "").toUpperCase() === "APPROVED" ? (
+  <Button
+    variant="secondary"
+    onClick={() => router.push(`/maintenance/work-orders?q=${encodeURIComponent(it.id)}`)}
+  >
+    Open Work Order
+  </Button>
+) : null}
 
                           {canApproveReject ? (
                             <>

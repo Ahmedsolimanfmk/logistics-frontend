@@ -85,6 +85,18 @@ export function Sidebar() {
         href: "/supervisors",
         roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR"],
       },
+      {
+  labelKey: "sidebar.inventory",
+  key: "inventory",
+  roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT"],
+  children: [
+    { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
+    { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
+    { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
+    { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" }
+  ],
+},
+
     ],
     []
   );
@@ -98,9 +110,12 @@ export function Sidebar() {
     pathname === href || pathname.startsWith(href + "/");
 
   const [open, setOpen] = useState<Record<string, boolean>>({
-    finance: false,
-    maintenance: false,
-  });
+  finance: false,
+  maintenance: false,
+  inventory: false,
+});
+
+  
 
   useEffect(() => {
     if (pathname?.startsWith("/maintenance")) {
@@ -109,6 +124,10 @@ export function Sidebar() {
     if (pathname?.startsWith("/finance")) {
       setOpen((p) => ({ ...p, finance: true }));
     }
+    if (pathname?.startsWith("/inventory")) {
+      setOpen((p) => ({ ...p, inventory: true }));
+    }
+
   }, [pathname]);
 
   return (
