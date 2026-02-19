@@ -79,24 +79,25 @@ export function Sidebar() {
         ],
       },
 
+      // ✅ INVENTORY GROUP
+      {
+        labelKey: "sidebar.inventory",
+        key: "inventory",
+        roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT"],
+        children: [
+          { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
+          { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
+          { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
+          { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
+        ],
+      },
+
       { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN"] },
       {
         labelKey: "sidebar.supervisors",
         href: "/supervisors",
         roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR"],
       },
-      {
-  labelKey: "sidebar.inventory",
-  key: "inventory",
-  roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT"],
-  children: [
-    { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
-    { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
-    { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
-    { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" }
-  ],
-},
-
     ],
     []
   );
@@ -106,28 +107,18 @@ export function Sidebar() {
     return roles.includes(role);
   };
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + "/");
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   const [open, setOpen] = useState<Record<string, boolean>>({
-  finance: false,
-  maintenance: false,
-  inventory: false,
-});
-
-  
+    finance: false,
+    maintenance: false,
+    inventory: false,
+  });
 
   useEffect(() => {
-    if (pathname?.startsWith("/maintenance")) {
-      setOpen((p) => ({ ...p, maintenance: true }));
-    }
-    if (pathname?.startsWith("/finance")) {
-      setOpen((p) => ({ ...p, finance: true }));
-    }
-    if (pathname?.startsWith("/inventory")) {
-      setOpen((p) => ({ ...p, inventory: true }));
-    }
-
+    if (pathname?.startsWith("/maintenance")) setOpen((p) => ({ ...p, maintenance: true }));
+    if (pathname?.startsWith("/finance")) setOpen((p) => ({ ...p, finance: true }));
+    if (pathname?.startsWith("/inventory")) setOpen((p) => ({ ...p, inventory: true }));
   }, [pathname]);
 
   return (
@@ -153,9 +144,7 @@ export function Sidebar() {
               return (
                 <div key={it.key} className="space-y-1">
                   <button
-                    onClick={() =>
-                      setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))
-                    }
+                    onClick={() => setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))}
                     className={cn(
                       "w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm border transition",
                       active
@@ -164,27 +153,27 @@ export function Sidebar() {
                     )}
                   >
                     <span>{t(it.labelKey)}</span>
-                    <span className={cn("text-xs transition", isOpen && "rotate-180")}>
-                      ▾
-                    </span>
+                    <span className={cn("text-xs transition", isOpen && "rotate-180")}>▾</span>
                   </button>
 
                   {isOpen && (
                     <div className="pl-2 space-y-1">
-                      {it.children.map((c) => (
-                        <Link
-                          key={c.href}
-                          href={c.href}
-                          className={cn(
-                            "block rounded-xl px-3 py-2 text-sm",
-                            isActive(c.href)
-                              ? "bg-white/10 text-white"
-                              : "text-slate-300 hover:bg-white/5 hover:text-white"
-                          )}
-                        >
-                          {t(c.labelKey)}
-                        </Link>
-                      ))}
+                      {it.children
+                        .filter((c) => canSee(c.roles))
+                        .map((c) => (
+                          <Link
+                            key={c.href}
+                            href={c.href}
+                            className={cn(
+                              "block rounded-xl px-3 py-2 text-sm",
+                              isActive(c.href)
+                                ? "bg-white/10 text-white"
+                                : "text-slate-300 hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            {t(c.labelKey)}
+                          </Link>
+                        ))}
                     </div>
                   )}
                 </div>
