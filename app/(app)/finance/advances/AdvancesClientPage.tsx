@@ -9,9 +9,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
+// ✅ Design System
+import { Button } from "@/src/components/ui/Button";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { KpiCard } from "@/src/components/ui/KpiCard";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
@@ -29,24 +33,6 @@ function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
-
-function StatusBadge({ s }: { s: string }) {
-  const st = String(s || "").toUpperCase();
-  const cls =
-    st === "OPEN" || st === "PENDING" || st === "IN_REVIEW"
-      ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
-      : st === "SETTLED" || st === "CLOSED"
-      ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/20"
-      : st === "CANCELED" || st === "REJECTED"
-      ? "bg-red-500/15 text-red-200 border-red-500/20"
-      : "bg-white/5 text-slate-200 border-white/10";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
 }
 
 type TabKey = "ALL" | "OPEN" | "SETTLED" | "CANCELED";
@@ -81,15 +67,24 @@ function IssueAdvanceModal({
       try {
         const res = await api.get("/users");
         const body = (res as any)?.data ?? res;
-        const list = Array.isArray(body) ? body : Array.isArray(body?.items) ? body.items : [];
+        const list = Array.isArray(body)
+          ? body
+          : Array.isArray(body?.items)
+          ? body.items
+          : [];
 
         const sup = list.filter(
-          (u: any) => String(u?.role || "").toUpperCase() === "FIELD_SUPERVISOR" && u?.is_active !== false
+          (u: any) =>
+            String(u?.role || "").toUpperCase() === "FIELD_SUPERVISOR" &&
+            u?.is_active !== false
         );
 
         setSupervisors(sup);
       } catch (e: any) {
-        showToast("error", e?.response?.data?.message || e?.message || "Failed to load supervisors");
+        showToast(
+          "error",
+          e?.response?.data?.message || e?.message || "Failed to load supervisors"
+        );
       } finally {
         setLoading(false);
       }
@@ -113,26 +108,33 @@ function IssueAdvanceModal({
       onIssued();
       onClose();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("financeAdvances.errors.issueFailed"));
+      showToast(
+        "error",
+        e?.response?.data?.message ||
+          e?.message ||
+          t("financeAdvances.errors.issueFailed")
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-xl rounded-2xl bg-slate-900 text-white border border-white/10 p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">{t("financeAdvances.modal.issueTitle")}</h3>
-          <button
-            onClick={onClose}
-            className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
-          >
+          <h3 className="text-lg font-bold">
+            {t("financeAdvances.modal.issueTitle")}
+          </h3>
+          <Button variant="secondary" onClick={onClose}>
             ✕
-          </button>
+          </Button>
         </div>
 
         <div className="mt-4 grid gap-3">
@@ -144,7 +146,9 @@ function IssueAdvanceModal({
               disabled={loading}
               className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
             >
-              <option value="">{t("financeAdvances.modal.selectSupervisor")}</option>
+              <option value="">
+                {t("financeAdvances.modal.selectSupervisor")}
+              </option>
               {supervisors.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.full_name || s.email || shortId(s.id)}
@@ -169,20 +173,18 @@ function IssueAdvanceModal({
         </div>
 
         <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60"
-          >
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+
+          <Button
+            variant="primary"
             onClick={submit}
             disabled={!canSubmit || loading}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-60 font-semibold"
+            isLoading={loading}
           >
             {loading ? t("common.saving") : t("financeAdvances.actions.issue")}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -199,11 +201,14 @@ export default function AdvancesClientPage() {
 
   const role = roleUpper(user?.role);
   const canSeeAll = role === "ADMIN" || role === "ACCOUNTANT";
-  const canIssue = canSeeAll; // ✅ صرف عهدة = ADMIN/ACCOUNTANT
+  const canIssue = canSeeAll;
 
   const status = (sp.get("status") || "ALL").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
+  const pageSize = Math.min(
+    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
+    200
+  );
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
@@ -234,7 +239,10 @@ export default function AdvancesClientPage() {
     router.push(`/finance/advances?${p.toString()}`);
   };
 
-  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
+  const qsKey = useMemo(
+    () => `${status}|${page}|${pageSize}|${q}`,
+    [status, page, pageSize, q]
+  );
 
   async function load() {
     if (token === null) return;
@@ -256,14 +264,21 @@ export default function AdvancesClientPage() {
       const data = (res as any)?.data ?? res;
 
       const list = Array.isArray(data) ? data : (data as any)?.items || [];
-      const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
+      const tTotal = Array.isArray(data)
+        ? list.length
+        : Number((data as any)?.total || 0);
 
       setItems(list);
       setTotal(tTotal);
     } catch (e: any) {
-      setErr(e?.message || t("financeAdvances.errors.loadFailed"));
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeAdvances.errors.loadFailed");
+      setErr(msg);
       setItems([]);
       setTotal(0);
+      showToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -281,89 +296,138 @@ export default function AdvancesClientPage() {
     { key: "CANCELED", label: t("financeAdvances.filters.canceled") },
   ];
 
+  const kpi = useMemo(() => {
+    const rows = Array.isArray(items) ? items : [];
+    const norm = (s: any) => String(s || "").toUpperCase();
+    const stOf = (x: any) => norm(x?.status || x?.settlement_status);
+
+    const sumAmount = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+
+    const isOpen = (s: string) => s === "OPEN" || s === "IN_REVIEW" || s === "PENDING";
+    const isSettled = (s: string) => s === "SETTLED" || s === "CLOSED";
+    const isCanceled = (s: string) => s === "CANCELED" || s === "REJECTED";
+
+    const openCount = rows.filter((x) => isOpen(stOf(x))).length;
+    const settledCount = rows.filter((x) => isSettled(stOf(x))).length;
+    const canceledCount = rows.filter((x) => isCanceled(stOf(x))).length;
+
+    return { sumAmount, openCount, settledCount, canceledCount };
+  }, [items]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold">{t("financeAdvances.title")}</div>
-            <div className="text-xs text-slate-400">
-              {canSeeAll ? t("financeAdvances.meta.showingAll") : t("financeAdvances.meta.showingMine")}
+        <PageHeader
+          title={t("financeAdvances.title")}
+          subtitle={
+            <>
+              {canSeeAll
+                ? t("financeAdvances.meta.showingAll")
+                : t("financeAdvances.meta.showingMine")}
               {" — "}
-              {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
-            </div>
-          </div>
+              {t("common.role")}:{" "}
+              <span className="text-slate-200">{role || "—"}</span>
+            </>
+          }
+          actions={
+            <>
+              <Link href="/finance">
+                <Button variant="secondary">← {t("sidebar.finance")}</Button>
+              </Link>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/finance"
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-            >
-              ← {t("sidebar.finance")}
-            </Link>
+              {canIssue ? (
+                <Button variant="primary" onClick={() => setIssueOpen(true)}>
+                  + {t("financeAdvances.actions.issue")}
+                </Button>
+              ) : null}
 
-            {canIssue ? (
-              <button
-                onClick={() => setIssueOpen(true)}
-                className="px-3 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm"
+              <Button
+                variant="secondary"
+                onClick={load}
+                disabled={loading}
+                isLoading={loading}
               >
-                + {t("financeAdvances.actions.issue")}
-              </button>
-            ) : null}
-
-            <button
-              onClick={load}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-60"
-            >
-              {loading ? t("common.loading") : t("common.refresh")}
-            </button>
-          </div>
-        </div>
+                {loading ? t("common.loading") : t("common.refresh")}
+              </Button>
+            </>
+          }
+        />
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={status}
-            onChange={(e) => setParam("status", e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          >
-            {statusOptions.map((x) => (
-              <option key={x.key} value={x.key}>
-                {x.label}
-              </option>
-            ))}
-          </select>
+        <FiltersBar
+          left={
+            <>
+              <select
+                value={status}
+                onChange={(e) => setParam("status", e.target.value)}
+                className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
+              >
+                {statusOptions.map((x) => (
+                  <option key={x.key} value={x.key}>
+                    {x.label}
+                  </option>
+                ))}
+              </select>
 
-          <input
-            value={q}
-            onChange={(e) => setParam("q", e.target.value)}
-            placeholder={t("financeAdvances.filters.searchPlaceholder")}
-            className="w-full md:w-[420px] px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          />
+              <input
+                value={q}
+                onChange={(e) => setParam("q", e.target.value)}
+                placeholder={t("financeAdvances.filters.searchPlaceholder")}
+                className="w-full md:w-[420px] px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
+              />
 
-          <div className="text-xs text-slate-400 ml-auto">
-            {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
-            <span className="text-slate-200">
-              {page}/{totalPages}
-            </span>
+              <div className="text-xs text-slate-400">
+                {t("common.total")}:{" "}
+                <span className="text-slate-200">{total}</span> —{" "}
+                {t("common.page")}{" "}
+                <span className="text-slate-200">
+                  {page}/{totalPages}
+                </span>
+              </div>
+            </>
+          }
+          right={
+            <select
+              value={String(pageSize)}
+              onChange={(e) => setParam("pageSize", e.target.value)}
+              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
+            >
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          }
+        />
+
+        {/* KPI (only when loaded successfully) */}
+        {!loading && !err ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard
+              label={t("financeAdvances.kpi.totalAmount")}
+              value={fmtMoney(kpi.sumAmount)}
+              hint={t("financeAdvances.kpi.pageOnly")}
+            />
+            <KpiCard
+              label={t("financeAdvances.kpi.open")}
+              value={kpi.openCount}
+            />
+            <KpiCard
+              label={t("financeAdvances.kpi.settled")}
+              value={kpi.settledCount}
+            />
+            <KpiCard
+              label={t("financeAdvances.kpi.canceled")}
+              value={kpi.canceledCount}
+            />
           </div>
-
-          <select
-            value={String(pageSize)}
-            onChange={(e) => setParam("pageSize", e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          >
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="200">200</option>
-          </select>
-        </div>
+        ) : null}
 
         {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+            {err}
+          </div>
         ) : null}
 
         {/* Table */}
@@ -377,12 +441,24 @@ export default function AdvancesClientPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.actions")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.amount")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.supervisor")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeAdvances.table.id")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.actions")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.created")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.status")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.amount")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.supervisor")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeAdvances.table.id")}
+                    </th>
                   </tr>
                 </thead>
 
@@ -400,18 +476,15 @@ export default function AdvancesClientPage() {
                     return (
                       <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
                         <td className="px-4 py-2">
-                          <Link
-                            href={`/finance/advances/${x.id}`}
-                            className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                          >
-                            {t("common.view")}
+                          <Link href={`/finance/advances/${x.id}`}>
+                            <Button variant="secondary">{t("common.view")}</Button>
                           </Link>
                         </td>
 
                         <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
 
                         <td className="px-4 py-2">
-                          <StatusBadge s={st} />
+                          <StatusBadge status={st} />
                         </td>
 
                         <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
@@ -429,28 +502,29 @@ export default function AdvancesClientPage() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
+            <Button
+              variant="secondary"
               disabled={page <= 1}
               onClick={() => setParam("page", String(page - 1))}
             >
               {t("common.prev")}
-            </button>
+            </Button>
 
-            <div className="text-xs text-slate-400">{t("financeAdvances.meta.showing", { count: items.length, total })}</div>
+            <div className="text-xs text-slate-400">
+              {t("financeAdvances.meta.showing", { count: items.length, total })}
+            </div>
 
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
+            <Button
+              variant="secondary"
               disabled={page >= totalPages}
               onClick={() => setParam("page", String(page + 1))}
             >
               {t("common.next")}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* ✅ Issue modal */}
       <IssueAdvanceModal
         open={issueOpen}
         onClose={() => setIssueOpen(false)}
@@ -458,8 +532,12 @@ export default function AdvancesClientPage() {
         showToast={showToast}
       />
 
-      {/* ✅ Toast */}
-      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

@@ -12,6 +12,9 @@ import { useT } from "@/src/i18n/useT";
 // ✅ Design System
 import { Button } from "@/src/components/ui/Button";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { KpiCard } from "@/src/components/ui/KpiCard";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -54,10 +57,7 @@ export default function ExpensesClientPage() {
 
   const status = (sp.get("status") || "PENDING").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(
-    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
-    200
-  );
+  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
@@ -87,10 +87,7 @@ export default function ExpensesClientPage() {
     router.push(`/finance/expenses?${p.toString()}`);
   };
 
-  const qsKey = useMemo(
-    () => `${status}|${page}|${pageSize}|${q}`,
-    [status, page, pageSize, q]
-  );
+  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
 
   async function load() {
     if (token === null) return;
@@ -106,17 +103,13 @@ export default function ExpensesClientPage() {
       const data = (res as any)?.data ?? res;
 
       const list = Array.isArray(data) ? data : (data as any)?.items || [];
-      const tTotal = Array.isArray(data)
-        ? list.length
-        : Number((data as any)?.total || 0);
+      const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
 
       setItems(list);
       setTotal(tTotal);
     } catch (e: any) {
       const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        t("financeExpenses.errors.loadFailed");
+        e?.response?.data?.message || e?.message || t("financeExpenses.errors.loadFailed");
       setErr(msg);
       setItems([]);
       setTotal(0);
@@ -143,9 +136,7 @@ export default function ExpensesClientPage() {
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message ||
-          e?.message ||
-          t("financeExpenses.errors.approveFailed")
+        e?.response?.data?.message || e?.message || t("financeExpenses.errors.approveFailed")
       );
     }
   }
@@ -166,9 +157,7 @@ export default function ExpensesClientPage() {
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message ||
-          e?.message ||
-          t("financeExpenses.errors.rejectFailed")
+        e?.response?.data?.message || e?.message || t("financeExpenses.errors.rejectFailed")
       );
     }
   }
@@ -181,36 +170,59 @@ export default function ExpensesClientPage() {
     { key: "ALL", label: t("financeExpenses.tabs.ALL") },
   ];
 
+  const kpi = useMemo(() => {
+    const rows = Array.isArray(items) ? items : [];
+    const norm = (s: any) => String(s || "").toUpperCase();
+
+    const sumAll = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+
+    const sumApproved = rows
+      .filter((x) => ["APPROVED", "REAPPROVED"].includes(norm(x?.approval_status || x?.status)))
+      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+
+    const sumPending = rows
+      .filter((x) => norm(x?.approval_status || x?.status) === "PENDING")
+      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+
+    const sumRejected = rows
+      .filter((x) => norm(x?.approval_status || x?.status) === "REJECTED")
+      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+
+    const sumAppealed = rows
+      .filter((x) => norm(x?.approval_status || x?.status) === "APPEALED")
+      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+
+    return { sumAll, sumApproved, sumPending, sumRejected, sumAppealed };
+  }, [items]);
+
+  const pageTotal = useMemo(
+    () => (Array.isArray(items) ? items : []).reduce((acc, x) => acc + Number(x?.amount || 0), 0),
+    [items]
+  );
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold">{t("financeExpenses.title")}</div>
-            <div className="text-xs text-slate-400">
-              {t("common.role")}:{" "}
-              <span className="text-slate-200">{role || "—"}</span>
-              {!canReview ? (
-                <span className="ml-2">({t("financeExpenses.viewOnly")})</span>
-              ) : null}
-            </div>
-          </div>
+        <PageHeader
+          title={t("financeExpenses.title")}
+          subtitle={
+            <>
+              {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
+              {!canReview ? <span className="ml-2">({t("financeExpenses.viewOnly")})</span> : null}
+            </>
+          }
+          actions={
+            <>
+              <Link href="/finance">
+                <Button variant="secondary">← {t("sidebar.finance")}</Button>
+              </Link>
 
-          <div className="flex items-center gap-2">
-            <Link href="/finance">
-              <Button variant="secondary">← {t("sidebar.finance")}</Button>
-            </Link>
-
-            <Button
-              onClick={load}
-              disabled={loading}
-              isLoading={loading}
-              variant="primary"
-            >
-              {loading ? t("common.loading") : t("common.refresh")}
-            </Button>
-          </div>
-        </div>
+              <Button onClick={load} disabled={loading} isLoading={loading} variant="primary">
+                {loading ? t("common.loading") : t("common.refresh")}
+              </Button>
+            </>
+          }
+        />
 
         {/* Tabs */}
         <div className="flex flex-wrap gap-2">
@@ -240,8 +252,7 @@ export default function ExpensesClientPage() {
           />
 
           <div className="text-xs text-slate-400">
-            {t("common.total")}: <span className="text-slate-200">{total}</span>{" "}
-            — {t("common.page")}{" "}
+            {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
             <span className="text-slate-200">
               {page}/{totalPages}
             </span>
@@ -260,108 +271,82 @@ export default function ExpensesClientPage() {
           </select>
         </div>
 
-        {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
-            {err}
-          </div>
-        ) : null}
-
+        {/* KPI (only when loaded successfully) */}
+{!loading && !err ? (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <KpiCard
+      label={t("financeExpenses.kpi.total")}
+      value={fmtMoney(kpi.sumAll)}
+      hint={t("financeExpenses.kpi.pageOnly")}
+    />
+    <KpiCard
+      label={t("financeExpenses.kpi.approved")}
+      value={fmtMoney(kpi.sumApproved)}
+    />
+    <KpiCard
+      label={t("financeExpenses.kpi.pending")}
+      value={fmtMoney(kpi.sumPending)}
+    />
+    <KpiCard
+      label={t("financeExpenses.kpi.rejected")}
+      value={fmtMoney(kpi.sumRejected)}
+    />
+    <KpiCard
+      label={t("financeExpenses.kpi.appealed")}
+      value={fmtMoney(kpi.sumAppealed)}
+    />
+  </div>
+) : null}
         {/* Table */}
         <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           {loading ? (
-            <div className="p-4 text-sm text-slate-300">
-              {t("common.loading")}
-            </div>
+            <div className="p-4 text-sm text-slate-300">{t("common.loading")}</div>
           ) : items.length === 0 ? (
-            <div className="p-4 text-sm text-slate-300">
-              {t("financeExpenses.empty")}
-            </div>
+            <div className="p-4 text-sm text-slate-300">{t("financeExpenses.empty")}</div>
           ) : (
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.id")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.amount")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.type")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.status")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.trip")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.vehicle")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.created")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.actions")}
-                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.id")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.amount")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.type")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.status")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.trip")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.vehicle")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.created")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.actions")}</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {items.map((x: any) => {
-                    const st = String(
-                      x.approval_status || x.status || ""
-                    ).toUpperCase();
+                    const st = String(x.approval_status || x.status || "").toUpperCase();
 
                     return (
-                      <tr
-                        key={x.id}
-                        className="border-t border-white/10 hover:bg-white/5"
-                      >
-                        <td className="px-4 py-2 font-mono">
-                          {shortId(x.id)}
-                        </td>
-                        <td className="px-4 py-2 font-semibold">
-                          {fmtMoney(x.amount)}
-                        </td>
+                      <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
+                        <td className="px-4 py-2 font-mono">{shortId(x.id)}</td>
+                        <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
                         <td className="px-4 py-2">{x.expense_type || "—"}</td>
                         <td className="px-4 py-2">
                           <StatusBadge status={st} />
                         </td>
-                        <td className="px-4 py-2 font-mono">
-                          {x.trip_id ? shortId(x.trip_id) : "—"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {x.vehicles?.plate_no ||
-                            x.vehicles?.plate_number ||
-                            "—"}
-                        </td>
-                        <td className="px-4 py-2 text-slate-300">
-                          {fmtDate(x.created_at)}
-                        </td>
+                        <td className="px-4 py-2 font-mono">{x.trip_id ? shortId(x.trip_id) : "—"}</td>
+                        <td className="px-4 py-2">{x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}</td>
+                        <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
 
                         <td className="px-4 py-2">
                           <div className="flex flex-wrap gap-2">
                             <Link href={`/finance/expenses/${x.id}`}>
-                              <Button variant="secondary">
-                                {t("common.view")}
-                              </Button>
+                              <Button variant="secondary">{t("common.view")}</Button>
                             </Link>
 
                             {canReview && st === "PENDING" ? (
                               <>
-                                <Button
-                                  onClick={() => approve(x.id)}
-                                  variant="primary"
-                                >
+                                <Button onClick={() => approve(x.id)} variant="primary">
                                   {t("financeExpenses.actions.approve")}
                                 </Button>
-
-                                <Button
-                                  onClick={() => reject(x.id)}
-                                  variant="danger"
-                                >
+                                <Button onClick={() => reject(x.id)} variant="danger">
                                   {t("financeExpenses.actions.reject")}
                                 </Button>
                               </>
@@ -370,9 +355,7 @@ export default function ExpensesClientPage() {
                             {st === "REJECTED" && x.rejection_reason ? (
                               <span className="text-xs text-slate-400">
                                 {t("financeExpenses.table.reason")}:{" "}
-                                <span className="text-slate-200">
-                                  {String(x.rejection_reason)}
-                                </span>
+                                <span className="text-slate-200">{String(x.rejection_reason)}</span>
                               </span>
                             ) : null}
                           </div>
@@ -381,17 +364,24 @@ export default function ExpensesClientPage() {
                     );
                   })}
                 </tbody>
+
+                {/* ✅ Footer total row */}
+                <tfoot className="bg-white/5">
+                  <tr>
+                    <td className="px-4 py-2 text-slate-300" colSpan={1}>
+                      {t("common.total")}
+                    </td>
+                    <td className="px-4 py-2 font-bold">{fmtMoney(pageTotal)}</td>
+                    <td className="px-4 py-2" colSpan={6} />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}
 
           {/* Pagination */}
           <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
-            <Button
-              variant="secondary"
-              disabled={page <= 1}
-              onClick={() => setParam("page", String(page - 1))}
-            >
+            <Button variant="secondary" disabled={page <= 1} onClick={() => setParam("page", String(page - 1))}>
               {t("common.prev")}
             </Button>
 
@@ -399,23 +389,17 @@ export default function ExpensesClientPage() {
               {t("financeExpenses.meta.showing", { count: items.length, total })}
             </div>
 
-            <Button
-              variant="secondary"
-              disabled={page >= totalPages}
-              onClick={() => setParam("page", String(page + 1))}
-            >
+            <Button variant="secondary" disabled={page >= totalPages} onClick={() => setParam("page", String(page + 1))}>
               {t("common.next")}
             </Button>
           </div>
         </div>
 
-        <Toast
-          open={toastOpen}
-          message={toastMsg}
-          type={toastType}
-          onClose={() => setToastOpen(false)}
-        />
+        <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
       </div>
     </div>
   );
 }
+
+// لاحقًا: لو عايزين KPIs على كل البيانات (مش بس الصفحة الحالية)
+// نضيف endpoint: GET /cash/cash-expenses/summary

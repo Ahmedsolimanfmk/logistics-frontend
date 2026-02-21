@@ -821,9 +821,18 @@
       "approveNotes": "Notes (optional):",
       "rejectReason": "Rejection reason (required):",
       "rejectNotes": "Notes (optional):"
+    },
+    "financeExpenses": {
+    "kpi": {
+      "total": "Total",
+      "pageOnly": "On current page results",
+      "approved": "Approved",
+      "pending": "Pending",
+      "rejected": "Rejected",
+      "appealed": "Appealed"
     }
-  },
-
+    
+    },
   "financeAdvanceDetails": {
   "title": "تفاصيل العُهدة",
   "tabs": {
@@ -1214,7 +1223,7 @@
     "cashExpenseType": "Expense Type"
   }
 }
-
+}
 }
 
 
