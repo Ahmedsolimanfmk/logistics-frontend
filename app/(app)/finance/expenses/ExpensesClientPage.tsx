@@ -9,6 +9,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Toast } from "@/src/components/Toast";
 import { useT } from "@/src/i18n/useT";
 
+// ✅ Design System
+import { Button } from "@/src/components/ui/Button";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
@@ -33,26 +37,6 @@ function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
-
-function StatusBadge({ s }: { s: string }) {
-  const st = String(s || "").toUpperCase();
-  const cls =
-    st === "APPROVED" || st === "REAPPROVED"
-      ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/20"
-      : st === "REJECTED"
-      ? "bg-red-500/15 text-red-200 border-red-500/20"
-      : st === "APPEALED"
-      ? "bg-indigo-500/15 text-indigo-200 border-indigo-500/20"
-      : st === "PENDING"
-      ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
-      : "bg-white/5 text-slate-200 border-white/10";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
 }
 
 type TabKey = "PENDING" | "APPROVED" | "REJECTED" | "APPEALED" | "ALL";
@@ -213,19 +197,18 @@ export default function ExpensesClientPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link
-              href="/finance"
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-            >
-              ← {t("sidebar.finance")}
+            <Link href="/finance">
+              <Button variant="secondary">← {t("sidebar.finance")}</Button>
             </Link>
-            <button
+
+            <Button
               onClick={load}
               disabled={loading}
-              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm disabled:opacity-60"
+              isLoading={loading}
+              variant="primary"
             >
               {loading ? t("common.loading") : t("common.refresh")}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -286,69 +269,110 @@ export default function ExpensesClientPage() {
         {/* Table */}
         <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           {loading ? (
-            <div className="p-4 text-sm text-slate-300">{t("common.loading")}</div>
+            <div className="p-4 text-sm text-slate-300">
+              {t("common.loading")}
+            </div>
           ) : items.length === 0 ? (
-            <div className="p-4 text-sm text-slate-300">{t("financeExpenses.empty")}</div>
+            <div className="p-4 text-sm text-slate-300">
+              {t("financeExpenses.empty")}
+            </div>
           ) : (
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.id")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.amount")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.type")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.trip")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.vehicle")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.actions")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.id")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.amount")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.type")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.status")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.trip")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.vehicle")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.created")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.actions")}
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {items.map((x: any) => {
-                    const st = String(x.approval_status || x.status || "").toUpperCase();
+                    const st = String(
+                      x.approval_status || x.status || ""
+                    ).toUpperCase();
+
                     return (
-                      <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
-                        <td className="px-4 py-2 font-mono">{shortId(x.id)}</td>
-                        <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
+                      <tr
+                        key={x.id}
+                        className="border-t border-white/10 hover:bg-white/5"
+                      >
+                        <td className="px-4 py-2 font-mono">
+                          {shortId(x.id)}
+                        </td>
+                        <td className="px-4 py-2 font-semibold">
+                          {fmtMoney(x.amount)}
+                        </td>
                         <td className="px-4 py-2">{x.expense_type || "—"}</td>
                         <td className="px-4 py-2">
-                          <StatusBadge s={st} />
+                          <StatusBadge status={st} />
                         </td>
-                        <td className="px-4 py-2 font-mono">{x.trip_id ? shortId(x.trip_id) : "—"}</td>
-                        <td className="px-4 py-2">{x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}</td>
-                        <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
+                        <td className="px-4 py-2 font-mono">
+                          {x.trip_id ? shortId(x.trip_id) : "—"}
+                        </td>
+                        <td className="px-4 py-2">
+                          {x.vehicles?.plate_no ||
+                            x.vehicles?.plate_number ||
+                            "—"}
+                        </td>
+                        <td className="px-4 py-2 text-slate-300">
+                          {fmtDate(x.created_at)}
+                        </td>
+
                         <td className="px-4 py-2">
                           <div className="flex flex-wrap gap-2">
-                            <Link
-                              href={`/finance/expenses/${x.id}`}
-                              className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                            >
-                              {t("common.view")}
+                            <Link href={`/finance/expenses/${x.id}`}>
+                              <Button variant="secondary">
+                                {t("common.view")}
+                              </Button>
                             </Link>
 
                             {canReview && st === "PENDING" ? (
                               <>
-                                <button
+                                <Button
                                   onClick={() => approve(x.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-white/10 bg-emerald-600/70 hover:bg-emerald-600 text-xs"
+                                  variant="primary"
                                 >
                                   {t("financeExpenses.actions.approve")}
-                                </button>
-                                <button
+                                </Button>
+
+                                <Button
                                   onClick={() => reject(x.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-white/10 bg-red-600/70 hover:bg-red-600 text-xs"
+                                  variant="danger"
                                 >
                                   {t("financeExpenses.actions.reject")}
-                                </button>
+                                </Button>
                               </>
                             ) : null}
 
                             {st === "REJECTED" && x.rejection_reason ? (
                               <span className="text-xs text-slate-400">
                                 {t("financeExpenses.table.reason")}:{" "}
-                                <span className="text-slate-200">{String(x.rejection_reason)}</span>
+                                <span className="text-slate-200">
+                                  {String(x.rejection_reason)}
+                                </span>
                               </span>
                             ) : null}
                           </div>
@@ -363,25 +387,25 @@ export default function ExpensesClientPage() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
+            <Button
+              variant="secondary"
               disabled={page <= 1}
               onClick={() => setParam("page", String(page - 1))}
             >
               {t("common.prev")}
-            </button>
+            </Button>
 
             <div className="text-xs text-slate-400">
               {t("financeExpenses.meta.showing", { count: items.length, total })}
             </div>
 
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
+            <Button
+              variant="secondary"
               disabled={page >= totalPages}
               onClick={() => setParam("page", String(page + 1))}
             >
               {t("common.next")}
-            </button>
+            </Button>
           </div>
         </div>
 
