@@ -41,10 +41,8 @@ function shortId(id: any) {
 
 type TabKey = "PENDING" | "APPROVED" | "REJECTED" | "APPEALED" | "ALL";
 
-export default function ExpensesClientPage() {
-  // ✅ عندك useT بيرجع function
+export default function ExpensesClientPage(): React.ReactElement {
   const t = useT();
-
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -56,10 +54,7 @@ export default function ExpensesClientPage() {
 
   const status = (sp.get("status") || "PENDING").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(
-    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
-    200
-  );
+  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
@@ -68,7 +63,7 @@ export default function ExpensesClientPage() {
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<any | null>(null);
-  
+
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
   const [toastOpen, setToastOpen] = useState(false);
@@ -91,57 +86,54 @@ export default function ExpensesClientPage() {
     router.push(`/finance/expenses?${p.toString()}`);
   };
 
-  const qsKey = useMemo(
-    () => `${status}|${page}|${pageSize}|${q}`,
-    [status, page, pageSize, q]
-  );
+  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
 
   async function load() {
-    if (token === null) return;
-    if (!token) return;
+    if (token === null) return; // store still hydrating
+    if (!token) return; // not logged in
 
     setLoading(true);
     setErr(null);
 
     try {
-  const [listRes, summaryRes] = await Promise.all([
-    api.get("/cash/cash-expenses", {
-      params: {
-        status: status === "ALL" ? undefined : status,
-        page,
-        page_size: pageSize,
-        q: q || undefined,
-      },
-    }),
-    api.get("/cash/cash-expenses/summary", {
-      params: {
-        status: status === "ALL" ? undefined : status,
-        q: q || undefined,
-      },
-    }),
-  ]);
+      const [listRes, summaryRes] = await Promise.all([
+        api.get("/cash/cash-expenses", {
+          params: {
+            status: status === "ALL" ? undefined : status,
+            page,
+            page_size: pageSize,
+            q: q || undefined,
+          },
+        }),
+        api.get("/cash/cash-expenses/summary", {
+          params: {
+            status: status === "ALL" ? undefined : status,
+            q: q || undefined,
+          },
+        }),
+      ]);
 
-  const listData = (listRes as any)?.data ?? listRes;
-  const list = Array.isArray(listData) ? listData : (listData as any)?.items || [];
-  const tTotal = Array.isArray(listData) ? list.length : Number((listData as any)?.total || 0);
+      const listData = (listRes as any)?.data ?? listRes;
+      const list = Array.isArray(listData) ? listData : (listData as any)?.items || [];
+      const tTotal = Array.isArray(listData) ? list.length : Number((listData as any)?.total || 0);
 
-  setItems(list);
-  setTotal(tTotal);
+      setItems(Array.isArray(list) ? list : []);
+      setTotal(tTotal);
 
-  const sumData = (summaryRes as any)?.data ?? summaryRes;
-  setSummary(sumData?.totals || null);
-} catch (e: any) {
-  const msg =
-    e?.response?.data?.message || e?.message || t("financeExpenses.errors.loadFailed");
-
-  setErr(msg);
-  setItems([]);
-  setTotal(0);
-  setSummary(null);
-  showToast("error", msg);
-} finally {
-  setLoading(false);
-}
+      const sumData = (summaryRes as any)?.data ?? summaryRes;
+      setSummary(sumData?.totals || null);
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.message || e?.message || t("financeExpenses.errors.loadFailed");
+      setErr(msg);
+      setItems([]);
+      setTotal(0);
+      setSummary(null);
+      showToast("error", msg);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     load();
@@ -153,17 +145,13 @@ export default function ExpensesClientPage() {
 
     const notes = window.prompt(t("financeExpenses.prompts.approveNotes")) || "";
     try {
-      await api.post(`/cash/cash-expenses/${expenseId}/approve`, {
-        notes: notes || null,
-      });
+      await api.post(`/cash/cash-expenses/${expenseId}/approve`, { notes: notes || null });
       showToast("success", t("common.save"));
       await load();
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message ||
-          e?.message ||
-          t("financeExpenses.errors.approveFailed")
+        e?.response?.data?.message || e?.message || t("financeExpenses.errors.approveFailed")
       );
     }
   }
@@ -185,9 +173,7 @@ export default function ExpensesClientPage() {
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message ||
-          e?.message ||
-          t("financeExpenses.errors.rejectFailed")
+        e?.response?.data?.message || e?.message || t("financeExpenses.errors.rejectFailed")
       );
     }
   }
@@ -201,49 +187,45 @@ export default function ExpensesClientPage() {
   ];
 
   const kpi = useMemo(() => {
-  // ✅ if summary endpoint returned data, use it (ALL DATA)
-  if (summary) {
-    return {
-      sumAll: Number(summary.sumAll || 0),
-      sumApproved: Number(summary.sumApproved || 0),
-      sumPending: Number(summary.sumPending || 0),
-      sumRejected: Number(summary.sumRejected || 0),
-      sumAppealed: Number(summary.sumAppealed || 0),
-      _from: "summary",
-    };
-  }
+    // ✅ summary endpoint (ALL DATA)
+    if (summary) {
+      return {
+        sumAll: Number(summary.sumAll || 0),
+        sumApproved: Number(summary.sumApproved || 0),
+        sumPending: Number(summary.sumPending || 0),
+        sumRejected: Number(summary.sumRejected || 0),
+        sumAppealed: Number(summary.sumAppealed || 0),
+        _from: "summary" as const,
+      };
+    }
 
-  // fallback: page-only (old behavior)
-  const rows = Array.isArray(items) ? items : [];
-  const norm = (s: any) => String(s || "").toUpperCase();
+    // fallback: page-only
+    const rows = Array.isArray(items) ? items : [];
+    const norm = (s: any) => String(s || "").toUpperCase();
 
-  const sumAll = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+    const sumAll = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-  const sumApproved = rows
-    .filter((x) => ["APPROVED", "REAPPROVED"].includes(norm(x?.approval_status || x?.status)))
-    .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+    const sumApproved = rows
+      .filter((x) => ["APPROVED", "REAPPROVED"].includes(norm(x?.approval_status || x?.status)))
+      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-  const sumPending = rows
-    .filter((x) => norm(x?.approval_status || x?.status) === "PENDING")
-    .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+    const sumPending = rows
+      .filter((x) => norm(x?.approval_status || x?.status) === "PENDING")
+      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-  const sumRejected = rows
-    .filter((x) => norm(x?.approval_status || x?.status) === "REJECTED")
-    .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+    const sumRejected = rows
+      .filter((x) => norm(x?.approval_status || x?.status) === "REJECTED")
+      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-  const sumAppealed = rows
-    .filter((x) => norm(x?.approval_status || x?.status) === "APPEALED")
-    .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+    const sumAppealed = rows
+      .filter((x) => norm(x?.approval_status || x?.status) === "APPEALED")
+      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-  return { sumAll, sumApproved, sumPending, sumRejected, sumAppealed, _from: "page" };
-}, [items, summary]);
+    return { sumAll, sumApproved, sumPending, sumRejected, sumAppealed, _from: "page" as const };
+  }, [items, summary]);
 
   const pageTotal = useMemo(
-    () =>
-      (Array.isArray(items) ? items : []).reduce(
-        (acc, x) => acc + Number(x?.amount || 0),
-        0
-      ),
+    () => (Array.isArray(items) ? items : []).reduce((acc, x) => acc + Number(x?.amount || 0), 0),
     [items]
   );
 
@@ -254,11 +236,8 @@ export default function ExpensesClientPage() {
           title={t("financeExpenses.title")}
           subtitle={
             <>
-              {t("common.role")}:{" "}
-              <span className="text-slate-200">{role || "—"}</span>
-              {!canReview ? (
-                <span className="ml-2">({t("financeExpenses.viewOnly")})</span>
-              ) : null}
+              {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
+              {!canReview ? <span className="ml-2">({t("financeExpenses.viewOnly")})</span> : null}
             </>
           }
           actions={
@@ -267,12 +246,7 @@ export default function ExpensesClientPage() {
                 <Button variant="secondary">← {t("sidebar.finance")}</Button>
               </Link>
 
-              <Button
-                onClick={load}
-                disabled={loading}
-                isLoading={loading}
-                variant="primary"
-              >
+              <Button onClick={load} disabled={loading} isLoading={loading} variant="primary">
                 {loading ? t("common.loading") : t("common.refresh")}
               </Button>
             </>
@@ -280,11 +254,7 @@ export default function ExpensesClientPage() {
         />
 
         {/* ✅ TabsBar reusable */}
-        <TabsBar<TabKey>
-          tabs={tabs}
-          value={status}
-          onChange={(key) => setParam("status", key)}
-        />
+        <TabsBar<TabKey> tabs={tabs} value={status} onChange={(key) => setParam("status", key)} />
 
         {/* Filters */}
         <FiltersBar
@@ -298,9 +268,7 @@ export default function ExpensesClientPage() {
               />
 
               <div className="text-xs text-slate-400">
-                {t("common.total")}:{" "}
-                <span className="text-slate-200">{total}</span> —{" "}
-                {t("common.page")}{" "}
+                {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
                 <span className="text-slate-200">
                   {page}/{totalPages}
                 </span>
@@ -330,22 +298,10 @@ export default function ExpensesClientPage() {
               value={fmtMoney(kpi.sumAll)}
               hint={kpi._from === "summary" ? t("financeExpenses.kpi.allData") : t("financeExpenses.kpi.pageOnly")}
             />
-            <KpiCard
-              label={t("financeExpenses.kpi.approved")}
-              value={fmtMoney(kpi.sumApproved)}
-            />
-            <KpiCard
-              label={t("financeExpenses.kpi.pending")}
-              value={fmtMoney(kpi.sumPending)}
-            />
-            <KpiCard
-              label={t("financeExpenses.kpi.rejected")}
-              value={fmtMoney(kpi.sumRejected)}
-            />
-            <KpiCard
-              label={t("financeExpenses.kpi.appealed")}
-              value={fmtMoney(kpi.sumAppealed)}
-            />
+            <KpiCard label={t("financeExpenses.kpi.approved")} value={fmtMoney(kpi.sumApproved)} />
+            <KpiCard label={t("financeExpenses.kpi.pending")} value={fmtMoney(kpi.sumPending)} />
+            <KpiCard label={t("financeExpenses.kpi.rejected")} value={fmtMoney(kpi.sumRejected)} />
+            <KpiCard label={t("financeExpenses.kpi.appealed")} value={fmtMoney(kpi.sumAppealed)} />
           </div>
         ) : null}
 
@@ -366,54 +322,30 @@ export default function ExpensesClientPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.id")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.amount")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.type")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.status")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.trip")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.vehicle")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.created")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeExpenses.table.actions")}
-                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.id")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.amount")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.type")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.status")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.trip")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.vehicle")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.created")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.actions")}</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {items.map((x: any) => {
                     const st = String(x.approval_status || x.status || "").toUpperCase();
-
                     return (
-                      <tr
-                        key={x.id}
-                        className="border-t border-white/10 hover:bg-white/5"
-                      >
+                      <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
                         <td className="px-4 py-2 font-mono">{shortId(x.id)}</td>
                         <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
                         <td className="px-4 py-2">{x.expense_type || "—"}</td>
                         <td className="px-4 py-2">
                           <StatusBadge status={st} />
                         </td>
-                        <td className="px-4 py-2 font-mono">
-                          {x.trip_id ? shortId(x.trip_id) : "—"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}
-                        </td>
+                        <td className="px-4 py-2 font-mono">{x.trip_id ? shortId(x.trip_id) : "—"}</td>
+                        <td className="px-4 py-2">{x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}</td>
                         <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
 
                         <td className="px-4 py-2">
@@ -436,9 +368,7 @@ export default function ExpensesClientPage() {
                             {st === "REJECTED" && x.rejection_reason ? (
                               <span className="text-xs text-slate-400">
                                 {t("financeExpenses.table.reason")}:{" "}
-                                <span className="text-slate-200">
-                                  {String(x.rejection_reason)}
-                                </span>
+                                <span className="text-slate-200">{String(x.rejection_reason)}</span>
                               </span>
                             ) : null}
                           </div>
@@ -448,7 +378,6 @@ export default function ExpensesClientPage() {
                   })}
                 </tbody>
 
-                {/* Footer total row */}
                 <tfoot className="bg-white/5">
                   <tr>
                     <td className="px-4 py-2 text-slate-300" colSpan={1}>
@@ -464,11 +393,7 @@ export default function ExpensesClientPage() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
-            <Button
-              variant="secondary"
-              disabled={page <= 1}
-              onClick={() => setParam("page", String(page - 1))}
-            >
+            <Button variant="secondary" disabled={page <= 1} onClick={() => setParam("page", String(page - 1))}>
               {t("common.prev")}
             </Button>
 
@@ -476,24 +401,14 @@ export default function ExpensesClientPage() {
               {t("financeExpenses.meta.showing", { count: items.length, total })}
             </div>
 
-            <Button
-              variant="secondary"
-              disabled={page >= totalPages}
-              onClick={() => setParam("page", String(page + 1))}
-            >
+            <Button variant="secondary" disabled={page >= totalPages} onClick={() => setParam("page", String(page + 1))}>
               {t("common.next")}
             </Button>
           </div>
         </div>
 
-        <Toast
-          open={toastOpen}
-          message={toastMsg}
-          type={toastType}
-          onClose={() => setToastOpen(false)}
-        />
+        <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
       </div>
     </div>
   );
-}
 }
