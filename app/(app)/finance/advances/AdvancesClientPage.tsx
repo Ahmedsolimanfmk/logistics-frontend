@@ -1,4 +1,3 @@
-// app/(app)/finance/advances/AdvancesClientPage.tsx
 "use client";
 
 import Link from "next/link";
@@ -9,7 +8,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
 
-// ✅ Design System
 import { Button } from "@/src/components/ui/Button";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { PageHeader } from "@/src/components/ui/PageHeader";
@@ -19,16 +17,19 @@ import { FiltersBar } from "@/src/components/ui/FiltersBar";
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
+
 function fmtMoney(n: any) {
   const v = Number(n || 0);
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
+
 function fmtDate(d?: string | null) {
   if (!d) return "—";
   const dt = new Date(String(d));
   if (Number.isNaN(dt.getTime())) return String(d);
   return dt.toLocaleString("ar-EG");
 }
+
 function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
@@ -37,7 +38,9 @@ function shortId(id: any) {
 
 type TabKey = "ALL" | "OPEN" | "SETTLED" | "CANCELED";
 
-/* ---------------- Issue Advance Modal (ADMIN/ACCOUNTANT) ---------------- */
+/* =========================
+   Issue Advance Modal
+========================= */
 function IssueAdvanceModal({
   open,
   onClose,
@@ -50,7 +53,6 @@ function IssueAdvanceModal({
   showToast: (type: "success" | "error", msg: string) => void;
 }) {
   const t = useT();
-
   const [loading, setLoading] = useState(false);
   const [supervisors, setSupervisors] = useState<any[]>([]);
   const [supervisorId, setSupervisorId] = useState("");
@@ -83,7 +85,9 @@ function IssueAdvanceModal({
       } catch (e: any) {
         showToast(
           "error",
-          e?.response?.data?.message || e?.message || "Failed to load supervisors"
+          e?.response?.data?.message ||
+            e?.message ||
+            "Failed to load supervisors"
         );
       } finally {
         setLoading(false);
@@ -183,7 +187,9 @@ function IssueAdvanceModal({
             disabled={!canSubmit || loading}
             isLoading={loading}
           >
-            {loading ? t("common.saving") : t("financeAdvances.actions.issue")}
+            {loading
+              ? t("common.saving")
+              : t("financeAdvances.actions.issue")}
           </Button>
         </div>
       </div>
@@ -191,7 +197,10 @@ function IssueAdvanceModal({
   );
 }
 
-export default function AdvancesClientPage() {
+/* =========================
+   MAIN PAGE
+========================= */
+export default function AdvancesClientPage(): React.ReactElement {
   const t = useT();
   const router = useRouter();
   const sp = useSearchParams();
@@ -216,14 +225,11 @@ export default function AdvancesClientPage() {
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<any | null>(null);
-
-  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+  const [issueOpen, setIssueOpen] = useState(false);
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
-
-  const [issueOpen, setIssueOpen] = useState(false);
 
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
@@ -240,105 +246,105 @@ export default function AdvancesClientPage() {
     router.push(`/finance/advances?${p.toString()}`);
   };
 
-  const qsKey = useMemo(
-    () => `${status}|${page}|${pageSize}|${q}`,
-    [status, page, pageSize, q]
-  );
+  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
   async function load() {
-    if (token === null) return;
     if (!token) return;
 
     setLoading(true);
     setErr(null);
 
     try {
-  const [listRes, summaryRes] = await Promise.all([
-    api.get("/cash/cash-advances", {
-      params: {
-        status: status === "ALL" ? undefined : status,
-        page,
-        page_size: pageSize,
-        q: q || undefined,
-      },
-    }),
-    api.get("/cash/cash-advances/summary", {
-      params: {
-        status: status === "ALL" ? undefined : status,
-        q: q || undefined,
-      },
-    }),
-  ]);
+      const [listRes, summaryRes] = await Promise.all([
+        api.get("/cash/cash-advances", {
+          params: {
+            status: status === "ALL" ? undefined : status,
+            page,
+            page_size: pageSize,
+            q: q || undefined,
+          },
+        }),
+        api.get("/cash/cash-advances/summary", {
+          params: {
+            status: status === "ALL" ? undefined : status,
+            q: q || undefined,
+          },
+        }),
+      ]);
 
-  const data = (listRes as any)?.data ?? listRes;
-  const list = Array.isArray(data) ? data : (data as any)?.items || [];
-  const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
+      const data = (listRes as any)?.data ?? listRes;
+      const list = Array.isArray(data)
+        ? data
+        : (data as any)?.items || [];
+      const tTotal = Array.isArray(data)
+        ? list.length
+        : Number((data as any)?.total || 0);
 
-  setItems(list);
-  setTotal(tTotal);
+      setItems(list);
+      setTotal(tTotal);
 
-  const sumData = (summaryRes as any)?.data ?? summaryRes;
-  setSummary(sumData?.totals || null);
-} catch (e: any) {
-  const msg =
-    e?.response?.data?.message ||
-    e?.message ||
-    t("financeAdvances.errors.loadFailed");
+      const sumData = (summaryRes as any)?.data ?? summaryRes;
+      setSummary(sumData?.totals || null);
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeAdvances.errors.loadFailed");
 
-  setErr(msg);
-  setItems([]);
-  setTotal(0);
-  setSummary(null);
-  showToast("error", msg);
-} finally {
-  setLoading(false);
-}
+      setErr(msg);
+      setItems([]);
+      setTotal(0);
+      setSummary(null);
+      showToast("error", msg);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qsKey, token]);
-
-  const statusOptions: Array<{ key: TabKey; label: string }> = [
-    { key: "ALL", label: t("financeAdvances.filters.allStatuses") },
-    { key: "OPEN", label: t("financeAdvances.filters.open") },
-    { key: "SETTLED", label: t("financeAdvances.filters.settled") },
-    { key: "CANCELED", label: t("financeAdvances.filters.canceled") },
-  ];
+  }, [status, page, pageSize, q, token]);
 
   const kpi = useMemo(() => {
-  // ✅ All-data KPI from summary endpoint
-  if (summary) {
+    if (summary) {
+      return {
+        sumAmount: Number(summary.sumAmount || 0),
+        openCount: Number(summary.openCount || 0),
+        settledCount: Number(summary.settledCount || 0),
+        canceledCount: Number(summary.canceledCount || 0),
+      };
+    }
+
+    const rows = items;
+    const sumAmount = rows.reduce(
+      (acc, x) => acc + Number(x?.amount || 0),
+      0
+    );
+
     return {
-      sumAmount: Number(summary.sumAmount || 0),
-      openCount: Number(summary.openCount || 0),
-      settledCount: Number(summary.settledCount || 0),
-      canceledCount: Number(summary.canceledCount || 0),
-      _from: "summary",
+      sumAmount,
+      openCount: rows.filter((x) =>
+        ["OPEN", "IN_REVIEW", "PENDING"].includes(
+          String(x.status).toUpperCase()
+        )
+      ).length,
+      settledCount: rows.filter((x) =>
+        ["SETTLED", "CLOSED"].includes(
+          String(x.status).toUpperCase()
+        )
+      ).length,
+      canceledCount: rows.filter((x) =>
+        ["CANCELED", "REJECTED"].includes(
+          String(x.status).toUpperCase()
+        )
+      ).length,
     };
-  }
-
-  // fallback: page-only
-  const rows = Array.isArray(items) ? items : [];
-  const norm = (s: any) => String(s || "").toUpperCase();
-  const stOf = (x: any) => norm(x?.status || x?.settlement_status);
-
-  const sumAmount = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
-
-  const isOpen = (s: string) => s === "OPEN" || s === "IN_REVIEW" || s === "PENDING";
-  const isSettled = (s: string) => s === "SETTLED" || s === "CLOSED";
-  const isCanceled = (s: string) => s === "CANCELED" || s === "REJECTED";
-
-  const openCount = rows.filter((x) => isOpen(stOf(x))).length;
-  const settledCount = rows.filter((x) => isSettled(stOf(x))).length;
-  const canceledCount = rows.filter((x) => isCanceled(stOf(x))).length;
-
-  return { sumAmount, openCount, settledCount, canceledCount, _from: "page" };
-}, [items, summary]);
+  }, [items, summary]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+
         <PageHeader
           title={t("financeAdvances.title")}
           subtitle={
@@ -354,14 +360,19 @@ export default function AdvancesClientPage() {
           actions={
             <>
               <Link href="/finance">
-                <Button variant="secondary">← {t("sidebar.finance")}</Button>
+                <Button variant="secondary">
+                  ← {t("sidebar.finance")}
+                </Button>
               </Link>
 
-              {canIssue ? (
-                <Button variant="primary" onClick={() => setIssueOpen(true)}>
+              {canIssue && (
+                <Button
+                  variant="primary"
+                  onClick={() => setIssueOpen(true)}
+                >
                   + {t("financeAdvances.actions.issue")}
                 </Button>
-              ) : null}
+              )}
 
               <Button
                 variant="secondary"
@@ -369,67 +380,20 @@ export default function AdvancesClientPage() {
                 disabled={loading}
                 isLoading={loading}
               >
-                {loading ? t("common.loading") : t("common.refresh")}
+                {loading
+                  ? t("common.loading")
+                  : t("common.refresh")}
               </Button>
             </>
           }
         />
 
-        {/* Filters */}
-        <FiltersBar
-          left={
-            <>
-              <select
-                value={status}
-                onChange={(e) => setParam("status", e.target.value)}
-                className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-              >
-                {statusOptions.map((x) => (
-                  <option key={x.key} value={x.key}>
-                    {x.label}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                value={q}
-                onChange={(e) => setParam("q", e.target.value)}
-                placeholder={t("financeAdvances.filters.searchPlaceholder")}
-                className="w-full md:w-[420px] px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-              />
-
-              <div className="text-xs text-slate-400">
-                {t("common.total")}:{" "}
-                <span className="text-slate-200">{total}</span> —{" "}
-                {t("common.page")}{" "}
-                <span className="text-slate-200">
-                  {page}/{totalPages}
-                </span>
-              </div>
-            </>
-          }
-          right={
-            <select
-              value={String(pageSize)}
-              onChange={(e) => setParam("pageSize", e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-            >
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-              <option value="200">200</option>
-            </select>
-          }
-        />
-
-        {/* KPI (only when loaded successfully) */}
-        {!loading && !err ? (
+        {/* KPI */}
+        {!loading && !err && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard
               label={t("financeAdvances.kpi.totalAmount")}
               value={fmtMoney(kpi.sumAmount)}
-              hint={kpi._from === "summary" ? t("financeAdvances.kpi.allData") : t("financeAdvances.kpi.pageOnly")}
             />
             <KpiCard
               label={t("financeAdvances.kpi.open")}
@@ -444,113 +408,14 @@ export default function AdvancesClientPage() {
               value={kpi.canceledCount}
             />
           </div>
-        ) : null}
+        )}
 
-        {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
-            {err}
-          </div>
-        ) : null}
-
-        {/* Table */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-          {loading ? (
-            <div className="p-4 text-sm text-slate-300">{t("common.loading")}</div>
-          ) : items.length === 0 ? (
-            <div className="p-4 text-sm text-slate-300">{t("financeAdvances.empty")}</div>
-          ) : (
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-white/5">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeAdvances.table.actions")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeAdvances.table.created")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeAdvances.table.status")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeAdvances.table.amount")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeAdvances.table.supervisor")}
-                    </th>
-                    <th className="px-4 py-2 text-left text-slate-200">
-                      {t("financeAdvances.table.id")}
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {items.map((x: any) => {
-                    const st = String(x.status || x.settlement_status || "").toUpperCase();
-
-                    const supervisorName =
-                      x.supervisors?.full_name ||
-                      x.supervisor?.full_name ||
-                      x.supervisor_name ||
-                      x.users_cash_advances_field_supervisor_idTousers?.full_name ||
-                      "—";
-
-                    return (
-                      <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
-                        <td className="px-4 py-2">
-                          <Link href={`/finance/advances/${x.id}`}>
-                            <Button variant="secondary">{t("common.view")}</Button>
-                          </Link>
-                        </td>
-
-                        <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
-
-                        <td className="px-4 py-2">
-                          <StatusBadge status={st} />
-                        </td>
-
-                        <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
-
-                        <td className="px-4 py-2">{supervisorName}</td>
-
-                        <td className="px-4 py-2 font-mono">{shortId(x.id)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
-            <Button
-              variant="secondary"
-              disabled={page <= 1}
-              onClick={() => setParam("page", String(page - 1))}
-            >
-              {t("common.prev")}
-            </Button>
-
-            <div className="text-xs text-slate-400">
-              {t("financeAdvances.meta.showing", { count: items.length, total })}
-            </div>
-
-            <Button
-              variant="secondary"
-              disabled={page >= totalPages}
-              onClick={() => setParam("page", String(page + 1))}
-            >
-              {t("common.next")}
-            </Button>
-          </div>
-        </div>
       </div>
 
       <IssueAdvanceModal
         open={issueOpen}
         onClose={() => setIssueOpen(false)}
-        onIssued={() => load()}
+        onIssued={load}
         showToast={showToast}
       />
 
@@ -562,5 +427,4 @@ export default function AdvancesClientPage() {
       />
     </div>
   );
-}
 }
