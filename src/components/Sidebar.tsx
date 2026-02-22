@@ -79,7 +79,6 @@ export function Sidebar() {
         ],
       },
 
-      // ✅ INVENTORY GROUP
       {
         labelKey: "sidebar.inventory",
         key: "inventory",
@@ -107,7 +106,8 @@ export function Sidebar() {
     return roles.includes(role);
   };
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
 
   const [open, setOpen] = useState<Record<string, boolean>>({
     finance: false,
@@ -116,23 +116,29 @@ export function Sidebar() {
   });
 
   useEffect(() => {
-    if (pathname?.startsWith("/maintenance")) setOpen((p) => ({ ...p, maintenance: true }));
-    if (pathname?.startsWith("/finance")) setOpen((p) => ({ ...p, finance: true }));
-    if (pathname?.startsWith("/inventory")) setOpen((p) => ({ ...p, inventory: true }));
+    if (pathname?.startsWith("/maintenance"))
+      setOpen((p) => ({ ...p, maintenance: true }));
+    if (pathname?.startsWith("/finance"))
+      setOpen((p) => ({ ...p, finance: true }));
+    if (pathname?.startsWith("/inventory"))
+      setOpen((p) => ({ ...p, inventory: true }));
   }, [pathname]);
 
   return (
-    <aside className="h-screen w-[260px] shrink-0 border-r border-white/10 bg-slate-950 text-white sticky top-0 flex flex-col">
+    <aside className="h-screen w-[260px] shrink-0 border-r border-white/10 bg-[rgb(var(--trex-sidebar))] text-white sticky top-0 flex flex-col shadow-2xl">
+      
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
-        <div className="text-lg font-bold">{t("sidebar.appName")}</div>
+      <div className="p-4 border-b border-white/10 bg-[rgba(var(--trex-card),0.35)]">
+        <div className="text-lg font-bold tracking-wide">
+          {t("sidebar.appName")}
+        </div>
         <div className="mt-1 text-xs text-slate-400">
           {user?.full_name || user?.email || "—"} —{" "}
           <span className="text-slate-200">{role || "—"}</span>
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Navigation */}
       <nav className="p-3 space-y-1 flex-1 overflow-auto">
         {items
           .filter((it) => canSee((it as any).roles))
@@ -144,16 +150,25 @@ export function Sidebar() {
               return (
                 <div key={it.key} className="space-y-1">
                   <button
-                    onClick={() => setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))}
+                    onClick={() =>
+                      setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))
+                    }
                     className={cn(
-                      "w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm border transition",
+                      "w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm border transition relative",
                       active
-                        ? "bg-white/10 border-white/10 text-white"
-                        : "text-slate-300 border-transparent hover:bg-white/5 hover:text-white"
+                        ? "bg-[rgba(var(--trex-accent),0.15)] border-[rgba(var(--trex-accent),0.3)] text-white"
+                        : "text-slate-300 border-transparent hover:bg-white/5 hover:text-[rgb(var(--trex-accent))]"
                     )}
                   >
                     <span>{t(it.labelKey)}</span>
-                    <span className={cn("text-xs transition", isOpen && "rotate-180")}>▾</span>
+                    <span
+                      className={cn(
+                        "text-xs transition",
+                        isOpen && "rotate-180"
+                      )}
+                    >
+                      ▾
+                    </span>
                   </button>
 
                   {isOpen && (
@@ -165,10 +180,10 @@ export function Sidebar() {
                             key={c.href}
                             href={c.href}
                             className={cn(
-                              "block rounded-xl px-3 py-2 text-sm",
+                              "block rounded-xl px-3 py-2 text-sm border-l-2 transition",
                               isActive(c.href)
-                                ? "bg-white/10 text-white"
-                                : "text-slate-300 hover:bg-white/5 hover:text-white"
+                                ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.12)] text-white"
+                                : "border-transparent text-slate-300 hover:bg-white/5 hover:text-[rgb(var(--trex-accent))]"
                             )}
                           >
                             {t(c.labelKey)}
@@ -185,10 +200,10 @@ export function Sidebar() {
                 key={it.href}
                 href={it.href}
                 className={cn(
-                  "block rounded-xl px-3 py-2 text-sm",
+                  "block rounded-xl px-3 py-2 text-sm border-l-2 transition",
                   isActive(it.href)
-                    ? "bg-white/10 text-white"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white"
+                    ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.15)] text-white"
+                    : "border-transparent text-slate-300 hover:bg-white/5 hover:text-[rgb(var(--trex-accent))]"
                 )}
               >
                 {t(it.labelKey)}
@@ -201,7 +216,7 @@ export function Sidebar() {
       <div className="p-3 border-t border-white/10">
         <button
           onClick={logout}
-          className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+          className="w-full px-3 py-2 rounded-xl border border-[rgba(var(--trex-accent),0.35)] bg-[rgba(var(--trex-accent),0.15)] hover:bg-[rgba(var(--trex-accent),0.25)] text-sm transition"
         >
           {t("common.logout")}
         </button>

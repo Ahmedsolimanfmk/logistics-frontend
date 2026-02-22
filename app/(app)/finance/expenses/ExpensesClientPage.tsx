@@ -15,10 +15,7 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { KpiCard } from "@/src/components/ui/KpiCard";
 import { FiltersBar } from "@/src/components/ui/FiltersBar";
-
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
+import { TabsBar } from "@/src/components/ui/TabsBar";
 
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
@@ -45,7 +42,9 @@ function shortId(id: any) {
 type TabKey = "PENDING" | "APPROVED" | "REJECTED" | "APPEALED" | "ALL";
 
 export default function ExpensesClientPage() {
+  // ✅ عندك useT بيرجع function
   const t = useT();
+
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -57,7 +56,10 @@ export default function ExpensesClientPage() {
 
   const status = (sp.get("status") || "PENDING").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
+  const pageSize = Math.min(
+    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
+    200
+  );
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
@@ -65,7 +67,8 @@ export default function ExpensesClientPage() {
 
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
-
+  const [summary, setSummary] = useState<any | null>(null);
+  
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
   const [toastOpen, setToastOpen] = useState(false);
@@ -83,11 +86,15 @@ export default function ExpensesClientPage() {
     const p = new URLSearchParams(sp.toString());
     if (v) p.set(k, v);
     else p.delete(k);
+
     if (k !== "page") p.set("page", "1");
     router.push(`/finance/expenses?${p.toString()}`);
   };
 
-  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
+  const qsKey = useMemo(
+    () => `${status}|${page}|${pageSize}|${q}`,
+    [status, page, pageSize, q]
+  );
 
   async function load() {
     if (token === null) return;
@@ -95,29 +102,46 @@ export default function ExpensesClientPage() {
 
     setLoading(true);
     setErr(null);
+
     try {
-      const res = await api.get("/cash/cash-expenses", {
-        params: { status, page, page_size: pageSize, q: q || undefined },
-      });
+  const [listRes, summaryRes] = await Promise.all([
+    api.get("/cash/cash-expenses", {
+      params: {
+        status: status === "ALL" ? undefined : status,
+        page,
+        page_size: pageSize,
+        q: q || undefined,
+      },
+    }),
+    api.get("/cash/cash-expenses/summary", {
+      params: {
+        status: status === "ALL" ? undefined : status,
+        q: q || undefined,
+      },
+    }),
+  ]);
 
-      const data = (res as any)?.data ?? res;
+  const listData = (listRes as any)?.data ?? listRes;
+  const list = Array.isArray(listData) ? listData : (listData as any)?.items || [];
+  const tTotal = Array.isArray(listData) ? list.length : Number((listData as any)?.total || 0);
 
-      const list = Array.isArray(data) ? data : (data as any)?.items || [];
-      const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
+  setItems(list);
+  setTotal(tTotal);
 
-      setItems(list);
-      setTotal(tTotal);
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.message || e?.message || t("financeExpenses.errors.loadFailed");
-      setErr(msg);
-      setItems([]);
-      setTotal(0);
-      showToast("error", msg);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const sumData = (summaryRes as any)?.data ?? summaryRes;
+  setSummary(sumData?.totals || null);
+} catch (e: any) {
+  const msg =
+    e?.response?.data?.message || e?.message || t("financeExpenses.errors.loadFailed");
+
+  setErr(msg);
+  setItems([]);
+  setTotal(0);
+  setSummary(null);
+  showToast("error", msg);
+} finally {
+  setLoading(false);
+}
 
   useEffect(() => {
     load();
@@ -126,6 +150,7 @@ export default function ExpensesClientPage() {
 
   async function approve(expenseId: string) {
     if (!canReview) return;
+
     const notes = window.prompt(t("financeExpenses.prompts.approveNotes")) || "";
     try {
       await api.post(`/cash/cash-expenses/${expenseId}/approve`, {
@@ -136,13 +161,16 @@ export default function ExpensesClientPage() {
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message || e?.message || t("financeExpenses.errors.approveFailed")
+        e?.response?.data?.message ||
+          e?.message ||
+          t("financeExpenses.errors.approveFailed")
       );
     }
   }
 
   async function reject(expenseId: string) {
     if (!canReview) return;
+
     const reason = window.prompt(t("financeExpenses.prompts.rejectReason"));
     if (!reason || reason.trim().length < 2) return;
 
@@ -157,7 +185,9 @@ export default function ExpensesClientPage() {
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message || e?.message || t("financeExpenses.errors.rejectFailed")
+        e?.response?.data?.message ||
+          e?.message ||
+          t("financeExpenses.errors.rejectFailed")
       );
     }
   }
@@ -171,32 +201,49 @@ export default function ExpensesClientPage() {
   ];
 
   const kpi = useMemo(() => {
-    const rows = Array.isArray(items) ? items : [];
-    const norm = (s: any) => String(s || "").toUpperCase();
+  // ✅ if summary endpoint returned data, use it (ALL DATA)
+  if (summary) {
+    return {
+      sumAll: Number(summary.sumAll || 0),
+      sumApproved: Number(summary.sumApproved || 0),
+      sumPending: Number(summary.sumPending || 0),
+      sumRejected: Number(summary.sumRejected || 0),
+      sumAppealed: Number(summary.sumAppealed || 0),
+      _from: "summary",
+    };
+  }
 
-    const sumAll = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+  // fallback: page-only (old behavior)
+  const rows = Array.isArray(items) ? items : [];
+  const norm = (s: any) => String(s || "").toUpperCase();
 
-    const sumApproved = rows
-      .filter((x) => ["APPROVED", "REAPPROVED"].includes(norm(x?.approval_status || x?.status)))
-      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+  const sumAll = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-    const sumPending = rows
-      .filter((x) => norm(x?.approval_status || x?.status) === "PENDING")
-      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+  const sumApproved = rows
+    .filter((x) => ["APPROVED", "REAPPROVED"].includes(norm(x?.approval_status || x?.status)))
+    .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-    const sumRejected = rows
-      .filter((x) => norm(x?.approval_status || x?.status) === "REJECTED")
-      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+  const sumPending = rows
+    .filter((x) => norm(x?.approval_status || x?.status) === "PENDING")
+    .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-    const sumAppealed = rows
-      .filter((x) => norm(x?.approval_status || x?.status) === "APPEALED")
-      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+  const sumRejected = rows
+    .filter((x) => norm(x?.approval_status || x?.status) === "REJECTED")
+    .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-    return { sumAll, sumApproved, sumPending, sumRejected, sumAppealed };
-  }, [items]);
+  const sumAppealed = rows
+    .filter((x) => norm(x?.approval_status || x?.status) === "APPEALED")
+    .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+
+  return { sumAll, sumApproved, sumPending, sumRejected, sumAppealed, _from: "page" };
+}, [items, summary]);
 
   const pageTotal = useMemo(
-    () => (Array.isArray(items) ? items : []).reduce((acc, x) => acc + Number(x?.amount || 0), 0),
+    () =>
+      (Array.isArray(items) ? items : []).reduce(
+        (acc, x) => acc + Number(x?.amount || 0),
+        0
+      ),
     [items]
   );
 
@@ -207,8 +254,11 @@ export default function ExpensesClientPage() {
           title={t("financeExpenses.title")}
           subtitle={
             <>
-              {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
-              {!canReview ? <span className="ml-2">({t("financeExpenses.viewOnly")})</span> : null}
+              {t("common.role")}:{" "}
+              <span className="text-slate-200">{role || "—"}</span>
+              {!canReview ? (
+                <span className="ml-2">({t("financeExpenses.viewOnly")})</span>
+              ) : null}
             </>
           }
           actions={
@@ -217,86 +267,94 @@ export default function ExpensesClientPage() {
                 <Button variant="secondary">← {t("sidebar.finance")}</Button>
               </Link>
 
-              <Button onClick={load} disabled={loading} isLoading={loading} variant="primary">
+              <Button
+                onClick={load}
+                disabled={loading}
+                isLoading={loading}
+                variant="primary"
+              >
                 {loading ? t("common.loading") : t("common.refresh")}
               </Button>
             </>
           }
         />
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((x) => (
-            <button
-              key={x.key}
-              onClick={() => setParam("status", x.key)}
-              className={cn(
-                "px-3 py-2 rounded-xl text-sm border transition",
-                status === x.key
-                  ? "bg-white/10 border-white/10 text-white"
-                  : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
-              )}
+        {/* ✅ TabsBar reusable */}
+        <TabsBar<TabKey>
+          tabs={tabs}
+          value={status}
+          onChange={(key) => setParam("status", key)}
+        />
+
+        {/* Filters */}
+        <FiltersBar
+          left={
+            <>
+              <input
+                value={q}
+                onChange={(e) => setParam("q", e.target.value)}
+                placeholder={t("financeExpenses.filters.searchPlaceholder")}
+                className="w-full md:w-[420px] px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
+              />
+
+              <div className="text-xs text-slate-400">
+                {t("common.total")}:{" "}
+                <span className="text-slate-200">{total}</span> —{" "}
+                {t("common.page")}{" "}
+                <span className="text-slate-200">
+                  {page}/{totalPages}
+                </span>
+              </div>
+            </>
+          }
+          right={
+            <select
+              value={String(pageSize)}
+              onChange={(e) => setParam("pageSize", e.target.value)}
+              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
             >
-              {x.label}
-            </button>
-          ))}
-        </div>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          }
+        />
 
-        {/* Search + meta */}
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={q}
-            onChange={(e) => setParam("q", e.target.value)}
-            placeholder={t("financeExpenses.filters.searchPlaceholder")}
-            className="w-full md:w-[420px] px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          />
-
-          <div className="text-xs text-slate-400">
-            {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
-            <span className="text-slate-200">
-              {page}/{totalPages}
-            </span>
+        {/* KPI */}
+        {!loading && !err ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <KpiCard
+              label={t("financeExpenses.kpi.total")}
+              value={fmtMoney(kpi.sumAll)}
+              hint={kpi._from === "summary" ? t("financeExpenses.kpi.allData") : t("financeExpenses.kpi.pageOnly")}
+            />
+            <KpiCard
+              label={t("financeExpenses.kpi.approved")}
+              value={fmtMoney(kpi.sumApproved)}
+            />
+            <KpiCard
+              label={t("financeExpenses.kpi.pending")}
+              value={fmtMoney(kpi.sumPending)}
+            />
+            <KpiCard
+              label={t("financeExpenses.kpi.rejected")}
+              value={fmtMoney(kpi.sumRejected)}
+            />
+            <KpiCard
+              label={t("financeExpenses.kpi.appealed")}
+              value={fmtMoney(kpi.sumAppealed)}
+            />
           </div>
+        ) : null}
 
-          <select
-            value={String(pageSize)}
-            onChange={(e) => setParam("pageSize", e.target.value)}
-            className="ml-auto px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          >
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="200">200</option>
-          </select>
-        </div>
+        {err ? (
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+            {err}
+          </div>
+        ) : null}
 
-        {/* KPI (only when loaded successfully) */}
-{!loading && !err ? (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-    <KpiCard
-      label={t("financeExpenses.kpi.total")}
-      value={fmtMoney(kpi.sumAll)}
-      hint={t("financeExpenses.kpi.pageOnly")}
-    />
-    <KpiCard
-      label={t("financeExpenses.kpi.approved")}
-      value={fmtMoney(kpi.sumApproved)}
-    />
-    <KpiCard
-      label={t("financeExpenses.kpi.pending")}
-      value={fmtMoney(kpi.sumPending)}
-    />
-    <KpiCard
-      label={t("financeExpenses.kpi.rejected")}
-      value={fmtMoney(kpi.sumRejected)}
-    />
-    <KpiCard
-      label={t("financeExpenses.kpi.appealed")}
-      value={fmtMoney(kpi.sumAppealed)}
-    />
-  </div>
-) : null}
         {/* Table */}
         <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           {loading ? (
@@ -308,14 +366,30 @@ export default function ExpensesClientPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.id")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.amount")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.type")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.trip")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.vehicle")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.actions")}</th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.id")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.amount")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.type")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.status")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.trip")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.vehicle")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.created")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-200">
+                      {t("financeExpenses.table.actions")}
+                    </th>
                   </tr>
                 </thead>
 
@@ -324,15 +398,22 @@ export default function ExpensesClientPage() {
                     const st = String(x.approval_status || x.status || "").toUpperCase();
 
                     return (
-                      <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
+                      <tr
+                        key={x.id}
+                        className="border-t border-white/10 hover:bg-white/5"
+                      >
                         <td className="px-4 py-2 font-mono">{shortId(x.id)}</td>
                         <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
                         <td className="px-4 py-2">{x.expense_type || "—"}</td>
                         <td className="px-4 py-2">
                           <StatusBadge status={st} />
                         </td>
-                        <td className="px-4 py-2 font-mono">{x.trip_id ? shortId(x.trip_id) : "—"}</td>
-                        <td className="px-4 py-2">{x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}</td>
+                        <td className="px-4 py-2 font-mono">
+                          {x.trip_id ? shortId(x.trip_id) : "—"}
+                        </td>
+                        <td className="px-4 py-2">
+                          {x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}
+                        </td>
                         <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
 
                         <td className="px-4 py-2">
@@ -355,7 +436,9 @@ export default function ExpensesClientPage() {
                             {st === "REJECTED" && x.rejection_reason ? (
                               <span className="text-xs text-slate-400">
                                 {t("financeExpenses.table.reason")}:{" "}
-                                <span className="text-slate-200">{String(x.rejection_reason)}</span>
+                                <span className="text-slate-200">
+                                  {String(x.rejection_reason)}
+                                </span>
                               </span>
                             ) : null}
                           </div>
@@ -365,7 +448,7 @@ export default function ExpensesClientPage() {
                   })}
                 </tbody>
 
-                {/* ✅ Footer total row */}
+                {/* Footer total row */}
                 <tfoot className="bg-white/5">
                   <tr>
                     <td className="px-4 py-2 text-slate-300" colSpan={1}>
@@ -381,7 +464,11 @@ export default function ExpensesClientPage() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
-            <Button variant="secondary" disabled={page <= 1} onClick={() => setParam("page", String(page - 1))}>
+            <Button
+              variant="secondary"
+              disabled={page <= 1}
+              onClick={() => setParam("page", String(page - 1))}
+            >
               {t("common.prev")}
             </Button>
 
@@ -389,17 +476,24 @@ export default function ExpensesClientPage() {
               {t("financeExpenses.meta.showing", { count: items.length, total })}
             </div>
 
-            <Button variant="secondary" disabled={page >= totalPages} onClick={() => setParam("page", String(page + 1))}>
+            <Button
+              variant="secondary"
+              disabled={page >= totalPages}
+              onClick={() => setParam("page", String(page + 1))}
+            >
               {t("common.next")}
             </Button>
           </div>
         </div>
 
-        <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+        <Toast
+          open={toastOpen}
+          message={toastMsg}
+          type={toastType}
+          onClose={() => setToastOpen(false)}
+        />
       </div>
     </div>
   );
 }
-
-// لاحقًا: لو عايزين KPIs على كل البيانات (مش بس الصفحة الحالية)
-// نضيف endpoint: GET /cash/cash-expenses/summary
+}

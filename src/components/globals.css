@@ -1,4 +1,109 @@
-html[dir="rtl"] body {
-  direction: rtl;
-  text-align: right;
+/* =========================
+   TREX – Navy-heavy (DEFAULT)
+   ========================= */
+
+:root {
+  /* Brand (from logo) */
+  --trex-navy-hex: #050A24; /* deep sidebar */
+  --trex-navy-2-hex: #111D41; /* surface */
+  --trex-navy-3-hex: #162852; /* card */
+  --trex-accent-hex: #61A2FC; /* accent blue */
+
+  /* RGB tokens (for alpha usage) */
+  --trex-bg: 5 10 36;        /* #050A24 */
+  --trex-sidebar: 5 10 36;   /* same as bg for heavy feel */
+  --trex-surface: 17 29 65;  /* #111D41 */
+  --trex-card: 22 40 82;     /* #162852 */
+
+  --trex-border: 255 255 255;
+  --trex-text: 248 250 252;
+  --trex-muted: 148 163 184;
+
+  --trex-accent: 97 162 252; /* #61A2FC */
+  --trex-accent-2: 62 111 179;
+
+  --trex-danger: 239 68 68;
+  --trex-success: 16 185 129;
+  --trex-warning: 245 158 11;
+
+  --trex-radius: 18px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  color: rgb(var(--trex-text));
+  background: rgb(var(--trex-bg));
+}
+
+/* =========================
+   Scrollbars (dark-friendly)
+   ========================= */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) rgba(255, 255, 255, 0.06);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* =========================
+   Utility helpers (optional)
+   ========================= */
+
+.trex-card {
+  background: rgba(var(--trex-card), 0.55);
+  border: 1px solid rgba(var(--trex-border), 0.1);
+  border-radius: var(--trex-radius);
+}
+
+.trex-card-solid {
+  background: rgba(var(--trex-card), 0.75);
+  border: 1px solid rgba(var(--trex-border), 0.1);
+  border-radius: var(--trex-radius);
+}
+
+.trex-input {
+  background: rgba(var(--trex-bg), 0.25);
+  border: 1px solid rgba(var(--trex-border), 0.1);
+  border-radius: 14px;
+  outline: none;
+}
+
+.trex-input:focus {
+  border-color: rgba(var(--trex-accent), 0.45);
+  box-shadow: 0 0 0 4px rgba(var(--trex-accent), 0.12);
+}
+
+/* =========================
+   Sidebar helpers (only if you add className="trex-sidebar")
+   ========================= */
+
+.trex-sidebar {
+  background: rgb(var(--trex-sidebar));
+  color: rgb(var(--trex-text));
+}
+
+.trex-sidebar a.active {
+  background: rgba(var(--trex-accent), 0.14);
+  border-left: 3px solid rgb(var(--trex-accent));
 }

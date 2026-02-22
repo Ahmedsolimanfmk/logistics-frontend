@@ -85,8 +85,13 @@ export default function FinanceClientPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
+  // Lists for tables/alerts
   const [pendingExpenses, setPendingExpenses] = useState<any[]>([]);
   const [advances, setAdvances] = useState<any[]>([]);
+
+  // ✅ Summary for KPIs (Phase B)
+  const [expensesSummary, setExpensesSummary] = useState<any | null>(null);
+  const [advancesSummary, setAdvancesSummary] = useState<any | null>(null);
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
@@ -108,20 +113,39 @@ export default function FinanceClientPage() {
     setErr(null);
 
     try {
-      // ✅ pending expenses
-      const expRes = await api.get("/cash/cash-expenses", {
-        params: { status: "PENDING", page: 1, page_size: 200 },
-      });
+      // ✅ Load in parallel:
+      // 1) pending list (for table/alerts)
+      // 2) pending summary (for KPI = ALL DATA)
+      // 3) advances list (for table/alerts)
+      // 4) advances summary (for KPI = ALL DATA)
+      const [expRes, expSumRes, advRes, advSumRes] = await Promise.all([
+        api.get("/cash/cash-expenses", {
+          params: { status: "PENDING", page: 1, page_size: 200 },
+        }),
+        api.get("/cash/cash-expenses/summary", {
+          params: { status: "PENDING" },
+        }),
+        api.get("/cash/cash-advances"),
+        api.get("/cash/cash-advances/summary"),
+      ]);
 
+      // pending list
       const expData = (expRes as any)?.data ?? expRes;
       const expItems = Array.isArray(expData) ? expData : expData?.items || [];
       setPendingExpenses(Array.isArray(expItems) ? expItems : []);
 
-      // ✅ advances
-      const advRes = await api.get("/cash/cash-advances");
+      // pending summary
+      const expSumData = (expSumRes as any)?.data ?? expSumRes;
+      setExpensesSummary(expSumData?.totals || null);
+
+      // advances list
       const advData = (advRes as any)?.data ?? advRes;
       const advItems = Array.isArray(advData) ? advData : advData?.items || [];
       setAdvances(Array.isArray(advItems) ? advItems : []);
+
+      // advances summary
+      const advSumData = (advSumRes as any)?.data ?? advSumRes;
+      setAdvancesSummary(advSumData?.totals || null);
 
       showToast("success", t("common.refresh"));
     } catch (e: any) {
@@ -131,6 +155,12 @@ export default function FinanceClientPage() {
         t("financeDashboard.errors.loadFailed");
       setErr(msg);
       showToast("error", msg);
+
+      // keep UI stable
+      setPendingExpenses([]);
+      setAdvances([]);
+      setExpensesSummary(null);
+      setAdvancesSummary(null);
     } finally {
       setLoading(false);
     }
@@ -144,10 +174,10 @@ export default function FinanceClientPage() {
   // open tab from URL
   useEffect(() => {
     const v = String(sp.get("tab") || "").toLowerCase();
-    if (v === "pending" || v === "advances" || v === "alerts")
-      setTab(v as TabKey);
+    if (v === "pending" || v === "advances" || v === "alerts") setTab(v as TabKey);
   }, [sp]);
 
+  // visibility (role scoping for lists)
   const visiblePending = useMemo(() => {
     if (!isSupervisor) return pendingExpenses;
     return pendingExpenses.filter((x) => x.created_by === user?.id);
@@ -165,35 +195,40 @@ export default function FinanceClientPage() {
     });
   }, [visibleAdvances]);
 
+  // ✅ KPIs: prefer summary for ALL DATA, fallback to list
   const kpis = useMemo(() => {
-    const pendingCount = visiblePending.length;
-    const pendingTotal = visiblePending.reduce(
-      (s, x) => s + Number(x.amount || 0),
-      0
-    );
+    // pending KPI from summary (PENDING only)
+    const pendingCount =
+      expensesSummary?.countAll != null ? Number(expensesSummary.countAll || 0) : visiblePending.length;
 
-    const openCount = openAdvances.length;
-    const openTotal = openAdvances.reduce(
-      (s, x) => s + Number(x.amount || 0),
-      0
-    );
+    const pendingTotal =
+      expensesSummary?.sumAll != null
+        ? Number(expensesSummary.sumAll || 0)
+        : visiblePending.reduce((s, x) => s + Number(x.amount || 0), 0);
 
-    const overduePending = visiblePending.filter(
-      (x) => daysBetween(x.created_at) >= PENDING_DAYS
-    );
-    const overdueAdv = openAdvances.filter(
-      (a) => daysBetween(a.created_at) >= ADVANCE_OPEN_DAYS
-    );
+    // open advances KPI:
+    // summary endpoint gives openCount/settledCount/canceledCount but sumAmount is for ALL advances
+    // so openTotal is best computed from open list for now (until we add sumOpen server-side).
+    const openCount =
+      advancesSummary?.openCount != null ? Number(advancesSummary.openCount || 0) : openAdvances.length;
+
+    const openTotal =
+  advancesSummary?.sumOpen != null
+    ? Number(advancesSummary.sumOpen || 0)
+    : openAdvances.reduce((s, x) => s + Number(x.amount || 0), 0);
+
+    const overduePendingCount = visiblePending.filter((x) => daysBetween(x.created_at) >= PENDING_DAYS).length;
+    const overdueAdvCount = openAdvances.filter((a) => daysBetween(a.created_at) >= ADVANCE_OPEN_DAYS).length;
 
     return {
       pendingCount,
       pendingTotal,
       openCount,
       openTotal,
-      overduePendingCount: overduePending.length,
-      overdueAdvCount: overdueAdv.length,
+      overduePendingCount,
+      overdueAdvCount,
     };
-  }, [visiblePending, openAdvances]);
+  }, [expensesSummary, advancesSummary, visiblePending, openAdvances]);
 
   const alerts = useMemo(() => {
     const overduePending = visiblePending
@@ -258,48 +293,44 @@ export default function FinanceClientPage() {
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
         <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">
-            {t("financeDashboard.kpis.pendingCount")}
-          </div>
+          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.pendingCount")}</div>
           <div className="text-lg font-semibold">{kpis.pendingCount}</div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">
-            {t("financeDashboard.kpis.pendingTotal")}
-          </div>
-          <div className="text-lg font-semibold">
-            {fmtMoney(kpis.pendingTotal)}
+          <div className="mt-1 text-[11px] text-slate-500">
+            {expensesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly")}
           </div>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">
-            {t("financeDashboard.kpis.openAdvances")}
+          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.pendingTotal")}</div>
+          <div className="text-lg font-semibold">{fmtMoney(kpis.pendingTotal)}</div>
+          <div className="mt-1 text-[11px] text-slate-500">
+            {expensesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly")}
           </div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.openAdvances")}</div>
           <div className="text-lg font-semibold">{kpis.openCount}</div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">
-            {t("financeDashboard.kpis.openAdvancesTotal")}
-          </div>
-          <div className="text-lg font-semibold">
-            {fmtMoney(kpis.openTotal)}
+          <div className="mt-1 text-[11px] text-slate-500">
+            {advancesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly")}
           </div>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">
-            {t("financeDashboard.kpis.pendingDays", { days: PENDING_DAYS })}
+          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.openAdvancesTotal")}</div>
+          <div className="text-lg font-semibold">{fmtMoney(kpis.openTotal)}</div>
+          <div className="mt-1 text-[11px] text-slate-500">
+            {t("financeDashboard.meta.openFromListNote")}
           </div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.pendingDays", { days: PENDING_DAYS })}</div>
           <div className="text-lg font-semibold">{kpis.overduePendingCount}</div>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">
-            {t("financeDashboard.kpis.advanceDays", { days: ADVANCE_OPEN_DAYS })}
-          </div>
+          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.advanceDays", { days: ADVANCE_OPEN_DAYS })}</div>
           <div className="text-lg font-semibold">{kpis.overdueAdvCount}</div>
         </div>
       </div>
@@ -332,9 +363,7 @@ export default function FinanceClientPage() {
               <div className="text-sm text-slate-200">
                 {t("financeDashboard.sections.pendingHeader")}{" "}
                 <span className="text-xs text-slate-400">
-                  {t("financeDashboard.links.showing", {
-                    count: visiblePending.length,
-                  })}
+                  {t("financeDashboard.links.showing", { count: visiblePending.length })}
                 </span>
               </div>
               <Link
@@ -346,30 +375,16 @@ export default function FinanceClientPage() {
             </div>
 
             {visiblePending.length === 0 ? (
-              <div className="text-sm text-slate-300">
-                {t("financeDashboard.empty.noPending")}
-              </div>
+              <div className="text-sm text-slate-300">{t("financeDashboard.empty.noPending")}</div>
             ) : (
               <div className="rounded-xl border border-white/10 overflow-hidden">
                 <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                  <div className="col-span-2">
-                    {t("financeDashboard.tables.pending.amount")}
-                  </div>
-                  <div className="col-span-3">
-                    {t("financeDashboard.tables.pending.type")}
-                  </div>
-                  <div className="col-span-2">
-                    {t("financeDashboard.tables.pending.source")}
-                  </div>
-                  <div className="col-span-2">
-                    {t("financeDashboard.tables.pending.age")}
-                  </div>
-                  <div className="col-span-2">
-                    {t("financeDashboard.tables.pending.created")}
-                  </div>
-                  <div className="col-span-1 text-right">
-                    {t("financeDashboard.tables.pending.view")}
-                  </div>
+                  <div className="col-span-2">{t("financeDashboard.tables.pending.amount")}</div>
+                  <div className="col-span-3">{t("financeDashboard.tables.pending.type")}</div>
+                  <div className="col-span-2">{t("financeDashboard.tables.pending.source")}</div>
+                  <div className="col-span-2">{t("financeDashboard.tables.pending.age")}</div>
+                  <div className="col-span-2">{t("financeDashboard.tables.pending.created")}</div>
+                  <div className="col-span-1 text-right">{t("financeDashboard.tables.pending.view")}</div>
                 </div>
 
                 {visiblePending.slice(0, 30).map((x) => {
@@ -379,9 +394,7 @@ export default function FinanceClientPage() {
                       key={x.id}
                       className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
                     >
-                      <div className="col-span-2 font-medium">
-                        {fmtMoney(x.amount)}
-                      </div>
+                      <div className="col-span-2 font-medium">{fmtMoney(x.amount)}</div>
                       <div className="col-span-3">{x.expense_type || "—"}</div>
                       <div className="col-span-2">
                         <SourceBadge s={x.payment_source} />
@@ -391,9 +404,7 @@ export default function FinanceClientPage() {
                           {t("financeDashboard.meta.days", { n: age })}
                         </span>
                       </div>
-                      <div className="col-span-2 text-slate-300">
-                        {fmtDate(x.created_at)}
-                      </div>
+                      <div className="col-span-2 text-slate-300">{fmtDate(x.created_at)}</div>
                       <div className="col-span-1 flex justify-end">
                         <Link
                           href={`/finance/expenses/${x.id}`}
@@ -407,9 +418,7 @@ export default function FinanceClientPage() {
                 })}
 
                 {visiblePending.length > 30 ? (
-                  <div className="p-3 text-xs text-slate-400">
-                    {t("financeDashboard.meta.showingFirst30")}
-                  </div>
+                  <div className="p-3 text-xs text-slate-400">{t("financeDashboard.meta.showingFirst30")}</div>
                 ) : null}
               </div>
             )}
@@ -420,48 +429,36 @@ export default function FinanceClientPage() {
               <div className="text-sm text-slate-200">
                 {t("financeDashboard.sections.advancesHeader")}{" "}
                 <span className="text-xs text-slate-400">
-                  {t("financeDashboard.links.showing", {
-                    count: openAdvances.length,
-                  })}
+                  {t("financeDashboard.links.showing", { count: openAdvances.length })}
                 </span>
               </div>
-              <Link
-                href="/finance/advances"
-                className="text-xs text-slate-300 hover:text-white"
-              >
+              <Link href="/finance/advances" className="text-xs text-slate-300 hover:text-white">
                 {t("financeDashboard.links.openList")}
               </Link>
             </div>
 
             {openAdvances.length === 0 ? (
-              <div className="text-sm text-slate-300">
-                {t("financeDashboard.empty.noOpenAdvances")}
-              </div>
+              <div className="text-sm text-slate-300">{t("financeDashboard.empty.noOpenAdvances")}</div>
             ) : (
               <div className="rounded-xl border border-white/10 overflow-hidden">
                 <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                  <div className="col-span-4">
-                    {t("financeDashboard.tables.advances.supervisor")}
-                  </div>
-                  <div className="col-span-2">
-                    {t("financeDashboard.tables.advances.amount")}
-                  </div>
-                  <div className="col-span-2">
-                    {t("financeDashboard.tables.advances.status")}
-                  </div>
-                  <div className="col-span-2">
-                    {t("financeDashboard.tables.advances.age")}
-                  </div>
-                  <div className="col-span-2 text-right">
-                    {t("financeDashboard.tables.advances.view")}
-                  </div>
+                  <div className="col-span-4">{t("financeDashboard.tables.advances.supervisor")}</div>
+                  <div className="col-span-2">{t("financeDashboard.tables.advances.amount")}</div>
+                  <div className="col-span-2">{t("financeDashboard.tables.advances.status")}</div>
+                  <div className="col-span-2">{t("financeDashboard.tables.advances.age")}</div>
+                  <div className="col-span-2 text-right">{t("financeDashboard.tables.advances.view")}</div>
                 </div>
 
                 {openAdvances.slice(0, 30).map((a) => {
                   const age = daysBetween(a.created_at);
+
+                  // ✅ FIX: correct include name from backend controller
                   const sup =
-                    a?.users_cash_advances_supervisor?.full_name ||
-                    a?.users_cash_advances_supervisor?.email ||
+                    a?.users_cash_advances_field_supervisor_idTousers?.full_name ||
+                    a?.users_cash_advances_field_supervisor_idTousers?.email ||
+                    a?.supervisors?.full_name ||
+                    a?.supervisor?.full_name ||
+                    a?.supervisor_name ||
                     a.field_supervisor_id ||
                     "—";
 
@@ -471,9 +468,7 @@ export default function FinanceClientPage() {
                       className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
                     >
                       <div className="col-span-4">{sup}</div>
-                      <div className="col-span-2 font-medium">
-                        {fmtMoney(a.amount)}
-                      </div>
+                      <div className="col-span-2 font-medium">{fmtMoney(a.amount)}</div>
                       <div className="col-span-2">
                         <StatusBadge s={a.status} />
                       </div>
@@ -495,9 +490,7 @@ export default function FinanceClientPage() {
                 })}
 
                 {openAdvances.length > 30 ? (
-                  <div className="p-3 text-xs text-slate-400">
-                    {t("financeDashboard.meta.showingFirst30")}
-                  </div>
+                  <div className="p-3 text-xs text-slate-400">{t("financeDashboard.meta.showingFirst30")}</div>
                 ) : null}
               </div>
             )}
@@ -506,9 +499,7 @@ export default function FinanceClientPage() {
           <div className="space-y-4">
             <div className="text-sm text-slate-200">
               {t("financeDashboard.sections.alertsHeader")}{" "}
-              <span className="text-xs text-slate-400">
-                {t("financeDashboard.sections.alertsHint")}
-              </span>
+              <span className="text-xs text-slate-400">{t("financeDashboard.sections.alertsHint")}</span>
             </div>
 
             <div className="space-y-2">
@@ -525,30 +516,16 @@ export default function FinanceClientPage() {
               </div>
 
               {alerts.overduePending.length === 0 ? (
-                <div className="text-sm text-slate-300">
-                  {t("financeDashboard.empty.noOverduePending")}
-                </div>
+                <div className="text-sm text-slate-300">{t("financeDashboard.empty.noOverduePending")}</div>
               ) : (
                 <div className="rounded-xl border border-white/10 overflow-hidden">
                   <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                    <div className="col-span-2">
-                      {t("financeDashboard.tables.alertsPending.age")}
-                    </div>
-                    <div className="col-span-2">
-                      {t("financeDashboard.tables.alertsPending.amount")}
-                    </div>
-                    <div className="col-span-3">
-                      {t("financeDashboard.tables.alertsPending.type")}
-                    </div>
-                    <div className="col-span-2">
-                      {t("financeDashboard.tables.alertsPending.source")}
-                    </div>
-                    <div className="col-span-2">
-                      {t("financeDashboard.tables.alertsPending.created")}
-                    </div>
-                    <div className="col-span-1 text-right">
-                      {t("financeDashboard.tables.alertsPending.view")}
-                    </div>
+                    <div className="col-span-2">{t("financeDashboard.tables.alertsPending.age")}</div>
+                    <div className="col-span-2">{t("financeDashboard.tables.alertsPending.amount")}</div>
+                    <div className="col-span-3">{t("financeDashboard.tables.alertsPending.type")}</div>
+                    <div className="col-span-2">{t("financeDashboard.tables.alertsPending.source")}</div>
+                    <div className="col-span-2">{t("financeDashboard.tables.alertsPending.created")}</div>
+                    <div className="col-span-1 text-right">{t("financeDashboard.tables.alertsPending.view")}</div>
                   </div>
 
                   {alerts.overduePending.slice(0, 20).map((x: any) => (
@@ -556,19 +533,13 @@ export default function FinanceClientPage() {
                       key={x.id}
                       className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
                     >
-                      <div className="col-span-2 text-amber-200">
-                        {t("financeDashboard.meta.days", { n: x.age_days })}
-                      </div>
-                      <div className="col-span-2 font-medium">
-                        {fmtMoney(x.amount)}
-                      </div>
+                      <div className="col-span-2 text-amber-200">{t("financeDashboard.meta.days", { n: x.age_days })}</div>
+                      <div className="col-span-2 font-medium">{fmtMoney(x.amount)}</div>
                       <div className="col-span-3">{x.expense_type || "—"}</div>
                       <div className="col-span-2">
                         <SourceBadge s={x.payment_source} />
                       </div>
-                      <div className="col-span-2 text-slate-300">
-                        {fmtDate(x.created_at)}
-                      </div>
+                      <div className="col-span-2 text-slate-300">{fmtDate(x.created_at)}</div>
                       <div className="col-span-1 flex justify-end">
                         <Link
                           href={`/finance/expenses/${x.id}`}
@@ -581,9 +552,7 @@ export default function FinanceClientPage() {
                   ))}
 
                   {alerts.overduePending.length > 20 ? (
-                    <div className="p-3 text-xs text-slate-400">
-                      {t("financeDashboard.meta.showingFirst20Pending")}
-                    </div>
+                    <div className="p-3 text-xs text-slate-400">{t("financeDashboard.meta.showingFirst20Pending")}</div>
                   ) : null}
                 </div>
               )}
@@ -594,42 +563,30 @@ export default function FinanceClientPage() {
                 <div className="text-sm text-slate-200">
                   {t("financeDashboard.tabs.advances")} ({alerts.overdueAdv.length})
                 </div>
-                <Link
-                  href="/finance/advances"
-                  className="text-xs text-slate-300 hover:text-white"
-                >
+                <Link href="/finance/advances" className="text-xs text-slate-300 hover:text-white">
                   {t("financeDashboard.links.openList")}
                 </Link>
               </div>
 
               {alerts.overdueAdv.length === 0 ? (
-                <div className="text-sm text-slate-300">
-                  {t("financeDashboard.empty.noOverdueAdvances")}
-                </div>
+                <div className="text-sm text-slate-300">{t("financeDashboard.empty.noOverdueAdvances")}</div>
               ) : (
                 <div className="rounded-xl border border-white/10 overflow-hidden">
                   <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                    <div className="col-span-2">
-                      {t("financeDashboard.tables.alertsAdvances.age")}
-                    </div>
-                    <div className="col-span-4">
-                      {t("financeDashboard.tables.alertsAdvances.supervisor")}
-                    </div>
-                    <div className="col-span-2">
-                      {t("financeDashboard.tables.alertsAdvances.amount")}
-                    </div>
-                    <div className="col-span-2">
-                      {t("financeDashboard.tables.alertsAdvances.status")}
-                    </div>
-                    <div className="col-span-2 text-right">
-                      {t("financeDashboard.tables.alertsAdvances.view")}
-                    </div>
+                    <div className="col-span-2">{t("financeDashboard.tables.alertsAdvances.age")}</div>
+                    <div className="col-span-4">{t("financeDashboard.tables.alertsAdvances.supervisor")}</div>
+                    <div className="col-span-2">{t("financeDashboard.tables.alertsAdvances.amount")}</div>
+                    <div className="col-span-2">{t("financeDashboard.tables.alertsAdvances.status")}</div>
+                    <div className="col-span-2 text-right">{t("financeDashboard.tables.alertsAdvances.view")}</div>
                   </div>
 
                   {alerts.overdueAdv.slice(0, 20).map((a: any) => {
                     const sup =
-                      a?.users_cash_advances_supervisor?.full_name ||
-                      a?.users_cash_advances_supervisor?.email ||
+                      a?.users_cash_advances_field_supervisor_idTousers?.full_name ||
+                      a?.users_cash_advances_field_supervisor_idTousers?.email ||
+                      a?.supervisors?.full_name ||
+                      a?.supervisor?.full_name ||
+                      a?.supervisor_name ||
                       a.field_supervisor_id ||
                       "—";
 
@@ -638,13 +595,9 @@ export default function FinanceClientPage() {
                         key={a.id}
                         className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
                       >
-                        <div className="col-span-2 text-amber-200">
-                          {t("financeDashboard.meta.days", { n: a.age_days })}
-                        </div>
+                        <div className="col-span-2 text-amber-200">{t("financeDashboard.meta.days", { n: a.age_days })}</div>
                         <div className="col-span-4">{sup}</div>
-                        <div className="col-span-2 font-medium">
-                          {fmtMoney(a.amount)}
-                        </div>
+                        <div className="col-span-2 font-medium">{fmtMoney(a.amount)}</div>
                         <div className="col-span-2">
                           <StatusBadge s={a.status} />
                         </div>
@@ -661,9 +614,7 @@ export default function FinanceClientPage() {
                   })}
 
                   {alerts.overdueAdv.length > 20 ? (
-                    <div className="p-3 text-xs text-slate-400">
-                      {t("financeDashboard.meta.showingFirst20Adv")}
-                    </div>
+                    <div className="p-3 text-xs text-slate-400">{t("financeDashboard.meta.showingFirst20Adv")}</div>
                   ) : null}
                 </div>
               )}

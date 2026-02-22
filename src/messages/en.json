@@ -732,7 +732,10 @@
       "days": "{n} days",
       "showingFirst30": "Showing first 30 records",
       "showingFirst20Pending": "Showing first 20 overdue expenses",
-      "showingFirst20Adv": "Showing first 20 overdue advances"
+      "showingFirst20Adv": "Showing first 20 overdue advances",
+       "allData": "All data",
+  "pageOnly": "Current page only",
+  "openFromListNote": "Open total calculated from open advances"
     },
     "tables": {
       "pending": {

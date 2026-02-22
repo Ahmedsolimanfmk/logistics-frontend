@@ -215,6 +215,7 @@ export default function AdvancesClientPage() {
   const [err, setErr] = useState<string | null>(null);
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState<any | null>(null);
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
@@ -252,37 +253,46 @@ export default function AdvancesClientPage() {
     setErr(null);
 
     try {
-      const res = await api.get("/cash/cash-advances", {
-        params: {
-          status: status === "ALL" ? undefined : status,
-          page,
-          page_size: pageSize,
-          q: q || undefined,
-        },
-      });
+  const [listRes, summaryRes] = await Promise.all([
+    api.get("/cash/cash-advances", {
+      params: {
+        status: status === "ALL" ? undefined : status,
+        page,
+        page_size: pageSize,
+        q: q || undefined,
+      },
+    }),
+    api.get("/cash/cash-advances/summary", {
+      params: {
+        status: status === "ALL" ? undefined : status,
+        q: q || undefined,
+      },
+    }),
+  ]);
 
-      const data = (res as any)?.data ?? res;
+  const data = (listRes as any)?.data ?? listRes;
+  const list = Array.isArray(data) ? data : (data as any)?.items || [];
+  const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
 
-      const list = Array.isArray(data) ? data : (data as any)?.items || [];
-      const tTotal = Array.isArray(data)
-        ? list.length
-        : Number((data as any)?.total || 0);
+  setItems(list);
+  setTotal(tTotal);
 
-      setItems(list);
-      setTotal(tTotal);
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        t("financeAdvances.errors.loadFailed");
-      setErr(msg);
-      setItems([]);
-      setTotal(0);
-      showToast("error", msg);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const sumData = (summaryRes as any)?.data ?? summaryRes;
+  setSummary(sumData?.totals || null);
+} catch (e: any) {
+  const msg =
+    e?.response?.data?.message ||
+    e?.message ||
+    t("financeAdvances.errors.loadFailed");
+
+  setErr(msg);
+  setItems([]);
+  setTotal(0);
+  setSummary(null);
+  showToast("error", msg);
+} finally {
+  setLoading(false);
+}
 
   useEffect(() => {
     load();
@@ -297,22 +307,34 @@ export default function AdvancesClientPage() {
   ];
 
   const kpi = useMemo(() => {
-    const rows = Array.isArray(items) ? items : [];
-    const norm = (s: any) => String(s || "").toUpperCase();
-    const stOf = (x: any) => norm(x?.status || x?.settlement_status);
+  // ✅ All-data KPI from summary endpoint
+  if (summary) {
+    return {
+      sumAmount: Number(summary.sumAmount || 0),
+      openCount: Number(summary.openCount || 0),
+      settledCount: Number(summary.settledCount || 0),
+      canceledCount: Number(summary.canceledCount || 0),
+      _from: "summary",
+    };
+  }
 
-    const sumAmount = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+  // fallback: page-only
+  const rows = Array.isArray(items) ? items : [];
+  const norm = (s: any) => String(s || "").toUpperCase();
+  const stOf = (x: any) => norm(x?.status || x?.settlement_status);
 
-    const isOpen = (s: string) => s === "OPEN" || s === "IN_REVIEW" || s === "PENDING";
-    const isSettled = (s: string) => s === "SETTLED" || s === "CLOSED";
-    const isCanceled = (s: string) => s === "CANCELED" || s === "REJECTED";
+  const sumAmount = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
-    const openCount = rows.filter((x) => isOpen(stOf(x))).length;
-    const settledCount = rows.filter((x) => isSettled(stOf(x))).length;
-    const canceledCount = rows.filter((x) => isCanceled(stOf(x))).length;
+  const isOpen = (s: string) => s === "OPEN" || s === "IN_REVIEW" || s === "PENDING";
+  const isSettled = (s: string) => s === "SETTLED" || s === "CLOSED";
+  const isCanceled = (s: string) => s === "CANCELED" || s === "REJECTED";
 
-    return { sumAmount, openCount, settledCount, canceledCount };
-  }, [items]);
+  const openCount = rows.filter((x) => isOpen(stOf(x))).length;
+  const settledCount = rows.filter((x) => isSettled(stOf(x))).length;
+  const canceledCount = rows.filter((x) => isCanceled(stOf(x))).length;
+
+  return { sumAmount, openCount, settledCount, canceledCount, _from: "page" };
+}, [items, summary]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -407,7 +429,7 @@ export default function AdvancesClientPage() {
             <KpiCard
               label={t("financeAdvances.kpi.totalAmount")}
               value={fmtMoney(kpi.sumAmount)}
-              hint={t("financeAdvances.kpi.pageOnly")}
+              hint={kpi._from === "summary" ? t("financeAdvances.kpi.allData") : t("financeAdvances.kpi.pageOnly")}
             />
             <KpiCard
               label={t("financeAdvances.kpi.open")}
@@ -540,4 +562,5 @@ export default function AdvancesClientPage() {
       />
     </div>
   );
+}
 }

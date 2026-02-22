@@ -748,7 +748,10 @@
       "days": "{n} يوم",
       "showingFirst30": "عرض أول 30 سجل",
       "showingFirst20Pending": "عرض أول 20 مصروف متأخر",
-      "showingFirst20Adv": "عرض أول 20 سلفة متأخرة"
+      "showingFirst20Adv": "عرض أول 20 سلفة متأخرة",
+      "allData": "كل البيانات",
+  "pageOnly": "الصفحة الحالية فقط",
+  "openFromListNote": "إجمالي المفتوح محسوب من السلف المفتوحة"
     },
     "tables": {
       "pending": {
@@ -902,7 +905,8 @@
       "pageOnly": "على نتائج الصفحة الحالية",
       "open": "مفتوحة",
       "settled": "مقفولة",
-      "canceled": "ملغاة"
+      "canceled": "ملغاة",
+      "allData": "كل البيانات"
     }
   },
 
