@@ -29,14 +29,15 @@
   --trex-radius: 18px;
 }
 
-html,
-body {
+html, body {
   height: 100%;
+  background: rgb(var(--trex-bg));
 }
 
 body {
   color: rgb(var(--trex-text));
   background: rgb(var(--trex-bg));
+  min-height: 100%;
 }
 
 /* =========================

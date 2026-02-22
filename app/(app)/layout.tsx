@@ -1,4 +1,4 @@
-import React from "react";
+// app/(app)/layout.tsx
 import AppShell from "@/src/components/AppShell";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
