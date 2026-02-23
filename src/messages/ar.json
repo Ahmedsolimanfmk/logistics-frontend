@@ -907,7 +907,14 @@
       "settled": "مقفولة",
       "canceled": "ملغاة",
       "allData": "كل البيانات"
-    }
+    },
+    "modal": {
+  "issueTitle": "صرف عهدة نقدية",
+  "supervisor": "المشرف",
+  "selectSupervisor": "اختر مشرف",
+  "amount": "المبلغ",
+  "amountPh": "اكتب المبلغ"
+}
   },
 
   "trips": {
