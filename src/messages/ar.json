@@ -1376,5 +1376,28 @@
     "errNotes": "سبب الصرف مطلوب (5 حروف على الأقل)",
     "errPick": "اختر سيريال واحد على الأقل",
     "createdOk": "تم إنشاء إذن صرف Draft للصرف المباشر"
-  }
+  },
+  "partsCatalog": {
+  "add": "+ إضافة للكتالوج",
+  "modalTitle": "إضافة قطعة للكتالوج",
+  "partNumber": "كود القطعة (part_number)",
+  "partNumberPh": "مثال: FILT-OIL-001",
+  "suggest": "اقتراح",
+  "name": "اسم القطعة",
+  "namePh": "مثال: فلتر زيت",
+  "brand": "البراند",
+  "brandPh": "مثال: MANN",
+  "category": "التصنيف",
+  "categoryPh": "مثال: Filters",
+  "unit": "الوحدة",
+  "unitPh": "مثال: pcs",
+  "minStock": "حد أدنى للمخزون",
+  "minStockPh": "مثال: 5",
+  "save": "حفظ في الكتالوج",
+  "savedOk": "تمت إضافة القطعة للكتالوج ✅",
+  "errPartNumber": "كود القطعة (part_number) مطلوب",
+  "errName": "اسم القطعة مطلوب",
+  "errMinStock": "min_stock لازم يكون رقم >= 0",
+  "errPartNumberExists": "هذا الكود موجود بالفعل (part_number already exists)"
+}
 }

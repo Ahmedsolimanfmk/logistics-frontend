@@ -1,25 +1,27 @@
+@import "tailwindcss";
+
 /* =========================
    TREX – Navy-heavy (DEFAULT)
    ========================= */
 
 :root {
   /* Brand (from logo) */
-  --trex-navy-hex: #050A24; /* deep sidebar */
-  --trex-navy-2-hex: #111D41; /* surface */
-  --trex-navy-3-hex: #162852; /* card */
-  --trex-accent-hex: #61A2FC; /* accent blue */
+  --trex-navy-hex: #050A24;
+  --trex-navy-2-hex: #111D41;
+  --trex-navy-3-hex: #162852;
+  --trex-accent-hex: #61A2FC;
 
-  /* RGB tokens (for alpha usage) */
-  --trex-bg: 5 10 36;        /* #050A24 */
-  --trex-sidebar: 5 10 36;   /* same as bg for heavy feel */
-  --trex-surface: 17 29 65;  /* #111D41 */
-  --trex-card: 22 40 82;     /* #162852 */
+  /* RGB tokens */
+  --trex-bg: 5 10 36;
+  --trex-sidebar: 5 10 36;
+  --trex-surface: 17 29 65;
+  --trex-card: 22 40 82;
 
   --trex-border: 255 255 255;
   --trex-text: 248 250 252;
   --trex-muted: 148 163 184;
 
-  --trex-accent: 97 162 252; /* #61A2FC */
+  --trex-accent: 97 162 252;
   --trex-accent-2: 62 111 179;
 
   --trex-danger: 239 68 68;
@@ -29,21 +31,22 @@
   --trex-radius: 18px;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   background: rgb(var(--trex-bg));
 }
 
 body {
+  min-height: 100%;
   color: rgb(var(--trex-text));
   background: rgb(var(--trex-bg));
-  min-height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* =========================
    Scrollbars (dark-friendly)
    ========================= */
-
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.16) rgba(255, 255, 255, 0.06);
@@ -94,10 +97,6 @@ body {
   border-color: rgba(var(--trex-accent), 0.45);
   box-shadow: 0 0 0 4px rgba(var(--trex-accent), 0.12);
 }
-
-/* =========================
-   Sidebar helpers (only if you add className="trex-sidebar")
-   ========================= */
 
 .trex-sidebar {
   background: rgb(var(--trex-sidebar));

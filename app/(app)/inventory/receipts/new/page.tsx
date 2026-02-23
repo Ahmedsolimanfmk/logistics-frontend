@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
-import { apiGet, unwrapItems } from "@/src/lib/api";
+import { api, apiGet, unwrapItems } from "@/src/lib/api"; // ✅ api is needed for POST
 import { createReceipt } from "@/src/lib/receipts.api";
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -12,7 +12,7 @@ function cn(...v: Array<string | false | null | undefined>) {
 }
 
 type Warehouse = { id: string; name?: string | null };
-type Part = { id: string; name?: string | null; brand?: string | null };
+type Part = { id: string; part_number: string; name: string; brand?: string | null; category?: string | null; unit?: string | null };
 
 type DraftItem = {
   part_id: string;
@@ -23,11 +23,23 @@ type DraftItem = {
 };
 
 function genInternalSerial(partId: string, rowIdx: number) {
-  // توليد سريع + شبه فريد (مش مثالي 100% لكن عملي لحد ما نخلي السيرفر يولّد تسلسلي)
   const p = (partId || "PART").slice(0, 6).toUpperCase();
   const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
   const ts = Date.now().toString(36).slice(-6).toUpperCase();
   return `${p}-${ts}-${rowIdx + 1}-${rand}`;
+}
+
+// optional helper: suggest part_number from name
+function suggestPartNumber(name: string) {
+  const base = String(name || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  if (!base) return "";
+  const suffix = Date.now().toString(36).slice(-4).toUpperCase();
+  return `${base.slice(0, 18)}-${suffix}`; // keep it short-ish
 }
 
 export default function NewReceiptPage() {
@@ -46,6 +58,7 @@ export default function NewReceiptPage() {
   const [partQ, setPartQ] = useState("");
 
   const [loading, setLoading] = useState(false);
+
   const [toast, setToast] = useState({
     open: false,
     message: "",
@@ -56,6 +69,17 @@ export default function NewReceiptPage() {
     { part_id: "", internal_serial: "", manufacturer_serial: "", unit_cost: "", notes: "" },
   ]);
 
+  // ✅ Catalog modal
+  const [partModalOpen, setPartModalOpen] = useState(false);
+  const [partSaving, setPartSaving] = useState(false);
+
+  const [newPartNumber, setNewPartNumber] = useState("");
+  const [newPartName, setNewPartName] = useState("");
+  const [newPartBrand, setNewPartBrand] = useState("");
+  const [newPartCategory, setNewPartCategory] = useState("");
+  const [newPartUnit, setNewPartUnit] = useState("");
+  const [newPartMinStock, setNewPartMinStock] = useState("");
+
   // load warehouses once
   useEffect(() => {
     const load = async () => {
@@ -63,8 +87,6 @@ export default function NewReceiptPage() {
         const res = await apiGet<any>("/inventory/warehouses");
         const ws = unwrapItems<Warehouse>(res);
         setWarehouses(ws);
-
-        // لو فيه مخزن واحد بس => اختاره تلقائي
         if (ws.length === 1) setWarehouseId(ws[0].id);
       } catch (e: any) {
         setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
@@ -111,17 +133,30 @@ export default function NewReceiptPage() {
 
   const hasAnyItem = useMemo(() => items.some((x) => x.part_id || x.manufacturer_serial), [items]);
 
+  const onPickPart = (rowIdx: number, part_id: string) => {
+    const serial = genInternalSerial(part_id, rowIdx);
+    updateRow(rowIdx, { part_id, internal_serial: serial });
+  };
+
+  const regenSerial = (rowIdx: number) => {
+    const pid = items[rowIdx]?.part_id || "";
+    if (!pid) return;
+    updateRow(rowIdx, { internal_serial: genInternalSerial(pid, rowIdx) });
+  };
+
   const onCreate = async () => {
     if (!warehouseId.trim()) return setToast({ open: true, message: t("receipts.errWarehouse"), type: "error" });
     if (!supplier.trim()) return setToast({ open: true, message: t("receipts.errSupplier"), type: "error" });
     if (!hasAnyItem) return setToast({ open: true, message: t("receipts.errItems"), type: "error" });
 
-    // validation
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
-      if (!it.part_id.trim()) return setToast({ open: true, message: t("receipts.errPartId", { i: i + 1 }), type: "error" });
-      if (!it.manufacturer_serial.trim()) return setToast({ open: true, message: t("receipts.errManufacturerSerial", { i: i + 1 }), type: "error" });
-      if (!it.internal_serial.trim()) return setToast({ open: true, message: t("common.failed"), type: "error" }); // should not happen
+      if (!it.part_id.trim())
+        return setToast({ open: true, message: t("receipts.errPartId", { i: i + 1 }), type: "error" });
+      if (!it.manufacturer_serial.trim())
+        return setToast({ open: true, message: t("receipts.errManufacturerSerial", { i: i + 1 }), type: "error" });
+      if (!it.internal_serial.trim())
+        return setToast({ open: true, message: t("common.failed"), type: "error" });
     }
 
     setLoading(true);
@@ -133,8 +168,8 @@ export default function NewReceiptPage() {
         invoice_date: invoiceDate.trim() ? invoiceDate.trim() : null,
         items: items.map((it) => ({
           part_id: it.part_id.trim(),
-          internal_serial: it.internal_serial.trim(), // auto
-          manufacturer_serial: it.manufacturer_serial.trim(), // from supplier
+          internal_serial: it.internal_serial.trim(),
+          manufacturer_serial: it.manufacturer_serial.trim(),
           unit_cost: it.unit_cost.trim() === "" ? null : it.unit_cost.trim(),
           notes: it.notes.trim() ? it.notes.trim() : null,
         })),
@@ -153,15 +188,98 @@ export default function NewReceiptPage() {
     }
   };
 
-  const onPickPart = (rowIdx: number, part_id: string) => {
-    const serial = genInternalSerial(part_id, rowIdx);
-    updateRow(rowIdx, { part_id, internal_serial: serial });
+  // ✅ open modal helper
+  const openCatalogModal = () => {
+    // prefill from search query
+    const q = partQ.trim();
+    if (q && !newPartName) setNewPartName(q);
+
+    // suggest part_number if empty
+    if (!newPartNumber && (newPartName || q)) {
+      setNewPartNumber(suggestPartNumber(newPartName || q));
+    }
+    setPartModalOpen(true);
   };
 
-  const regenSerial = (rowIdx: number) => {
-    const pid = items[rowIdx]?.part_id || "";
-    if (!pid) return;
-    updateRow(rowIdx, { internal_serial: genInternalSerial(pid, rowIdx) });
+  // ✅ create part
+  const createPartQuick = async () => {
+    const pn = newPartNumber.trim();
+    const nm = newPartName.trim();
+
+    if (!pn) return setToast({ open: true, message: "كود القطعة (part_number) مطلوب", type: "error" });
+    if (!nm) return setToast({ open: true, message: "اسم القطعة مطلوب", type: "error" });
+
+    // min_stock validation front
+    const ms =
+      newPartMinStock.trim() === ""
+        ? null
+        : Number(newPartMinStock);
+
+    if (ms != null && (!Number.isFinite(ms) || ms < 0)) {
+      setToast({ open: true, message: "min_stock لازم يكون رقم >= 0", type: "error" });
+      return;
+    }
+
+    setPartSaving(true);
+    try {
+      const payload: any = {
+        part_number: pn,
+        name: nm,
+        brand: newPartBrand.trim() || null,
+        category: newPartCategory.trim() || null,
+        unit: newPartUnit.trim() || null,
+        min_stock: ms == null ? null : Math.floor(ms),
+      };
+
+      const created: Part = await api.post("/inventory/parts", payload);
+
+      // add to list + auto select in first empty row
+      setParts((p) => {
+        // avoid duplicates in UI
+        const exists = p.some((x) => x.id === created.id || x.part_number === created.part_number);
+        return exists ? p : [created, ...p];
+      });
+
+      setItems((prev) => {
+        const idx = prev.findIndex((x) => !x.part_id);
+        if (idx === -1) {
+          const rowIdx = prev.length;
+          return [
+            ...prev,
+            {
+              part_id: created.id,
+              internal_serial: genInternalSerial(created.id, rowIdx),
+              manufacturer_serial: "",
+              unit_cost: "",
+              notes: "",
+            },
+          ];
+        }
+        return prev.map((r, i) =>
+          i === idx ? { ...r, part_id: created.id, internal_serial: genInternalSerial(created.id, i) } : r
+        );
+      });
+
+      setToast({ open: true, message: "تمت إضافة القطعة للكتالوج ✅", type: "success" });
+
+      // close + reset
+      setPartModalOpen(false);
+      setNewPartNumber("");
+      setNewPartName("");
+      setNewPartBrand("");
+      setNewPartCategory("");
+      setNewPartUnit("");
+      setNewPartMinStock("");
+    } catch (e: any) {
+      const msg =
+        e?.response?.status === 409
+          ? "هذا الكود موجود بالفعل (part_number already exists)"
+          : e?.response?.data?.message || e?.message || t("common.failed");
+
+      setToast({ open: true, message: msg, type: "error" });
+    } finally {
+      setPartSaving(false);
+    }
   };
 
   return (
@@ -192,8 +310,6 @@ export default function NewReceiptPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <div className="text-xs text-slate-400 mb-1">{t("receipts.warehouseId")}</div>
-
-            {/* بدل input: dropdown */}
             <select
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
@@ -241,23 +357,33 @@ export default function NewReceiptPage() {
           </div>
         </div>
 
-        {/* parts search */}
+        {/* parts search + add catalog */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
           <div className="md:col-span-2">
             <div className="text-xs text-slate-400 mb-1">{t("common.search")}</div>
             <input
               value={partQ}
               onChange={(e) => setPartQ(e.target.value)}
-              placeholder="ابحث عن قطعة (اسم/براند/...)"
+              placeholder="ابحث عن قطعة (كود/اسم/براند...)"
               className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
             />
           </div>
-          <button
-            onClick={searchParts}
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 text-sm"
-          >
-            بحث القطع
-          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={searchParts}
+              className="flex-1 px-3 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 text-sm"
+            >
+              بحث القطع
+            </button>
+            <button
+              type="button"
+              onClick={openCatalogModal}
+              className="px-3 py-2 rounded-xl border border-white/10 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm"
+            >
+              + إضافة للكتالوج
+            </button>
+          </div>
         </div>
 
         <div className="text-xs text-slate-400">
@@ -306,10 +432,16 @@ export default function NewReceiptPage() {
                         <option value="">اختر part</option>
                         {parts.map((pp) => (
                           <option key={pp.id} value={pp.id}>
-                            {pp.name ? `${pp.name} (${pp.brand || ""}) — ${pp.id}` : pp.id}
+                            {pp.name ? `${pp.part_number} — ${pp.name} (${pp.brand || ""})` : pp.part_number}
                           </option>
                         ))}
                       </select>
+
+                      {p?.part_number ? (
+                        <div className="mt-1 text-xs text-slate-400">
+                          كود: <span className="font-mono text-slate-300">{p.part_number}</span>
+                        </div>
+                      ) : null}
                     </td>
 
                     <td className="px-4 py-3">
@@ -332,7 +464,9 @@ export default function NewReceiptPage() {
                           disabled={!it.part_id}
                           className={cn(
                             "px-3 py-2 rounded-xl border text-sm",
-                            !it.part_id ? "border-white/10 bg-white/5 text-slate-500" : "border-white/10 bg-white/10 hover:bg-white/15"
+                            !it.part_id
+                              ? "border-white/10 bg-white/5 text-slate-500"
+                              : "border-white/10 bg-white/10 hover:bg-white/15"
                           )}
                         >
                           إعادة
@@ -409,6 +543,110 @@ export default function NewReceiptPage() {
             {loading ? t("common.loading") : t("receipts.createDraft")}
           </button>
         </div>
+      </div>
+
+      {/* ✅ Add-to-catalog modal */}
+      {partModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setPartModalOpen(false)} />
+
+          <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-slate-950 p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">إضافة قطعة للكتالوج</div>
+              <button
+                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+                onClick={() => setPartModalOpen(false)}
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <Field
+                label="كود القطعة (part_number) *"
+                value={newPartNumber}
+                onChange={setNewPartNumber}
+                ph="مثال: FILT-OIL-001"
+                rightAction={
+                  <button
+                    type="button"
+                    onClick={() => setNewPartNumber(suggestPartNumber(newPartName || partQ))}
+                    className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
+                  >
+                    اقتراح
+                  </button>
+                }
+              />
+
+              <Field label="اسم القطعة *" value={newPartName} onChange={setNewPartName} ph="مثال: فلتر زيت" />
+              <Field label="البراند (اختياري)" value={newPartBrand} onChange={setNewPartBrand} ph="مثال: MANN" />
+              <Field label="التصنيف (اختياري)" value={newPartCategory} onChange={setNewPartCategory} ph="مثال: Filters" />
+              <Field label="الوحدة (اختياري)" value={newPartUnit} onChange={setNewPartUnit} ph="مثال: pcs" />
+              <Field
+                label="حد أدنى للمخزون (اختياري)"
+                value={newPartMinStock}
+                onChange={setNewPartMinStock}
+                ph="مثال: 5"
+              />
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  disabled={partSaving}
+                  onClick={createPartQuick}
+                  className={cn(
+                    "px-3 py-2 rounded-xl border text-sm",
+                    partSaving
+                      ? "border-white/10 bg-white/5 text-slate-500"
+                      : "border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20"
+                  )}
+                >
+                  {partSaving ? t("common.loading") : "حفظ في الكتالوج"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPartModalOpen(false)}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+                >
+                  {t("common.cancel")}
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-400">
+                * لازم تدخل <span className="font-mono">part_number</span> لأنه Required في الباك-إند الحالي.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  ph,
+  rightAction,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  ph?: string;
+  rightAction?: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="text-xs text-slate-400 mb-1">{label}</div>
+      <div className="flex gap-2 items-center">
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={ph}
+          className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+        />
+        {rightAction}
       </div>
     </div>
   );
