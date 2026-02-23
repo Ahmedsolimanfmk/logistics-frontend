@@ -311,17 +311,19 @@ export default function NewReceiptPage() {
           <div>
             <div className="text-xs text-slate-400 mb-1">{t("receipts.warehouseId")}</div>
             <select
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
-            >
-              <option value="">{t("common.all")}</option>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name ? `${w.name} — ${w.id}` : w.id}
-                </option>
-              ))}
-            </select>
+  value={warehouseId}
+  onChange={(e) => setWarehouseId(e.target.value)}
+  className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
+>
+  <option value="" style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
+    {t("common.all")}
+  </option>
+  {warehouses.map((w) => (
+    <option key={w.id} value={w.id} style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
+      {w.name ? `${w.name} — ${w.id}` : w.id}
+    </option>
+  ))}
+</select>
           </div>
 
           <div>
@@ -425,18 +427,24 @@ export default function NewReceiptPage() {
                     {/* part picker */}
                     <td className="px-4 py-3">
                       <select
-                        value={it.part_id}
-                        onChange={(e) => onPickPart(idx, e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
-                      >
-                        <option value="">اختر part</option>
-                        {parts.map((pp) => (
-                          <option key={pp.id} value={pp.id}>
-                            {pp.name ? `${pp.part_number} — ${pp.name} (${pp.brand || ""})` : pp.part_number}
-                          </option>
-                        ))}
-                      </select>
+  value={it.part_id}
+  onChange={(e) => onPickPart(idx, e.target.value)}
+  className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
+>
+  <option value="" style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
+    {t("receipts.selectPart") || "اختر part"}
+  </option>
 
+  {parts.map((pp) => (
+    <option
+      key={pp.id}
+      value={pp.id}
+      style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}
+    >
+      {pp.name ? `${pp.name} (${pp.brand || ""}) — ${pp.id}` : pp.id}
+    </option>
+  ))}
+</select>
                       {p?.part_number ? (
                         <div className="mt-1 text-xs text-slate-400">
                           كود: <span className="font-mono text-slate-300">{p.part_number}</span>
