@@ -5,30 +5,23 @@
    ========================= */
 
 :root {
-  /* Brand (from logo) */
-  --trex-navy-hex: #050A24;
-  --trex-navy-2-hex: #111D41;
-  --trex-navy-3-hex: #162852;
-  --trex-accent-hex: #61A2FC;
+  /* LIGHT DEFAULT */
+  --trex-bg: 248 250 252;        /* slate-50 */
+  --trex-fg: 15 23 42;           /* slate-900 */
+  --trex-surface: 255 255 255;   /* white */
+  --trex-card: 255 255 255;      /* white */
+  --trex-sidebar: 255 255 255;   /* white */
+  --trex-accent: 249 115 22;     /* orange-500 */
+}
 
-  /* RGB tokens */
-  --trex-bg: 5 10 36;
-  --trex-sidebar: 5 10 36;
-  --trex-surface: 17 29 65;
-  --trex-card: 22 40 82;
-
-  --trex-border: 255 255 255;
-  --trex-text: 248 250 252;
-  --trex-muted: 148 163 184;
-
-  --trex-accent: 97 162 252;
-  --trex-accent-2: 62 111 179;
-
-  --trex-danger: 239 68 68;
-  --trex-success: 16 185 129;
-  --trex-warning: 245 158 11;
-
-  --trex-radius: 18px;
+/* OPTIONAL: لو حبيت Dark لاحقًا */
+html.dark {
+  --trex-bg: 2 6 23;             /* slate-950 */
+  --trex-fg: 248 250 252;        /* slate-50 */
+  --trex-surface: 11 18 32;      /* custom dark */
+  --trex-card: 15 23 42;         /* slate-900 */
+  --trex-sidebar: 2 6 23;        /* slate-950 */
+  --trex-accent: 249 115 22;     /* orange-500 */
 }
 
 html,

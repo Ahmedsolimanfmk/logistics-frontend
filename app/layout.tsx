@@ -23,14 +23,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="bg-[rgb(var(--trex-bg))] text-white">
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+    >
       <head>
         <Script src="/env.js" strategy="beforeInteractive" />
       </head>
 
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[rgb(var(--trex-bg))] text-white min-h-screen`}
-      >
+      <body className="min-h-screen bg-[rgb(var(--trex-bg))] text-[rgb(var(--trex-fg))]">
         <LanguageInit />
         {children}
       </body>

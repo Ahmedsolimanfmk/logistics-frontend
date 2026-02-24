@@ -106,8 +106,7 @@ export function Sidebar() {
     return roles.includes(role);
   };
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + "/");
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   const [open, setOpen] = useState<Record<string, boolean>>({
     finance: false,
@@ -116,25 +115,19 @@ export function Sidebar() {
   });
 
   useEffect(() => {
-    if (pathname?.startsWith("/maintenance"))
-      setOpen((p) => ({ ...p, maintenance: true }));
-    if (pathname?.startsWith("/finance"))
-      setOpen((p) => ({ ...p, finance: true }));
-    if (pathname?.startsWith("/inventory"))
-      setOpen((p) => ({ ...p, inventory: true }));
+    if (pathname?.startsWith("/maintenance")) setOpen((p) => ({ ...p, maintenance: true }));
+    if (pathname?.startsWith("/finance")) setOpen((p) => ({ ...p, finance: true }));
+    if (pathname?.startsWith("/inventory")) setOpen((p) => ({ ...p, inventory: true }));
   }, [pathname]);
 
   return (
-    <aside className="h-screen w-[260px] shrink-0 border-r border-white/10 bg-[rgb(var(--trex-sidebar))] text-white sticky top-0 flex flex-col shadow-2xl">
-      
+    <aside className="h-screen w-[260px] shrink-0 border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] sticky top-0 flex flex-col shadow-[0_0_30px_rgba(0,0,0,0.06)]">
       {/* Header */}
-      <div className="p-4 border-b border-white/10 bg-[rgba(var(--trex-card),0.35)]">
-        <div className="text-lg font-bold tracking-wide">
-          {t("sidebar.appName")}
-        </div>
-        <div className="mt-1 text-xs text-slate-400">
+      <div className="p-4 border-b border-black/10 bg-[rgba(var(--trex-card),0.7)]">
+        <div className="text-lg font-bold tracking-wide">{t("sidebar.appName")}</div>
+        <div className="mt-1 text-xs text-slate-500">
           {user?.full_name || user?.email || "—"} —{" "}
-          <span className="text-slate-200">{role || "—"}</span>
+          <span className="text-slate-900">{role || "—"}</span>
         </div>
       </div>
 
@@ -150,29 +143,20 @@ export function Sidebar() {
               return (
                 <div key={it.key} className="space-y-1">
                   <button
-                    onClick={() =>
-                      setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))
-                    }
+                    onClick={() => setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))}
                     className={cn(
-                      "w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm border transition relative",
+                      "w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm border transition",
                       active
-                        ? "bg-[rgba(var(--trex-accent),0.15)] border-[rgba(var(--trex-accent),0.3)] text-white"
-                        : "text-slate-300 border-transparent hover:bg-white/5 hover:text-[rgb(var(--trex-accent))]"
+                        ? "bg-[rgba(var(--trex-accent),0.12)] border-[rgba(var(--trex-accent),0.25)] text-slate-900"
+                        : "text-slate-700 border-transparent hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
                     )}
                   >
                     <span>{t(it.labelKey)}</span>
-                    <span
-                      className={cn(
-                        "text-xs transition",
-                        isOpen && "rotate-180"
-                      )}
-                    >
-                      ▾
-                    </span>
+                    <span className={cn("text-xs transition", isOpen && "rotate-180")}>▾</span>
                   </button>
 
                   {isOpen && (
-                    <div className="pl-2 space-y-1">
+                    <div className="pr-2 space-y-1">
                       {it.children
                         .filter((c) => canSee(c.roles))
                         .map((c) => (
@@ -180,10 +164,10 @@ export function Sidebar() {
                             key={c.href}
                             href={c.href}
                             className={cn(
-                              "block rounded-xl px-3 py-2 text-sm border-l-2 transition",
+                              "block rounded-xl px-3 py-2 text-sm border-r-2 transition",
                               isActive(c.href)
-                                ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.12)] text-white"
-                                : "border-transparent text-slate-300 hover:bg-white/5 hover:text-[rgb(var(--trex-accent))]"
+                                ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.10)] text-slate-900"
+                                : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
                             )}
                           >
                             {t(c.labelKey)}
@@ -200,10 +184,10 @@ export function Sidebar() {
                 key={it.href}
                 href={it.href}
                 className={cn(
-                  "block rounded-xl px-3 py-2 text-sm border-l-2 transition",
+                  "block rounded-xl px-3 py-2 text-sm border-r-2 transition",
                   isActive(it.href)
-                    ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.15)] text-white"
-                    : "border-transparent text-slate-300 hover:bg-white/5 hover:text-[rgb(var(--trex-accent))]"
+                    ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.12)] text-slate-900"
+                    : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
                 )}
               >
                 {t(it.labelKey)}
@@ -213,10 +197,10 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-white/10">
+      <div className="p-3 border-t border-black/10">
         <button
           onClick={logout}
-          className="w-full px-3 py-2 rounded-xl border border-[rgba(var(--trex-accent),0.35)] bg-[rgba(var(--trex-accent),0.15)] hover:bg-[rgba(var(--trex-accent),0.25)] text-sm transition"
+          className="w-full px-3 py-2 rounded-xl border border-[rgba(var(--trex-accent),0.30)] bg-[rgba(var(--trex-accent),0.12)] hover:bg-[rgba(var(--trex-accent),0.18)] text-sm transition text-slate-900"
         >
           {t("common.logout")}
         </button>
