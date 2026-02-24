@@ -1,3 +1,4 @@
+// app/(app)/dashboard/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -76,7 +77,6 @@ function roleUpper(r?: string) {
 
 function getAllowedTabs(role?: string): TabKey[] {
   const r = roleUpper(role);
-
   if (r === "ADMIN") return ["operations", "finance", "maintenance", "dev"];
   if (r === "FIELD_SUPERVISOR") return ["operations", "maintenance"];
   if (r === "FINANCE" || r === "ACCOUNTANT") return ["operations", "finance"];
@@ -114,20 +114,15 @@ function DeltaBadge({ points }: { points: TrendPoint[] | null | undefined }) {
 
   const cls =
     d.dir === "up"
-      ? "bg-emerald-500/10 text-emerald-200 border-emerald-400/20"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
       : d.dir === "down"
-      ? "bg-rose-500/10 text-rose-200 border-rose-400/20"
-      : "bg-slate-500/10 text-slate-200 border-white/10";
+      ? "bg-rose-50 text-rose-700 border-rose-200"
+      : "bg-gray-50 text-gray-700 border-gray-200";
 
   const icon = d.dir === "up" ? "↑" : d.dir === "down" ? "↓" : "•";
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
-        cls
-      )}
-    >
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs", cls)}>
       <span>{icon}</span>
       <span>{d.pct}%</span>
       <span className="opacity-70">{t("common.vsPrev")}</span>
@@ -136,13 +131,13 @@ function DeltaBadge({ points }: { points: TrendPoint[] | null | undefined }) {
 }
 
 // =====================
-// UI atoms
+// UI atoms (LIGHT)
 // =====================
 function EmptyNice({ title, hint }: { title: string; hint: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-      <div className="text-sm font-semibold text-white">{title}</div>
-      <div className="mt-1 text-sm text-slate-400">{hint}</div>
+    <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+      <div className="text-sm font-semibold text-gray-900">{title}</div>
+      <div className="mt-1 text-sm text-gray-600">{hint}</div>
     </div>
   );
 }
@@ -159,7 +154,7 @@ function Section({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base md:text-lg font-semibold text-white">{title}</h2>
+        <h2 className="text-base md:text-lg font-semibold text-gray-900">{title}</h2>
         {right}
       </div>
       {children}
@@ -188,13 +183,13 @@ function Tabs({
             className={cn(
               "px-3 py-2 rounded-xl border text-sm transition",
               active
-                ? "bg-orange-500/15 border-orange-400/30 text-orange-100"
-                : "bg-slate-950/20 border-white/10 text-slate-200 hover:bg-white/5"
+                ? "bg-orange-50 border-orange-200 text-orange-800"
+                : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
             )}
           >
             {it.label}
             {typeof it.count === "number" ? (
-              <span className="mr-2 text-xs opacity-80">({it.count})</span> // ✅ RTL
+              <span className="mr-2 text-xs opacity-80">({it.count})</span>
             ) : null}
           </button>
         );
@@ -239,9 +234,9 @@ function DataTable({
   const emptyNode = typeof empty !== "undefined" ? empty : t("common.noData");
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-3">
-        <div className="text-sm font-semibold text-white">{title}</div>
+    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
+        <div className="text-sm font-semibold text-gray-900">{title}</div>
 
         <div className="flex items-center gap-2">
           {right}
@@ -250,29 +245,29 @@ function DataTable({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={t("common.search")}
-              className="px-3 py-1.5 rounded-lg bg-slate-950/30 border border-white/10 text-sm text-slate-100 outline-none"
+              className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-200"
             />
           ) : null}
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-gray-600">
             {fmtInt(filtered.length)} {t("common.rows")}
           </span>
         </div>
       </div>
 
       {!filtered.length ? (
-        <div className="p-5 text-sm text-slate-300">
+        <div className="p-5 text-sm text-gray-700">
           {typeof emptyNode === "string" ? emptyNode : emptyNode}
         </div>
       ) : (
         <div className="overflow-auto">
           <table className="min-w-full text-sm" dir="rtl">
-            <thead className="bg-white/5">
+            <thead className="bg-gray-50">
               <tr>
                 {columns.map((c) => (
                   <th
                     key={c.key}
                     className={cn(
-                      "text-right font-medium text-slate-200 px-4 py-2 whitespace-nowrap", // ✅ RTL
+                      "text-right font-medium text-gray-700 px-4 py-2 whitespace-nowrap",
                       c.className
                     )}
                   >
@@ -287,7 +282,7 @@ function DataTable({
                 <tr
                   key={idx}
                   className={cn(
-                    "border-t border-white/10 hover:bg-white/5",
+                    "border-t border-gray-200 hover:bg-gray-50",
                     clickable && "cursor-pointer"
                   )}
                   onClick={() => {
@@ -298,7 +293,7 @@ function DataTable({
                     <td
                       key={c.key}
                       className={cn(
-                        "px-4 py-2 text-slate-200 whitespace-nowrap text-right", // ✅ RTL
+                        "px-4 py-2 text-gray-900 whitespace-nowrap text-right",
                         c.className
                       )}
                     >
@@ -325,8 +320,8 @@ function MiniChart({
   valueKey: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="text-sm font-semibold text-white mb-3">{title}</div>
+    <div className="rounded-2xl border border-gray-200 bg-white p-4">
+      <div className="text-sm font-semibold text-gray-900 mb-3">{title}</div>
       <div className="h-44">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points || []}>
@@ -361,23 +356,23 @@ function ActionTile({
 
   const toneCls =
     tone === "danger"
-      ? "border-rose-500/20 bg-rose-500/10"
+      ? "border-rose-200 bg-rose-50"
       : tone === "warn"
-      ? "border-amber-500/20 bg-amber-500/10"
+      ? "border-amber-200 bg-amber-50"
       : tone === "good"
-      ? "border-emerald-500/20 bg-emerald-500/10"
-      : "border-white/10 bg-white/5";
+      ? "border-emerald-200 bg-emerald-50"
+      : "border-gray-200 bg-white";
 
   const Body = (
     <div className={cn("rounded-2xl border p-4 shadow-sm", toneCls)}>
-      <div className="text-xs text-slate-300">{title}</div>
-      <div className="mt-1 text-2xl font-semibold tracking-tight text-white">
+      <div className="text-xs text-gray-600">{title}</div>
+      <div className="mt-1 text-2xl font-semibold tracking-tight text-gray-900">
         {value}
       </div>
-      {hint ? <div className="mt-1 text-xs text-slate-300/80">{hint}</div> : null}
+      {hint ? <div className="mt-1 text-xs text-gray-600">{hint}</div> : null}
       {href ? (
         <div className="mt-3">
-          <span className="inline-flex text-xs text-orange-200/90 underline">
+          <span className="inline-flex text-xs text-orange-700 underline">
             {openLabel || t("common.open")}
           </span>
         </div>
@@ -408,12 +403,12 @@ function CompactKpi({
   href?: string;
 }) {
   const Body = (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition">
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 hover:bg-gray-50 transition">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs text-slate-300">{title}</div>
-          <div className="mt-1 text-2xl font-semibold text-white">{value}</div>
-          {sub ? <div className="mt-1 text-xs text-slate-400">{sub}</div> : null}
+          <div className="text-xs text-gray-600">{title}</div>
+          <div className="mt-1 text-2xl font-semibold text-gray-900">{value}</div>
+          {sub ? <div className="mt-1 text-xs text-gray-600">{sub}</div> : null}
         </div>
         {right}
       </div>
@@ -635,24 +630,24 @@ export default function DashboardPage() {
   }, [isAdminAcc]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white" dir="rtl">
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+    // ✅ لايت + RTL — بدون خلفية دارك (AppShell already wraps)
+    <div className="min-h-screen text-gray-900" dir="rtl">
+      <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-xl font-bold">{t("dashboard.title")}</div>
-            <div className="text-sm text-slate-400">
+            <div className="text-sm text-gray-600">
               {user?.full_name || "—"} — {user?.role || "—"}
             </div>
           </div>
 
-          {/* RTL: مجموعة الأزرار */}
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
 
             <button
               type="button"
               onClick={reloadAll}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+              className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm"
             >
               {t("common.refresh")}
             </button>
@@ -663,7 +658,7 @@ export default function DashboardPage() {
                 logout();
                 window.location.href = "/login";
               }}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+              className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm"
             >
               {t("common.logout")}
             </button>
@@ -671,7 +666,7 @@ export default function DashboardPage() {
         </div>
 
         {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {err}
           </div>
         ) : null}
@@ -681,10 +676,10 @@ export default function DashboardPage() {
         {loadingSummary ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="h-4 w-28 bg-white/10 rounded" />
-                <div className="mt-3 h-8 w-16 bg-white/10 rounded" />
-                <div className="mt-2 h-3 w-36 bg-white/10 rounded" />
+              <div key={i} className="rounded-2xl border border-gray-200 bg-white p-4">
+                <div className="h-4 w-28 bg-gray-100 rounded" />
+                <div className="mt-3 h-8 w-16 bg-gray-100 rounded" />
+                <div className="mt-2 h-3 w-36 bg-gray-100 rounded" />
               </div>
             ))}
           </div>
@@ -695,7 +690,7 @@ export default function DashboardPage() {
                 <Section
                   title={t("sections.opsAction")}
                   right={
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-gray-600">
                       {t("common.lastRefresh")} {new Date().toLocaleTimeString(getCurrentLocale())}
                     </span>
                   }
@@ -703,25 +698,17 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <ActionTile
                       title={t("dashboard.ops.tripsNeedingFinanceClose.title")}
-                      value={fmtInt(ops.needingClose)}
-                      hint={
-                        ops.needingClose
-                          ? t("dashboard.ops.tripsNeedingFinanceClose.hintOn")
-                          : t("dashboard.ops.tripsNeedingFinanceClose.hintOff")
-                      }
-                      tone={ops.toneClose}
+                      value={fmtInt(Number(tables?.trips_needing_finance_close?.length ?? 0))}
+                      hint={t("dashboard.ops.tripsNeedingFinanceClose.hintOn")}
+                      tone="danger"
                       href="/trips?status=COMPLETED&financial_closed_at=null"
                       openLabel={t("common.open")}
                     />
 
                     <ActionTile
                       title={t("dashboard.ops.activeTripsNow.title")}
-                      value={fmtInt(ops.activeNow)}
-                      hint={
-                        ops.activeNow
-                          ? t("dashboard.ops.activeTripsNow.hintOn")
-                          : t("dashboard.ops.activeTripsNow.hintOff")
-                      }
+                      value={fmtInt(Number(tables?.active_trips_now?.length ?? 0))}
+                      hint={t("dashboard.ops.activeTripsNow.hintOn")}
                       tone={ops.toneActive as any}
                       href="/trips?status=ASSIGNED,IN_PROGRESS"
                       openLabel={t("common.open")}
@@ -773,12 +760,7 @@ export default function DashboardPage() {
                     title={t("dashboard.ops.tables.activeTripsNow")}
                     rows={tables?.active_trips_now || []}
                     searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.ops.empty.activeTripsNow.title")}
-                        hint={t("dashboard.ops.empty.activeTripsNow.hint")}
-                      />
-                    }
+                    empty={<EmptyNice title={t("dashboard.ops.empty.activeTripsNow.title")} hint={t("dashboard.ops.empty.activeTripsNow.hint")} />}
                     onRowClick={(r) => {
                       if (r?.trip_id) router.push(`/trips/${r.trip_id}`);
                     }}
@@ -787,10 +769,9 @@ export default function DashboardPage() {
                         key: "trip_id",
                         label: t("dashboard.columns.trip"),
                         render: (r) => (
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono">{shortId(r.trip_id)}</span>
+                          <div className="flex items-center gap-2 justify-end">
                             <button
-                              className="text-xs text-orange-200/80 hover:text-orange-100 underline"
+                              className="text-xs text-orange-700 underline"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 safeCopy(String(r.trip_id || ""));
@@ -799,6 +780,7 @@ export default function DashboardPage() {
                             >
                               {t("common.copy")}
                             </button>
+                            <span className="font-mono">{shortId(r.trip_id)}</span>
                           </div>
                         ),
                       },
@@ -807,11 +789,7 @@ export default function DashboardPage() {
                       { key: "site", label: t("dashboard.columns.site") },
                       { key: "vehicle_plate_number", label: t("dashboard.columns.vehicle") },
                       { key: "driver_name", label: t("dashboard.columns.driver") },
-                      {
-                        key: "trip_created_at",
-                        label: t("dashboard.columns.created"),
-                        render: (r) => fmtDate(r.trip_created_at),
-                      },
+                      { key: "trip_created_at", label: t("dashboard.columns.created"), render: (r) => fmtDate(r.trip_created_at) },
                     ]}
                   />
 
@@ -819,30 +797,17 @@ export default function DashboardPage() {
                     title={t("dashboard.ops.tables.tripsNeedingClose")}
                     rows={tables?.trips_needing_finance_close || []}
                     searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.ops.empty.tripsNeedingClose.title")}
-                        hint={t("dashboard.ops.empty.tripsNeedingClose.hint")}
-                      />
-                    }
+                    empty={<EmptyNice title={t("dashboard.ops.empty.tripsNeedingClose.title")} hint={t("dashboard.ops.empty.tripsNeedingClose.hint")} />}
                     onRowClick={(r) => {
                       if (r?.id) router.push(`/trips/${r.id}`);
                     }}
                     columns={[
-                      {
-                        key: "id",
-                        label: t("dashboard.columns.trip"),
-                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
-                      },
+                      { key: "id", label: t("dashboard.columns.trip"), render: (r) => <span className="font-mono">{shortId(r.id)}</span> },
                       { key: "status", label: t("dashboard.columns.status") },
                       { key: "financial_status", label: t("dashboard.columns.financial") },
                       { key: "client", label: t("dashboard.columns.client") },
                       { key: "site", label: t("dashboard.columns.site") },
-                      {
-                        key: "created_at",
-                        label: t("dashboard.columns.created"),
-                        render: (r) => fmtDate(r.created_at),
-                      },
+                      { key: "created_at", label: t("dashboard.columns.created"), render: (r) => fmtDate(r.created_at) },
                     ]}
                   />
                 </div>
@@ -851,23 +816,23 @@ export default function DashboardPage() {
                   title={t("dashboard.ops.trendTitle")}
                   right={
                     loadingCharts ? (
-                      <span className="text-xs text-slate-400">{t("common.loading")}</span>
+                      <span className="text-xs text-gray-600">{t("common.loading")}</span>
                     ) : chartData ? (
-                      <span className="text-xs text-slate-400">{t("common.daily")}</span>
+                      <span className="text-xs text-gray-600">{t("common.daily")}</span>
                     ) : (
-                      <span className="text-xs text-slate-400">{t("common.unavailable")}</span>
+                      <span className="text-xs text-gray-600">{t("common.unavailable")}</span>
                     )
                   }
                 >
                   {loadingCharts ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <div className="h-4 w-40 bg-white/10 rounded" />
-                        <div className="mt-3 h-44 bg-white/10 rounded" />
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                        <div className="h-4 w-40 bg-gray-100 rounded" />
+                        <div className="mt-3 h-44 bg-gray-100 rounded" />
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <div className="h-4 w-40 bg-white/10 rounded" />
-                        <div className="mt-3 h-44 bg-white/10 rounded" />
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                        <div className="h-4 w-40 bg-gray-100 rounded" />
+                        <div className="mt-3 h-44 bg-gray-100 rounded" />
                       </div>
                     </div>
                   ) : chartData ? (
@@ -876,7 +841,7 @@ export default function DashboardPage() {
                       <MiniChart title={t("dashboard.ops.charts.tripsAssigned")} points={chartData.trips_assigned} valueKey="value" />
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
                       {t("dashboard.errors.trendsUnavailable")}
                     </div>
                   )}
@@ -891,29 +856,19 @@ export default function DashboardPage() {
                     <ActionTile
                       title={t("dashboard.finance.pendingTooLong.title")}
                       value={fmtInt(fin.pendingTooLong)}
-                      hint={
-                        fin.pendingTooLong
-                          ? t("dashboard.finance.pendingTooLong.hintOn")
-                          : t("dashboard.finance.pendingTooLong.hintOff")
-                      }
+                      hint={fin.pendingTooLong ? t("dashboard.finance.pendingTooLong.hintOn") : t("dashboard.finance.pendingTooLong.hintOff")}
                       tone={fin.tonePending as any}
                       href="/finance?tab=pending"
                       openLabel={t("common.open")}
                     />
-
                     <ActionTile
                       title={t("dashboard.finance.openAdvances.title")}
                       value={fmtInt(fin.advancesOpen)}
-                      hint={
-                        fin.advancesOpen
-                          ? t("dashboard.finance.openAdvances.hintOn")
-                          : t("dashboard.finance.openAdvances.hintOff")
-                      }
+                      hint={fin.advancesOpen ? t("dashboard.finance.openAdvances.hintOn") : t("dashboard.finance.openAdvances.hintOff")}
                       tone={fin.toneAdv as any}
                       href="/finance?tab=advances"
                       openLabel={t("common.open")}
                     />
-
                     <ActionTile
                       title={t("dashboard.finance.expensesTodayApproved.title")}
                       value={fmtMoney(cards?.expenses_today?.APPROVED ?? 0)}
@@ -930,12 +885,7 @@ export default function DashboardPage() {
                     title={t("dashboard.finance.topExpenseTypesToday.tableTitle")}
                     rows={tables?.top_expense_types_today || []}
                     searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.finance.empty.noApprovedToday.title")}
-                        hint={t("dashboard.finance.empty.noApprovedToday.hint")}
-                      />
-                    }
+                    empty={<EmptyNice title={t("dashboard.finance.empty.noApprovedToday.title")} hint={t("dashboard.finance.empty.noApprovedToday.hint")} />}
                     columns={[
                       { key: "expense_type", label: t("dashboard.columns.type") },
                       { key: "amount", label: t("dashboard.columns.amount"), render: (r) => fmtMoney(r.amount) },
@@ -949,45 +899,14 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 <Section title={t("dashboard.maintenance.actionRequired")}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <ActionTile
-                      title={t("dashboard.maintenance.openWorkOrders.title")}
-                      value={fmtInt(mnt.openWos)}
-                      hint={mnt.openWos ? t("dashboard.maintenance.openWorkOrders.hintOn") : t("dashboard.maintenance.openWorkOrders.hintOff")}
-                      tone={mnt.toneOpen as any}
-                      href={maintenanceOpenHref}
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.maintenance.qaNeeds.title")}
-                      value={fmtInt(mnt.qaNeeds)}
-                      hint={mnt.qaNeeds ? t("dashboard.maintenance.qaNeeds.hintOn") : t("dashboard.maintenance.qaNeeds.hintOff")}
-                      tone={mnt.toneQa as any}
-                      href={maintenanceQaNeedsHref}
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.maintenance.qaFailed.title")}
-                      value={fmtInt(mnt.qaFailed)}
-                      hint={mnt.qaFailed ? t("dashboard.maintenance.qaFailed.hintOn") : t("dashboard.maintenance.qaFailed.hintOff")}
-                      tone={mnt.toneFail as any}
-                      href={maintenanceFailedHref}
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.maintenance.partsMismatch.title")}
-                      value={fmtInt(mnt.mismatch)}
-                      hint={mnt.mismatch ? t("dashboard.maintenance.partsMismatch.hintOn") : t("dashboard.maintenance.partsMismatch.hintOff")}
-                      tone={mnt.toneMismatch as any}
-                      href={maintenanceMismatchHref}
-                      openLabel={t("common.open")}
-                    />
+                    <ActionTile title={t("dashboard.maintenance.openWorkOrders.title")} value={fmtInt(mnt.openWos)} hint={mnt.openWos ? t("dashboard.maintenance.openWorkOrders.hintOn") : t("dashboard.maintenance.openWorkOrders.hintOff")} tone={mnt.toneOpen as any} href={maintenanceOpenHref} openLabel={t("common.open")} />
+                    <ActionTile title={t("dashboard.maintenance.qaNeeds.title")} value={fmtInt(mnt.qaNeeds)} hint={mnt.qaNeeds ? t("dashboard.maintenance.qaNeeds.hintOn") : t("dashboard.maintenance.qaNeeds.hintOff")} tone={mnt.toneQa as any} href={maintenanceQaNeedsHref} openLabel={t("common.open")} />
+                    <ActionTile title={t("dashboard.maintenance.qaFailed.title")} value={fmtInt(mnt.qaFailed)} hint={mnt.qaFailed ? t("dashboard.maintenance.qaFailed.hintOn") : t("dashboard.maintenance.qaFailed.hintOff")} tone={mnt.toneFail as any} href={maintenanceFailedHref} openLabel={t("common.open")} />
+                    <ActionTile title={t("dashboard.maintenance.partsMismatch.title")} value={fmtInt(mnt.mismatch)} hint={mnt.mismatch ? t("dashboard.maintenance.partsMismatch.hintOn") : t("dashboard.maintenance.partsMismatch.hintOff")} tone={mnt.toneMismatch as any} href={maintenanceMismatchHref} openLabel={t("common.open")} />
                   </div>
 
                   {!isAdminAcc ? (
-                    <div className="mt-2 text-xs text-slate-400">{t("dashboard.maintenance.supervisorNote")}</div>
+                    <div className="mt-2 text-xs text-gray-600">{t("dashboard.maintenance.supervisorNote")}</div>
                   ) : null}
                 </Section>
 
@@ -1005,7 +924,7 @@ export default function DashboardPage() {
                   right={
                     <Link
                       href={isAdminAcc ? "/maintenance/work-orders" : "/maintenance/requests"}
-                      className="text-xs text-orange-200/90 underline"
+                      className="text-xs text-orange-700 underline"
                     >
                       {t("dashboard.maintenance.recentWorkOrders.openList")} ←
                     </Link>
@@ -1015,12 +934,7 @@ export default function DashboardPage() {
                     title={t("dashboard.maintenance.recentWorkOrders.tableTitle")}
                     rows={tables?.maintenance_recent_work_orders || []}
                     searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.maintenance.empty.noWorkOrders.title")}
-                        hint={t("dashboard.maintenance.empty.noWorkOrders.hint")}
-                      />
-                    }
+                    empty={<EmptyNice title={t("dashboard.maintenance.empty.noWorkOrders.title")} hint={t("dashboard.maintenance.empty.noWorkOrders.hint")} />}
                     onRowClick={(r) => {
                       if (isAdminAcc && r?.id) router.push(`/maintenance/work-orders/${r.id}`);
                       else router.push(`/maintenance/requests`);
