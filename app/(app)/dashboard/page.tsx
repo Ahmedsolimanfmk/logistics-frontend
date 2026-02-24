@@ -1,4 +1,3 @@
-// app/(app)/dashboard/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -195,7 +194,7 @@ function Tabs({
           >
             {it.label}
             {typeof it.count === "number" ? (
-              <span className="ml-2 text-xs opacity-80">({it.count})</span>
+              <span className="mr-2 text-xs opacity-80">({it.count})</span> // ✅ RTL
             ) : null}
           </button>
         );
@@ -233,9 +232,7 @@ function DataTable({
     if (!searchable) return rows || [];
     const s = q.trim().toLowerCase();
     if (!s) return rows || [];
-    return (rows || []).filter((r) =>
-      JSON.stringify(r).toLowerCase().includes(s)
-    );
+    return (rows || []).filter((r) => JSON.stringify(r).toLowerCase().includes(s));
   }, [rows, q, searchable]);
 
   const clickable = Boolean(onRowClick);
@@ -268,14 +265,14 @@ function DataTable({
         </div>
       ) : (
         <div className="overflow-auto">
-          <table className="min-w-full text-sm">
+          <table className="min-w-full text-sm" dir="rtl">
             <thead className="bg-white/5">
               <tr>
                 {columns.map((c) => (
                   <th
                     key={c.key}
                     className={cn(
-                      "text-left font-medium text-slate-200 px-4 py-2 whitespace-nowrap",
+                      "text-right font-medium text-slate-200 px-4 py-2 whitespace-nowrap", // ✅ RTL
                       c.className
                     )}
                   >
@@ -301,7 +298,7 @@ function DataTable({
                     <td
                       key={c.key}
                       className={cn(
-                        "px-4 py-2 text-slate-200 whitespace-nowrap",
+                        "px-4 py-2 text-slate-200 whitespace-nowrap text-right", // ✅ RTL
                         c.className
                       )}
                     >
@@ -455,10 +452,7 @@ export default function DashboardPage() {
   }, [token]);
 
   const allowedTabs = useMemo(() => getAllowedTabs(user?.role), [user?.role]);
-  const isAdminAcc = useMemo(
-    () => isAdminOrAccountant(user?.role),
-    [user?.role]
-  );
+  const isAdminAcc = useMemo(() => isAdminOrAccountant(user?.role), [user?.role]);
 
   const [tab, setTab] = useState<TabKey>("operations");
   const [summary, setSummary] = useState<any>(null);
@@ -509,10 +503,7 @@ export default function DashboardPage() {
 
     setLoadingCharts(true);
     try {
-      const data = await apiAuthGet(`/dashboard/trends/bundle`, {
-        bucket: "daily",
-      });
-
+      const data = await apiAuthGet(`/dashboard/trends/bundle`, { bucket: "daily" });
       const normalized = (data && (data.data ?? data)) || null;
       setBundle(normalized);
     } catch {
@@ -547,13 +538,10 @@ export default function DashboardPage() {
   const alerts = summary?.alerts || {};
 
   const tabItems = useMemo(() => {
-    const opsCount = Number(
-      alerts?.active_trips_now_count ?? tables?.active_trips_now?.length ?? 0
-    );
+    const opsCount = Number(alerts?.active_trips_now_count ?? tables?.active_trips_now?.length ?? 0);
 
     const finCount =
-      Number(alerts?.advances_open ?? 0) +
-      Number(alerts?.expenses_pending_too_long ?? 0);
+      Number(alerts?.advances_open ?? 0) + Number(alerts?.expenses_pending_too_long ?? 0);
 
     const m = cards?.maintenance || {};
     const mntCount = Number(m?.open_work_orders ?? 0) + Number(m?.qa_needs ?? 0);
@@ -567,11 +555,7 @@ export default function DashboardPage() {
       items.push({ key: "finance", label: t("tabs.finance"), count: finCount });
 
     if (allowedTabs.includes("maintenance"))
-      items.push({
-        key: "maintenance",
-        label: t("tabs.maintenance"),
-        count: mntCount,
-      });
+      items.push({ key: "maintenance", label: t("tabs.maintenance"), count: mntCount });
 
     if (allowedTabs.includes("dev") && canSeeDev(user?.role))
       items.push({ key: "dev", label: t("tabs.dev") });
@@ -600,8 +584,7 @@ export default function DashboardPage() {
     const activeNow = Number(tables?.active_trips_now?.length ?? 0);
     const needingClose = Number(tables?.trips_needing_finance_close?.length ?? 0);
 
-    const toneActive =
-      activeNow >= 10 ? "warn" : activeNow > 0 ? "neutral" : "good";
+    const toneActive = activeNow >= 10 ? "warn" : activeNow > 0 ? "neutral" : "good";
     const toneClose = needingClose > 0 ? "danger" : "good";
 
     return { tripsTodayTotal, activeNow, needingClose, toneActive, toneClose } as const;
@@ -628,45 +611,31 @@ export default function DashboardPage() {
     const toneFail = qaFailed > 0 ? "danger" : "good";
     const toneMismatch = mismatch > 0 ? "warn" : "good";
 
-    return {
-      openWos,
-      completedToday,
-      qaNeeds,
-      qaFailed,
-      mismatch,
-      toneOpen,
-      toneQa,
-      toneFail,
-      toneMismatch,
-    } as const;
+    return { openWos, completedToday, qaNeeds, qaFailed, mismatch, toneOpen, toneQa, toneFail, toneMismatch } as const;
   }, [cards]);
 
-  // ✅ بدون تعديل باك: استخدم status واحدة فقط.
   const maintenanceOpenHref = useMemo(() => {
     if (isAdminAcc) return "/maintenance/work-orders?status=OPEN";
     return "/maintenance/requests?status=APPROVED";
   }, [isAdminAcc]);
 
   const maintenanceQaNeedsHref = useMemo(() => {
-    // ماعندناش QA filter في list endpoint
     if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
     return "/maintenance/requests?status=APPROVED";
   }, [isAdminAcc]);
 
   const maintenanceFailedHref = useMemo(() => {
-    // route /maintenance/reports غير موجود عندك -> 404
     if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
     return "/maintenance/requests";
   }, [isAdminAcc]);
 
   const maintenanceMismatchHref = useMemo(() => {
-    // mismatch filter مش مدعوم في list endpoint
     if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
     return "/maintenance/requests";
   }, [isAdminAcc]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-950 text-white" dir="rtl">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -676,8 +645,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* RTL: مجموعة الأزرار */}
           <div className="flex items-center gap-2">
-            
+            <LanguageSwitcher />
 
             <button
               type="button"
@@ -726,8 +696,7 @@ export default function DashboardPage() {
                   title={t("sections.opsAction")}
                   right={
                     <span className="text-xs text-slate-400">
-                      {t("common.lastRefresh")}{" "}
-                      {new Date().toLocaleTimeString(getCurrentLocale())}
+                      {t("common.lastRefresh")} {new Date().toLocaleTimeString(getCurrentLocale())}
                     </span>
                   }
                 >
@@ -903,16 +872,8 @@ export default function DashboardPage() {
                     </div>
                   ) : chartData ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <MiniChart
-                        title={t("dashboard.ops.charts.tripsCreated")}
-                        points={chartData.trips_created}
-                        valueKey="value"
-                      />
-                      <MiniChart
-                        title={t("dashboard.ops.charts.tripsAssigned")}
-                        points={chartData.trips_assigned}
-                        valueKey="value"
-                      />
+                      <MiniChart title={t("dashboard.ops.charts.tripsCreated")} points={chartData.trips_created} valueKey="value" />
+                      <MiniChart title={t("dashboard.ops.charts.tripsAssigned")} points={chartData.trips_assigned} valueKey="value" />
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
@@ -977,11 +938,7 @@ export default function DashboardPage() {
                     }
                     columns={[
                       { key: "expense_type", label: t("dashboard.columns.type") },
-                      {
-                        key: "amount",
-                        label: t("dashboard.columns.amount"),
-                        render: (r) => fmtMoney(r.amount),
-                      },
+                      { key: "amount", label: t("dashboard.columns.amount"), render: (r) => fmtMoney(r.amount) },
                     ]}
                   />
                 </Section>
@@ -995,11 +952,7 @@ export default function DashboardPage() {
                     <ActionTile
                       title={t("dashboard.maintenance.openWorkOrders.title")}
                       value={fmtInt(mnt.openWos)}
-                      hint={
-                        mnt.openWos
-                          ? t("dashboard.maintenance.openWorkOrders.hintOn")
-                          : t("dashboard.maintenance.openWorkOrders.hintOff")
-                      }
+                      hint={mnt.openWos ? t("dashboard.maintenance.openWorkOrders.hintOn") : t("dashboard.maintenance.openWorkOrders.hintOff")}
                       tone={mnt.toneOpen as any}
                       href={maintenanceOpenHref}
                       openLabel={t("common.open")}
@@ -1008,11 +961,7 @@ export default function DashboardPage() {
                     <ActionTile
                       title={t("dashboard.maintenance.qaNeeds.title")}
                       value={fmtInt(mnt.qaNeeds)}
-                      hint={
-                        mnt.qaNeeds
-                          ? t("dashboard.maintenance.qaNeeds.hintOn")
-                          : t("dashboard.maintenance.qaNeeds.hintOff")
-                      }
+                      hint={mnt.qaNeeds ? t("dashboard.maintenance.qaNeeds.hintOn") : t("dashboard.maintenance.qaNeeds.hintOff")}
                       tone={mnt.toneQa as any}
                       href={maintenanceQaNeedsHref}
                       openLabel={t("common.open")}
@@ -1021,11 +970,7 @@ export default function DashboardPage() {
                     <ActionTile
                       title={t("dashboard.maintenance.qaFailed.title")}
                       value={fmtInt(mnt.qaFailed)}
-                      hint={
-                        mnt.qaFailed
-                          ? t("dashboard.maintenance.qaFailed.hintOn")
-                          : t("dashboard.maintenance.qaFailed.hintOff")
-                      }
+                      hint={mnt.qaFailed ? t("dashboard.maintenance.qaFailed.hintOn") : t("dashboard.maintenance.qaFailed.hintOff")}
                       tone={mnt.toneFail as any}
                       href={maintenanceFailedHref}
                       openLabel={t("common.open")}
@@ -1034,11 +979,7 @@ export default function DashboardPage() {
                     <ActionTile
                       title={t("dashboard.maintenance.partsMismatch.title")}
                       value={fmtInt(mnt.mismatch)}
-                      hint={
-                        mnt.mismatch
-                          ? t("dashboard.maintenance.partsMismatch.hintOn")
-                          : t("dashboard.maintenance.partsMismatch.hintOff")
-                      }
+                      hint={mnt.mismatch ? t("dashboard.maintenance.partsMismatch.hintOn") : t("dashboard.maintenance.partsMismatch.hintOff")}
                       tone={mnt.toneMismatch as any}
                       href={maintenanceMismatchHref}
                       openLabel={t("common.open")}
@@ -1046,34 +987,16 @@ export default function DashboardPage() {
                   </div>
 
                   {!isAdminAcc ? (
-                    <div className="mt-2 text-xs text-slate-400">
-                      {t("dashboard.maintenance.supervisorNote")}
-                    </div>
+                    <div className="mt-2 text-xs text-slate-400">{t("dashboard.maintenance.supervisorNote")}</div>
                   ) : null}
                 </Section>
 
                 <Section title={t("dashboard.maintenance.kpisToday")}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <CompactKpi
-                      title={t("dashboard.maintenance.completedToday.title")}
-                      value={fmtInt(mnt.completedToday)}
-                      sub={t("dashboard.maintenance.completedToday.sub")}
-                    />
-                    <CompactKpi
-                      title={t("dashboard.maintenance.partsCostToday.title")}
-                      value={fmtMoney(cards?.maintenance?.maintenance_parts_cost_today ?? 0)}
-                      sub={t("dashboard.maintenance.partsCostToday.sub")}
-                    />
-                    <CompactKpi
-                      title={t("dashboard.maintenance.cashCostToday.title")}
-                      value={fmtMoney(cards?.maintenance?.maintenance_cash_cost_today ?? 0)}
-                      sub={t("dashboard.maintenance.cashCostToday.sub")}
-                    />
-                    <CompactKpi
-                      title={t("dashboard.maintenance.totalCostToday.title")}
-                      value={fmtMoney(cards?.maintenance?.maintenance_cost_today ?? 0)}
-                      sub={t("dashboard.maintenance.totalCostToday.sub")}
-                    />
+                    <CompactKpi title={t("dashboard.maintenance.completedToday.title")} value={fmtInt(mnt.completedToday)} sub={t("dashboard.maintenance.completedToday.sub")} />
+                    <CompactKpi title={t("dashboard.maintenance.partsCostToday.title")} value={fmtMoney(cards?.maintenance?.maintenance_parts_cost_today ?? 0)} sub={t("dashboard.maintenance.partsCostToday.sub")} />
+                    <CompactKpi title={t("dashboard.maintenance.cashCostToday.title")} value={fmtMoney(cards?.maintenance?.maintenance_cash_cost_today ?? 0)} sub={t("dashboard.maintenance.cashCostToday.sub")} />
+                    <CompactKpi title={t("dashboard.maintenance.totalCostToday.title")} value={fmtMoney(cards?.maintenance?.maintenance_cost_today ?? 0)} sub={t("dashboard.maintenance.totalCostToday.sub")} />
                   </div>
                 </Section>
 
@@ -1084,7 +1007,7 @@ export default function DashboardPage() {
                       href={isAdminAcc ? "/maintenance/work-orders" : "/maintenance/requests"}
                       className="text-xs text-orange-200/90 underline"
                     >
-                      {t("dashboard.maintenance.recentWorkOrders.openList")} →
+                      {t("dashboard.maintenance.recentWorkOrders.openList")} ←
                     </Link>
                   }
                 >
@@ -1103,28 +1026,12 @@ export default function DashboardPage() {
                       else router.push(`/maintenance/requests`);
                     }}
                     columns={[
-                      {
-                        key: "id",
-                        label: t("dashboard.columns.wo"),
-                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
-                      },
+                      { key: "id", label: t("dashboard.columns.wo"), render: (r) => <span className="font-mono">{shortId(r.id)}</span> },
                       { key: "status", label: t("dashboard.columns.status") },
                       { key: "type", label: t("dashboard.columns.type") },
-                      {
-                        key: "vehicle_id",
-                        label: t("dashboard.columns.vehicle"),
-                        render: (r) => <span className="font-mono">{shortId(r.vehicle_id)}</span>,
-                      },
-                      {
-                        key: "opened_at",
-                        label: t("dashboard.columns.opened"),
-                        render: (r) => fmtDate(r.opened_at),
-                      },
-                      {
-                        key: "completed_at",
-                        label: t("dashboard.columns.completed"),
-                        render: (r) => fmtDate(r.completed_at),
-                      },
+                      { key: "vehicle_id", label: t("dashboard.columns.vehicle"), render: (r) => <span className="font-mono">{shortId(r.vehicle_id)}</span> },
+                      { key: "opened_at", label: t("dashboard.columns.opened"), render: (r) => fmtDate(r.opened_at) },
+                      { key: "completed_at", label: t("dashboard.columns.completed"), render: (r) => fmtDate(r.completed_at) },
                     ]}
                   />
                 </Section>

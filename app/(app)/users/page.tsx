@@ -13,9 +13,15 @@ import {
 } from "@/src/lib/users.api";
 import { useT } from "@/src/i18n/useT";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
+// ✅ UI System (Light)
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { DataTable } from "@/src/components/ui/DataTable";
+
+// ✅ Toast + ConfirmDialog
+import { Toast } from "@/src/components/Toast";
+import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
@@ -28,39 +34,69 @@ function fmtDate(d?: string | null) {
   return dt.toLocaleString("ar-EG");
 }
 
+// ✅ Light Card (local helper)
 function Card({
   title,
   right,
   children,
 }: {
-  title: string;
+  title?: React.ReactNode;
   right?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-        <div className="font-semibold">{title}</div>
-        {right}
-      </div>
+    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+      {title ? (
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
+          <div className="font-semibold text-gray-900">{title}</div>
+          {right ? <div className="flex items-center gap-2">{right}</div> : null}
+        </div>
+      ) : null}
       <div className="p-4">{children}</div>
     </div>
   );
 }
 
-function fmtTpl(template: string, vars: Record<string, any>) {
-  return template.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
-}
-
 export default function UsersPage() {
   const t = useT();
   const router = useRouter();
+
   const token = useAuth((s) => s.token);
   const user = useAuth((s) => s.user);
   const hydrate = useAuth((s) => s.hydrate);
 
   const role = roleUpper(user?.role);
   const isAdmin = role === "ADMIN";
+  const canRender = !!token && !!user && isAdmin;
+
+  // Toast
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  function showToast(message: string, type: "success" | "error" = "success") {
+    setToastMsg(message);
+    setToastType(type);
+    setToastOpen(true);
+  }
+
+  // ConfirmDialog (toggle status)
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
+  const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
+  const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
+
+  function openConfirm(opts: {
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+    action: () => Promise<void> | void;
+  }) {
+    setConfirmTitle(opts.title ?? "تأكيد");
+    setConfirmDesc(opts.description ?? "");
+    setConfirmAction(() => opts.action);
+    setConfirmOpen(true);
+  }
 
   // Filters / Paging
   const [q, setQ] = useState("");
@@ -84,6 +120,12 @@ export default function UsersPage() {
   const [cPassword, setCPassword] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
 
+  // Reset Password Modal
+  const [openResetPw, setOpenResetPw] = useState(false);
+  const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
+  const [newPass, setNewPass] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
+
   useEffect(() => {
     hydrate?.();
   }, [hydrate]);
@@ -94,9 +136,9 @@ export default function UsersPage() {
     if (!isAdmin) router.replace("/dashboard");
   }, [token, user, isAdmin, router]);
 
-  const canRender = !!token && !!user && isAdmin;
+  async function fetchUsers(next?: { resetSkip?: boolean }) {
+    if (next?.resetSkip) setSkip(0);
 
-  async function fetchUsers() {
     setLoading(true);
     setErr(null);
     try {
@@ -105,7 +147,7 @@ export default function UsersPage() {
         role: roleFilter || undefined,
         is_active: activeFilter || undefined,
         take,
-        skip,
+        skip: next?.resetSkip ? 0 : skip,
       });
       setItems(unwrapItems<UserRow>(res));
       setTotal(unwrapTotal(res));
@@ -125,10 +167,7 @@ export default function UsersPage() {
   }, [canRender, take, skip]);
 
   const page = useMemo(() => Math.floor(skip / take) + 1, [skip, take]);
-  const pages = useMemo(
-    () => Math.max(1, Math.ceil((total || 0) / take)),
-    [total, take]
-  );
+  const pages = useMemo(() => Math.max(1, Math.ceil((total || 0) / take)), [total, take]);
 
   function resetPaging() {
     setSkip(0);
@@ -136,33 +175,68 @@ export default function UsersPage() {
 
   async function onSearch() {
     resetPaging();
-    await fetchUsers();
+    await fetchUsers({ resetSkip: true });
   }
 
   async function onToggleActive(u: UserRow) {
-    const msg = fmtTpl(t("users.confirm.toggleStatus"), { name: u.full_name });
-    if (!confirm(msg)) return;
-    try {
-      await setUserStatus(u.id, !u.is_active);
-      await fetchUsers();
-    } catch (e: any) {
-      alert(e?.message || t("common.failed"));
-    }
+    const msg = t("users.confirm.toggleStatus", { name: u.full_name });
+
+    openConfirm({
+      title: u.is_active ? "تأكيد التعطيل" : "تأكيد التفعيل",
+      description: msg,
+      action: async () => {
+        setConfirmBusy(true);
+        try {
+          await setUserStatus(u.id, !u.is_active);
+          showToast(t("common.saved") || t("common.success"), "success");
+          await fetchUsers();
+        } catch (e: any) {
+          showToast(e?.message || t("common.failed"), "error");
+        } finally {
+          setConfirmBusy(false);
+          setConfirmOpen(false);
+        }
+      },
+    });
   }
 
-  async function onResetPassword(u: UserRow) {
-    const msg = fmtTpl(t("users.prompt.newPassword"), { name: u.full_name });
-    const newPass = prompt(msg);
-    if (!newPass) return;
+  function openResetPassword(u: UserRow) {
+    setResetTarget(u);
+    setNewPass("");
+    setOpenResetPw(true);
+  }
+
+  async function onSubmitResetPassword() {
+    if (!resetTarget) return;
+    if (!newPass.trim()) {
+      showToast(t("users.errors.passwordRequired") || t("common.required"), "error");
+      return;
+    }
+
+    setResetBusy(true);
     try {
-      await resetUserPassword(u.id, newPass);
-      alert(t("users.alert.passwordChanged"));
+      await resetUserPassword(resetTarget.id, newPass.trim());
+      setOpenResetPw(false);
+      setResetTarget(null);
+      setNewPass("");
+      showToast(t("users.alert.passwordChanged"), "success");
     } catch (e: any) {
-      alert(e?.message || t("common.failed"));
+      showToast(e?.message || t("common.failed"), "error");
+    } finally {
+      setResetBusy(false);
     }
   }
 
   async function onCreate() {
+    if (!cFullName.trim()) {
+      showToast(t("users.errors.fullNameRequired") || t("common.required"), "error");
+      return;
+    }
+    if (!cPassword) {
+      showToast(t("users.errors.passwordRequired") || t("common.required"), "error");
+      return;
+    }
+
     setCreateBusy(true);
     try {
       await createUser({
@@ -180,336 +254,352 @@ export default function UsersPage() {
       setCRole("FIELD_SUPERVISOR");
       setCPassword("");
       resetPaging();
-      await fetchUsers();
+      showToast(t("common.created") || t("common.success"), "success");
+      await fetchUsers({ resetSkip: true });
     } catch (e: any) {
-      alert(e?.message || t("users.errors.createFailed"));
+      showToast(e?.message || t("users.errors.createFailed"), "error");
     } finally {
       setCreateBusy(false);
     }
   }
 
+  // ===== Guards =====
   if (!token) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="text-lg font-semibold">{t("users.title")}</div>
-        <div className="mt-2 text-white/70">{t("users.mustLogin")}</div>
-        <button
-          onClick={() => router.push("/login")}
-          className="mt-4 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
-        >
-          {t("common.login")}
-        </button>
+      <div className="min-h-screen bg-gray-50" dir="rtl">
+        <div className="max-w-5xl mx-auto p-4 md:p-6">
+          <Card>
+            <div className="text-lg font-semibold text-gray-900">{t("users.title")}</div>
+            <div className="mt-2 text-gray-600">{t("users.mustLogin")}</div>
+            <div className="mt-4">
+              <Button onClick={() => router.push("/login")}>{t("common.login")}</Button>
+            </div>
+          </Card>
+        </div>
+
+        <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
       </div>
     );
   }
 
   if (!canRender) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        {t("common.loading")}
+      <div className="min-h-screen bg-gray-50" dir="rtl">
+        <div className="max-w-5xl mx-auto p-4 md:p-6">
+          <Card>
+            <div className="text-gray-700">{t("common.loading")}</div>
+          </Card>
+        </div>
+
+        <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
       </div>
     );
   }
 
+  // ===== Page =====
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <div className="text-2xl font-bold">{t("users.title")}</div>
-          <div className="text-sm text-white/60">{t("users.subtitle")}</div>
-        </div>
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+        <PageHeader
+          title={t("users.title")}
+          subtitle={t("users.subtitle")}
+          actions={<Button onClick={() => setOpenCreate(true)}>{t("users.actions.create")}</Button>}
+        />
 
-        <button
-          onClick={() => setOpenCreate(true)}
-          className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
+        {/* Filters */}
+        <Card
+          title={t("users.filters.title")}
+          right={
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setQ("");
+                setRoleFilter("");
+                setActiveFilter("");
+                resetPaging();
+                fetchUsers({ resetSkip: true });
+              }}
+            >
+              {t("common.reset")}
+            </Button>
+          }
         >
-          {t("users.actions.create")}
-        </button>
-      </div>
-
-      {/* Filters */}
-      <Card
-        title={t("users.filters.title")}
-        right={
-          <button
-            onClick={() => {
-              setQ("");
-              setRoleFilter("");
-              setActiveFilter("");
-              resetPaging();
-              fetchUsers();
-            }}
-            className="px-3 py-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-          >
-            {t("common.reset")}
-          </button>
-        }
-      >
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div>
-            <div className="text-xs text-white/60 mb-1">{t("common.search")}</div>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t("users.filters.searchPlaceholder")}
-              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 outline-none"
-            />
-          </div>
-
-          <div>
-            <div className="text-xs text-white/60 mb-1">{t("users.filters.role")}</div>
-            <input
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value.toUpperCase())}
-              placeholder={t("users.filters.rolePlaceholder")}
-              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 outline-none"
-            />
-          </div>
-
-          <div>
-            <div className="text-xs text-white/60 mb-1">{t("users.filters.status")}</div>
-            <select
-              value={activeFilter}
-              onChange={(e) => setActiveFilter(e.target.value as any)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 outline-none"
-            >
-              <option value="">{t("common.all")}</option>
-              <option value="true">{t("common.active")}</option>
-              <option value="false">{t("common.disabled")}</option>
-            </select>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <button
-              onClick={onSearch}
-              className="flex-1 px-4 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15"
-            >
-              {t("common.search")}
-            </button>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-white/60">{t("common.rows")}</span>
-              <select
-                value={take}
-                onChange={(e) => {
-                  setTake(Number(e.target.value));
-                  resetPaging();
-                }}
-                className="rounded-xl border border-white/10 bg-slate-950 px-2 py-2 outline-none"
-              >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {err ? <div className="mt-3 text-sm text-red-300">⚠️ {err}</div> : null}
-      </Card>
-
-      {/* Table */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-          <div className="text-sm text-white/70">
-            {t("common.total")}: <span className="font-semibold text-white">{total}</span>
-          </div>
-
-          <div className="text-sm text-white/70">
-            {t("common.page")} <span className="font-semibold text-white">{page}</span> /{" "}
-            <span className="font-semibold text-white">{pages}</span>
-          </div>
-        </div>
-
-        <div className="overflow-auto">
-          <table className="min-w-[1050px] w-full text-sm">
-            <thead className="bg-white/5 text-white/70">
-              <tr>
-                <th className="text-left px-4 py-3">{t("users.table.name")}</th>
-                <th className="text-left px-4 py-3">{t("users.table.email")}</th>
-                <th className="text-left px-4 py-3">{t("users.table.phone")}</th>
-                <th className="text-left px-4 py-3">{t("users.table.role")}</th>
-                <th className="text-left px-4 py-3">{t("users.table.status")}</th>
-                <th className="text-left px-4 py-3">{t("users.table.created")}</th>
-                <th className="text-left px-4 py-3">{t("users.table.updated")}</th>
-                <th className="text-right px-4 py-3">{t("users.table.actions")}</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td className="px-4 py-4 text-white/60" colSpan={8}>
-                    {t("common.loading")}
-                  </td>
-                </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-4 text-white/60" colSpan={8}>
-                    {t("users.empty")}
-                  </td>
-                </tr>
-              ) : (
-                items.map((u: any) => (
-                  <tr key={u.id} className="border-t border-white/10">
-                    <td className="px-4 py-3 font-medium text-white">{u.full_name}</td>
-                    <td className="px-4 py-3 text-white/80">{u.email || "—"}</td>
-                    <td className="px-4 py-3 text-white/80">{u.phone || "—"}</td>
-                    <td className="px-4 py-3 text-white/80">{u.role}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "inline-flex px-2 py-1 rounded-full text-xs border",
-                          u.is_active
-                            ? "bg-green-500/10 text-green-200 border-green-500/20"
-                            : "bg-red-500/10 text-red-200 border-red-500/20"
-                        )}
-                      >
-                        {u.is_active ? t("common.activeUpper") : t("common.disabledUpper")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-white/70">{fmtDate(u.created_at)}</td>
-                    <td className="px-4 py-3 text-white/70">{fmtDate(u.updated_at)}</td>
-                    <td className="px-4 py-3 text-right space-x-2">
-                      <button
-                        onClick={() => onResetPassword(u)}
-                        className="px-3 py-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
-                      >
-                        {t("users.actions.resetPw")}
-                      </button>
-                      <button
-                        onClick={() => onToggleActive(u)}
-                        className="px-3 py-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
-                      >
-                        {u.is_active ? t("users.actions.disable") : t("users.actions.enable")}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="px-4 py-3 border-t border-white/10 flex items-center justify-end gap-2">
-          <button
-            disabled={skip <= 0}
-            onClick={() => setSkip((s) => Math.max(0, s - take))}
-            className={cn(
-              "px-3 py-1 rounded-xl border border-white/10",
-              skip <= 0 ? "opacity-50 cursor-not-allowed" : "bg-white/5 hover:bg-white/10"
-            )}
-          >
-            {t("common.prev")}
-          </button>
-          <button
-            disabled={skip + take >= total}
-            onClick={() => setSkip((s) => s + take)}
-            className={cn(
-              "px-3 py-1 rounded-xl border border-white/10",
-              skip + take >= total ? "opacity-50 cursor-not-allowed" : "bg-white/5 hover:bg-white/10"
-            )}
-          >
-            {t("common.next")}
-          </button>
-        </div>
-      </div>
-
-      {/* Create Modal */}
-      {openCreate ? (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-950 text-white overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-              <div className="font-semibold">{t("users.modal.title")}</div>
-              <button
-                onClick={() => setOpenCreate(false)}
-                className="px-2 py-1 rounded-lg hover:bg-white/10"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-4 space-y-3">
-              <div>
-                <div className="text-xs text-white/60 mb-1">{t("users.modal.fullName")} *</div>
-                <input
-                  value={cFullName}
-                  onChange={(e) => setCFullName(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <FiltersBar
+            left={
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
                 <div>
-                  <div className="text-xs text-white/60 mb-1">{t("users.modal.email")}</div>
+                  <div className="text-xs text-gray-600 mb-1">{t("common.search")}</div>
                   <input
-                    value={cEmail}
-                    onChange={(e) => setCEmail(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 outline-none"
-                    placeholder={t("common.optional")}
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder={t("users.filters.searchPlaceholder")}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
                   />
                 </div>
+
                 <div>
-                  <div className="text-xs text-white/60 mb-1">{t("users.modal.phone")}</div>
+                  <div className="text-xs text-gray-600 mb-1">{t("users.filters.role")}</div>
                   <input
-                    value={cPhone}
-                    onChange={(e) => setCPhone(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 outline-none"
-                    placeholder={t("common.optional")}
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value.toUpperCase())}
+                    placeholder={t("users.filters.rolePlaceholder")}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs text-white/60 mb-1">{t("users.modal.role")} *</div>
+                  <div className="text-xs text-gray-600 mb-1">{t("users.filters.status")}</div>
                   <select
-                    value={cRole}
-                    onChange={(e) => setCRole(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 outline-none"
+                    value={activeFilter}
+                    onChange={(e) => setActiveFilter(e.target.value as any)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
                   >
-                    <option value="FIELD_SUPERVISOR">FIELD_SUPERVISOR</option>
-                    <option value="ACCOUNTANT">ACCOUNTANT</option>
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="HR">HR</option>
-                    <option value="GENERAL_SUPERVISOR">GENERAL_SUPERVISOR</option>
+                    <option value="">{t("common.all")}</option>
+                    <option value="true">{t("common.active")}</option>
+                    <option value="false">{t("common.disabled")}</option>
                   </select>
                 </div>
 
+                <div className="flex items-end gap-2">
+                  <Button onClick={onSearch} className="flex-1">
+                    {t("common.search")}
+                  </Button>
+
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-600">{t("common.rows")}</span>
+                    <select
+                      value={take}
+                      onChange={(e) => {
+                        setTake(Number(e.target.value));
+                        resetPaging();
+                      }}
+                      className="rounded-xl border border-gray-200 bg-white px-2 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    >
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            }
+          />
+
+          {err ? <div className="mt-3 text-sm text-red-600">⚠️ {err}</div> : null}
+        </Card>
+
+        {/* Table */}
+        <DataTable<UserRow>
+          title={t("users.title")}
+          columns={[
+            { key: "full_name", label: t("users.table.name") },
+            { key: "email", label: t("users.table.email") },
+            { key: "phone", label: t("users.table.phone") },
+            { key: "role", label: t("users.table.role") },
+            {
+              key: "is_active",
+              label: t("users.table.status"),
+              render: (u) => (
+                <span
+                  className={
+                    u.is_active
+                      ? "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-green-50 text-green-700 border-green-200"
+                      : "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-red-50 text-red-700 border-red-200"
+                  }
+                >
+                  {u.is_active ? t("common.activeUpper") : t("common.disabledUpper")}
+                </span>
+              ),
+            },
+            { key: "created_at", label: t("users.table.created"), render: (u) => fmtDate((u as any).created_at) },
+            { key: "updated_at", label: t("users.table.updated"), render: (u) => fmtDate((u as any).updated_at) },
+            {
+              key: "actions",
+              label: t("users.table.actions"),
+              className: "text-left",
+              headerClassName: "text-left",
+              render: (u) => (
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => openResetPassword(u)}>
+                    {t("users.actions.resetPw")}
+                  </Button>
+                  <Button variant="secondary" onClick={() => onToggleActive(u)}>
+                    {u.is_active ? t("users.actions.disable") : t("users.actions.enable")}
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+          rows={items}
+          loading={loading}
+          emptyTitle={t("users.empty")}
+          emptyHint={t("common.tryAdjustFilters") || t("common.noData")}
+          total={total}
+          page={page}
+          pages={pages}
+          onPrev={skip <= 0 ? undefined : () => setSkip((s) => Math.max(0, s - take))}
+          onNext={skip + take >= total ? undefined : () => setSkip((s) => s + take)}
+        />
+
+        {/* Create Modal (Light) */}
+        {openCreate ? (
+          <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-center justify-center p-4">
+            <div dir="rtl" className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white text-gray-900 overflow-hidden shadow-xl">
+              <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div className="font-semibold">{t("users.modal.title")}</div>
+                <button onClick={() => setOpenCreate(false)} className="px-2 py-1 rounded-lg hover:bg-gray-100">
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-4 space-y-3">
                 <div>
-                  <div className="text-xs text-white/60 mb-1">{t("users.modal.password")} *</div>
+                  <div className="text-xs text-gray-600 mb-1">{t("users.modal.fullName")} *</div>
                   <input
-                    value={cPassword}
-                    onChange={(e) => setCPassword(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 outline-none"
+                    value={cFullName}
+                    onChange={(e) => setCFullName(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">{t("users.modal.email")}</div>
+                    <input
+                      value={cEmail}
+                      onChange={(e) => setCEmail(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                      placeholder={t("common.optional")}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">{t("users.modal.phone")}</div>
+                    <input
+                      value={cPhone}
+                      onChange={(e) => setCPhone(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                      placeholder={t("common.optional")}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">{t("users.modal.role")} *</div>
+                    <select
+                      value={cRole}
+                      onChange={(e) => setCRole(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    >
+                      <option value="FIELD_SUPERVISOR">FIELD_SUPERVISOR</option>
+                      <option value="ACCOUNTANT">ACCOUNTANT</option>
+                      <option value="ADMIN">ADMIN</option>
+                      <option value="HR">HR</option>
+                      <option value="GENERAL_SUPERVISOR">GENERAL_SUPERVISOR</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">{t("users.modal.password")} *</div>
+                    <input
+                      value={cPassword}
+                      onChange={(e) => setCPassword(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                      type="password"
+                      placeholder={t("users.modal.passwordHint")}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-4 py-3 border-t border-gray-200 flex gap-2 justify-start">
+                <Button variant="secondary" onClick={() => setOpenCreate(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button isLoading={createBusy} disabled={createBusy} onClick={onCreate}>
+                  {t("users.modal.create")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Reset Password Modal (Light) */}
+        {openResetPw ? (
+          <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-center justify-center p-4">
+            <div dir="rtl" className="w-full max-w-md rounded-2xl border border-gray-200 bg-white text-gray-900 overflow-hidden shadow-xl">
+              <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div className="font-semibold">
+                  {t("users.actions.resetPw")} — {resetTarget?.full_name || "—"}
+                </div>
+                <button
+                  onClick={() => {
+                    setOpenResetPw(false);
+                    setResetTarget(null);
+                    setNewPass("");
+                  }}
+                  className="px-2 py-1 rounded-lg hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-4 space-y-3">
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">
+                    {t("users.prompt.newPassword", { name: resetTarget?.full_name || "" })}
+                  </div>
+                  <input
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
                     type="password"
                     placeholder={t("users.modal.passwordHint")}
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="px-4 py-3 border-t border-white/10 flex gap-2 justify-end">
-              <button
-                onClick={() => setOpenCreate(false)}
-                className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                disabled={createBusy}
-                onClick={onCreate}
-                className={cn(
-                  "px-4 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15",
-                  createBusy ? "opacity-60 cursor-not-allowed" : ""
-                )}
-              >
-                {createBusy ? t("users.modal.creating") : t("users.modal.create")}
-              </button>
+              <div className="px-4 py-3 border-t border-gray-200 flex gap-2 justify-start">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setOpenResetPw(false);
+                    setResetTarget(null);
+                    setNewPass("");
+                  }}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button isLoading={resetBusy} disabled={resetBusy} onClick={onSubmitResetPassword}>
+                  {t("common.save") || t("common.confirm")}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmTitle}
+        description={confirmDesc}
+        confirmText="تأكيد"
+        cancelText="إلغاء"
+        tone="danger"
+        isLoading={confirmBusy}
+        dir="rtl"
+        onClose={() => {
+          if (confirmBusy) return;
+          setConfirmOpen(false);
+        }}
+        onConfirm={async () => {
+          if (!confirmAction) return;
+          await confirmAction();
+        }}
+      />
+
+      <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
     </div>
   );
 }

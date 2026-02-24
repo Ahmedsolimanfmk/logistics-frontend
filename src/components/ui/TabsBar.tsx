@@ -1,4 +1,3 @@
-// src/components/ui/TabsBar.tsx
 "use client";
 
 import React from "react";
@@ -31,8 +30,8 @@ export function TabsBar<T extends string>({
             className={cn(
               "px-3 py-2 rounded-xl text-sm border transition",
               active
-                ? "bg-white/10 border-white/10 text-white"
-                : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white",
+                ? "bg-black border-black text-white"
+                : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50",
               x.disabled && "opacity-50 cursor-not-allowed"
             )}
           >

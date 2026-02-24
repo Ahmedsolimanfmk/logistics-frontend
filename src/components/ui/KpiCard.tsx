@@ -1,4 +1,3 @@
-// src/components/ui/KpiCard.tsx
 import React from "react";
 
 export function KpiCard({
@@ -13,10 +12,16 @@ export function KpiCard({
   className?: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-white/10 bg-white/5 p-4 ${className}`}>
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className="mt-1 text-2xl font-bold">{value}</div>
-      {hint ? <div className="mt-1 text-xs text-slate-400">{hint}</div> : null}
+    <div
+      className={[
+        "rounded-2xl border border-gray-200 bg-white p-4",
+        "shadow-sm",
+        className,
+      ].join(" ")}
+    >
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="mt-1 text-2xl font-bold text-gray-900">{value}</div>
+      {hint ? <div className="mt-1 text-xs text-gray-500">{hint}</div> : null}
     </div>
   );
 }
