@@ -13,6 +13,7 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { KpiCard } from "@/src/components/ui/KpiCard";
 import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
@@ -38,8 +39,18 @@ function shortId(id: any) {
 
 type TabKey = "ALL" | "OPEN" | "SETTLED" | "CANCELED";
 
+type AdvanceRow = {
+  id: string;
+  amount?: number;
+  status?: string;
+  created_at?: string | null;
+  field_supervisor_id?: string | null;
+  notes?: string | null;
+  users_cash_advances_supervisor?: { full_name?: string | null; email?: string | null } | null;
+};
+
 /* =========================
-   Issue Advance Modal
+   Issue Advance Modal (Light + RTL)
 ========================= */
 function IssueAdvanceModal({
   open,
@@ -69,26 +80,16 @@ function IssueAdvanceModal({
       try {
         const res = await api.get("/users");
         const body = (res as any)?.data ?? res;
-        const list = Array.isArray(body)
-          ? body
-          : Array.isArray(body?.items)
-          ? body.items
-          : [];
+        const list = Array.isArray(body) ? body : Array.isArray(body?.items) ? body.items : [];
 
         const sup = list.filter(
           (u: any) =>
-            String(u?.role || "").toUpperCase() === "FIELD_SUPERVISOR" &&
-            u?.is_active !== false
+            String(u?.role || "").toUpperCase() === "FIELD_SUPERVISOR" && u?.is_active !== false
         );
 
         setSupervisors(sup);
       } catch (e: any) {
-        showToast(
-          "error",
-          e?.response?.data?.message ||
-            e?.message ||
-            "Failed to load supervisors"
-        );
+        showToast("error", e?.response?.data?.message || e?.message || "Failed to load supervisors");
       } finally {
         setLoading(false);
       }
@@ -114,9 +115,7 @@ function IssueAdvanceModal({
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message ||
-          e?.message ||
-          t("financeAdvances.errors.issueFailed")
+        e?.response?.data?.message || e?.message || t("financeAdvances.errors.issueFailed")
       );
     } finally {
       setLoading(false);
@@ -125,34 +124,33 @@ function IssueAdvanceModal({
 
   return (
     <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
-      onClick={onClose}
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 backdrop-blur-[1px] p-4"
+      dir="rtl"
+      onMouseDown={() => {
+        if (!loading) onClose();
+      }}
     >
       <div
-        className="w-full max-w-xl rounded-2xl bg-slate-900 text-white border border-white/10 p-4"
-        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xl rounded-2xl bg-white text-gray-900 border border-gray-200 shadow-xl overflow-hidden"
+        onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">
-            {t("financeAdvances.modal.issueTitle")}
-          </h3>
-          <Button variant="secondary" onClick={onClose}>
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">{t("financeAdvances.modal.issueTitle")}</h3>
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
             ✕
           </Button>
         </div>
 
-        <div className="mt-4 grid gap-3">
+        <div className="p-4 grid gap-3">
           <label className="grid gap-2 text-sm">
-            {t("financeAdvances.modal.supervisor")}
+            <span className="text-xs text-gray-600">{t("financeAdvances.modal.supervisor")}</span>
             <select
               value={supervisorId}
               onChange={(e) => setSupervisorId(e.target.value)}
               disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-gray-200 outline-none focus:ring-2 focus:ring-gray-200"
             >
-              <option value="">
-                {t("financeAdvances.modal.selectSupervisor")}
-              </option>
+              <option value="">{t("financeAdvances.modal.selectSupervisor")}</option>
               {supervisors.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.full_name || s.email || shortId(s.id)}
@@ -162,7 +160,7 @@ function IssueAdvanceModal({
           </label>
 
           <label className="grid gap-2 text-sm">
-            {t("financeAdvances.modal.amount")}
+            <span className="text-xs text-gray-600">{t("financeAdvances.modal.amount")}</span>
             <input
               type="number"
               min="0"
@@ -171,25 +169,18 @@ function IssueAdvanceModal({
               onChange={(e) => setAmount(e.target.value)}
               disabled={loading}
               placeholder={t("financeAdvances.modal.amountPh")}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-gray-200 outline-none focus:ring-2 focus:ring-gray-200"
             />
           </label>
         </div>
 
-        <div className="mt-5 flex items-center justify-end gap-2">
+        <div className="px-4 py-3 border-t border-gray-200 flex items-center gap-2 justify-start">
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             {t("common.cancel")}
           </Button>
 
-          <Button
-            variant="primary"
-            onClick={submit}
-            disabled={!canSubmit || loading}
-            isLoading={loading}
-          >
-            {loading
-              ? t("common.saving")
-              : t("financeAdvances.actions.issue")}
+          <Button variant="primary" onClick={submit} disabled={!canSubmit || loading} isLoading={loading}>
+            {loading ? t("common.saving") : t("financeAdvances.actions.issue")}
           </Button>
         </div>
       </div>
@@ -214,15 +205,12 @@ export default function AdvancesClientPage(): React.ReactElement {
 
   const status = (sp.get("status") || "ALL").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(
-    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
-    200
-  );
+  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<AdvanceRow[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<any | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
@@ -273,12 +261,8 @@ export default function AdvancesClientPage(): React.ReactElement {
       ]);
 
       const data = (listRes as any)?.data ?? listRes;
-      const list = Array.isArray(data)
-        ? data
-        : (data as any)?.items || [];
-      const tTotal = Array.isArray(data)
-        ? list.length
-        : Number((data as any)?.total || 0);
+      const list: AdvanceRow[] = Array.isArray(data) ? data : (data as any)?.items || [];
+      const tTotal = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
 
       setItems(list);
       setTotal(tTotal);
@@ -286,11 +270,7 @@ export default function AdvancesClientPage(): React.ReactElement {
       const sumData = (summaryRes as any)?.data ?? summaryRes;
       setSummary(sumData?.totals || null);
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        t("financeAdvances.errors.loadFailed");
-
+      const msg = e?.response?.data?.message || e?.message || t("financeAdvances.errors.loadFailed");
       setErr(msg);
       setItems([]);
       setTotal(0);
@@ -303,6 +283,7 @@ export default function AdvancesClientPage(): React.ReactElement {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, page, pageSize, q, token]);
 
   const kpi = useMemo(() => {
@@ -316,115 +297,206 @@ export default function AdvancesClientPage(): React.ReactElement {
     }
 
     const rows = items;
-    const sumAmount = rows.reduce(
-      (acc, x) => acc + Number(x?.amount || 0),
-      0
-    );
+    const sumAmount = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
 
     return {
       sumAmount,
       openCount: rows.filter((x) =>
-        ["OPEN", "IN_REVIEW", "PENDING"].includes(
-          String(x.status).toUpperCase()
-        )
+        ["OPEN", "IN_REVIEW", "PENDING"].includes(String(x.status).toUpperCase())
       ).length,
-      settledCount: rows.filter((x) =>
-        ["SETTLED", "CLOSED"].includes(
-          String(x.status).toUpperCase()
-        )
-      ).length,
-      canceledCount: rows.filter((x) =>
-        ["CANCELED", "REJECTED"].includes(
-          String(x.status).toUpperCase()
-        )
-      ).length,
+      settledCount: rows.filter((x) => ["SETTLED", "CLOSED"].includes(String(x.status).toUpperCase())).length,
+      canceledCount: rows.filter((x) => ["CANCELED", "REJECTED"].includes(String(x.status).toUpperCase())).length,
     };
   }, [items, summary]);
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+  const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
+    { key: "ALL", label: t("common.all") || "الكل" },
+    { key: "OPEN", label: t("financeAdvances.tabs.open") || "مفتوح", count: kpi.openCount },
+    { key: "SETTLED", label: t("financeAdvances.tabs.settled") || "مُسوّى", count: kpi.settledCount },
+    { key: "CANCELED", label: t("financeAdvances.tabs.canceled") || "ملغي", count: kpi.canceledCount },
+  ];
 
+  const columns: DataTableColumn<AdvanceRow>[] = [
+    {
+      key: "id",
+      label: t("financeAdvances.table.id") || "المعرف",
+      render: (r) => <span className="font-mono text-xs">{shortId(r.id)}</span>,
+    },
+    {
+      key: "supervisor",
+      label: t("financeAdvances.table.supervisor") || "المشرف",
+      render: (r) =>
+        r.users_cash_advances_supervisor?.full_name ||
+        r.users_cash_advances_supervisor?.email ||
+        r.field_supervisor_id ||
+        "—",
+    },
+    {
+      key: "amount",
+      label: t("financeAdvances.table.amount") || "المبلغ",
+      render: (r) => <span className="font-semibold">{fmtMoney(r.amount)}</span>,
+    },
+    {
+      key: "status",
+      label: t("financeAdvances.table.status") || "الحالة",
+      render: (r) => <StatusBadge status={String(r.status || "").toUpperCase()} />,
+    },
+    {
+      key: "created_at",
+      label: t("financeAdvances.table.createdAt") || "تاريخ الإنشاء",
+      render: (r) => fmtDate(r.created_at),
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
         <PageHeader
           title={t("financeAdvances.title")}
           subtitle={
             <>
-              {canSeeAll
-                ? t("financeAdvances.meta.showingAll")
-                : t("financeAdvances.meta.showingMine")}
+              {canSeeAll ? t("financeAdvances.meta.showingAll") : t("financeAdvances.meta.showingMine")}
               {" — "}
-              {t("common.role")}:{" "}
-              <span className="text-slate-200">{role || "—"}</span>
+              {t("common.role")}: <span className="text-gray-700">{role || "—"}</span>
             </>
           }
           actions={
-            <>
+            <div className="flex flex-wrap items-center gap-2">
               <Link href="/finance">
-                <Button variant="secondary">
-                  ← {t("sidebar.finance")}
-                </Button>
+                <Button variant="secondary">{t("sidebar.finance")}</Button>
               </Link>
 
-              {canIssue && (
-                <Button
-                  variant="primary"
-                  onClick={() => setIssueOpen(true)}
-                >
+              {canIssue ? (
+                <Button variant="primary" onClick={() => setIssueOpen(true)}>
                   + {t("financeAdvances.actions.issue")}
                 </Button>
-              )}
+              ) : null}
 
-              <Button
-                variant="secondary"
-                onClick={load}
-                disabled={loading}
-                isLoading={loading}
-              >
-                {loading
-                  ? t("common.loading")
-                  : t("common.refresh")}
+              <Button variant="secondary" onClick={load} disabled={loading} isLoading={loading}>
+                {loading ? t("common.loading") : t("common.refresh")}
               </Button>
-            </>
+            </div>
           }
         />
 
         {/* KPI */}
-        {!loading && !err && (
+        {!loading && !err ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard
-              label={t("financeAdvances.kpi.totalAmount")}
-              value={fmtMoney(kpi.sumAmount)}
-            />
-            <KpiCard
-              label={t("financeAdvances.kpi.open")}
-              value={kpi.openCount}
-            />
-            <KpiCard
-              label={t("financeAdvances.kpi.settled")}
-              value={kpi.settledCount}
-            />
-            <KpiCard
-              label={t("financeAdvances.kpi.canceled")}
-              value={kpi.canceledCount}
+            <KpiCard label={t("financeAdvances.kpi.totalAmount")} value={fmtMoney(kpi.sumAmount)} />
+            <KpiCard label={t("financeAdvances.kpi.open")} value={kpi.openCount} />
+            <KpiCard label={t("financeAdvances.kpi.settled")} value={kpi.settledCount} />
+            <KpiCard label={t("financeAdvances.kpi.canceled")} value={kpi.canceledCount} />
+          </div>
+        ) : null}
+
+        {/* Filters + Tabs */}
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <FiltersBar
+              left={
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">{t("common.search")}</div>
+                    <input
+                      value={q}
+                      onChange={(e) => setParam("q", e.target.value)}
+                      placeholder={t("financeAdvances.filters.searchPh") || "بحث بالمعرف/المشرف..."}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    />
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-600">{t("common.rows")}</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => setParam("pageSize", String(e.target.value))}
+                        className="rounded-xl border border-gray-200 bg-white px-2 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-end justify-start gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setParam("q", "");
+                        setParam("status", "ALL");
+                        setParam("pageSize", String(25));
+                      }}
+                    >
+                      {t("common.reset")}
+                    </Button>
+                  </div>
+                </div>
+              }
             />
           </div>
-        )}
 
+          <div className="px-4 py-3 flex flex-wrap gap-2">
+            {tabs.map((x) => {
+              const active = status === x.key;
+              return (
+                <button
+                  key={x.key}
+                  onClick={() => setParam("status", x.key === "ALL" ? "ALL" : x.key)}
+                  className={[
+                    "px-3 py-2 rounded-xl text-sm border transition inline-flex items-center gap-2",
+                    active
+                      ? "bg-gray-900 text-white border-gray-900"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
+                  ].join(" ")}
+                >
+                  {x.label}
+                  {typeof x.count === "number" ? (
+                    <span
+                      className={[
+                        "text-xs px-2 py-0.5 rounded-full",
+                        active ? "bg-white/15 text-white" : "bg-gray-100 text-gray-700",
+                      ].join(" ")}
+                    >
+                      {x.count}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Error */}
+        {err ? <div className="text-sm text-red-600">⚠️ {err}</div> : null}
+
+        {/* Table */}
+        <DataTable<AdvanceRow>
+          title={t("financeAdvances.table.title") || t("financeAdvances.title")}
+          subtitle={
+            status === "ALL"
+              ? (t("financeAdvances.meta.showingAll") as any)
+              : `${t("financeAdvances.table.filteredBy") || "تصفية:"} ${status}`
+          }
+          columns={columns}
+          rows={items}
+          loading={loading}
+          total={total}
+          page={page}
+          pages={totalPages}
+          onPrev={page <= 1 ? undefined : () => setParam("page", String(page - 1))}
+          onNext={page >= totalPages ? undefined : () => setParam("page", String(page + 1))}
+          emptyTitle={t("financeAdvances.empty") || "لا يوجد سلف"}
+          emptyHint={t("common.tryAdjustFilters") || "جرّب تغيير الفلاتر أو البحث."}
+          onRowClick={(row) => router.push(`/finance/advances/${row.id}`)}
+        />
       </div>
 
-      <IssueAdvanceModal
-        open={issueOpen}
-        onClose={() => setIssueOpen(false)}
-        onIssued={load}
-        showToast={showToast}
-      />
+      <IssueAdvanceModal open={issueOpen} onClose={() => setIssueOpen(false)} onIssued={load} showToast={showToast} />
 
-      <Toast
-        open={toastOpen}
-        message={toastMsg}
-        type={toastType}
-        onClose={() => setToastOpen(false)}
-      />
+      <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
     </div>
   );
 }

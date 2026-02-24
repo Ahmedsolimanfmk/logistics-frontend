@@ -40,9 +40,7 @@ function Toast({
       className={cn(
         "fixed right-4 bottom-4 z-[9999] max-w-[360px] cursor-pointer",
         "rounded-xl px-4 py-3 text-white shadow-xl border",
-        type === "success"
-          ? "bg-emerald-600 border-emerald-500/30"
-          : "bg-red-600 border-red-500/30"
+        type === "success" ? "bg-emerald-600 border-emerald-500/30" : "bg-red-600 border-red-500/30"
       )}
       role="alert"
     >
@@ -86,11 +84,7 @@ function AssignTripModal({
       setLoading(true);
       try {
         // ✅ list endpoints may return {items} or []
-        const [vRes, dRes, uRes] = await Promise.all([
-          api.get("/vehicles"),
-          api.get("/drivers"),
-          api.get("/users"),
-        ]);
+        const [vRes, dRes, uRes] = await Promise.all([api.get("/vehicles"), api.get("/drivers"), api.get("/users")]);
 
         const v = unwrap(vRes);
         const d = unwrap(dRes);
@@ -103,9 +97,7 @@ function AssignTripModal({
         setVehicles(vItems);
         setDrivers(dItems);
 
-        setSupervisors(
-          uItems.filter((x: any) => roleUpper(x?.role) === "FIELD_SUPERVISOR")
-        );
+        setSupervisors(uItems.filter((x: any) => roleUpper(x?.role) === "FIELD_SUPERVISOR"));
       } finally {
         setLoading(false);
       }
@@ -133,20 +125,14 @@ function AssignTripModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-3"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-3" onClick={onClose}>
       <div
-        className="w-[560px] max-w-full rounded-2xl bg-white text-slate-900 p-4"
+        className="w-[560px] max-w-full rounded-2xl bg-white text-slate-900 p-4 border border-slate-200 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3">
           <h3 className="m-0 font-bold">{t("tripModals.assignTitle")}</h3>
-          <button
-            onClick={onClose}
-            className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
-          >
+          <button onClick={onClose} className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">
             ✕
           </button>
         </div>
@@ -158,14 +144,12 @@ function AssignTripModal({
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
               disabled={loading}
-              className="h-10 rounded-lg border border-slate-200 px-3"
+              className="h-10 rounded-lg border border-slate-200 px-3 bg-white"
             >
               <option value="">{t("tripModals.selectVehicle")}</option>
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.fleet_no && v.plate_no
-                    ? `${v.fleet_no} - ${v.plate_no}`
-                    : v.plate_number || v.plate_no || v.name || v.code || v.id}
+                  {v.fleet_no && v.plate_no ? `${v.fleet_no} - ${v.plate_no}` : v.plate_number || v.plate_no || v.name || v.code || v.id}
                 </option>
               ))}
             </select>
@@ -177,7 +161,7 @@ function AssignTripModal({
               value={driverId}
               onChange={(e) => setDriverId(e.target.value)}
               disabled={loading}
-              className="h-10 rounded-lg border border-slate-200 px-3"
+              className="h-10 rounded-lg border border-slate-200 px-3 bg-white"
             >
               <option value="">{t("tripModals.selectDriver")}</option>
               {drivers.map((d) => (
@@ -194,7 +178,7 @@ function AssignTripModal({
               value={supervisorId}
               onChange={(e) => setSupervisorId(e.target.value)}
               disabled={loading}
-              className="h-10 rounded-lg border border-slate-200 px-3"
+              className="h-10 rounded-lg border border-slate-200 px-3 bg-white"
             >
               <option value="">{t("tripModals.none")}</option>
               {supervisors.map((s) => (
@@ -304,8 +288,8 @@ export default function TripsManagedPage() {
 
   if (token === null) {
     return (
-      <div className="p-4">
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+      <div className="p-4 bg-gray-50 text-gray-900" dir="rtl">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
           {t("common.loadingSession")}
         </div>
       </div>
@@ -313,31 +297,31 @@ export default function TripsManagedPage() {
   }
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-3 bg-gray-50 text-gray-900 min-h-screen" dir="rtl">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-white m-0">{t("trips.title")}</h2>
-          <div className="text-sm text-slate-400">{t("trips.subtitle")}</div>
+          <h2 className="text-xl font-bold text-slate-900 m-0">{t("trips.title")}</h2>
+          <div className="text-sm text-slate-600">{t("trips.subtitle")}</div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={loadTrips}
             disabled={loading}
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-white disabled:opacity-50"
+            className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
           >
             {loading ? t("common.loading") : t("common.refresh")}
           </button>
 
-          <div className="text-xs text-slate-400">
-            {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
+          <div className="text-xs text-slate-600">
+            {t("common.role")}: <span className="text-slate-900 font-semibold">{role || "—"}</span>
           </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/5">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
         <div className="min-w-[720px]">
-          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs text-slate-400 border-b border-white/10">
+          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs text-slate-600 border-b border-slate-200 bg-slate-50">
             <div className="col-span-2">{t("trips.table.status")}</div>
             <div className="col-span-4">{t("trips.table.client")}</div>
             <div className="col-span-4">{t("trips.table.site")}</div>
@@ -352,18 +336,17 @@ export default function TripsManagedPage() {
             return (
               <div
                 key={tr.id}
-                className="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-white/10 hover:bg-white/5"
+                className="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-slate-200 hover:bg-slate-50"
               >
-                <div className="col-span-2 text-slate-200">{st || "—"}</div>
-                <div className="col-span-4 text-slate-200">{clientName}</div>
-                <div className="col-span-4 text-slate-200">{siteName}</div>
+                <div className="col-span-2 text-slate-900">{st || "—"}</div>
+                <div className="col-span-4 text-slate-900">{clientName}</div>
+                <div className="col-span-4 text-slate-900">{siteName}</div>
 
                 <div className="col-span-2">
                   <div className="flex gap-2 flex-wrap justify-end">
-                    {/* Optional: view details */}
                     <Link
                       href={`/trips/${tr.id}`}
-                      className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white"
+                      className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs"
                       title={t("common.view")}
                     >
                       {t("common.view")}
@@ -372,7 +355,7 @@ export default function TripsManagedPage() {
                     {st === "DRAFT" && canAssign ? (
                       <button
                         onClick={() => openAssign(tr.id)}
-                        className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white"
+                        className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs"
                       >
                         {t("trips.actions.assign")}
                       </button>
@@ -381,7 +364,7 @@ export default function TripsManagedPage() {
                     {st === "ASSIGNED" ? (
                       <button
                         onClick={() => startTrip(tr.id)}
-                        className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white"
+                        className="px-2 py-1 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800"
                       >
                         {t("trips.actions.start")}
                       </button>
@@ -390,7 +373,7 @@ export default function TripsManagedPage() {
                     {st === "IN_PROGRESS" ? (
                       <button
                         onClick={() => finishTrip(tr.id)}
-                        className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white"
+                        className="px-2 py-1 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-xs text-amber-800"
                       >
                         {t("trips.actions.finish")}
                       </button>
@@ -402,7 +385,7 @@ export default function TripsManagedPage() {
           })}
 
           {!loading && trips.length === 0 ? (
-            <div className="px-4 py-6 text-sm text-slate-300">{t("trips.empty")}</div>
+            <div className="px-4 py-6 text-sm text-slate-600">{t("trips.empty")}</div>
           ) : null}
         </div>
       </div>
@@ -417,13 +400,7 @@ export default function TripsManagedPage() {
         }}
       />
 
-      <Toast
-        open={toastOpen}
-        message={toastMsg}
-        type={toastType}
-        onClose={() => setToastOpen(false)}
-        closeHint={t("tripModals.toastCloseHint")}
-      />
+      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} closeHint={t("tripModals.toastCloseHint")} />
     </div>
   );
 }

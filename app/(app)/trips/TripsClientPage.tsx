@@ -61,7 +61,7 @@ function Toast({
       role="alert"
     >
       <div className="font-semibold">{message}</div>
-      <div className="mt-1 text-xs opacity-80">{t("tripModals.toastCloseHint")}</div>
+      <div className="mt-1 text-xs opacity-85">{t("tripModals.toastCloseHint")}</div>
     </div>
   );
 }
@@ -171,19 +171,16 @@ function AssignTripModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
       <div
-        className="w-full max-w-xl rounded-2xl bg-slate-900 text-white border border-white/10 p-4"
+        className="w-full max-w-xl rounded-2xl bg-white text-slate-900 border border-slate-200 p-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">{t("tripModals.assignTitle")}</h3>
           <button
             onClick={onClose}
-            className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
+            className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
           >
             ✕
           </button>
@@ -196,7 +193,7 @@ function AssignTripModal({
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
               disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
             >
               <option value="">{t("tripModals.selectVehicle")}</option>
               {vehicles.map((v) => (
@@ -213,7 +210,7 @@ function AssignTripModal({
               value={driverId}
               onChange={(e) => setDriverId(e.target.value)}
               disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
             >
               <option value="">{t("tripModals.selectDriver")}</option>
               {drivers.map((d) => (
@@ -230,7 +227,7 @@ function AssignTripModal({
               value={supervisorId}
               onChange={(e) => setSupervisorId(e.target.value)}
               disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
             >
               <option value="">{t("tripModals.none")}</option>
               {supervisors.map((s) => (
@@ -246,14 +243,14 @@ function AssignTripModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60"
+            className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-60"
           >
             {t("tripModals.cancel")}
           </button>
           <button
             onClick={submit}
             disabled={!canSubmit || loading}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-60 font-semibold"
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 font-semibold"
           >
             {loading ? t("tripModals.saving") : t("tripModals.assign")}
           </button>
@@ -337,12 +334,12 @@ function CreateTripModal({
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
       <div
-        className="w-full max-w-xl rounded-2xl bg-slate-900 text-white border border-white/10 p-4"
+        className="w-full max-w-xl rounded-2xl bg-white text-slate-900 border border-slate-200 p-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">{t("tripModals.createTitle")}</h3>
-          <button onClick={onClose} className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10">
+          <button onClick={onClose} className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50">
             ✕
           </button>
         </div>
@@ -354,7 +351,7 @@ function CreateTripModal({
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
             >
               <option value="">{t("common.search")}</option>
               {clients.map((c) => (
@@ -371,7 +368,7 @@ function CreateTripModal({
               value={siteId}
               onChange={(e) => setSiteId(e.target.value)}
               disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
             >
               <option value="">{t("common.search")}</option>
               {sites.map((s) => (
@@ -388,7 +385,7 @@ function CreateTripModal({
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
             />
           </label>
 
@@ -397,7 +394,7 @@ function CreateTripModal({
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
               rows={3}
             />
           </label>
@@ -407,14 +404,14 @@ function CreateTripModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60"
+            className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-60"
           >
             {t("tripModals.cancel")}
           </button>
           <button
             onClick={submit}
             disabled={!canSubmit || loading}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-sky-600/80 hover:bg-sky-600 disabled:opacity-60 font-semibold"
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 font-semibold"
           >
             {loading ? t("tripModals.saving") : t("tripModals.create")}
           </button>
@@ -436,6 +433,7 @@ export default function TripsPage() {
   const role = String(user?.role || "").toUpperCase();
 
   const canSeeFinance = useMemo(() => role === "ADMIN" || role === "ACCOUNTANT", [role]);
+  const canAssign = useMemo(() => role === "ADMIN" || role === "HR", [role]);
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -449,8 +447,6 @@ export default function TripsPage() {
   const [assignTripId, setAssignTripId] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-
-  const canAssign = useMemo(() => role === "ADMIN" || role === "HR", [role]);
 
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
@@ -548,9 +544,9 @@ export default function TripsPage() {
 
   if (token === null) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white">
+      <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
         <div className="max-w-7xl mx-auto p-4 md:p-6">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
             {t("common.checkingSession")}
           </div>
         </div>
@@ -559,16 +555,16 @@ export default function TripsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-xl font-bold">{t("trips.title")}</div>
-            <div className="text-sm text-slate-400">{t("trips.subtitle")}</div>
+            <div className="text-sm text-slate-600">{t("trips.subtitle")}</div>
           </div>
 
-          <div className="text-xs text-slate-400">
-            {t("trips.meta.role")}: <span className="text-slate-200">{role || "—"}</span>
+          <div className="text-xs text-slate-600">
+            {t("trips.meta.role")}: <span className="text-slate-900 font-semibold">{role || "—"}</span>
           </div>
         </div>
 
@@ -577,7 +573,7 @@ export default function TripsPage() {
           <select
             value={status}
             onChange={(e) => setParam("status", e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
+            className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm outline-none"
           >
             <option value="">{t("trips.filters.allStatuses")}</option>
             <option value="ASSIGNED,IN_PROGRESS">{t("trips.filters.active")}</option>
@@ -587,13 +583,13 @@ export default function TripsPage() {
             <option value="COMPLETED">{t("trips.filters.COMPLETED")}</option>
           </select>
 
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-600">
             {t("trips.meta.total")}: {total} — {t("trips.meta.page")} {page}/{totalPages}
           </span>
 
           <button
             onClick={() => setCreateOpen(true)}
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+            className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
           >
             {t("trips.actions.createTrip")}
           </button>
@@ -601,31 +597,33 @@ export default function TripsPage() {
           <button
             onClick={loadTrips}
             disabled={loading}
-            className="ml-auto px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-60"
+            className="ml-auto px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-60"
           >
             {loading ? t("common.loading") : t("trips.actions.refresh")}
           </button>
         </div>
 
         {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">{t("common.loading")}</div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+            {t("common.loading")}
+          </div>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
-                <thead className="bg-white/5">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.trip")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.client")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.site")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.scheduled")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("trips.table.actions")}</th>
+                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.trip")}</th>
+                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.status")}</th>
+                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.client")}</th>
+                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.site")}</th>
+                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.scheduled")}</th>
+                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.created")}</th>
+                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.actions")}</th>
                   </tr>
                 </thead>
 
@@ -636,15 +634,15 @@ export default function TripsPage() {
                     return (
                       <tr
                         key={r.id}
-                        className={cn("border-t border-white/10 hover:bg-white/5 cursor-pointer")}
+                        className={cn("border-t border-slate-200 hover:bg-slate-50 cursor-pointer")}
                         onClick={() => router.push(`/trips/${r.id}`)}
                       >
-                        <td className="px-4 py-2 font-mono">{shortId(r.id)}</td>
-                        <td className="px-4 py-2">{String(r.status || "—")}</td>
-                        <td className="px-4 py-2">{r.clients?.name || "—"}</td>
-                        <td className="px-4 py-2">{r.sites?.name || "—"}</td>
-                        <td className="px-4 py-2">{fmtDate(r.scheduled_at)}</td>
-                        <td className="px-4 py-2">{fmtDate(r.created_at)}</td>
+                        <td className="px-4 py-2 font-mono text-slate-800">{shortId(r.id)}</td>
+                        <td className="px-4 py-2 text-slate-800">{String(r.status || "—")}</td>
+                        <td className="px-4 py-2 text-slate-800">{r.clients?.name || "—"}</td>
+                        <td className="px-4 py-2 text-slate-800">{r.sites?.name || "—"}</td>
+                        <td className="px-4 py-2 text-slate-700">{fmtDate(r.scheduled_at)}</td>
+                        <td className="px-4 py-2 text-slate-700">{fmtDate(r.created_at)}</td>
 
                         <td className="px-4 py-2">
                           <div className="flex gap-2 flex-wrap">
@@ -653,7 +651,7 @@ export default function TripsPage() {
                               <Link
                                 href={`/trips/${r.id}/finance`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs"
+                                className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800"
                                 title={t("tripFinance.title")}
                               >
                                 {t("trips.actions.finance")}
@@ -662,7 +660,7 @@ export default function TripsPage() {
 
                             {st === "DRAFT" && canAssign ? (
                               <button
-                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openAssign(r.id);
@@ -674,7 +672,7 @@ export default function TripsPage() {
 
                             {st === "ASSIGNED" ? (
                               <button
-                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-emerald-600/60 hover:bg-emerald-600 text-xs"
+                                className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   startTrip(r.id);
@@ -686,7 +684,7 @@ export default function TripsPage() {
 
                             {st === "IN_PROGRESS" ? (
                               <button
-                                className="px-3 py-1.5 rounded-lg border border-white/10 bg-amber-600/60 hover:bg-amber-600 text-xs"
+                                className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-xs text-amber-800"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   finishTrip(r.id);
@@ -703,7 +701,7 @@ export default function TripsPage() {
 
                   {!items.length ? (
                     <tr>
-                      <td className="px-4 py-6 text-slate-300" colSpan={7}>
+                      <td className="px-4 py-6 text-slate-600" colSpan={7}>
                         {t("trips.empty")}
                       </td>
                     </tr>
@@ -712,19 +710,19 @@ export default function TripsPage() {
               </table>
             </div>
 
-            <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
+            <div className="flex items-center justify-between gap-3 p-4 border-t border-slate-200">
               <button
-                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
+                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
                 disabled={page <= 1}
                 onClick={() => setParam("page", String(page - 1))}
               >
                 {t("common.prev")}
               </button>
 
-              <div className="text-xs text-slate-400">{t("trips.meta.showing", { count: items.length, total })}</div>
+              <div className="text-xs text-slate-600">{t("trips.meta.showing", { count: items.length, total })}</div>
 
               <button
-                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
+                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
                 disabled={page >= totalPages}
                 onClick={() => setParam("page", String(page + 1))}
               >
@@ -743,20 +741,9 @@ export default function TripsPage() {
         showToast={showToast}
       />
 
-      <CreateTripModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => loadTrips()}
-        showToast={showToast}
-      />
+      <CreateTripModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={() => loadTrips()} showToast={showToast} />
 
-      <Toast
-        open={toastOpen}
-        message={toastMsg}
-        type={toastType}
-        onClose={() => setToastOpen(false)}
-        t={t}
-      />
+      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} t={t} />
     </div>
   );
 }

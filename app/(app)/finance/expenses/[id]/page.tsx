@@ -1,11 +1,20 @@
+// app/(app)/finance/expenses/[id]/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
+
+// ✅ UI System (Light)
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+
+// ✅ Toast + ConfirmDialog
+import { Toast } from "@/src/components/Toast";
+import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -27,28 +36,37 @@ function fmtDate(d?: string | null) {
   return dt.toLocaleString("ar-EG");
 }
 
-function StatusBadge({ s }: { s: string }) {
-  const st = String(s || "").toUpperCase();
+function StatusBadge({ status }: { status: string }) {
+  const st = String(status || "").toUpperCase();
   const cls =
     st === "APPROVED" || st === "REAPPROVED"
-      ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/20"
+      ? "bg-green-50 text-green-700 border-green-200"
       : st === "REJECTED"
-      ? "bg-red-500/15 text-red-200 border-red-500/20"
+      ? "bg-red-50 text-red-700 border-red-200"
       : st === "APPEALED"
-      ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
+      ? "bg-amber-50 text-amber-700 border-amber-200"
       : st === "PENDING"
-      ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
-      : "bg-slate-500/15 text-slate-200 border-white/10";
-  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
+      ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+      : "bg-gray-50 text-gray-700 border-gray-200";
+
+  return (
+    <span className={cn("inline-flex items-center px-2 py-1 rounded-full text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
 }
 
 type TabKey = "overview" | "audit" | "actions";
 
-export default function ExpenseDetailsPage() {
+export default function ExpenseDetailsPage(): React.ReactElement {
   const t = useT();
   const params = useParams();
   const router = useRouter();
-  const id = String((params as any)?.id || "");
+
+  // ✅ robust id parsing
+  const rawId = (params as any)?.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  const expenseId = typeof id === "string" && id && id !== "undefined" && id !== "null" ? id : "";
 
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
@@ -56,43 +74,79 @@ export default function ExpenseDetailsPage() {
   const isAccountantOrAdmin = role === "ACCOUNTANT" || role === "ADMIN";
   const isSupervisor = role === "FIELD_SUPERVISOR";
 
+  // Tabs
   const [tab, setTab] = useState<TabKey>("overview");
 
+  // Loading / Busy / Error
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Expense data (we try to fetch it; fallback scan advances)
+  // Data
   const [expense, setExpense] = useState<any | null>(null);
-
-  // Audit response: { expense_id, audits: [] }
   const [audits, setAudits] = useState<any[]>([]);
   const [auditNote, setAuditNote] = useState<string | null>(null);
 
+  // Toast
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToastType(type);
+    setToastMsg(msg);
+    setToastOpen(true);
+    setTimeout(() => setToastOpen(false), 2500);
+  }
+
+  // ConfirmDialog (generic)
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
+  const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
+  const [confirmTone, setConfirmTone] = useState<"danger" | "warning" | "info">("warning");
+  const [confirmText, setConfirmText] = useState<string>("تأكيد");
+  const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
+
+  function openConfirm(opts: {
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+    tone?: "danger" | "warning" | "info";
+    confirmText?: string;
+    action: () => Promise<void> | void;
+  }) {
+    setConfirmTitle(opts.title ?? "تأكيد");
+    setConfirmDesc(opts.description ?? "");
+    setConfirmTone(opts.tone ?? "warning");
+    setConfirmText(opts.confirmText ?? "تأكيد");
+    setConfirmAction(() => opts.action);
+    setConfirmOpen(true);
+  }
+
   // ---------- loaders ----------
   async function fetchExpenseByBestEffort(expenseId: string) {
-    // 1) if you later add GET /cash/cash-expenses/:id this will work automatically
+    // 1) direct endpoint (if exists)
     try {
-      const e = await api.get(`/cash/cash-expenses/${expenseId}`);
-      return e as any;
+      const res = await api.get(`/cash/cash-expenses/${expenseId}`);
+      return (res as any)?.data ?? res;
     } catch {
       // ignore
     }
 
-    // 2) fallback: scan advances -> expenses (works for ADVANCE expenses)
+    // 2) fallback scan advances -> expenses (works for ADVANCE expenses)
     try {
-      const advances = (await api.get("/cash/cash-advances")) as any[];
+      const advRes = await api.get("/cash/cash-advances");
+      const advData = (advRes as any)?.data ?? advRes;
+      const advances = Array.isArray(advData) ? advData : (advData as any)?.items || [];
 
-      const visibleAdvances = isSupervisor
-        ? advances.filter((a) => a.field_supervisor_id === user?.id)
-        : advances;
+      const visibleAdvances = isSupervisor ? advances.filter((a: any) => a.field_supervisor_id === user?.id) : advances;
 
-      // try in parallel (cap to avoid overloading)
       const lists = await Promise.all(
-        visibleAdvances.slice(0, 60).map(async (a) => {
+        visibleAdvances.slice(0, 60).map(async (a: any) => {
           try {
-            const arr = (await api.get(`/cash/cash-advances/${a.id}/expenses`)) as any[];
-            return arr;
+            const exRes = await api.get(`/cash/cash-advances/${a.id}/expenses`);
+            const exData = (exRes as any)?.data ?? exRes;
+            return Array.isArray(exData) ? exData : [];
           } catch {
             return [];
           }
@@ -100,7 +154,7 @@ export default function ExpenseDetailsPage() {
       );
 
       const flat = lists.flat();
-      const found = flat.find((x) => x.id === expenseId);
+      const found = flat.find((x: any) => x.id === expenseId);
       return found || null;
     } catch {
       return null;
@@ -110,41 +164,49 @@ export default function ExpenseDetailsPage() {
   async function fetchAudit(expenseId: string) {
     try {
       const r: any = await api.get(`/cash/cash-expenses/${expenseId}/audit`);
-      const arr = Array.isArray(r?.audits) ? r.audits : [];
+      const body = (r as any)?.data ?? r;
+      const arr = Array.isArray(body?.audits) ? body.audits : [];
       setAudits(arr);
-      if (r?.note) setAuditNote(String(r.note));
-      else setAuditNote(null);
+      setAuditNote(body?.note ? String(body.note) : null);
     } catch (e: any) {
-      // audit is optional (table may not exist)
       setAudits([]);
       setAuditNote(e?.message || t("financeExpenseDetails.errors.auditFailed"));
     }
   }
 
   async function loadAll() {
+    if (!expenseId) return;
+
     setLoading(true);
     setError(null);
 
     try {
-      const [e] = await Promise.all([fetchExpenseByBestEffort(id)]);
+      const e = await fetchExpenseByBestEffort(expenseId);
       setExpense(e);
-
-      await fetchAudit(id);
+      await fetchAudit(expenseId);
     } catch (e: any) {
       setError(e?.message || t("financeExpenseDetails.errors.loadFailed"));
+      setExpense(null);
+      setAudits([]);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    if (!id) return;
+    if (!expenseId) {
+      setLoading(false);
+      setExpense(null);
+      setAudits([]);
+      setError(t("financeExpenseDetails.errors.invalidId"));
+      return;
+    }
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [expenseId]);
 
   // ---------- derived permissions ----------
-  const approvalStatus = String(expense?.approval_status || "").toUpperCase();
+  const approvalStatus = String(expense?.approval_status || expense?.status || "").toUpperCase();
   const paymentSource = String(expense?.payment_source || "").toUpperCase();
 
   const canApproveReject = isAccountantOrAdmin && approvalStatus === "PENDING";
@@ -154,79 +216,156 @@ export default function ExpenseDetailsPage() {
   const isOwner = expense?.created_by && user?.id && expense.created_by === user.id;
   const canAppeal = isSupervisor && isOwner && approvalStatus === "REJECTED";
 
-  // ---------- actions ----------
-  async function approve() {
+  // ---------- actions (wrapped with confirm) ----------
+  function onApprove() {
     if (!canApproveReject) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.post(`/cash/cash-expenses/${id}/approve`, {});
-      await loadAll();
-      setTab("overview");
-    } catch (e: any) {
-      setError(e.message || t("financeExpenseDetails.errors.approveFailed"));
-    } finally {
-      setBusy(false);
-    }
+
+    openConfirm({
+      title: t("financeExpenseDetails.actions.approve"),
+      description: t("financeExpenseDetails.confirm.approve") || "هل أنت متأكد من اعتماد هذا المصروف؟",
+      tone: "info",
+      confirmText: t("common.confirm") || "تأكيد",
+      action: async () => {
+        setConfirmBusy(true);
+        setBusy(true);
+        setError(null);
+        try {
+          await api.post(`/cash/cash-expenses/${expenseId}/approve`, {});
+          showToast("success", t("common.saved") || t("common.success"));
+          await loadAll();
+          setTab("overview");
+        } catch (e: any) {
+          const msg = e?.response?.data?.message || e?.message || t("financeExpenseDetails.errors.approveFailed");
+          setError(msg);
+          showToast("error", msg);
+        } finally {
+          setBusy(false);
+          setConfirmBusy(false);
+          setConfirmOpen(false);
+        }
+      },
+    });
   }
 
-  async function reject() {
+  function onReject() {
     if (!canApproveReject) return;
+
     const reason = window.prompt(t("financeExpenseDetails.prompts.rejectReasonRequired"));
     if (!reason || reason.trim().length < 2) return;
 
-    setBusy(true);
-    setError(null);
-    try {
-      await api.post(`/cash/cash-expenses/${id}/reject`, { reason: reason.trim() });
-      await loadAll();
-      setTab("overview");
-    } catch (e: any) {
-      setError(e.message || t("financeExpenseDetails.errors.rejectFailed"));
-    } finally {
-      setBusy(false);
-    }
+    openConfirm({
+      title: t("financeExpenseDetails.actions.reject"),
+      description: (
+        <div className="space-y-2">
+          <div>{t("financeExpenseDetails.confirm.reject") || "هل أنت متأكد من رفض هذا المصروف؟"}</div>
+          <div className="text-xs text-gray-600">
+            {t("financeExpenseDetails.labels.reason") || "السبب"}:{" "}
+            <span className="font-semibold text-gray-900">{reason.trim()}</span>
+          </div>
+        </div>
+      ),
+      tone: "danger",
+      confirmText: t("common.confirm") || "تأكيد",
+      action: async () => {
+        setConfirmBusy(true);
+        setBusy(true);
+        setError(null);
+        try {
+          await api.post(`/cash/cash-expenses/${expenseId}/reject`, { reason: reason.trim() });
+          showToast("success", t("common.saved") || t("common.success"));
+          await loadAll();
+          setTab("overview");
+        } catch (e: any) {
+          const msg = e?.response?.data?.message || e?.message || t("financeExpenseDetails.errors.rejectFailed");
+          setError(msg);
+          showToast("error", msg);
+        } finally {
+          setBusy(false);
+          setConfirmBusy(false);
+          setConfirmOpen(false);
+        }
+      },
+    });
   }
 
-  async function appeal() {
+  function onAppeal() {
     if (!canAppeal) return;
+
     const notes = window.prompt(t("financeExpenseDetails.prompts.appealReasonRequired"));
     if (!notes || notes.trim().length < 2) return;
 
-    setBusy(true);
-    setError(null);
-    try {
-      await api.post(`/cash/cash-expenses/${id}/appeal`, { notes: notes.trim() });
-      await loadAll();
-      setTab("overview");
-    } catch (e: any) {
-      setError(e.message || t("financeExpenseDetails.errors.appealFailed"));
-    } finally {
-      setBusy(false);
-    }
+    openConfirm({
+      title: t("financeExpenseDetails.actions.appeal"),
+      description: (
+        <div className="space-y-2">
+          <div>{t("financeExpenseDetails.confirm.appeal") || "هل تريد إرسال استئناف على هذا المصروف؟"}</div>
+          <div className="text-xs text-gray-600">
+            {t("financeExpenseDetails.labels.notes") || "ملاحظات"}:{" "}
+            <span className="font-semibold text-gray-900">{notes.trim()}</span>
+          </div>
+        </div>
+      ),
+      tone: "warning",
+      confirmText: t("common.confirm") || "تأكيد",
+      action: async () => {
+        setConfirmBusy(true);
+        setBusy(true);
+        setError(null);
+        try {
+          await api.post(`/cash/cash-expenses/${expenseId}/appeal`, { notes: notes.trim() });
+          showToast("success", t("common.saved") || t("common.success"));
+          await loadAll();
+          setTab("overview");
+        } catch (e: any) {
+          const msg = e?.response?.data?.message || e?.message || t("financeExpenseDetails.errors.appealFailed");
+          setError(msg);
+          showToast("error", msg);
+        } finally {
+          setBusy(false);
+          setConfirmBusy(false);
+          setConfirmOpen(false);
+        }
+      },
+    });
   }
 
-  async function reopenRejected() {
+  function onReopenRejected() {
     if (!canReopenRejected) return;
+
     const notes = window.prompt(t("financeExpenseDetails.prompts.optionalNote")) || "";
 
-    setBusy(true);
-    setError(null);
-    try {
-      await api.post(`/cash/cash-expenses/${id}/reopen`, { notes: notes.trim() || undefined });
-      await loadAll();
-      setTab("overview");
-    } catch (e: any) {
-      setError(e.message || t("financeExpenseDetails.errors.reopenFailed"));
-    } finally {
-      setBusy(false);
-    }
+    openConfirm({
+      title: t("financeExpenseDetails.actions.reopenToPending"),
+      description: t("financeExpenseDetails.confirm.reopen") || "هل تريد إعادة فتح المصروف (إلى Pending)؟",
+      tone: "warning",
+      confirmText: t("common.confirm") || "تأكيد",
+      action: async () => {
+        setConfirmBusy(true);
+        setBusy(true);
+        setError(null);
+        try {
+          await api.post(`/cash/cash-expenses/${expenseId}/reopen`, { notes: notes.trim() || undefined });
+          showToast("success", t("common.saved") || t("common.success"));
+          await loadAll();
+          setTab("overview");
+        } catch (e: any) {
+          const msg = e?.response?.data?.message || e?.message || t("financeExpenseDetails.errors.reopenFailed");
+          setError(msg);
+          showToast("error", msg);
+        } finally {
+          setBusy(false);
+          setConfirmBusy(false);
+          setConfirmOpen(false);
+        }
+      },
+    });
   }
 
-  async function resolveAppeal(decision: "APPROVE" | "REJECT") {
+  function onResolveAppeal(decision: "APPROVE" | "REJECT") {
     if (!canResolveAppeal) return;
 
     let payload: any = { decision };
+
     if (decision === "REJECT") {
       const reason = window.prompt(t("financeExpenseDetails.prompts.rejectReasonRequired"));
       if (!reason || reason.trim().length < 2) return;
@@ -236,20 +375,42 @@ export default function ExpenseDetailsPage() {
       if (notes && notes.trim()) payload.notes = notes.trim();
     }
 
-    setBusy(true);
-    setError(null);
-    try {
-      await api.post(`/cash/cash-expenses/${id}/resolve-appeal`, payload);
-      await loadAll();
-      setTab("overview");
-    } catch (e: any) {
-      setError(e.message || t("financeExpenseDetails.errors.resolveAppealFailed"));
-    } finally {
-      setBusy(false);
-    }
+    openConfirm({
+      title:
+        decision === "APPROVE"
+          ? t("financeExpenseDetails.actions.resolveApprove")
+          : t("financeExpenseDetails.actions.resolveReject"),
+      description:
+        decision === "APPROVE"
+          ? t("financeExpenseDetails.confirm.resolveApprove") || "هل تريد اعتماد الاستئناف؟"
+          : t("financeExpenseDetails.confirm.resolveReject") || "هل تريد رفض الاستئناف؟",
+      tone: decision === "APPROVE" ? "info" : "danger",
+      confirmText: t("common.confirm") || "تأكيد",
+      action: async () => {
+        setConfirmBusy(true);
+        setBusy(true);
+        setError(null);
+        try {
+          await api.post(`/cash/cash-expenses/${expenseId}/resolve-appeal`, payload);
+          showToast("success", t("common.saved") || t("common.success"));
+          await loadAll();
+          setTab("overview");
+        } catch (e: any) {
+          const msg =
+            e?.response?.data?.message ||
+            e?.message ||
+            t("financeExpenseDetails.errors.resolveAppealFailed");
+          setError(msg);
+          showToast("error", msg);
+        } finally {
+          setBusy(false);
+          setConfirmBusy(false);
+          setConfirmOpen(false);
+        }
+      },
+    });
   }
 
-  // ---------- UI ----------
   const tabs = useMemo(
     () => [
       { key: "overview" as const, label: t("financeExpenseDetails.tabs.overview") },
@@ -259,305 +420,307 @@ export default function ExpenseDetailsPage() {
     [t]
   );
 
+  // ---------- UI ----------
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">{t("financeExpenseDetails.title")}</h1>
-            {expense?.approval_status ? <StatusBadge s={expense.approval_status} /> : null}
-          </div>
-
-          <div className="text-xs text-slate-400">
-            {t("financeExpenseDetails.meta.id")}: <span className="text-slate-200">{id}</span>
-            {paymentSource ? (
-              <>
-                {" "}
-                — {t("financeExpenseDetails.meta.source")}:{" "}
-                <span className="text-slate-200">{paymentSource}</span>
-              </>
-            ) : null}
-          </div>
-
-          {!loading && !expense ? (
-            <div className="text-xs text-amber-300">
-              {t("financeExpenseDetails.meta.notFoundHint")}
+    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+        <PageHeader
+          title={
+            <div className="flex items-center gap-2">
+              <span>{t("financeExpenseDetails.title")}</span>
+              {expense?.approval_status || expense?.status ? (
+                <StatusBadge status={String(expense?.approval_status || expense?.status)} />
+              ) : null}
             </div>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.back()}
-            className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-          >
-            {t("common.back")}
-          </button>
-          <Link
-            href="/finance/expenses"
-            className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-          >
-            {t("common.list")}
-          </Link>
-        </div>
-      </div>
-
-      {error && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((tt) => (
-          <button
-            key={tt.key}
-            onClick={() => setTab(tt.key)}
-            className={cn(
-              "px-3 py-2 rounded-lg text-sm border transition",
-              tab === tt.key
-                ? "bg-white/10 border-white/10 text-white"
-                : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            {tt.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-        {loading ? (
-          <div className="text-sm text-slate-300">{t("common.loading")}</div>
-        ) : tab === "overview" ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.amount")}</div>
-                <div className="text-lg font-semibold">{fmtMoney(expense?.amount)}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.type")}</div>
-                <div className="text-sm text-slate-200">{expense?.expense_type || "—"}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.createdAt")}</div>
-                <div className="text-sm text-slate-200">{fmtDate(expense?.created_at)}</div>
-              </div>
+          }
+          subtitle={
+            <div className="text-sm text-gray-600">
+              {t("financeExpenseDetails.meta.id")}:{" "}
+              <span className="font-mono text-gray-900">{expenseId || "—"}</span>
+              {paymentSource ? (
+                <>
+                  {" "}
+                  — {t("financeExpenseDetails.meta.source")}:{" "}
+                  <span className="font-semibold text-gray-900">{paymentSource}</span>
+                </>
+              ) : null}
             </div>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => router.back()}>
+                {t("common.back")}
+              </Button>
+              <Link href="/finance/expenses">
+                <Button variant="secondary">{t("common.list")}</Button>
+              </Link>
+              <Button variant="secondary" onClick={loadAll} disabled={loading || busy} isLoading={loading || busy}>
+                {t("common.refresh")}
+              </Button>
+            </div>
+          }
+        />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-1">
-                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.creator")}</div>
-                <div className="text-sm text-slate-200">
-                  {expense?.users_cash_expenses_created_byTousers?.full_name ||
-                    expense?.users_cash_expenses_created_byTousers?.email ||
-                    expense?.created_by ||
-                    "—"}
+        {error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            ⚠️ {error}
+          </div>
+        ) : null}
+
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tt) => (
+            <button
+              key={tt.key}
+              onClick={() => setTab(tt.key)}
+              className={cn(
+                "px-3 py-2 rounded-xl text-sm border transition",
+                tab === tt.key
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              )}
+            >
+              {tt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+          <div className="p-4">
+            {loading ? (
+              <div className="text-sm text-gray-600">{t("common.loading")}</div>
+            ) : tab === "overview" ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.amount")}</div>
+                    <div className="text-lg font-semibold text-gray-900">{fmtMoney(expense?.amount)}</div>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.type")}</div>
+                    <div className="text-sm text-gray-900">{expense?.expense_type || "—"}</div>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.createdAt")}</div>
+                    <div className="text-sm text-gray-900">{fmtDate(expense?.created_at)}</div>
+                  </div>
                 </div>
-                <div className="text-xs text-slate-400 mt-2">{t("financeExpenseDetails.overview.notes")}</div>
-                <div className="text-sm text-slate-200 whitespace-pre-wrap">
-                  {expense?.notes || "—"}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.creator")}</div>
+                    <div className="text-sm text-gray-900">
+                      {expense?.users_cash_expenses_created_byTousers?.full_name ||
+                        expense?.users_cash_expenses_created_byTousers?.email ||
+                        expense?.created_by ||
+                        "—"}
+                    </div>
+
+                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.notes")}</div>
+                    <div className="text-sm text-gray-900 whitespace-pre-wrap">{expense?.notes || "—"}</div>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-1">
+                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.context")}</div>
+
+                    <div className="text-sm text-gray-900">
+                      {t("financeExpenseDetails.overview.trip")}:{" "}
+                      <span className="font-mono text-gray-700">{expense?.trip_id || "—"}</span>
+                    </div>
+                    <div className="text-sm text-gray-900">
+                      {t("financeExpenseDetails.overview.vehicle")}:{" "}
+                      <span className="font-mono text-gray-700">{expense?.vehicle_id || "—"}</span>
+                    </div>
+                    <div className="text-sm text-gray-900">
+                      {t("financeExpenseDetails.overview.workOrder")}:{" "}
+                      <span className="font-mono text-gray-700">{expense?.maintenance_work_order_id || "—"}</span>
+                    </div>
+
+                    {paymentSource === "COMPANY" ? (
+                      <div className="mt-2 space-y-1">
+                        <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.companyFields")}</div>
+
+                        <div className="text-sm text-gray-900">
+                          {t("financeExpenseDetails.overview.vendor")}:{" "}
+                          <span className="text-gray-700">{expense?.vendor_name || "—"}</span>
+                        </div>
+                        <div className="text-sm text-gray-900">
+                          {t("financeExpenseDetails.overview.invoiceNo")}:{" "}
+                          <span className="text-gray-700">{expense?.invoice_no || "—"}</span>
+                        </div>
+                        <div className="text-sm text-gray-900">
+                          {t("financeExpenseDetails.overview.invoiceDate")}:{" "}
+                          <span className="text-gray-700">{fmtDate(expense?.invoice_date || null)}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-1">
+                        <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.advance")}</div>
+                        <div className="text-sm text-gray-900">
+                          {t("financeExpenseDetails.overview.cashAdvanceId")}:{" "}
+                          <span className="font-mono text-gray-700">{expense?.cash_advance_id || "—"}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-1">
+                  <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.resolution")}</div>
+
+                  <div className="text-sm text-gray-900">
+                    {t("financeExpenseDetails.overview.approvedAt")}:{" "}
+                    <span className="text-gray-700">{fmtDate(expense?.approved_at || null)}</span>
+                  </div>
+                  <div className="text-sm text-gray-900">
+                    {t("financeExpenseDetails.overview.rejectedAt")}:{" "}
+                    <span className="text-gray-700">{fmtDate(expense?.rejected_at || null)}</span>
+                  </div>
+                  <div className="text-sm text-gray-900">
+                    {t("financeExpenseDetails.overview.resolvedAt")}:{" "}
+                    <span className="text-gray-700">{fmtDate(expense?.resolved_at || null)}</span>
+                  </div>
+
+                  {expense?.rejection_reason ? (
+                    <div className="mt-2 text-sm text-red-700">
+                      {t("financeExpenseDetails.overview.rejectionReason")}:{" "}
+                      <span className="font-semibold">{String(expense.rejection_reason)}</span>
+                    </div>
+                  ) : null}
                 </div>
               </div>
-
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-1">
-                <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.context")}</div>
-                <div className="text-sm text-slate-200">
-                  {t("financeExpenseDetails.overview.trip")}:{" "}
-                  <span className="text-slate-300">{expense?.trip_id || "—"}</span>
-                </div>
-                <div className="text-sm text-slate-200">
-                  {t("financeExpenseDetails.overview.vehicle")}:{" "}
-                  <span className="text-slate-300">{expense?.vehicle_id || "—"}</span>
-                </div>
-                <div className="text-sm text-slate-200">
-                  {t("financeExpenseDetails.overview.workOrder")}:{" "}
-                  <span className="text-slate-300">{expense?.maintenance_work_order_id || "—"}</span>
+            ) : tab === "audit" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-gray-900">
+                    {t("financeExpenseDetails.audit.title")}
+                  </div>
+                  {auditNote ? <div className="text-xs text-gray-600">{auditNote}</div> : null}
                 </div>
 
-                {paymentSource === "COMPANY" ? (
-                  <>
-                    <div className="mt-2 text-xs text-slate-400">{t("financeExpenseDetails.overview.companyFields")}</div>
-                    <div className="text-sm text-slate-200">
-                      {t("financeExpenseDetails.overview.vendor")}:{" "}
-                      <span className="text-slate-300">{expense?.vendor_name || "—"}</span>
-                    </div>
-                    <div className="text-sm text-slate-200">
-                      {t("financeExpenseDetails.overview.invoiceNo")}:{" "}
-                      <span className="text-slate-300">{expense?.invoice_no || "—"}</span>
-                    </div>
-                    <div className="text-sm text-slate-200">
-                      {t("financeExpenseDetails.overview.invoiceDate")}:{" "}
-                      <span className="text-slate-300">{fmtDate(expense?.invoice_date || null)}</span>
-                    </div>
-                  </>
+                {audits.length === 0 ? (
+                  <div className="text-sm text-gray-600">{t("financeExpenseDetails.audit.empty")}</div>
                 ) : (
-                  <>
-                    <div className="mt-2 text-xs text-slate-400">{t("financeExpenseDetails.overview.advance")}</div>
-                    <div className="text-sm text-slate-200">
-                      {t("financeExpenseDetails.overview.cashAdvanceId")}:{" "}
-                      <span className="text-slate-300">{expense?.cash_advance_id || "—"}</span>
-                    </div>
-                  </>
+                  <div className="space-y-2">
+                    {audits.map((a) => (
+                      <div key={a.id} className="rounded-xl border border-gray-200 bg-white p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm font-semibold text-gray-900">{String(a.action || "ACTION")}</div>
+                          <div className="text-xs text-gray-600">{fmtDate(a.created_at)}</div>
+                        </div>
+
+                        <div className="mt-1 text-xs text-gray-600">
+                          {t("financeExpenseDetails.audit.actor")}:{" "}
+                          <span className="font-mono text-gray-900">{a.actor_id || "—"}</span>
+                        </div>
+
+                        {a.notes ? (
+                          <div className="mt-2 text-sm text-gray-900 whitespace-pre-wrap">{a.notes}</div>
+                        ) : null}
+
+                        {a.before || a.after ? (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-xs text-gray-700 hover:text-gray-900">
+                              {t("financeExpenseDetails.audit.showDiff")}
+                            </summary>
+                            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <pre className="text-xs overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
+                                {a.before || "—"}
+                              </pre>
+                              <pre className="text-xs overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
+                                {a.after || "—"}
+                              </pre>
+                            </div>
+                          </details>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-
-            <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-              <div className="text-xs text-slate-400">{t("financeExpenseDetails.overview.resolution")}</div>
-              <div className="text-sm text-slate-200">
-                {t("financeExpenseDetails.overview.approvedAt")}:{" "}
-                <span className="text-slate-300">{fmtDate(expense?.approved_at || null)}</span>
-              </div>
-              <div className="text-sm text-slate-200">
-                {t("financeExpenseDetails.overview.rejectedAt")}:{" "}
-                <span className="text-slate-300">{fmtDate(expense?.rejected_at || null)}</span>
-              </div>
-              <div className="text-sm text-slate-200">
-                {t("financeExpenseDetails.overview.resolvedAt")}:{" "}
-                <span className="text-slate-300">{fmtDate(expense?.resolved_at || null)}</span>
-              </div>
-              {expense?.rejection_reason ? (
-                <div className="text-sm text-red-200 mt-2">
-                  {t("financeExpenseDetails.overview.rejectionReason")}:{" "}
-                  <span className="text-red-300">{expense.rejection_reason}</span>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : tab === "audit" ? (
-          <div className="space-y-3">
-            <div className="text-sm text-slate-200">
-              {t("financeExpenseDetails.audit.title")}
-              {auditNote ? <span className="ml-2 text-xs text-slate-400">({auditNote})</span> : null}
-            </div>
-
-            {audits.length === 0 ? (
-              <div className="text-sm text-slate-300">{t("financeExpenseDetails.audit.empty")}</div>
             ) : (
-              <div className="space-y-2">
-                {audits.map((a) => (
-                  <div key={a.id} className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-sm font-semibold text-slate-100">
-                        {String(a.action || "ACTION")}
-                      </div>
-                      <div className="text-xs text-slate-400">{fmtDate(a.created_at)}</div>
-                    </div>
-                    <div className="mt-1 text-xs text-slate-400">
-                      {t("financeExpenseDetails.audit.actor")}:{" "}
-                      <span className="text-slate-200">{a.actor_id || "—"}</span>
-                    </div>
+              // actions tab
+              <div className="space-y-3">
+                <div className="text-sm text-gray-900">
+                  <span className="font-semibold">{t("financeExpenseDetails.actions.title")}</span>{" "}
+                  <span className="text-xs text-gray-600">
+                    ({t("financeExpenseDetails.actions.metaRole")}: {role || "—"} /{" "}
+                    {t("financeExpenseDetails.actions.metaStatus")}: {approvalStatus || "—"})
+                  </span>
+                </div>
 
-                    {a.notes ? (
-                      <div className="mt-2 text-sm text-slate-200 whitespace-pre-wrap">{a.notes}</div>
-                    ) : null}
+                <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+                  {canApproveReject ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="primary" onClick={onApprove} disabled={busy}>
+                        {t("financeExpenseDetails.actions.approve")}
+                      </Button>
+                      <Button variant="danger" onClick={onReject} disabled={busy}>
+                        {t("financeExpenseDetails.actions.reject")}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-600">{t("financeExpenseDetails.actions.none")}</div>
+                  )}
 
-                    {a.before || a.after ? (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs text-slate-300 hover:text-white">
-                          {t("financeExpenseDetails.audit.showDiff")}
-                        </summary>
-                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <pre className="text-xs overflow-auto rounded-lg border border-white/10 bg-slate-900 p-2">
-                            {a.before || "—"}
-                          </pre>
-                          <pre className="text-xs overflow-auto rounded-lg border border-white/10 bg-slate-900 p-2">
-                            {a.after || "—"}
-                          </pre>
-                        </div>
-                      </details>
-                    ) : null}
-                  </div>
-                ))}
+                  {canAppeal ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={onAppeal} disabled={busy}>
+                        {t("financeExpenseDetails.actions.appeal")}
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  {canResolveAppeal ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="primary" onClick={() => onResolveAppeal("APPROVE")} disabled={busy}>
+                        {t("financeExpenseDetails.actions.resolveApprove")}
+                      </Button>
+                      <Button variant="danger" onClick={() => onResolveAppeal("REJECT")} disabled={busy}>
+                        {t("financeExpenseDetails.actions.resolveReject")}
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  {canReopenRejected ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={onReopenRejected} disabled={busy}>
+                        {t("financeExpenseDetails.actions.reopenToPending")}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="text-xs text-gray-600">{t("financeExpenseDetails.actions.hint")}</div>
               </div>
             )}
           </div>
-        ) : (
-          // actions tab
-          <div className="space-y-3">
-            <div className="text-sm text-slate-200">
-              {t("financeExpenseDetails.actions.title")}
-              <span className="ml-2 text-xs text-slate-400">
-                ({t("financeExpenseDetails.actions.metaRole")}: {role || "—"} /{" "}
-                {t("financeExpenseDetails.actions.metaStatus")}: {approvalStatus || "—"})
-              </span>
-            </div>
-
-            <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">
-              {canApproveReject ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    disabled={busy}
-                    onClick={approve}
-                    className="px-3 py-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm disabled:opacity-50"
-                  >
-                    {t("financeExpenseDetails.actions.approve")}
-                  </button>
-                  <button
-                    disabled={busy}
-                    onClick={reject}
-                    className="px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-sm disabled:opacity-50"
-                  >
-                    {t("financeExpenseDetails.actions.reject")}
-                  </button>
-                </div>
-              ) : (
-                <div className="text-sm text-slate-300">{t("financeExpenseDetails.actions.none")}</div>
-              )}
-
-              {canAppeal ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    disabled={busy}
-                    onClick={appeal}
-                    className="px-3 py-2 rounded-lg border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/20 text-sm disabled:opacity-50"
-                  >
-                    {t("financeExpenseDetails.actions.appeal")}
-                  </button>
-                </div>
-              ) : null}
-
-              {canResolveAppeal ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    disabled={busy}
-                    onClick={() => resolveAppeal("APPROVE")}
-                    className="px-3 py-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm disabled:opacity-50"
-                  >
-                    {t("financeExpenseDetails.actions.resolveApprove")}
-                  </button>
-                  <button
-                    disabled={busy}
-                    onClick={() => resolveAppeal("REJECT")}
-                    className="px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-sm disabled:opacity-50"
-                  >
-                    {t("financeExpenseDetails.actions.resolveReject")}
-                  </button>
-                </div>
-              ) : null}
-
-              {canReopenRejected ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    disabled={busy}
-                    onClick={reopenRejected}
-                    className="px-3 py-2 rounded-lg border border-white/10 bg-white/10 hover:bg-white/15 text-sm disabled:opacity-50"
-                  >
-                    {t("financeExpenseDetails.actions.reopenToPending")}
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="text-xs text-slate-400">
-              {t("financeExpenseDetails.actions.hint")}
-            </div>
-          </div>
-        )}
+        </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmTitle}
+        description={confirmDesc}
+        confirmText={confirmText}
+        cancelText={t("common.cancel") || "إلغاء"}
+        tone={confirmTone}
+        isLoading={confirmBusy}
+        dir="rtl"
+        onClose={() => {
+          if (confirmBusy) return;
+          setConfirmOpen(false);
+        }}
+        onConfirm={async () => {
+          if (!confirmAction) return;
+          await confirmAction();
+        }}
+      />
+
+      <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
     </div>
   );
 }
