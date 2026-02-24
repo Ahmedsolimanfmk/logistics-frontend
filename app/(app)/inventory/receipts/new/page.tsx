@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
-import { api, apiGet, unwrapItems } from "@/src/lib/api"; // ✅ api is needed for POST
+import { apiGet, apiPost, unwrapItems } from "@/src/lib/api"; // ✅ استخدم apiPost بدل api.post
 import { createReceipt } from "@/src/lib/receipts.api";
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -25,7 +25,7 @@ type DraftItem = {
   part_id: string;
   internal_serial: string;
   manufacturer_serial: string;
-  unit_cost: string; // keep string for input
+  unit_cost: string;
   notes: string;
 };
 
@@ -36,7 +36,6 @@ function genInternalSerial(partId: string, rowIdx: number) {
   return `${p}-${ts}-${rowIdx + 1}-${rand}`;
 }
 
-// optional helper: suggest part_number from name
 function suggestPartNumber(name: string) {
   const base = String(name || "")
     .trim()
@@ -46,7 +45,7 @@ function suggestPartNumber(name: string) {
     .replace(/^-|-$/g, "");
   if (!base) return "";
   const suffix = Date.now().toString(36).slice(-4).toUpperCase();
-  return `${base.slice(0, 18)}-${suffix}`; // keep it short-ish
+  return `${base.slice(0, 18)}-${suffix}`;
 }
 
 export default function NewReceiptPage() {
@@ -57,7 +56,7 @@ export default function NewReceiptPage() {
   const [warehouseId, setWarehouseId] = useState("");
   const [supplier, setSupplier] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
-  const [invoiceDate, setInvoiceDate] = useState(""); // YYYY-MM-DD
+  const [invoiceDate, setInvoiceDate] = useState("");
 
   // data
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -87,7 +86,7 @@ export default function NewReceiptPage() {
   const [newPartUnit, setNewPartUnit] = useState("");
   const [newPartMinStock, setNewPartMinStock] = useState("");
 
-  // ✅ Warehouse modal (NEW - بدون حذف أي شيء)
+  // ✅ Warehouse modal
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
   const [warehouseSaving, setWarehouseSaving] = useState(false);
   const [newWarehouseName, setNewWarehouseName] = useState("");
@@ -109,7 +108,7 @@ export default function NewReceiptPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ reload warehouses helper (NEW)
+  // ✅ reload warehouses helper
   const reloadWarehouses = async (opts?: { selectId?: string }) => {
     try {
       const res = await apiGet<any>("/inventory/warehouses");
@@ -126,7 +125,7 @@ export default function NewReceiptPage() {
     }
   };
 
-  // ✅ create warehouse quick (NEW)
+  // ✅ create warehouse quick (FIXED)
   const createWarehouseQuick = async () => {
     const nm = newWarehouseName.trim();
     const loc = newWarehouseLocation.trim();
@@ -138,31 +137,25 @@ export default function NewReceiptPage() {
 
     setWarehouseSaving(true);
     try {
-      const payload: any = {
-        name: nm,
-        location: loc ? loc : null,
-      };
+      const payload = { name: nm, location: loc ? loc : null };
 
-      const created: Warehouse = await api.post("/inventory/warehouses", payload);
+      // ✅ FIX: apiPost بيرجع data مباشرة (Warehouse)
+      const created = await apiPost<Warehouse>("/inventory/warehouses", payload);
 
       setToast({ open: true, message: "تمت إضافة المخزن ✅", type: "success" });
 
-      // update UI list سريع + اختيار تلقائي
       setWarehouses((prev) => {
-        const exists = prev.some((x) => x.id === created.id || (x.name && created.name && x.name === created.name));
+        const exists =
+          prev.some((x) => x.id === created.id) ||
+          prev.some((x) => x.name && created.name && x.name === created.name);
         return exists ? prev : [created, ...prev];
       });
 
-      // اختار المخزن الجديد
       if (created?.id) setWarehouseId(created.id);
 
-      // قفل + reset
       setWarehouseModalOpen(false);
       setNewWarehouseName("");
       setNewWarehouseLocation("");
-
-      // (اختياري) اعمل reload للتأكد من الترتيب/البيانات كاملة
-      // await reloadWarehouses({ selectId: created?.id });
     } catch (e: any) {
       const msg =
         e?.response?.status === 409
@@ -267,20 +260,17 @@ export default function NewReceiptPage() {
     }
   };
 
-  // ✅ open modal helper
   const openCatalogModal = () => {
-    // prefill from search query
     const q = partQ.trim();
     if (q && !newPartName) setNewPartName(q);
 
-    // suggest part_number if empty
     if (!newPartNumber && (newPartName || q)) {
       setNewPartNumber(suggestPartNumber(newPartName || q));
     }
     setPartModalOpen(true);
   };
 
-  // ✅ create part
+  // ✅ create part (FIXED)
   const createPartQuick = async () => {
     const pn = newPartNumber.trim();
     const nm = newPartName.trim();
@@ -288,7 +278,6 @@ export default function NewReceiptPage() {
     if (!pn) return setToast({ open: true, message: "كود القطعة (part_number) مطلوب", type: "error" });
     if (!nm) return setToast({ open: true, message: "اسم القطعة مطلوب", type: "error" });
 
-    // min_stock validation front
     const ms = newPartMinStock.trim() === "" ? null : Number(newPartMinStock);
 
     if (ms != null && (!Number.isFinite(ms) || ms < 0)) {
@@ -307,11 +296,10 @@ export default function NewReceiptPage() {
         min_stock: ms == null ? null : Math.floor(ms),
       };
 
-      const created: Part = await api.post("/inventory/parts", payload);
+      // ✅ FIX
+      const created = await apiPost<Part>("/inventory/parts", payload);
 
-      // add to list + auto select in first empty row
       setParts((p) => {
-        // avoid duplicates in UI
         const exists = p.some((x) => x.id === created.id || x.part_number === created.part_number);
         return exists ? p : [created, ...p];
       });
@@ -338,7 +326,6 @@ export default function NewReceiptPage() {
 
       setToast({ open: true, message: "تمت إضافة القطعة للكتالوج ✅", type: "success" });
 
-      // close + reset
       setPartModalOpen(false);
       setNewPartNumber("");
       setNewPartName("");
@@ -387,22 +374,28 @@ export default function NewReceiptPage() {
           <div>
             <div className="text-xs text-slate-400 mb-1">{t("receipts.warehouseId")}</div>
 
-            {/* ✅ نفس select بتاعك + أضفنا زر إضافة مخزن بدون حذف */}
             <div className="flex gap-2">
-              <select
-                value={warehouseId}
-                onChange={(e) => setWarehouseId(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-              >
-                <option value="" style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
-                  {t("common.all")}
-                </option>
-                {warehouses.map((w) => (
-                  <option key={w.id} value={w.id} style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
-                    {w.name ? `${w.name} — ${w.id}` : w.id}
-                  </option>
-                ))}
-              </select>
+              {/* ✅ Select محسّن للـ Dark Mode */}
+              <div className="relative w-full">
+                <select
+                  value={warehouseId}
+                  onChange={(e) => setWarehouseId(e.target.value)}
+                  className="w-full appearance-none rounded-xl border border-white/10 bg-slate-900 text-slate-100 px-3 py-2 text-sm outline-none focus:border-white/20"
+                >
+                  <option value="">{t("common.all")}</option>
+
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name ? `${w.name} — ${w.id}` : w.id}
+                    </option>
+                  ))}
+                </select>
+
+                {/* سهم للوضوح */}
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                  ▼
+                </div>
+              </div>
 
               <button
                 type="button"
@@ -412,6 +405,9 @@ export default function NewReceiptPage() {
                 + إضافة مخزن
               </button>
             </div>
+
+            {/* ✅ Debug اختياري (احذفه بعد التأكد) */}
+            <div className="mt-1 text-xs text-slate-500">warehouses: {warehouses.length}</div>
           </div>
 
           <div>
@@ -420,7 +416,7 @@ export default function NewReceiptPage() {
               value={supplier}
               onChange={(e) => setSupplier(e.target.value)}
               placeholder={t("receipts.supplierPh")}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
             />
           </div>
         </div>
@@ -432,7 +428,7 @@ export default function NewReceiptPage() {
               value={invoiceNo}
               onChange={(e) => setInvoiceNo(e.target.value)}
               placeholder={t("receipts.invoiceNoPh")}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
             />
           </div>
 
@@ -442,7 +438,7 @@ export default function NewReceiptPage() {
               type="date"
               value={invoiceDate}
               onChange={(e) => setInvoiceDate(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
             />
           </div>
         </div>
@@ -455,7 +451,7 @@ export default function NewReceiptPage() {
               value={partQ}
               onChange={(e) => setPartQ(e.target.value)}
               placeholder="ابحث عن قطعة (كود/اسم/براند...)"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
             />
           </div>
 
@@ -512,23 +508,16 @@ export default function NewReceiptPage() {
                 const p = it.part_id ? partById.get(it.part_id) : null;
                 return (
                   <tr key={idx} className="border-t border-white/10">
-                    {/* part picker */}
                     <td className="px-4 py-3">
                       <select
                         value={it.part_id}
                         onChange={(e) => onPickPart(idx, e.target.value)}
                         className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
                       >
-                        <option value="" style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
-                          {t("receipts.selectPart") || "اختر part"}
-                        </option>
+                        <option value="">{t("receipts.selectPart") || "اختر part"}</option>
 
                         {parts.map((pp) => (
-                          <option
-                            key={pp.id}
-                            value={pp.id}
-                            style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}
-                          >
+                          <option key={pp.id} value={pp.id}>
                             {pp.name ? `${pp.name} (${pp.brand || ""}) — ${pp.id}` : pp.id}
                           </option>
                         ))}
@@ -546,14 +535,13 @@ export default function NewReceiptPage() {
                       <div className="text-xs text-slate-400">{p?.brand || ""}</div>
                     </td>
 
-                    {/* internal serial auto */}
                     <td className="px-4 py-3">
                       <div className="flex gap-2 items-center">
                         <input
                           value={it.internal_serial}
                           readOnly
                           placeholder="AUTO"
-                          className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none opacity-90"
+                          className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none opacity-90 text-slate-100"
                         />
                         <button
                           type="button"
@@ -571,13 +559,12 @@ export default function NewReceiptPage() {
                       </div>
                     </td>
 
-                    {/* manufacturer serial from supplier */}
                     <td className="px-4 py-3">
                       <input
                         value={it.manufacturer_serial}
                         onChange={(e) => updateRow(idx, { manufacturer_serial: e.target.value })}
                         placeholder="MFG-999"
-                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
                       />
                     </td>
 
@@ -586,7 +573,7 @@ export default function NewReceiptPage() {
                         value={it.unit_cost}
                         onChange={(e) => updateRow(idx, { unit_cost: e.target.value })}
                         placeholder="1200"
-                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
                       />
                     </td>
 
@@ -595,7 +582,7 @@ export default function NewReceiptPage() {
                         value={it.notes}
                         onChange={(e) => updateRow(idx, { notes: e.target.value })}
                         placeholder={t("receipts.notesPh")}
-                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
                       />
                     </td>
 
@@ -712,7 +699,7 @@ export default function NewReceiptPage() {
         </div>
       )}
 
-      {/* ✅ Add Warehouse Modal (NEW) */}
+      {/* ✅ Add Warehouse Modal */}
       {warehouseModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setWarehouseModalOpen(false)} />
@@ -805,7 +792,7 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={ph}
-          className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+          className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
         />
         {rightAction}
       </div>
