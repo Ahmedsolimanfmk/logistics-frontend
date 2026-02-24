@@ -5,15 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
-import { api, unwrapItems } from "@/src/lib/api";
-import {
-  // لو الدوال دي عندك استخدمها
-  // getInventoryRequest,
-  // approveInventoryRequest,
-  // rejectInventoryRequest,
-  // unreserveInventoryRequest,
-  type InventoryRequest,
-} from "@/src/lib/inventory.api";
+import { api } from "@/src/lib/api";
+import type { InventoryRequest } from "@/src/lib/inventory.api";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -99,14 +92,14 @@ function Button({
 }
 
 // =====================
-// Flexible API helpers (بدون افتراض أسماء ثابتة للـ endpoints)
+// Flexible API helpers (returns DATA not AxiosResponse)
 // =====================
 async function tryPost(paths: string[], body: any) {
   let lastErr: any = null;
   for (const p of paths) {
     try {
-      const res: any = await api.post(p, body);
-      return res;
+      const res = await api.post(p, body);
+      return res.data; // ✅ important
     } catch (e: any) {
       lastErr = e;
     }
@@ -118,8 +111,8 @@ async function tryGet(paths: string[]) {
   let lastErr: any = null;
   for (const p of paths) {
     try {
-      const res: any = await api.get(p);
-      return res;
+      const res = await api.get(p);
+      return res.data; // ✅ important
     } catch (e: any) {
       lastErr = e;
     }
@@ -128,41 +121,16 @@ async function tryGet(paths: string[]) {
 }
 
 function extractRequest(res: any): InventoryRequest | null {
-  // أشكال محتملة:
-  // { request: {...} } | { data: { request } } | {...request fields...}
-  const r =
-    res?.request ||
-    res?.data?.request ||
-    res?.data?.data?.request ||
-    res?.data ||
-    res;
-  if (r && typeof r === "object" && r.id) return r as InventoryRequest;
+  // after tryGet, res is already "data"
+  const r = res?.request || res?.data?.request || res?.data || res;
+  if (r && typeof r === "object" && (r as any).id) return r as InventoryRequest;
   return null;
 }
 
 function extractIssueId(res: any): string | null {
-  // أشكال محتملة:
-  // { issue: { id } } | { data: { issue } } | { issue_id } | { id }
-  return (
-    res?.issue?.id ||
-    res?.data?.issue?.id ||
-    res?.issue_id ||
-    res?.data?.issue_id ||
-    res?.id ||
-    res?.data?.id ||
-    null
-  );
+  // after tryPost, res is already "data"
+  return res?.issue?.id || res?.issue_id || res?.id || null;
 }
-
-type ReservationRow = {
-  id?: string;
-  part_item_id?: string;
-  internal_serial?: string;
-  manufacturer_serial?: string;
-  status?: string;
-  part_id?: string;
-  part?: any;
-};
 
 export default function InventoryRequestDetailsPage() {
   const t = useT();
@@ -185,25 +153,27 @@ export default function InventoryRequestDetailsPage() {
 
   const [rejectReason, setRejectReason] = useState("");
   const [notes, setNotes] = useState("");
-
   const [createdIssueId, setCreatedIssueId] = useState<string | null>(null);
 
   async function load() {
     if (!id) return;
     setLoading(true);
     try {
-      // endpoints محتملة
-      const res = await tryGet([
-        `/inventory/requests/${id}`,
+      const data = await tryGet([
+        `/inventory/requests/${id}`, // ✅ matches backend getRequest
         `/inventory/requests/${id}/details`,
         `/inventory/request/${id}`,
       ]);
 
-      const r = extractRequest(res);
+      const r = extractRequest(data);
       setReq(r);
     } catch (e: any) {
       setReq(null);
-      setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || t("common.failed"),
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -215,13 +185,13 @@ export default function InventoryRequestDetailsPage() {
   }, [id]);
 
   const statusUpper = String(req?.status || "").toUpperCase();
-  const lines = useMemo(() => (req as any)?.lines || [], [req]);
-  const reservations: ReservationRow[] = useMemo(
-    () => (req as any)?.reservations || (req as any)?.reserved_items || [],
-    [req]
-  );
-
   const workOrderId = (req as any)?.work_order_id || fromWo || "";
+
+  // ✅ backend returns lines include { parts: true }
+  const lines = useMemo(() => ((req as any)?.lines as any[]) || [], [req]);
+
+  // ✅ backend returns reservations include { part_items: { include: { parts, warehouses } } }
+  const reservations = useMemo(() => ((req as any)?.reservations as any[]) || [], [req]);
 
   // =====================
   // Actions
@@ -232,7 +202,7 @@ export default function InventoryRequestDetailsPage() {
     try {
       await tryPost(
         [
-          `/inventory/requests/${id}/approve`, // الأشيع
+          `/inventory/requests/${id}/approve`, // ✅ exists in backend
           `/inventory/requests/${id}/approve-reserve`,
           `/inventory/requests/${id}/reserve`,
         ],
@@ -242,7 +212,11 @@ export default function InventoryRequestDetailsPage() {
       setToast({ open: true, message: t("inventory.approvedOk"), type: "success" });
       await load();
     } catch (e: any) {
-      setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || t("common.failed"),
+        type: "error",
+      });
     } finally {
       setBusy(null);
     }
@@ -255,21 +229,20 @@ export default function InventoryRequestDetailsPage() {
       setToast({ open: true, message: t("inventory.rejectPrompt"), type: "error" });
       return;
     }
+
     setBusy("reject");
     try {
-      await tryPost(
-        [
-          `/inventory/requests/${id}/reject`,
-          `/inventory/requests/${id}/deny`,
-        ],
-        { reason }
-      );
+      await tryPost([`/inventory/requests/${id}/reject`, `/inventory/requests/${id}/deny`], { reason });
 
       setToast({ open: true, message: t("inventory.rejectedOk"), type: "success" });
       setRejectReason("");
       await load();
     } catch (e: any) {
-      setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || t("common.failed"),
+        type: "error",
+      });
     } finally {
       setBusy(null);
     }
@@ -279,27 +252,22 @@ export default function InventoryRequestDetailsPage() {
     if (!id) return;
     setBusy("unreserve");
     try {
-      const res = await tryPost(
-        [
-          `/inventory/requests/${id}/unreserve`,
-          `/inventory/requests/${id}/cancel-reserve`,
-        ],
+      const data = await tryPost(
+        [`/inventory/requests/${id}/unreserve`, `/inventory/requests/${id}/cancel-reserve`],
         { notes: notes || null }
       );
 
-      // لو رجّع عدد
-      const n =
-        res?.unreserved_count ||
-        res?.data?.unreserved_count ||
-        res?.count ||
-        res?.data?.count ||
-        null;
-
+      const n = data?.unreserved_count ?? data?.count ?? null;
       const msg = n ? t("inventory.unreservedOk", { n }) : t("common.save");
+
       setToast({ open: true, message: msg, type: "success" });
       await load();
     } catch (e: any) {
-      setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || t("common.failed"),
+        type: "error",
+      });
     } finally {
       setBusy(null);
     }
@@ -310,28 +278,27 @@ export default function InventoryRequestDetailsPage() {
 
     setBusy("createIssue");
     try {
-      // endpoints محتملة لإنشاء Issue Draft من Request
-      const res = await tryPost(
+      const data = await tryPost(
         [
-          `/inventory/requests/${id}/issues`, // ✅ الأفضل
+          `/inventory/requests/${id}/issues`,
           `/inventory/requests/${id}/issue`,
-          `/inventory/issues`, // fallback: body فيها request_id
+          `/inventory/issues`,
         ],
-        // fallback body:
         { request_id: id, notes: notes || null }
       );
 
-      const issueId = extractIssueId(res);
+      const issueId = extractIssueId(data);
       setCreatedIssueId(issueId);
 
       setToast({ open: true, message: t("issues.createdOk"), type: "success" });
 
-      // افتح تفاصيل الإذن لو عرفنا id
-      if (issueId) {
-        router.push(`/inventory/issues/${issueId}`);
-      }
+      if (issueId) router.push(`/inventory/issues/${issueId}`);
     } catch (e: any) {
-      setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || t("common.failed"),
+        type: "error",
+      });
     } finally {
       setBusy(null);
     }
@@ -340,17 +307,18 @@ export default function InventoryRequestDetailsPage() {
   async function postIssue(issueId: string) {
     setBusy("postIssue");
     try {
-      await tryPost(
-        [
-          `/inventory/issues/${issueId}/post`,
-          `/inventory/issues/${issueId}/posted`,
-        ],
-        { notes: notes || null }
-      );
+      await tryPost([`/inventory/issues/${issueId}/post`, `/inventory/issues/${issueId}/posted`], {
+        notes: notes || null,
+      });
+
       setToast({ open: true, message: t("issues.postedOk"), type: "success" });
       await load();
     } catch (e: any) {
-      setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || t("common.failed"),
+        type: "error",
+      });
     } finally {
       setBusy(null);
     }
@@ -384,6 +352,7 @@ export default function InventoryRequestDetailsPage() {
           >
             ← {t("common.back")}
           </Link>
+
           <button
             onClick={load}
             className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
@@ -393,10 +362,7 @@ export default function InventoryRequestDetailsPage() {
         </div>
       </div>
 
-      <Card
-        title={`${t("inventory.requestDetailsTitle")} #${shortId(id)}`}
-        right={<Badge value={req?.status as any} />}
-      >
+      <Card title={`${t("inventory.requestDetailsTitle")} #${shortId(id)}`} right={<Badge value={req?.status as any} />}>
         {loading ? (
           <div className="text-sm text-slate-300">{t("common.loading")}</div>
         ) : !req ? (
@@ -440,9 +406,7 @@ export default function InventoryRequestDetailsPage() {
                   placeholder={t("common.optional")}
                   className="w-full min-h-[90px] rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
                 />
-                <div className="mt-1 text-[11px] text-slate-400">
-                  {t("issues.notesPh")}
-                </div>
+                <div className="mt-1 text-[11px] text-slate-400">{t("issues.notesPh")}</div>
               </div>
 
               <div>
@@ -457,30 +421,22 @@ export default function InventoryRequestDetailsPage() {
               </div>
             </div>
 
-            {/* Actions Hub */}
+            {/* Actions */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm font-semibold mb-3">{t("common.actions")}</div>
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="primary"
-                  disabled={busy !== null || statusUpper !== "PENDING"}
-                  onClick={approveAndReserve}
-                >
+                <Button variant="primary" disabled={busy !== null || statusUpper !== "PENDING"} onClick={approveAndReserve}>
                   {busy === "approve" ? t("common.saving") : t("inventory.approve")}
                 </Button>
 
-                <Button
-                  variant="danger"
-                  disabled={busy !== null || statusUpper !== "PENDING"}
-                  onClick={reject}
-                >
+                <Button variant="danger" disabled={busy !== null || statusUpper !== "PENDING"} onClick={reject}>
                   {busy === "reject" ? t("common.saving") : t("inventory.reject")}
                 </Button>
 
                 <Button
                   variant="secondary"
-                  disabled={busy !== null || (statusUpper !== "APPROVED" && statusUpper !== "ISSUED")}
+                  disabled={busy !== null || statusUpper !== "APPROVED"}
                   onClick={unreserve}
                 >
                   {busy === "unreserve" ? t("common.saving") : t("inventory.unreserve")}
@@ -496,13 +452,6 @@ export default function InventoryRequestDetailsPage() {
                   {busy === "createIssue" ? t("common.saving") : t("inventory.createIssue")}
                 </Button>
 
-                <Link
-                  href={`/inventory/issues?request_id=${encodeURIComponent(id || "")}`}
-                  className="inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-                >
-                  {t("issues.title")} →
-                </Link>
-
                 {createdIssueId ? (
                   <>
                     <Link
@@ -512,11 +461,7 @@ export default function InventoryRequestDetailsPage() {
                       Open Issue #{shortId(createdIssueId)}
                     </Link>
 
-                    <Button
-                      variant="primary"
-                      disabled={busy !== null}
-                      onClick={() => postIssue(createdIssueId)}
-                    >
+                    <Button variant="primary" disabled={busy !== null} onClick={() => postIssue(createdIssueId)}>
                       {busy === "postIssue" ? t("common.saving") : t("issues.post")}
                     </Button>
                   </>
@@ -546,10 +491,11 @@ export default function InventoryRequestDetailsPage() {
                       lines.map((l: any, idx: number) => (
                         <tr key={l.id || idx} className="border-t border-white/10">
                           <td className="px-4 py-3">
-                            <div className="text-slate-100 font-semibold">{l?.part?.name || "—"}</div>
+                            {/* ✅ include is { parts: true } */}
+                            <div className="text-slate-100 font-semibold">{l?.parts?.name || "—"}</div>
                             <div className="text-xs text-slate-400 font-mono">{shortId(l?.part_id)}</div>
                           </td>
-                          <td className="px-4 py-3 text-slate-200">{l?.needed_qty ?? l?.qty ?? 0}</td>
+                          <td className="px-4 py-3 text-slate-200">{l?.needed_qty ?? 0}</td>
                           <td className="px-4 py-3 text-slate-300">{l?.notes || "—"}</td>
                         </tr>
                       ))
@@ -579,19 +525,24 @@ export default function InventoryRequestDetailsPage() {
                   </thead>
                   <tbody>
                     {Array.isArray(reservations) && reservations.length > 0 ? (
-                      reservations.map((x: any, idx: number) => (
-                        <tr key={x.id || x.part_item_id || idx} className="border-t border-white/10">
-                          <td className="px-4 py-3 font-mono text-xs text-slate-200">{x?.internal_serial || "—"}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-slate-200">{x?.manufacturer_serial || "—"}</td>
-                          <td className="px-4 py-3">
-                            <div className="text-slate-100">{x?.part?.name || x?.parts?.name || "—"}</div>
-                            <div className="text-xs text-slate-400 font-mono">{shortId(x?.part_id)}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge value={x?.status || ""} />
-                          </td>
-                        </tr>
-                      ))
+                      reservations.map((r: any, idx: number) => {
+                        const item = r?.part_items; // ✅ backend shape
+                        return (
+                          <tr key={r.id || r.part_item_id || idx} className="border-t border-white/10">
+                            <td className="px-4 py-3 font-mono text-xs text-slate-200">{item?.internal_serial || "—"}</td>
+                            <td className="px-4 py-3 font-mono text-xs text-slate-200">
+                              {item?.manufacturer_serial || "—"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-slate-100">{item?.parts?.name || "—"}</div>
+                              <div className="text-xs text-slate-400 font-mono">{shortId(item?.part_id)}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge value={item?.status || ""} />
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr className="border-t border-white/10">
                         <td colSpan={4} className="px-4 py-6 text-slate-400">
