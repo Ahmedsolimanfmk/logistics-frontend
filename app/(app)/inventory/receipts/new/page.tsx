@@ -11,8 +11,15 @@ function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-type Warehouse = { id: string; name?: string | null };
-type Part = { id: string; part_number: string; name: string; brand?: string | null; category?: string | null; unit?: string | null };
+type Warehouse = { id: string; name?: string | null; location?: string | null };
+type Part = {
+  id: string;
+  part_number: string;
+  name: string;
+  brand?: string | null;
+  category?: string | null;
+  unit?: string | null;
+};
 
 type DraftItem = {
   part_id: string;
@@ -80,6 +87,12 @@ export default function NewReceiptPage() {
   const [newPartUnit, setNewPartUnit] = useState("");
   const [newPartMinStock, setNewPartMinStock] = useState("");
 
+  // ✅ Warehouse modal (NEW - بدون حذف أي شيء)
+  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+  const [warehouseSaving, setWarehouseSaving] = useState(false);
+  const [newWarehouseName, setNewWarehouseName] = useState("");
+  const [newWarehouseLocation, setNewWarehouseLocation] = useState("");
+
   // load warehouses once
   useEffect(() => {
     const load = async () => {
@@ -95,6 +108,72 @@ export default function NewReceiptPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✅ reload warehouses helper (NEW)
+  const reloadWarehouses = async (opts?: { selectId?: string }) => {
+    try {
+      const res = await apiGet<any>("/inventory/warehouses");
+      const ws = unwrapItems<Warehouse>(res);
+      setWarehouses(ws);
+
+      if (opts?.selectId) {
+        setWarehouseId(opts.selectId);
+      } else if (ws.length === 1 && !warehouseId) {
+        setWarehouseId(ws[0].id);
+      }
+    } catch (e: any) {
+      setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
+    }
+  };
+
+  // ✅ create warehouse quick (NEW)
+  const createWarehouseQuick = async () => {
+    const nm = newWarehouseName.trim();
+    const loc = newWarehouseLocation.trim();
+
+    if (!nm) {
+      setToast({ open: true, message: "اسم المخزن مطلوب", type: "error" });
+      return;
+    }
+
+    setWarehouseSaving(true);
+    try {
+      const payload: any = {
+        name: nm,
+        location: loc ? loc : null,
+      };
+
+      const created: Warehouse = await api.post("/inventory/warehouses", payload);
+
+      setToast({ open: true, message: "تمت إضافة المخزن ✅", type: "success" });
+
+      // update UI list سريع + اختيار تلقائي
+      setWarehouses((prev) => {
+        const exists = prev.some((x) => x.id === created.id || (x.name && created.name && x.name === created.name));
+        return exists ? prev : [created, ...prev];
+      });
+
+      // اختار المخزن الجديد
+      if (created?.id) setWarehouseId(created.id);
+
+      // قفل + reset
+      setWarehouseModalOpen(false);
+      setNewWarehouseName("");
+      setNewWarehouseLocation("");
+
+      // (اختياري) اعمل reload للتأكد من الترتيب/البيانات كاملة
+      // await reloadWarehouses({ selectId: created?.id });
+    } catch (e: any) {
+      const msg =
+        e?.response?.status === 409
+          ? "اسم المخزن موجود بالفعل"
+          : e?.response?.data?.message || e?.message || t("common.failed");
+
+      setToast({ open: true, message: msg, type: "error" });
+    } finally {
+      setWarehouseSaving(false);
+    }
+  };
 
   // parts search
   const searchParts = async () => {
@@ -210,10 +289,7 @@ export default function NewReceiptPage() {
     if (!nm) return setToast({ open: true, message: "اسم القطعة مطلوب", type: "error" });
 
     // min_stock validation front
-    const ms =
-      newPartMinStock.trim() === ""
-        ? null
-        : Number(newPartMinStock);
+    const ms = newPartMinStock.trim() === "" ? null : Number(newPartMinStock);
 
     if (ms != null && (!Number.isFinite(ms) || ms < 0)) {
       setToast({ open: true, message: "min_stock لازم يكون رقم >= 0", type: "error" });
@@ -310,20 +386,32 @@ export default function NewReceiptPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <div className="text-xs text-slate-400 mb-1">{t("receipts.warehouseId")}</div>
-            <select
-  value={warehouseId}
-  onChange={(e) => setWarehouseId(e.target.value)}
-  className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
->
-  <option value="" style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
-    {t("common.all")}
-  </option>
-  {warehouses.map((w) => (
-    <option key={w.id} value={w.id} style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
-      {w.name ? `${w.name} — ${w.id}` : w.id}
-    </option>
-  ))}
-</select>
+
+            {/* ✅ نفس select بتاعك + أضفنا زر إضافة مخزن بدون حذف */}
+            <div className="flex gap-2">
+              <select
+                value={warehouseId}
+                onChange={(e) => setWarehouseId(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
+              >
+                <option value="" style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
+                  {t("common.all")}
+                </option>
+                {warehouses.map((w) => (
+                  <option key={w.id} value={w.id} style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
+                    {w.name ? `${w.name} — ${w.id}` : w.id}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => setWarehouseModalOpen(true)}
+                className="shrink-0 px-3 py-2 rounded-xl border border-white/10 bg-sky-500/10 hover:bg-sky-500/20 text-sm"
+              >
+                + إضافة مخزن
+              </button>
+            </div>
           </div>
 
           <div>
@@ -427,24 +515,25 @@ export default function NewReceiptPage() {
                     {/* part picker */}
                     <td className="px-4 py-3">
                       <select
-  value={it.part_id}
-  onChange={(e) => onPickPart(idx, e.target.value)}
-  className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
->
-  <option value="" style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
-    {t("receipts.selectPart") || "اختر part"}
-  </option>
+                        value={it.part_id}
+                        onChange={(e) => onPickPart(idx, e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
+                      >
+                        <option value="" style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}>
+                          {t("receipts.selectPart") || "اختر part"}
+                        </option>
 
-  {parts.map((pp) => (
-    <option
-      key={pp.id}
-      value={pp.id}
-      style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}
-    >
-      {pp.name ? `${pp.name} (${pp.brand || ""}) — ${pp.id}` : pp.id}
-    </option>
-  ))}
-</select>
+                        {parts.map((pp) => (
+                          <option
+                            key={pp.id}
+                            value={pp.id}
+                            style={{ backgroundColor: "#0f172a", color: "#e2e8f0" }}
+                          >
+                            {pp.name ? `${pp.name} (${pp.brand || ""}) — ${pp.id}` : pp.id}
+                          </option>
+                        ))}
+                      </select>
+
                       {p?.part_number ? (
                         <div className="mt-1 text-xs text-slate-400">
                           كود: <span className="font-mono text-slate-300">{p.part_number}</span>
@@ -590,12 +679,7 @@ export default function NewReceiptPage() {
               <Field label="البراند (اختياري)" value={newPartBrand} onChange={setNewPartBrand} ph="مثال: MANN" />
               <Field label="التصنيف (اختياري)" value={newPartCategory} onChange={setNewPartCategory} ph="مثال: Filters" />
               <Field label="الوحدة (اختياري)" value={newPartUnit} onChange={setNewPartUnit} ph="مثال: pcs" />
-              <Field
-                label="حد أدنى للمخزون (اختياري)"
-                value={newPartMinStock}
-                onChange={setNewPartMinStock}
-                ph="مثال: 5"
-              />
+              <Field label="حد أدنى للمخزون (اختياري)" value={newPartMinStock} onChange={setNewPartMinStock} ph="مثال: 5" />
 
               <div className="flex gap-2 pt-2">
                 <button
@@ -622,6 +706,75 @@ export default function NewReceiptPage() {
 
               <div className="text-xs text-slate-400">
                 * لازم تدخل <span className="font-mono">part_number</span> لأنه Required في الباك-إند الحالي.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Add Warehouse Modal (NEW) */}
+      {warehouseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setWarehouseModalOpen(false)} />
+
+          <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-slate-950 p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">إضافة مخزن</div>
+              <button
+                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+                onClick={() => setWarehouseModalOpen(false)}
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <Field
+                label="اسم المخزن *"
+                value={newWarehouseName}
+                onChange={setNewWarehouseName}
+                ph="مثال: Main Warehouse"
+              />
+              <Field
+                label="الموقع (اختياري)"
+                value={newWarehouseLocation}
+                onChange={setNewWarehouseLocation}
+                ph="مثال: Cairo / 6th October / ..."
+              />
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  disabled={warehouseSaving}
+                  onClick={createWarehouseQuick}
+                  className={cn(
+                    "px-3 py-2 rounded-xl border text-sm",
+                    warehouseSaving
+                      ? "border-white/10 bg-white/5 text-slate-500"
+                      : "border-sky-500/20 bg-sky-500/10 hover:bg-sky-500/20"
+                  )}
+                >
+                  {warehouseSaving ? t("common.loading") : "حفظ المخزن"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setWarehouseModalOpen(false)}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+                >
+                  {t("common.cancel")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => reloadWarehouses()}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
+                >
+                  تحديث القائمة
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-400">
+                * سيتم إنشاء المخزن عبر <span className="font-mono">POST /inventory/warehouses</span> ثم اختياره تلقائيًا.
               </div>
             </div>
           </div>
