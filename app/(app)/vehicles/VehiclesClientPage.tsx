@@ -4,9 +4,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Toast } from "@/src/components/Toast";
 import { useT } from "@/src/i18n/useT";
 import { useLang } from "@/src/i18n/lang";
+
+// ✅ Theme Components
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { Card } from "@/src/components/ui/Card";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { Toast } from "@/src/components/Toast"; // ✅ استعمل النسخة الموحدة
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -29,7 +37,66 @@ function vehicleLabel(v: any) {
   return dn || shortId(v.id);
 }
 
-/* ---------------- Modal ---------------- */
+const inputCls =
+  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none " +
+  "placeholder:text-gray-400 focus:ring-2 focus:ring-black/10";
+
+const selectCls =
+  "rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-black/10";
+
+/* ---------------- Modal Shell (Unified) ---------------- */
+function Modal({
+  open,
+  title,
+  subtitle,
+  children,
+  footer,
+  onClose,
+  maxWidthClassName = "max-w-2xl",
+}: {
+  open: boolean;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  onClose: () => void;
+  maxWidthClassName?: string;
+}) {
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4"
+      dir="rtl"
+      onMouseDown={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className={cn("w-full", maxWidthClassName)} onMouseDown={(e) => e.stopPropagation()}>
+        <Card
+          title={
+            <div>
+              <div className="text-sm font-semibold text-gray-900">{title}</div>
+              {subtitle ? <div className="mt-1 text-xs text-gray-500">{subtitle}</div> : null}
+            </div>
+          }
+          right={
+            <Button variant="ghost" onClick={onClose} aria-label="Close">
+              ✕
+            </Button>
+          }
+        >
+          <div className="space-y-4">{children}</div>
+          {footer ? (
+            <div className="mt-4 flex items-center justify-start gap-2">{footer}</div>
+          ) : null}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Vehicle Modal ---------------- */
 function VehicleModal({
   open,
   mode,
@@ -46,8 +113,6 @@ function VehicleModal({
   showToast: (type: "success" | "error", msg: string) => void;
 }) {
   const t = useT();
-  const lang = useLang();
-  const locale = lang === "en" ? "en-US" : "ar-EG";
 
   const [loading, setLoading] = useState(false);
 
@@ -73,12 +138,11 @@ function VehicleModal({
     setGps(String(initial?.gps_device_id || ""));
   }, [open, initial]);
 
-  if (!open) return null;
-
-  const canSubmit = fleetNo.trim() && plateNo.trim();
+  const canSubmit = !!fleetNo.trim() && !!plateNo.trim();
 
   async function submit() {
     if (!canSubmit) return;
+
     setLoading(true);
     try {
       const payload: any = {
@@ -110,138 +174,105 @@ function VehicleModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-2xl rounded-2xl bg-slate-900 text-white border border-white/10 p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">
-            {mode === "create" ? t("vehicles.modal.addTitle") : t("vehicles.modal.editTitle")}
-          </h3>
-
-          <button
-            onClick={onClose}
-            className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <label className="grid gap-2 text-sm">
-            {t("vehicles.fields.fleetNo")} *
-            <input
-              value={fleetNo}
-              onChange={(e) => setFleetNo(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-              placeholder={t("vehicles.placeholders.fleetNo")}
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("vehicles.fields.plateNo")} *
-            <input
-              value={plateNo}
-              onChange={(e) => setPlateNo(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-              placeholder={t("vehicles.placeholders.plateNo")}
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm md:col-span-2">
-            {t("vehicles.fields.displayName")}
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-              placeholder={t("vehicles.placeholders.displayName")}
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("vehicles.fields.status")}
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-            >
-              <option value="AVAILABLE">{t("vehicles.status.AVAILABLE")}</option>
-              <option value="IN_USE">{t("vehicles.status.IN_USE")}</option>
-              <option value="MAINTENANCE">{t("vehicles.status.MAINTENANCE")}</option>
-            </select>
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("vehicles.fields.model")}
-            <input
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("vehicles.fields.year")}
-            <input
-              value={year}
-              onChange={(e) => setYear(e.target.value)}
-              disabled={loading}
-              type="number"
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("vehicles.fields.odometer")}
-            <input
-              value={odometer}
-              onChange={(e) => setOdometer(e.target.value)}
-              disabled={loading}
-              type="number"
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm md:col-span-2">
-            {t("vehicles.fields.gps")}
-            <input
-              value={gps}
-              onChange={(e) => setGps(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 outline-none"
-            />
-          </label>
-        </div>
-
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60"
-          >
+    <Modal
+      open={open}
+      onClose={() => {
+        if (!loading) onClose();
+      }}
+      title={mode === "create" ? t("vehicles.modal.addTitle") : t("vehicles.modal.editTitle")}
+      subtitle={t("vehicles.subtitle")}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
             {t("common.cancel")}
-          </button>
+          </Button>
+          <Button variant="primary" onClick={submit} disabled={!canSubmit || loading} isLoading={loading}>
+            {t("common.save")}
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="grid gap-2 text-sm">
+          <span className="text-xs text-gray-500">{t("vehicles.fields.fleetNo")} *</span>
+          <input
+            value={fleetNo}
+            onChange={(e) => setFleetNo(e.target.value)}
+            disabled={loading}
+            className={inputCls}
+            placeholder={t("vehicles.placeholders.fleetNo")}
+          />
+        </label>
 
-          <button
-            onClick={submit}
-            disabled={!canSubmit || loading}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-60 font-semibold"
+        <label className="grid gap-2 text-sm">
+          <span className="text-xs text-gray-500">{t("vehicles.fields.plateNo")} *</span>
+          <input
+            value={plateNo}
+            onChange={(e) => setPlateNo(e.target.value)}
+            disabled={loading}
+            className={inputCls}
+            placeholder={t("vehicles.placeholders.plateNo")}
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm md:col-span-2">
+          <span className="text-xs text-gray-500">{t("vehicles.fields.displayName")}</span>
+          <input
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            disabled={loading}
+            className={inputCls}
+            placeholder={t("vehicles.placeholders.displayName")}
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm">
+          <span className="text-xs text-gray-500">{t("vehicles.fields.status")}</span>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            disabled={loading}
+            className={selectCls}
           >
-            {loading ? t("common.saving") : t("common.save")}
-          </button>
-        </div>
+            <option value="AVAILABLE">{t("vehicles.status.AVAILABLE")}</option>
+            <option value="IN_USE">{t("vehicles.status.IN_USE")}</option>
+            <option value="MAINTENANCE">{t("vehicles.status.MAINTENANCE")}</option>
+          </select>
+        </label>
+
+        <label className="grid gap-2 text-sm">
+          <span className="text-xs text-gray-500">{t("vehicles.fields.model")}</span>
+          <input value={model} onChange={(e) => setModel(e.target.value)} disabled={loading} className={inputCls} />
+        </label>
+
+        <label className="grid gap-2 text-sm">
+          <span className="text-xs text-gray-500">{t("vehicles.fields.year")}</span>
+          <input
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            disabled={loading}
+            type="number"
+            className={inputCls}
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm">
+          <span className="text-xs text-gray-500">{t("vehicles.fields.odometer")}</span>
+          <input
+            value={odometer}
+            onChange={(e) => setOdometer(e.target.value)}
+            disabled={loading}
+            type="number"
+            className={inputCls}
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm md:col-span-2">
+          <span className="text-xs text-gray-500">{t("vehicles.fields.gps")}</span>
+          <input value={gps} onChange={(e) => setGps(e.target.value)} disabled={loading} className={inputCls} />
+        </label>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -281,7 +312,6 @@ export default function VehiclesClientPage() {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
-    setTimeout(() => setToastOpen(false), 2500);
   }
 
   useEffect(() => {
@@ -324,8 +354,9 @@ export default function VehiclesClientPage() {
     setLoading(true);
     setErr(null);
     try {
-      const res = await api.get(`/vehicles?${qs}`);
-      setData(res.data); // ✅ important
+      const res: any = await api.get(`/vehicles?${qs}`);
+      const body = res?.data ?? res;
+      setData(body);
     } catch (e: any) {
       setErr(e?.message || t("vehicles.errors.loadFailed"));
     } finally {
@@ -368,170 +399,168 @@ export default function VehiclesClientPage() {
 
   if (token === null) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white">
+      <div className="min-h-screen bg-gray-50" dir="rtl">
         <div className="max-w-7xl mx-auto p-4 md:p-6">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            {t("common.checkingSession")}
-          </div>
+          <Card>
+            <div className="text-sm text-gray-700">{t("common.checkingSession")}</div>
+          </Card>
         </div>
       </div>
     );
   }
 
+  const columns: DataTableColumn<any>[] = [
+    {
+      key: "vehicle",
+      label: t("vehicles.table.vehicle"),
+      render: (v) => <span className="font-medium text-gray-900">{vehicleLabel(v)}</span>,
+    },
+    {
+      key: "fleet_no",
+      label: t("vehicles.table.fleet"),
+      render: (v) => <span className="font-mono text-gray-700">{v.fleet_no || "—"}</span>,
+    },
+    {
+      key: "plate_no",
+      label: t("vehicles.table.plate"),
+      render: (v) => <span className="font-mono text-gray-700">{v.plate_no || "—"}</span>,
+    },
+    {
+      key: "status",
+      label: t("vehicles.table.status"),
+      render: (v) => (
+        <span className="text-gray-700">
+          {t(`vehicles.status.${String(v.status || "").toUpperCase()}`) || (v.status || "—")}
+        </span>
+      ),
+    },
+    {
+      key: "is_active",
+      label: t("vehicles.table.active"),
+      render: (v) => <StatusBadge status={v.is_active ? "ACTIVE" : "INACTIVE"} />,
+    },
+    {
+      key: "created_at",
+      label: t("vehicles.table.created"),
+      render: (v) => <span className="text-gray-700">{fmtDate(v.created_at)}</span>,
+    },
+    {
+      key: "actions",
+      label: t("vehicles.table.actions"),
+      headerClassName: "w-[220px]",
+      render: (v) => (
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => openEdit(v)}>
+            {t("common.edit")}
+          </Button>
+          <Button variant="ghost" onClick={() => toggle(v)}>
+            {t("common.toggle")}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-gray-50" dir="rtl">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold">{t("vehicles.title")}</div>
-            <div className="text-sm text-slate-400">{t("vehicles.subtitle")}</div>
-          </div>
+        <Card>
+          <div className="space-y-4">
+            <PageHeader
+              title={t("vehicles.title")}
+              subtitle={t("vehicles.subtitle")}
+              actions={
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-gray-600">
+                    {t("common.role")}:{" "}
+                    <span className="font-medium text-gray-900">{role || "—"}</span>
+                  </div>
 
-          <div className="text-xs text-slate-400">
-            {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
-          </div>
-        </div>
+                  <Button variant="primary" onClick={openCreate}>
+                    {t("vehicles.actions.add")}
+                  </Button>
 
-        {/* Filters + Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={q}
-            onChange={(e) => setParam("q", e.target.value)}
-            placeholder={t("vehicles.filters.searchPlaceholder")}
-            className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none w-64"
-          />
+                  <Button variant="secondary" onClick={load} isLoading={loading}>
+                    {t("common.refresh")}
+                  </Button>
+                </div>
+              }
+            />
 
-          <select
-            value={status}
-            onChange={(e) => setParam("status", e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          >
-            <option value="">{t("vehicles.filters.allStatus")}</option>
-            <option value="AVAILABLE">{t("vehicles.status.AVAILABLE")}</option>
-            <option value="IN_USE">{t("vehicles.status.IN_USE")}</option>
-            <option value="MAINTENANCE">{t("vehicles.status.MAINTENANCE")}</option>
-            <option value="AVAILABLE,IN_USE">{t("vehicles.filters.activeStatus")}</option>
-          </select>
+            <FiltersBar
+              left={
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    value={q}
+                    onChange={(e) => setParam("q", e.target.value)}
+                    placeholder={t("vehicles.filters.searchPlaceholder")}
+                    className={cn(inputCls, "w-64")}
+                  />
 
-          <select
-            value={active}
-            onChange={(e) => setParam("active", e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          >
-            <option value="">{t("vehicles.filters.allActiveFlag")}</option>
-            <option value="1">{t("vehicles.filters.activeOnly")}</option>
-            <option value="0">{t("vehicles.filters.inactiveOnly")}</option>
-          </select>
+                  <select
+                    value={status}
+                    onChange={(e) => setParam("status", e.target.value)}
+                    className={selectCls}
+                  >
+                    <option value="">{t("vehicles.filters.allStatus")}</option>
+                    <option value="AVAILABLE">{t("vehicles.status.AVAILABLE")}</option>
+                    <option value="IN_USE">{t("vehicles.status.IN_USE")}</option>
+                    <option value="MAINTENANCE">{t("vehicles.status.MAINTENANCE")}</option>
+                    <option value="AVAILABLE,IN_USE">{t("vehicles.filters.activeStatus")}</option>
+                  </select>
 
-          <span className="text-xs text-slate-400">
-            {t("vehicles.meta.total")}: {total} — {t("vehicles.meta.page")} {page}/{totalPages}
-          </span>
+                  <select
+                    value={active}
+                    onChange={(e) => setParam("active", e.target.value)}
+                    className={selectCls}
+                  >
+                    <option value="">{t("vehicles.filters.allActiveFlag")}</option>
+                    <option value="1">{t("vehicles.filters.activeOnly")}</option>
+                    <option value="0">{t("vehicles.filters.inactiveOnly")}</option>
+                  </select>
+                </div>
+              }
+              right={
+                <div className="text-xs text-gray-600">
+                  {t("vehicles.meta.total")}:{" "}
+                  <span className="font-semibold text-gray-900">{total}</span> —{" "}
+                  {t("vehicles.meta.page")}{" "}
+                  <span className="font-semibold text-gray-900">
+                    {page}/{totalPages}
+                  </span>
+                </div>
+              }
+            />
 
-          <button
-            onClick={openCreate}
-            className="ml-auto px-3 py-2 rounded-xl border border-white/10 bg-emerald-600/80 hover:bg-emerald-600 text-sm"
-          >
-            {t("vehicles.actions.add")}
-          </button>
-
-          <button
-            onClick={load}
-            disabled={loading}
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-60"
-          >
-            {loading ? t("common.loading") : t("common.refresh")}
-          </button>
-        </div>
-
-        {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
-        ) : null}
-
-        {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            {t("common.loading")}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-white/5">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.vehicle")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.fleet")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.plate")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.active")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("vehicles.table.actions")}</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {items.map((v: any) => (
-                    <tr key={v.id} className={cn("border-t border-white/10 hover:bg-white/5")}>
-                      <td className="px-4 py-2 font-medium">{vehicleLabel(v)}</td>
-                      <td className="px-4 py-2 font-mono">{v.fleet_no || "—"}</td>
-                      <td className="px-4 py-2 font-mono">{v.plate_no || "—"}</td>
-                      <td className="px-4 py-2">
-                        {t(`vehicles.status.${String(v.status || "").toUpperCase()}`) || (v.status || "—")}
-                      </td>
-                      <td className="px-4 py-2">{v.is_active ? t("common.yes") : t("common.no")}</td>
-                      <td className="px-4 py-2">{fmtDate(v.created_at)}</td>
-                      <td className="px-4 py-2">
-                        <div className="flex gap-2">
-                          <button
-                            className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                            onClick={() => openEdit(v)}
-                          >
-                            {t("common.edit")}
-                          </button>
-
-                          <button
-                            className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                            onClick={() => toggle(v)}
-                          >
-                            {t("common.toggle")}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {!items.length ? (
-                    <tr>
-                      <td className="px-4 py-6 text-slate-300" colSpan={7}>
-                        {t("vehicles.empty")}
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
-              <button
-                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
-                disabled={page <= 1}
-                onClick={() => setParam("page", String(page - 1))}
-              >
-                {t("common.prev")}
-              </button>
-
-              <div className="text-xs text-slate-400">
-                {t("vehicles.meta.showing")} {items.length} {t("vehicles.meta.of")} {total}
+            {err ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {err}
               </div>
+            ) : null}
 
-              <button
-                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
-                disabled={page >= totalPages}
-                onClick={() => setParam("page", String(page + 1))}
-              >
-                {t("common.next")}
-              </button>
-            </div>
+            <DataTable
+              columns={columns}
+              rows={items}
+              loading={loading}
+              emptyTitle={t("vehicles.empty")}
+              emptyHint={t("vehicles.filters.searchPlaceholder")}
+              page={page}
+              pages={totalPages}
+              total={total}
+              onPrev={page > 1 ? () => setParam("page", String(page - 1)) : undefined}
+              onNext={page < totalPages ? () => setParam("page", String(page + 1)) : undefined}
+              footer={
+                <div className="text-xs text-gray-600">
+                  {t("vehicles.meta.showing")}{" "}
+                  <span className="font-semibold text-gray-900">{items.length}</span>{" "}
+                  {t("vehicles.meta.of")}{" "}
+                  <span className="font-semibold text-gray-900">{total}</span>
+                </div>
+              }
+              minWidthClassName="min-w-[1100px]"
+            />
           </div>
-        )}
+        </Card>
       </div>
 
       <VehicleModal
@@ -543,7 +572,13 @@ export default function VehiclesClientPage() {
         showToast={showToast}
       />
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        dir="rtl"
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

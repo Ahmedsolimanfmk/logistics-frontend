@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
@@ -50,6 +50,20 @@ async function apiFetch<T>(
 
   if (!res.ok) throw new Error(json?.message || `Request failed (${res.status})`);
   return json as T;
+}
+
+function pickTotal(res: any): number {
+  const meta = res?.meta || res?.data?.meta || null;
+  const t =
+    res?.total ??
+    res?.data?.total ??
+    meta?.total ??
+    meta?.count ??
+    res?.count ??
+    res?.data?.count ??
+    0;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : 0;
 }
 
 // UI
@@ -193,6 +207,8 @@ const optionCls = "bg-neutral-900 text-white";
 
 export default function WorkOrderDetailsPage() {
   const t = useT();
+  const router = useRouter();
+  const sp = useSearchParams();
 
   const token = useAuth((s: any) => s.token);
   const user = useAuth((s: any) => s.user);
@@ -209,13 +225,21 @@ export default function WorkOrderDetailsPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
 
+  const tabQ = String(sp?.get("tab") || "").toLowerCase();
+  const initialTab: TabKey =
+    tabQ === "installations" ? "installations" : tabQ === "qa" ? "qa" : "issues";
+  const [tab, setTab] = useState<TabKey>(initialTab);
+
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   const [wo, setWo] = useState<WorkOrder | null>(null);
   const [report, setReport] = useState<ReportResponse | null>(null);
 
-  const [tab, setTab] = useState<TabKey>("issues");
+  // ✅ WO Hub
+  const [hubWarehouseId, setHubWarehouseId] = useState("");
+  const [hubCounts, setHubCounts] = useState({ requests: 0, issues: 0, installations: 0 });
+  const [hubCountsLoading, setHubCountsLoading] = useState(false);
 
   // -------- Issues state --------
   const [issueCreating, setIssueCreating] = useState(false);
@@ -250,7 +274,106 @@ export default function WorkOrderDetailsPage() {
   const [completing, setCompleting] = useState(false);
   const [completeMsg, setCompleteMsg] = useState<string | null>(null);
 
-  async function load() {
+  const setTabAndUrl = useCallback(
+    (next: TabKey) => {
+      setTab(next);
+      if (!id) return; // مهم
+      const p = new URLSearchParams(sp?.toString() || "");
+      p.set("tab", next);
+      router.replace(`/maintenance/work-orders/${id}?${p.toString()}`);
+    },
+    [id, router, sp]
+  );
+
+  // ✅ WO Hub actions
+  function hubOpenRequests() {
+    if (!id) return;
+    router.push(`/inventory/requests?work_order_id=${encodeURIComponent(id)}`);
+  }
+  function hubOpenIssues() {
+    if (!id) return;
+    router.push(`/inventory/issues?work_order_id=${encodeURIComponent(id)}`);
+  }
+  function hubAddInstallations() {
+    setTabAndUrl("installations");
+  }
+  function hubCreateRequest() {
+    if (!id) return;
+    const wh = String(hubWarehouseId || "").trim();
+    if (!wh) {
+      alert("warehouse_id مطلوب لإنشاء طلب مخزني من داخل أمر العمل.");
+      return;
+    }
+    router.push(
+      `/inventory/requests/new?work_order_id=${encodeURIComponent(id)}&warehouse_id=${encodeURIComponent(wh)}`
+    );
+  }
+
+  const loadInstallations = useCallback(async () => {
+    if (!token || !id) return;
+    setInstLoading(true);
+    setInstMsg(null);
+
+    try {
+      const res: any = await apiFetch<any>(`/maintenance/work-orders/${id}/installations`, { token });
+
+      const arr = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.items)
+        ? res.items
+        : Array.isArray(res?.installations)
+        ? res.installations
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+
+      setInstItems(arr);
+    } catch (e: any) {
+      setInstItems([]);
+      setInstMsg(e?.message || t("woDetails.installationsLoadFailed"));
+    } finally {
+      setInstLoading(false);
+    }
+  }, [token, id, t]);
+
+  const loadHubCounts = useCallback(async () => {
+    if (!token || !id) return;
+    setHubCountsLoading(true);
+
+    try {
+      const reqRes: any = await apiFetch(
+        `/inventory/requests?work_order_id=${encodeURIComponent(id)}&page=1&limit=1`,
+        { token }
+      );
+      const requestsTotal = pickTotal(reqRes);
+
+      const issRes: any = await apiFetch(
+        `/inventory/issues?work_order_id=${encodeURIComponent(id)}&page=1&limit=1`,
+        { token }
+      );
+      const issuesTotal = pickTotal(issRes);
+
+      const instRes: any = await apiFetch(`/maintenance/work-orders/${id}/installations`, { token });
+      const instArr = Array.isArray(instRes)
+        ? instRes
+        : Array.isArray(instRes?.items)
+        ? instRes.items
+        : Array.isArray(instRes?.installations)
+        ? instRes.installations
+        : Array.isArray(instRes?.data)
+        ? instRes.data
+        : [];
+      const installationsTotal = instArr.length;
+
+      setHubCounts({ requests: requestsTotal, issues: issuesTotal, installations: installationsTotal });
+    } catch {
+      // لا نعطل الصفحة لو endpoints غير موجودة
+    } finally {
+      setHubCountsLoading(false);
+    }
+  }, [token, id]);
+
+  const load = useCallback(async () => {
     if (!token || !id) return;
     setLoading(true);
     setErr(null);
@@ -270,6 +393,9 @@ export default function WorkOrderDetailsPage() {
         setQaResult(r === "FAIL" ? "FAIL" : "PASS");
       }
       if (typeof db?.remarks === "string") setQaRemarks(db.remarks);
+
+      // ✅ counts مرة واحدة بعد نجاح التحميل
+      await loadHubCounts();
     } catch (e: any) {
       setWo(null);
       setReport(null);
@@ -277,46 +403,23 @@ export default function WorkOrderDetailsPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function loadInstallations() {
-    if (!token || !id) return;
-    setInstLoading(true);
-    setInstMsg(null);
-
-    try {
-      const res: any = await apiFetch<any>(`/maintenance/work-orders/${id}/installations`, { token });
-
-      const arr =
-        Array.isArray(res)
-          ? res
-          : Array.isArray(res?.["items"])
-          ? res["items"]
-          : Array.isArray(res?.["installations"])
-          ? res["installations"]
-          : Array.isArray(res?.["data"])
-          ? res["data"]
-          : [];
-
-      setInstItems(arr);
-    } catch (e: any) {
-      setInstItems([]);
-      setInstMsg(e?.message || t("woDetails.installationsLoadFailed"));
-    } finally {
-      setInstLoading(false);
-    }
-  }
+  }, [token, id, t, loadHubCounts]);
 
   useEffect(() => {
     if (!token || !id) return;
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, id]);
+  }, [token, id, load]);
+
+  // ✅ if URL tab changes externally
+  useEffect(() => {
+    const v = String(sp?.get("tab") || "").toLowerCase();
+    const next: TabKey = v === "installations" ? "installations" : v === "qa" ? "qa" : "issues";
+    setTab(next);
+  }, [tabQ, sp]);
 
   useEffect(() => {
     if (tab === "installations") loadInstallations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, loadInstallations]);
 
   const totals = report?.report_runtime?.totals;
   const rs = String(report?.report_status || "");
@@ -357,6 +460,8 @@ export default function WorkOrderDetailsPage() {
       });
       setIssueId(res?.issue?.id || null);
       setIssueMsg(t("woDetails.issueCreated"));
+      await loadHubCounts();
+      await load();
     } catch (e: any) {
       setIssueMsg(`${t("common.failed")}: ${e?.message || t("common.unknownError")}`);
     } finally {
@@ -461,7 +566,7 @@ export default function WorkOrderDetailsPage() {
       setInstOdo("");
       setInstNotes("");
 
-      await Promise.all([load(), loadInstallations()]);
+      await Promise.all([load(), loadInstallations(), loadHubCounts()]);
     } catch (e: any) {
       setInstMsg(`${t("common.failed")}: ${e?.message || t("common.unknownError")}`);
     } finally {
@@ -582,6 +687,67 @@ export default function WorkOrderDetailsPage() {
           <div className="text-sm text-white/70">{t("common.notFound")}</div>
         ) : (
           <div className="space-y-4">
+            {/* ✅ WO HUB */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div className="space-y-1">
+                  <div className="text-sm font-semibold">WO Hub</div>
+                  <div className="text-xs text-white/60">
+                    ربط المخزن + الطلبات + الصرف + التركيبات من نفس صفحة أمر العمل
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-white/60">warehouse_id</div>
+                    <input
+                      value={hubWarehouseId}
+                      onChange={(e) => setHubWarehouseId(e.target.value)}
+                      className="w-[260px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white placeholder:text-white/40"
+                      placeholder="uuid"
+                    />
+                  </div>
+
+                  {canManage ? (
+                    <Button variant="primary" onClick={hubCreateRequest}>
+                      Create Request
+                    </Button>
+                  ) : null}
+
+                  <Button variant="secondary" onClick={hubOpenRequests}>
+                    Open Requests
+                    <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs">
+                      {hubCountsLoading ? "…" : hubCounts.requests}
+                    </span>
+                  </Button>
+
+                  <Button variant="secondary" onClick={hubOpenIssues}>
+                    Open Issues
+                    <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs">
+                      {hubCountsLoading ? "…" : hubCounts.issues}
+                    </span>
+                  </Button>
+
+                  <Button variant="secondary" onClick={hubAddInstallations}>
+                    Add Installations
+                    <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs">
+                      {hubCountsLoading ? "…" : hubCounts.installations}
+                    </span>
+                  </Button>
+
+                  <Button variant="ghost" onClick={loadHubCounts} disabled={hubCountsLoading}>
+                    Refresh Counts
+                  </Button>
+                </div>
+              </div>
+
+              {!canManage ? (
+                <div className="mt-2 text-xs text-white/50">
+                  ملاحظة: Create Request متاح فقط لـ ADMIN / ACCOUNTANT
+                </div>
+              ) : null}
+            </div>
+
             {/* Summary */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="space-y-2">
@@ -614,9 +780,7 @@ export default function WorkOrderDetailsPage() {
                   {wo.vehicles?.fleet_no ? `${wo.vehicles.fleet_no} - ` : ""}
                   {wo.vehicles?.plate_no || wo.vehicles?.display_name || "—"}
                 </div>
-                <div className="text-xs text-white/50 font-mono">
-                  vehicle_id: {shortId(wo.vehicle_id)}
-                </div>
+                <div className="text-xs text-white/50 font-mono">vehicle_id: {shortId(wo.vehicle_id)}</div>
 
                 <div className="mt-3 text-sm font-semibold">{t("woDetails.report")}</div>
                 <div className="text-sm">
@@ -673,7 +837,7 @@ export default function WorkOrderDetailsPage() {
                     <span
                       className={cn(
                         "text-sm",
-                        completeMsg.startsWith("✅") ? "text-green-200" : "text-red-200"
+                        String(completeMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
                       )}
                     >
                       {completeMsg}
@@ -685,13 +849,13 @@ export default function WorkOrderDetailsPage() {
 
             {/* Tabs */}
             <div className="flex flex-wrap gap-2">
-              <Pill active={tab === "issues"} onClick={() => setTab("issues")}>
+              <Pill active={tab === "issues"} onClick={() => setTabAndUrl("issues")}>
                 {t("woDetails.tabIssues")}
               </Pill>
-              <Pill active={tab === "installations"} onClick={() => setTab("installations")}>
+              <Pill active={tab === "installations"} onClick={() => setTabAndUrl("installations")}>
                 {t("woDetails.tabInstallations")}
               </Pill>
-              <Pill active={tab === "qa"} onClick={() => setTab("qa")}>
+              <Pill active={tab === "qa"} onClick={() => setTabAndUrl("qa")}>
                 {t("woDetails.tabQa")}
               </Pill>
             </div>
@@ -764,10 +928,10 @@ export default function WorkOrderDetailsPage() {
                       </tr>
                     ))}
 
-                    {((recon.matched || []).length +
+                    {(recon.matched || []).length +
                       (recon.issued_not_installed || []).length +
                       (recon.installed_not_issued || []).length ===
-                      0) ? (
+                    0 ? (
                       <tr className="border-t border-white/10">
                         <td className="p-3 text-white/70" colSpan={5}>
                           {t("woDetails.noReconData")}
@@ -797,7 +961,12 @@ export default function WorkOrderDetailsPage() {
                 </div>
 
                 {issueMsg ? (
-                  <div className={cn("mt-2 text-sm", issueMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
+                  <div
+                    className={cn(
+                      "mt-2 text-sm",
+                      String(issueMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
+                    )}
+                  >
                     {issueMsg}
                   </div>
                 ) : null}
@@ -848,7 +1017,12 @@ export default function WorkOrderDetailsPage() {
                       {lineSaving ? t("common.saving") : t("woDetails.addLine")}
                     </Button>
                     {lineMsg ? (
-                      <div className={cn("text-sm", lineMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
+                      <div
+                        className={cn(
+                          "text-sm",
+                          String(lineMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
+                        )}
+                      >
                         {lineMsg}
                       </div>
                     ) : null}
@@ -953,7 +1127,12 @@ export default function WorkOrderDetailsPage() {
                       {instSaving ? t("common.saving") : t("woDetails.addInstallation")}
                     </Button>
                     {instMsg ? (
-                      <div className={cn("text-sm", instMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
+                      <div
+                        className={cn(
+                          "text-sm",
+                          String(instMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
+                        )}
+                      >
                         {instMsg}
                       </div>
                     ) : null}
@@ -1106,7 +1285,12 @@ export default function WorkOrderDetailsPage() {
                     </div>
 
                     {qaMsg ? (
-                      <div className={cn("text-sm", qaMsg.startsWith("✅") ? "text-green-200" : "text-red-200")}>
+                      <div
+                        className={cn(
+                          "text-sm",
+                          String(qaMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
+                        )}
+                      >
                         {qaMsg}
                       </div>
                     ) : null}

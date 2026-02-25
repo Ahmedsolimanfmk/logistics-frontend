@@ -4,6 +4,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 
+// ✅ Theme Components
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { Card } from "@/src/components/ui/Card";
+import { Toast } from "@/src/components/Toast"; // عندك نسختين: ui/Toast و components/Toast
+// لو عندك Toast في ui (زي اللي كتبته قبل كده): غيّر السطر اللي فوق إلى:
+// import { Toast } from "@/src/components/ui/Toast";
+
 type User = {
   id: string;
   full_name: string;
@@ -30,11 +41,6 @@ function cn(...v: Array<string | false | null | undefined>) {
 }
 
 function extractItems(payload: any): any[] {
-  // Supports:
-  // 1) { items: [...] }
-  // 2) { data: [...] }
-  // 3) { data: { items: [...] } }
-  // 4) direct array
   const p = payload?.data ?? payload;
 
   if (Array.isArray(p?.items)) return p.items;
@@ -44,40 +50,6 @@ function extractItems(payload: any): any[] {
 
   return [];
 }
-
-const ui = {
-  page: "min-h-screen bg-slate-950 text-slate-100",
-  container: "max-w-7xl mx-auto p-4 md:p-6 space-y-4",
-  shell:
-    "rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)]",
-  header: "flex items-start md:items-center justify-between gap-3 flex-wrap",
-  title: "text-2xl font-semibold tracking-tight",
-  subtitle: "text-sm text-slate-300",
-  btnPrimary:
-    "px-3 py-2 rounded-xl bg-white text-black hover:bg-white/90 active:scale-[0.99] transition disabled:opacity-50",
-  btnGhost:
-    "px-3 py-2 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition disabled:opacity-60",
-  input:
-    "w-full border border-white/10 bg-white/[0.03] text-slate-100 placeholder:text-slate-400 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-white/20",
-  select:
-    "border border-white/10 bg-white/[0.03] text-slate-100 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-white/20",
-  badgeOn: "bg-emerald-500/15 text-emerald-200 border border-emerald-500/20",
-  badgeOff: "bg-slate-500/15 text-slate-200 border border-slate-500/20",
-  tableWrap: "rounded-2xl overflow-hidden border border-white/10",
-  thead: "bg-white/[0.06] text-slate-200",
-  row: "border-t border-white/10 hover:bg-white/[0.03] transition",
-  cell: "p-3",
-  overlay:
-    "fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50",
-  modal:
-    "w-full max-w-2xl rounded-2xl border border-white/10 bg-gradient-to-b from-[#0b1220] to-[#060a12] shadow-[0_30px_90px_-40px_rgba(0,0,0,0.9)]",
-  modalHead:
-    "px-5 py-4 border-b border-white/10 flex items-center justify-between",
-  modalBody: "p-5 space-y-4",
-  modalFooter: "px-5 pb-5 flex items-center justify-end gap-2",
-  label: "text-xs uppercase tracking-wide text-slate-300",
-  hint: "text-xs text-slate-400",
-};
 
 function vehicleLabel(v: Vehicle) {
   const fleet = String(v.fleet_no || "").trim();
@@ -91,30 +63,63 @@ function isSupervisor(u: User) {
   return String(u.role || "").toUpperCase() === "FIELD_SUPERVISOR";
 }
 
-/* ---------------- Toast ---------------- */
-function Toast({
+const inputCls =
+  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none " +
+  "placeholder:text-gray-400 focus:ring-2 focus:ring-black/10";
+
+const selectCls =
+  "rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-black/10";
+
+/* ---------------- Modal Shell (Unified) ---------------- */
+function Modal({
   open,
-  message,
-  type,
+  title,
+  subtitle,
+  children,
+  footer,
   onClose,
+  maxWidthClassName = "max-w-2xl",
 }: {
   open: boolean;
-  message: string;
-  type: "success" | "error";
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
   onClose: () => void;
+  maxWidthClassName?: string;
 }) {
   if (!open) return null;
+
   return (
     <div
-      onClick={onClose}
-      className={cn(
-        "fixed bottom-4 right-4 z-[9999] max-w-sm cursor-pointer rounded-xl px-4 py-3 text-white shadow-xl",
-        type === "success" ? "bg-emerald-600" : "bg-red-600"
-      )}
-      role="alert"
+      className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4"
+      dir="rtl"
+      onMouseDown={onClose}
+      role="dialog"
+      aria-modal="true"
     >
-      <div className="font-semibold">{message}</div>
-      <div className="mt-1 text-xs opacity-80">اضغط لإغلاق</div>
+      <div
+        className={cn("w-full", maxWidthClassName)}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <Card
+          title={
+            <div>
+              <div className="text-sm font-semibold text-gray-900">{title}</div>
+              {subtitle ? <div className="mt-1 text-xs text-gray-500">{subtitle}</div> : null}
+            </div>
+          }
+          right={
+            <Button variant="ghost" onClick={onClose} aria-label="Close">
+              ✕
+            </Button>
+          }
+        >
+          <div className="space-y-4">{children}</div>
+
+          {footer ? <div className="mt-4 flex items-center justify-start gap-2">{footer}</div> : null}
+        </Card>
+      </div>
     </div>
   );
 }
@@ -145,8 +150,6 @@ function CreateSupervisorModal({
     setPassword("");
   }, [open]);
 
-  if (!open) return null;
-
   const canSubmit = Boolean(fullName.trim() && password.trim());
 
   async function submit() {
@@ -165,10 +168,7 @@ function CreateSupervisorModal({
       onCreated();
       onClose();
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        "فشل إنشاء المشرف";
+      const msg = e?.response?.data?.message || e?.message || "فشل إنشاء المشرف";
       showToast("error", msg);
     } finally {
       setSaving(false);
@@ -176,89 +176,75 @@ function CreateSupervisorModal({
   }
 
   return (
-    <div className={ui.overlay} onClick={onClose}>
-      <div className={ui.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={ui.modalHead}>
-          <div>
-            <div className="text-lg font-semibold">إضافة مشرف</div>
-            <div className={ui.hint}>سيتم إنشاء مستخدم بدور FIELD_SUPERVISOR</div>
-          </div>
-          <button onClick={onClose} className={ui.btnGhost}>
-            ✕
-          </button>
-        </div>
-
-        <div className={ui.modalBody}>
-          {/* منع autofill اللي كان بيثبت ايميل/باسورد الأدمن */}
-          <input
-            style={{ position: "absolute", left: "-9999px", top: "-9999px" }}
-            autoComplete="username"
-            name="fake-username"
-          />
-          <input
-            style={{ position: "absolute", left: "-9999px", top: "-9999px" }}
-            autoComplete="current-password"
-            name="fake-password"
-            type="password"
-          />
-
-          <div className="grid gap-2">
-            <div className={ui.label}>اسم المشرف *</div>
-            <input
-              className={ui.input}
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              autoComplete="off"
-              name="supervisor_full_name"
-            />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <div className={ui.label}>الهاتف</div>
-              <input
-                className={ui.input}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                autoComplete="off"
-                name="supervisor_phone"
-              />
-            </div>
-            <div className="grid gap-2">
-              <div className={ui.label}>البريد</div>
-              <input
-                className={ui.input}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="off"
-                name="supervisor_email"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <div className={ui.label}>كلمة المرور *</div>
-            <input
-              type="password"
-              className={ui.input}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              name="supervisor_new_password"
-            />
-          </div>
-        </div>
-
-        <div className={ui.modalFooter}>
-          <button onClick={onClose} className={ui.btnGhost} disabled={saving}>
+    <Modal
+      open={open}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
+      title="إضافة مشرف"
+      subtitle="سيتم إنشاء مستخدم بدور FIELD_SUPERVISOR"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
             إلغاء
-          </button>
-          <button onClick={submit} className={ui.btnPrimary} disabled={!canSubmit || saving}>
-            {saving ? "جارٍ الحفظ..." : "حفظ"}
-          </button>
+          </Button>
+          <Button variant="primary" onClick={submit} disabled={!canSubmit || saving} isLoading={saving}>
+            حفظ
+          </Button>
+        </>
+      }
+    >
+      {/* منع autofill اللي كان بيثبت ايميل/باسورد الأدمن */}
+      <input style={{ position: "absolute", left: "-9999px", top: "-9999px" }} autoComplete="username" name="fake-username" />
+      <input style={{ position: "absolute", left: "-9999px", top: "-9999px" }} autoComplete="current-password" name="fake-password" type="password" />
+
+      <div className="grid gap-2">
+        <div className="text-xs text-gray-500">اسم المشرف *</div>
+        <input
+          className={inputCls}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          autoComplete="off"
+          name="supervisor_full_name"
+        />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid gap-2">
+          <div className="text-xs text-gray-500">الهاتف</div>
+          <input
+            className={inputCls}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            autoComplete="off"
+            name="supervisor_phone"
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <div className="text-xs text-gray-500">البريد</div>
+          <input
+            className={inputCls}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="off"
+            name="supervisor_email"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="grid gap-2">
+        <div className="text-xs text-gray-500">كلمة المرور *</div>
+        <input
+          type="password"
+          className={inputCls}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          name="supervisor_new_password"
+        />
+      </div>
+    </Modal>
   );
 }
 
@@ -278,7 +264,7 @@ function ManageSupervisorVehiclesModal({
   onSaved: () => void;
   showToast: (type: "success" | "error", msg: string) => void;
 }) {
-  // ✅ Hooks MUST be called unconditionally
+  // ✅ Hooks unconditionally
   const [saving, setSaving] = useState(false);
   const [q, setQ] = useState("");
   const [localSelected, setLocalSelected] = useState<Set<string>>(new Set());
@@ -286,7 +272,6 @@ function ManageSupervisorVehiclesModal({
   const supervisorId = supervisor?.id || "";
   const isOpenOk = Boolean(open && supervisorId);
 
-  // ✅ Compute selected ids safely (no Set in deps)
   const selectedIdsArr = useMemo(() => {
     if (!supervisorId) return [] as string[];
     return vehicles
@@ -294,7 +279,6 @@ function ManageSupervisorVehiclesModal({
       .map((v) => v.id);
   }, [vehicles, supervisorId]);
 
-  // ✅ Sync localSelected when modal opens / supervisor changes
   useEffect(() => {
     if (!isOpenOk) return;
     setQ("");
@@ -323,7 +307,6 @@ function ManageSupervisorVehiclesModal({
 
   async function save() {
     if (!supervisorId) return;
-
     setSaving(true);
     try {
       const current = new Set(selectedIdsArr);
@@ -353,114 +336,94 @@ function ManageSupervisorVehiclesModal({
     }
   }
 
-  // ✅ return AFTER all hooks
+  // ✅ return after hooks
   if (!isOpenOk) return null;
 
+  const columns: DataTableColumn<Vehicle>[] = [
+    {
+      key: "select",
+      label: "اختيار",
+      headerClassName: "w-[80px]",
+      render: (v) => {
+        const checked = localSelected.has(v.id);
+        const ownedByOther = v.supervisor_id && v.supervisor_id !== supervisorId;
+
+        return (
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => toggle(v.id)}
+            disabled={saving || Boolean(ownedByOther)}
+            className="h-4 w-4"
+            title={ownedByOther ? "مربوطة بمشرف آخر" : ""}
+          />
+        );
+      },
+    },
+    { key: "vehicle", label: "العربية", render: (v) => <span className="font-medium">{vehicleLabel(v)}</span> },
+    { key: "status", label: "الحالة", render: (v) => v.status || "—" },
+    {
+      key: "active",
+      label: "نشط",
+      render: (v) => <StatusBadge status={v.is_active === false ? "INACTIVE" : "ACTIVE"} />,
+    },
+    {
+      key: "owner",
+      label: "المشرف الحالي",
+      render: (v) =>
+        v.supervisor_id ? (v.supervisor_id === supervisorId ? "هذا المشرف" : "مشرف آخر") : "—",
+    },
+  ];
+
   return (
-    <div className={ui.overlay} onClick={onClose}>
-      <div className={cn(ui.modal, "max-w-3xl")} onClick={(e) => e.stopPropagation()}>
-        <div className={ui.modalHead}>
-          <div>
-            <div className="text-lg font-semibold text-slate-100">
-              سيارات المشرف: {supervisor!.full_name}
-            </div>
-            <div className={ui.hint}>لكل عربية مشرف واحد فقط.</div>
+    <Modal
+      open={open}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
+      title={`سيارات المشرف: ${supervisor!.full_name}`}
+      subtitle="لكل عربية مشرف واحد فقط."
+      maxWidthClassName="max-w-4xl"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
+            إلغاء
+          </Button>
+          <Button variant="primary" onClick={save} isLoading={saving}>
+            حفظ
+          </Button>
+        </>
+      }
+    >
+      <FiltersBar
+        left={
+          <input
+            className={cn(inputCls, "max-w-md")}
+            placeholder="بحث: fleet / plate / status..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            autoComplete="off"
+            name="vehicles_search"
+          />
+        }
+        right={
+          <div className="text-sm text-gray-600">
+            Selected: <span className="font-semibold text-gray-900">{localSelected.size}</span>
           </div>
-          <button onClick={onClose} className={ui.btnGhost}>✕</button>
-        </div>
+        }
+      />
 
-        <div className={ui.modalBody}>
-          <div className="flex flex-wrap gap-2 items-center justify-between">
-            <input
-              className={cn(ui.input, "max-w-md")}
-              placeholder="بحث: fleet / plate / status..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              autoComplete="off"
-              name="vehicles_search"
-            />
-            <div className="text-sm text-slate-300">
-              Selected: <span className="font-semibold text-slate-100">{localSelected.size}</span>
-            </div>
-          </div>
-
-          <div className={cn(ui.tableWrap, "mt-2")}>
-            <div className="overflow-auto max-h-[55vh]">
-              <table className="w-full text-sm">
-                <thead className={ui.thead}>
-                  <tr className="text-right">
-                    <th className={cn(ui.cell, "w-[70px]")}>اختيار</th>
-                    <th className={ui.cell}>العربية</th>
-                    <th className={ui.cell}>الحالة</th>
-                    <th className={ui.cell}>نشط</th>
-                    <th className={ui.cell}>المشرف الحالي</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.length === 0 ? (
-                    <tr className="border-t border-white/10">
-                      <td colSpan={5} className={cn(ui.cell, "py-10 text-center text-slate-400")}>
-                        لا يوجد نتائج
-                      </td>
-                    </tr>
-                  ) : null}
-
-                  {list.map((v) => {
-                    const checked = localSelected.has(v.id);
-                    const ownedByOther = v.supervisor_id && v.supervisor_id !== supervisorId;
-
-                    return (
-                      <tr key={v.id} className={ui.row}>
-                        <td className={ui.cell}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggle(v.id)}
-                            disabled={saving || Boolean(ownedByOther)}
-                            className="h-4 w-4 accent-white"
-                            title={ownedByOther ? "مربوطة بمشرف آخر" : ""}
-                          />
-                        </td>
-                        <td className={cn(ui.cell, "font-medium")}>{vehicleLabel(v)}</td>
-                        <td className={ui.cell}>{v.status || "—"}</td>
-                        <td className={ui.cell}>
-                          <span
-                            className={cn(
-                              "inline-flex items-center px-2 py-1 rounded-full text-xs border",
-                              v.is_active === false ? ui.badgeOff : ui.badgeOn
-                            )}
-                          >
-                            {v.is_active === false ? "INACTIVE" : "ACTIVE"}
-                          </span>
-                        </td>
-                        <td className={ui.cell}>
-                          {v.supervisor_id
-                            ? v.supervisor_id === supervisorId
-                              ? "هذا المشرف"
-                              : "مشرف آخر"
-                            : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="p-3 border-t border-white/10 bg-white/[0.02] text-xs text-slate-400">
-              * الحفظ يعتمد على PATCH /vehicles/:id لتحديث supervisor_id
-            </div>
-          </div>
-        </div>
-
-        <div className={ui.modalFooter}>
-          <button onClick={onClose} className={ui.btnGhost} disabled={saving}>إلغاء</button>
-          <button onClick={save} className={ui.btnPrimary} disabled={saving}>
-            {saving ? "جارٍ الحفظ..." : "حفظ"}
-          </button>
-        </div>
-      </div>
-    </div>
+      <DataTable
+        title="قائمة العربيات"
+        subtitle="* الحفظ يعتمد على PATCH /vehicles/:id لتحديث supervisor_id"
+        columns={columns}
+        rows={list}
+        loading={false}
+        emptyTitle="لا يوجد نتائج"
+        emptyHint="جرّب تغيير البحث."
+        minWidthClassName="min-w-[900px]"
+      />
+    </Modal>
   );
 }
 
@@ -488,7 +451,6 @@ export default function SupervisorsPage() {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
-    setTimeout(() => setToastOpen(false), 2500);
   }
 
   const canCreate = role === "ADMIN";
@@ -560,134 +522,108 @@ export default function SupervisorsPage() {
     setManageOpen(true);
   }
 
+  const columns: DataTableColumn<User>[] = [
+    { key: "full_name", label: "الاسم", render: (u) => <span className="font-medium">{u.full_name}</span> },
+    { key: "phone", label: "الهاتف", render: (u) => u.phone || "—" },
+    { key: "email", label: "البريد", render: (u) => u.email || "—" },
+    {
+      key: "status",
+      label: "الحالة",
+      render: (u) => <StatusBadge status={u.is_active ? "ACTIVE" : "INACTIVE"} />,
+    },
+    {
+      key: "vehicles_count",
+      label: "عدد العربيات",
+      render: (u) => <span className="font-semibold">{vehiclesBySupervisor.get(u.id) || 0}</span>,
+    },
+    {
+      key: "actions",
+      label: "إجراءات",
+      headerClassName: "w-[240px]",
+      render: (u) => (
+        <div className="flex gap-2 justify-start">
+          <Button
+            variant="secondary"
+            onClick={() => openManage(u)}
+            disabled={!canManage}
+            title={!canManage ? "غير مصرح لك" : ""}
+          >
+            إدارة العربيات
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className={ui.page} dir="rtl">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-40 -right-40 h-[420px] w-[420px] rounded-full bg-white/5 blur-3xl" />
-        <div className="absolute bottom-[-120px] left-[-120px] h-[420px] w-[420px] rounded-full bg-white/5 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+        <Card>
+          <div className="space-y-4">
+            <PageHeader
+              title="المشرفين"
+              subtitle="إدارة مشرفين التشغيل + ربط العربيات بكل مشرف (لكل عربية مشرف واحد)"
+              actions={
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={loadAll} isLoading={loading}>
+                    تحديث
+                  </Button>
 
-      <div className={ui.container}>
-        <div className={cn("p-4 md:p-6", ui.shell)}>
-
-          <div className={ui.header}>
-            <div>
-              <h1 className={ui.title}>المشرفين</h1>
-              <p className={ui.subtitle}>
-                إدارة مشرفين التشغيل + ربط العربيات بكل مشرف (لكل عربية مشرف واحد)
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={loadAll} className={ui.btnGhost} disabled={loading}>
-                {loading ? "جارٍ التحديث..." : "تحديث"}
-              </button>
-
-              <button
-                onClick={() => setCreateOpen(true)}
-                className={ui.btnPrimary}
-                disabled={!canCreate}
-                title={!canCreate ? "إنشاء المشرفين ADMIN فقط" : ""}
-              >
-                + إضافة مشرف
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-5 flex gap-2 flex-wrap items-center">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="بحث بالاسم / الهاتف / البريد..."
-              className={cn(ui.input, "w-[420px] max-w-full")}
-              autoComplete="off"
-              name="supervisors_search"
+                  <Button
+                    variant="primary"
+                    onClick={() => setCreateOpen(true)}
+                    disabled={!canCreate}
+                    title={!canCreate ? "إنشاء المشرفين ADMIN فقط" : ""}
+                  >
+                    + إضافة مشرف
+                  </Button>
+                </div>
+              }
             />
 
-            <select
-              value={activeFilter}
-              onChange={(e) => setActiveFilter(e.target.value)}
-              className={ui.select}
-              name="supervisors_active_filter"
-            >
-              <option value="">الكل</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
+            <FiltersBar
+              left={
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="بحث بالاسم / الهاتف / البريد..."
+                    className={cn(inputCls, "w-[420px] max-w-full")}
+                    autoComplete="off"
+                    name="supervisors_search"
+                  />
 
-            <div className="text-sm text-slate-300">
-              الإجمالي: <span className="font-semibold text-slate-100">{supervisors.length}</span>
-            </div>
+                  <select
+                    value={activeFilter}
+                    onChange={(e) => setActiveFilter(e.target.value)}
+                    className={selectCls}
+                    name="supervisors_active_filter"
+                  >
+                    <option value="">الكل</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+
+                  <div className="text-sm text-gray-600">
+                    الإجمالي:{" "}
+                    <span className="font-semibold text-gray-900">{supervisors.length}</span>
+                  </div>
+                </div>
+              }
+            />
+
+            <DataTable
+              title="قائمة المشرفين"
+              subtitle="* الربط يعتمد على vehicles.supervisor_id و PATCH /vehicles/:id لتحديثه"
+              columns={columns}
+              rows={supervisors}
+              loading={loading}
+              emptyTitle="لا يوجد مشرفين"
+              emptyHint="جرّب تغيير الفلاتر أو البحث."
+              minWidthClassName="min-w-[1000px]"
+            />
           </div>
-
-          <div className={cn("mt-5", ui.tableWrap)}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className={ui.thead}>
-                  <tr className="text-right">
-                    <th className={ui.cell}>الاسم</th>
-                    <th className={ui.cell}>الهاتف</th>
-                    <th className={ui.cell}>البريد</th>
-                    <th className={ui.cell}>الحالة</th>
-                    <th className={ui.cell}>عدد العربيات</th>
-                    <th className={cn(ui.cell, "w-[240px]")}>إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {supervisors.length === 0 ? (
-                    <tr className="border-t border-white/10">
-                      <td colSpan={6} className={cn(ui.cell, "py-10 text-center text-slate-400")}>
-                        {loading ? "Loading..." : "لا يوجد مشرفين"}
-                      </td>
-                    </tr>
-                  ) : null}
-
-                  {supervisors.map((u) => {
-                    const count = vehiclesBySupervisor.get(u.id) || 0;
-
-                    return (
-                      <tr key={u.id} className={ui.row}>
-                        <td className={cn(ui.cell, "font-medium")}>{u.full_name}</td>
-                        <td className={ui.cell}>{u.phone || "—"}</td>
-                        <td className={ui.cell}>{u.email || "—"}</td>
-                        <td className={ui.cell}>
-                          <span
-                            className={cn(
-                              "inline-flex items-center px-2 py-1 rounded-full text-xs border",
-                              u.is_active ? ui.badgeOn : ui.badgeOff
-                            )}
-                          >
-                            {u.is_active ? "ACTIVE" : "INACTIVE"}
-                          </span>
-                        </td>
-                        <td className={ui.cell}>
-                          <span className="font-semibold">{count}</span>
-                        </td>
-                        <td className={ui.cell}>
-                          <div className="flex gap-2 justify-start">
-                            <button
-                              className={ui.btnGhost}
-                              onClick={() => openManage(u)}
-                              disabled={!canManage}
-                              title={!canManage ? "غير مصرح لك" : ""}
-                            >
-                              إدارة العربيات
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="p-3 border-t border-white/10 bg-white/[0.02] text-xs text-slate-400">
-              * الربط يعتمد على vehicles.supervisor_id و PATCH /vehicles/:id لتحديثه
-            </div>
-          </div>
-
-        </div>
+        </Card>
       </div>
 
       <CreateSupervisorModal
@@ -710,6 +646,7 @@ export default function SupervisorsPage() {
         open={toastOpen}
         message={toastMsg}
         type={toastType}
+        dir="rtl"
         onClose={() => setToastOpen(false)}
       />
     </div>
