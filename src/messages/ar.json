@@ -52,7 +52,10 @@
     "maintenance": "الصيانة",
     "dev": "المطور"
   },
-
+"language": {
+  "ar": "العربية",
+  "en": "English"
+},
   "sidebar": {
     "appName": "النظام اللوجستي",
     "dashboard": "لوحة التحكم",

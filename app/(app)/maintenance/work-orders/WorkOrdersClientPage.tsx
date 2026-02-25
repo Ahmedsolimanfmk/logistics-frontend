@@ -2,89 +2,32 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
-import { apiGet, unwrapItems } from "@/src/lib/api";
+import { api, unwrapItems, unwrapTotal } from "@/src/lib/api";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
+// ✅ Theme Components
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { Card } from "@/src/components/ui/Card";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { Toast } from "@/src/components/Toast";
+
 function fmtDate(d?: string | null) {
   if (!d) return "—";
   const dt = new Date(String(d));
   if (Number.isNaN(dt.getTime())) return String(d);
   return dt.toLocaleString("ar-EG");
 }
+
 function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
-
-function Card({
-  title,
-  right,
-  children,
-}: {
-  title: string;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
-        {right}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Button({
-  children,
-  onClick,
-  variant = "secondary",
-  disabled,
-  type = "button",
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  variant?: "primary" | "secondary" | "danger" | "ghost";
-  disabled?: boolean;
-  type?: "button" | "submit";
-}) {
-  const base =
-    "inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium transition border";
-  const styles: Record<string, string> = {
-    primary: "bg-white text-black border-white hover:bg-neutral-200",
-    secondary: "bg-white/5 text-white border-white/10 hover:bg-white/10",
-    danger: "bg-red-600 text-white border-red-600 hover:bg-red-700",
-    ghost: "bg-transparent text-white border-transparent hover:bg-white/10",
-  };
-  return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(base, styles[variant], disabled && "opacity-50 cursor-not-allowed")}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Badge({ value }: { value: string }) {
-  const v = String(value || "").toUpperCase();
-  const cls =
-    v === "OPEN" || v === "IN_PROGRESS"
-      ? "bg-yellow-500/15 text-yellow-200 border-yellow-500/30"
-      : v === "COMPLETED"
-      ? "bg-green-500/15 text-green-200 border-green-500/30"
-      : v === "CANCELED"
-      ? "bg-red-500/15 text-red-200 border-red-500/30"
-      : "bg-white/5 text-white border-white/10";
-  return <span className={cn("rounded-full border px-2 py-0.5 text-xs", cls)}>{v}</span>;
 }
 
 type WorkOrderListItem = {
@@ -93,8 +36,6 @@ type WorkOrderListItem = {
   type?: string | null;
   vendor_name?: string | null;
   opened_at?: string | null;
-  started_at?: string | null;
-  completed_at?: string | null;
   vehicle_id?: string | null;
   vehicles?: {
     fleet_no?: string | null;
@@ -105,6 +46,9 @@ type WorkOrderListItem = {
 
 export default function WorkOrdersClientPage() {
   const t = useT();
+  const router = useRouter();
+  const sp = useSearchParams();
+
   const token = useAuth((s: any) => s.token);
 
   useEffect(() => {
@@ -117,11 +61,34 @@ export default function WorkOrdersClientPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const [items, setItems] = useState<WorkOrderListItem[]>([]);
+  const [total, setTotal] = useState<number>(0);
+
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("");
 
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const limit = 20;
+
+  // Toast
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToastType(type);
+    setToastMsg(msg);
+    setToastOpen(true);
+  }
+
+  // ✅ اقرأ status من URL لو جاي من كروت الداشبورد
+  useEffect(() => {
+    const st = String(sp?.get("status") || "").toUpperCase();
+    if (st && ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELED"].includes(st)) {
+      setStatus(st);
+      setPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function load() {
     if (!token) return;
@@ -130,19 +97,29 @@ export default function WorkOrdersClientPage() {
     setErr(null);
 
     try {
-      // ✅ نستخدم api.ts (baseURL + token automatically)
-      const res = await apiGet(`/maintenance/work-orders`, {
-        page,
-        limit,
-        q: q.trim() ? q.trim() : undefined,
-        status: status ? status : undefined,
-      });
+      const params: any = { page, limit };
+      if (q.trim()) params.q = q.trim();
+      if (status) params.status = status;
 
-      const arr = unwrapItems<WorkOrderListItem>(res);
-      setItems(arr);
+      const res = await api.get("/maintenance/work-orders", { params });
+
+      const list = unwrapItems<WorkOrderListItem>(res.data);
+      const tot = unwrapTotal(res.data);
+
+      setItems(list);
+      setTotal(tot || 0);
     } catch (e: any) {
       setItems([]);
-      setErr(e?.message || "Failed to load");
+      setTotal(0);
+
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        t("common.error") ||
+        "Failed";
+
+      setErr(msg);
+      showToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -176,172 +153,212 @@ export default function WorkOrdersClientPage() {
     });
   }, [items, q, status]);
 
-  // ✅ حالة "لسه بنحمّل الجلسة"
-  if (!token) {
-    return (
-      <div className="space-y-4 p-4 text-white">
-        <Card title={t("woList.title") || "Work Orders"}>
-          <div className="text-sm text-white/70">
-            {t("common.loadingSession") || "Loading session…"}
+  const columns: DataTableColumn<WorkOrderListItem>[] = useMemo(() => {
+    return [
+      {
+        key: "actions",
+        label: t("workOrders.list.columns.actions"),
+        render: (row) => (
+          <Link href={`/maintenance/work-orders/${encodeURIComponent(row.id)}`}>
+            <Button variant="secondary">{t("workOrders.list.view")}</Button>
+          </Link>
+        ),
+      },
+      {
+        key: "opened_at",
+        label: t("workOrders.list.columns.opened"),
+        render: (row) => fmtDate(row.opened_at),
+      },
+      {
+        key: "status",
+        label: t("workOrders.list.columns.status"),
+        render: (row) => (row.status ? <StatusBadge status={row.status} /> : "—"),
+      },
+      {
+        key: "type",
+        label: t("workOrders.list.columns.type"),
+        render: (row) => row.type || "—",
+      },
+      {
+        key: "vendor_name",
+        label: t("workOrders.list.columns.vendor"),
+        render: (row) => row.vendor_name || "—",
+      },
+      {
+        key: "vehicle",
+        label: t("workOrders.list.columns.vehicle"),
+        render: (row) => {
+          const v = row.vehicles;
+          const line1 = `${v?.fleet_no ? `${v.fleet_no} - ` : ""}${v?.plate_no || v?.display_name || "—"}`;
+          return (
+            <div className="space-y-1">
+              <div className="font-medium">{line1}</div>
+              <div className="text-xs opacity-70 font-mono">
+                vehicle_id: {shortId(row.vehicle_id)}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        key: "id",
+        label: "ID",
+        render: (row) => (
+          <div className="space-y-1">
+            <div className="font-semibold">{shortId(row.id)}</div>
+            <div className="text-xs opacity-70 font-mono">{row.id}</div>
           </div>
+        ),
+      },
+    ];
+  }, [t]);
+
+  if (token === null) {
+    return (
+      <div className="p-4 space-y-4">
+        <Card>
+          <div className="text-sm opacity-70">{t("maintenanceRequests.checkingSession")}</div>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 p-4 text-white">
-      <div className="flex items-center justify-between gap-3">
-        <div className="space-y-1">
-          <div className="text-sm text-white/70">{t("woList.breadcrumb") || "Maintenance / Work Orders"}</div>
-          <div className="text-xl font-semibold">{t("woList.title") || "Work Orders"}</div>
-        </div>
-        <Button variant="secondary" onClick={load} disabled={loading}>
-          {t("common.refresh") || "Refresh"}
-        </Button>
-      </div>
-
-      <Card
-        title={t("woList.filters") || "Filters"}
-        right={
-          <div className="text-xs text-white/60">
-            {t("common.count") || "Count"}: {filteredLocal.length}
-          </div>
+    <div className="p-4 space-y-4">
+      <PageHeader
+        title={t("workOrders.title")}
+        subtitle={`${t("workOrders.breadcrumb")} / ${t("workOrders.title")}`}
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setPage(1);
+              load();
+            }}
+            isLoading={loading}
+          >
+            {t("workOrders.actions.refresh")}
+          </Button>
         }
-      >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div>
-            <div className="mb-1 text-xs text-white/60">{t("common.search") || "Search"}</div>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white placeholder:text-white/40"
-              placeholder={t("woList.searchPlaceholder") || "id / vendor / vehicle…"}
-            />
-          </div>
+      />
 
-          <div>
-            <div className="mb-1 text-xs text-white/60">{t("common.status") || "Status"}</div>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white"
-            >
-              <option className="bg-neutral-900" value="">
-                {t("common.all") || "All"}
-              </option>
-              <option className="bg-neutral-900" value="OPEN">
-                OPEN
-              </option>
-              <option className="bg-neutral-900" value="IN_PROGRESS">
-                IN_PROGRESS
-              </option>
-              <option className="bg-neutral-900" value="COMPLETED">
-                COMPLETED
-              </option>
-              <option className="bg-neutral-900" value="CANCELED">
-                CANCELED
-              </option>
-            </select>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <Button
-              variant="primary"
-              onClick={() => {
-                setPage(1);
-                load();
-              }}
-              disabled={loading}
-            >
-              {t("common.apply") || "Apply"}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setQ("");
-                setStatus("");
-                setPage(1);
-              }}
-            >
-              {t("common.clear") || "Clear"}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      <Card
-        title={t("woList.list") || "List"}
-        right={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={loading || page <= 1}
-            >
-              ←
-            </Button>
-            <div className="text-xs text-white/60">
-              {t("common.page") || "Page"}: {page}
+      <FiltersBar
+        left={
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div>
+              <div className="mb-1 text-xs opacity-70">{t("workOrders.filters.searchTitle")}</div>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white placeholder:text-white/40"
+                placeholder={t("workOrders.filters.searchTitle")}
+              />
             </div>
-            <Button variant="secondary" onClick={() => setPage((p) => p + 1)} disabled={loading}>
-              →
-            </Button>
+
+            <div>
+              <div className="mb-1 text-xs opacity-70">{t("workOrders.filters.status")}</div>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white"
+              >
+                <option className="bg-neutral-900" value="">
+                  {t("workOrders.status.all")}
+                </option>
+                <option className="bg-neutral-900" value="OPEN">
+                  {t("workOrders.status.open")}
+                </option>
+                <option className="bg-neutral-900" value="IN_PROGRESS">
+                  {t("workOrders.status.inProgress")}
+                </option>
+                <option className="bg-neutral-900" value="COMPLETED">
+                  {t("workOrders.status.completed")}
+                </option>
+                <option className="bg-neutral-900" value="CANCELED">
+                  {t("workOrders.status.canceled")}
+                </option>
+              </select>
+            </div>
+
+            <div className="flex items-end gap-2">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setPage(1);
+                  load();
+                }}
+                isLoading={loading}
+              >
+                {t("workOrders.filters.searchBtn")}
+              </Button>
+
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setQ("");
+                  setStatus("");
+                  setPage(1);
+
+                  const p = new URLSearchParams(sp?.toString() || "");
+                  p.delete("status");
+                  router.replace(`/maintenance/work-orders${p.toString() ? `?${p.toString()}` : ""}`);
+                }}
+              >
+                {t("common.clear") || "مسح"}
+              </Button>
+            </div>
           </div>
         }
-      >
-        {loading ? (
-          <div className="text-sm text-white/70">{t("common.loading") || "Loading…"}</div>
-        ) : err ? (
-          <div className="text-sm text-red-200">
-            {t("common.error") || "Error"}: {err}
+        right={
+          <div className="text-sm text-white/70">
+            {t("maintenanceRequests.pagination.total")}:{" "}
+            <span className="font-semibold text-white">{filteredLocal.length}</span>
           </div>
-        ) : filteredLocal.length === 0 ? (
-          <div className="text-sm text-white/70">{t("common.noData") || "No data"}</div>
-        ) : (
-          <div className="overflow-auto rounded-2xl border border-white/10">
-            <table className="min-w-[900px] w-full text-sm">
-              <thead className="bg-white/5 text-white/70">
-                <tr>
-                  <th className="p-3 text-left">{t("woList.id") || "ID"}</th>
-                  <th className="p-3 text-left">{t("woList.vehicle") || "Vehicle"}</th>
-                  <th className="p-3 text-left">{t("woList.vendor") || "Vendor"}</th>
-                  <th className="p-3 text-left">{t("woList.type") || "Type"}</th>
-                  <th className="p-3 text-left">{t("common.status") || "Status"}</th>
-                  <th className="p-3 text-left">{t("woList.opened") || "Opened"}</th>
-                  <th className="p-3 text-left">{t("common.actions") || "Actions"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLocal.map((x) => (
-                  <tr key={x.id} className="border-t border-white/10">
-                    <td className="p-3">
-                      <div className="font-semibold">{shortId(x.id)}</div>
-                      <div className="text-xs font-mono text-white/50">{x.id}</div>
-                    </td>
-                    <td className="p-3">
-                      {x.vehicles?.fleet_no ? `${x.vehicles.fleet_no} - ` : ""}
-                      {x.vehicles?.plate_no || x.vehicles?.display_name || "—"}
-                      <div className="text-xs font-mono text-white/50">
-                        vehicle_id: {shortId(x.vehicle_id)}
-                      </div>
-                    </td>
-                    <td className="p-3">{x.vendor_name || "—"}</td>
-                    <td className="p-3">{x.type || "—"}</td>
-                    <td className="p-3">{x.status ? <Badge value={String(x.status)} /> : "—"}</td>
-                    <td className="p-3">{fmtDate(x.opened_at)}</td>
-                    <td className="p-3">
-                      <Link href={`/maintenance/work-orders/${encodeURIComponent(x.id)}`}>
-                        <Button variant="secondary">{t("common.view") || "View"}</Button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        }
+      />
+
+      <Card>
+        {err ? <div className="text-sm text-red-300 mb-3">{err}</div> : null}
+
+        {/* ✅ DataTable يستخدم rows مش data */}
+        <DataTable<WorkOrderListItem>
+          columns={columns}
+          rows={filteredLocal}
+          loading={loading}
+          emptyTitle={t("workOrders.list.empty")}
+          emptyHint={t("maintenanceRequests.filters.searchLocal")}
+          right={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={loading || page <= 1}
+              >
+                ←
+              </Button>
+              <div className="text-xs text-gray-600">
+                {t("workOrders.pagination.page")}{" "}
+                <span className="font-semibold text-gray-900">{page}</span>
+              </div>
+              <Button variant="secondary" onClick={() => setPage((p) => p + 1)} disabled={loading}>
+                →
+              </Button>
+            </div>
+          }
+          total={total}
+          page={page}
+          // pages اختياري — لو عايز يظهر: احسبه
+          pages={Math.max(1, Math.ceil((total || 0) / limit))}
+          onPrev={page > 1 ? () => setPage((p) => Math.max(1, p - 1)) : undefined}
+          onNext={
+            page < Math.max(1, Math.ceil((total || 0) / limit))
+              ? () => setPage((p) => p + 1)
+              : undefined
+          }
+        />
       </Card>
+
+      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
     </div>
   );
 }
