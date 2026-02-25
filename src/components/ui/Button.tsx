@@ -1,4 +1,4 @@
-import React from "react";
+ import React from "react";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 
@@ -42,4 +42,4 @@ export function Button({
       {children}
     </button>
   );
-}
+} 

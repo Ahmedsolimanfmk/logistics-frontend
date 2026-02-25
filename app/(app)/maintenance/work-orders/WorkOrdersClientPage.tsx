@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
+import { apiGet, unwrapItems } from "@/src/lib/api";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -18,37 +19,6 @@ function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3000";
-
-async function apiFetch<T>(
-  path: string,
-  opts: { method?: string; token?: string | null; body?: any } = {}
-): Promise<T> {
-  const { method = "GET", token, body } = opts;
-  const url = new URL(path.startsWith("http") ? path : `${API_BASE}${path}`);
-
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
-
-  const txt = await res.text();
-  let json: any = null;
-  try {
-    json = txt ? JSON.parse(txt) : null;
-  } catch {
-    json = { message: txt || "Unknown response" };
-  }
-
-  if (!res.ok) throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
 }
 
 function Card({
@@ -133,19 +103,7 @@ type WorkOrderListItem = {
   } | null;
 };
 
-function normalizeList(res: any): WorkOrderListItem[] {
-  const arr =
-    (Array.isArray(res) && res) ||
-    res?.items ||
-    res?.data ||
-    res?.work_orders ||
-    res?.workOrders ||
-    res?.result ||
-    [];
-  return Array.isArray(arr) ? arr : [];
-}
-
-export default function WorkOrdersListClientPage() {
+export default function WorkOrdersClientPage() {
   const t = useT();
   const token = useAuth((s: any) => s.token);
 
@@ -167,19 +125,21 @@ export default function WorkOrdersListClientPage() {
 
   async function load() {
     if (!token) return;
+
     setLoading(true);
     setErr(null);
 
     try {
-      const p = new URLSearchParams();
-      p.set("page", String(page));
-      p.set("limit", String(limit));
-      if (q.trim()) p.set("q", q.trim());
-      if (status) p.set("status", status);
+      // ✅ نستخدم api.ts (baseURL + token automatically)
+      const res = await apiGet(`/maintenance/work-orders`, {
+        page,
+        limit,
+        q: q.trim() ? q.trim() : undefined,
+        status: status ? status : undefined,
+      });
 
-      // ✅ endpoint الليست (عدّل لو عندك endpoint مختلف)
-      const res: any = await apiFetch(`/maintenance/work-orders?${p.toString()}`, { token });
-      setItems(normalizeList(res));
+      const arr = unwrapItems<WorkOrderListItem>(res);
+      setItems(arr);
     } catch (e: any) {
       setItems([]);
       setErr(e?.message || "Failed to load");
@@ -195,11 +155,11 @@ export default function WorkOrdersListClientPage() {
   }, [token, page]);
 
   const filteredLocal = useMemo(() => {
-    // لو الـ API ما بيدعمش q/status، ده fallback محلي
     const qq = q.trim().toLowerCase();
     return items.filter((x) => {
       const stOk = !status || String(x.status || "").toUpperCase() === status;
       if (!qq) return stOk;
+
       const hay = [
         x.id,
         x.type,
@@ -211,15 +171,19 @@ export default function WorkOrdersListClientPage() {
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
+
       return stOk && hay.includes(qq);
     });
   }, [items, q, status]);
 
-  if (token === null) {
+  // ✅ حالة "لسه بنحمّل الجلسة"
+  if (!token) {
     return (
       <div className="space-y-4 p-4 text-white">
         <Card title={t("woList.title") || "Work Orders"}>
-          <div className="text-sm text-white/70">{t("common.loadingSession") || "Loading session…"}</div>
+          <div className="text-sm text-white/70">
+            {t("common.loadingSession") || "Loading session…"}
+          </div>
         </Card>
       </div>
     );
@@ -310,7 +274,11 @@ export default function WorkOrdersListClientPage() {
         title={t("woList.list") || "List"}
         right={
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={loading || page <= 1}>
+            <Button
+              variant="secondary"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={loading || page <= 1}
+            >
               ←
             </Button>
             <div className="text-xs text-white/60">
@@ -354,7 +322,9 @@ export default function WorkOrdersListClientPage() {
                     <td className="p-3">
                       {x.vehicles?.fleet_no ? `${x.vehicles.fleet_no} - ` : ""}
                       {x.vehicles?.plate_no || x.vehicles?.display_name || "—"}
-                      <div className="text-xs font-mono text-white/50">vehicle_id: {shortId(x.vehicle_id)}</div>
+                      <div className="text-xs font-mono text-white/50">
+                        vehicle_id: {shortId(x.vehicle_id)}
+                      </div>
                     </td>
                     <td className="p-3">{x.vendor_name || "—"}</td>
                     <td className="p-3">{x.type || "—"}</td>
