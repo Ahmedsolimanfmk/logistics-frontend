@@ -68,7 +68,11 @@
     "maintenanceRequests": "Requests",
     "maintenanceWorkOrders": "Work Orders",
     "users": "Users",
-    "supervisors": "Supervisors"
+    "supervisors": "Supervisors",
+    "inventory": "Inventory",
+    "inventoryRequests": "Requests",
+    "inventoryIssues": "Issues",
+    "inventoryReceipts": "Receipts"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -136,11 +140,10 @@
         "tripsAssigned": "Trips Assigned"
       },
       "language": {
-  "switch": "Switch language",
-  "ar": "Arabic",
-  "en": "English"
-}
-
+        "switch": "Switch language",
+        "ar": "Arabic",
+        "en": "English"
+      }
     },
     "finance": {
       "actionRequired": "Finance – Action Required",
@@ -733,9 +736,9 @@
       "showingFirst30": "Showing first 30 records",
       "showingFirst20Pending": "Showing first 20 overdue expenses",
       "showingFirst20Adv": "Showing first 20 overdue advances",
-       "allData": "All data",
-  "pageOnly": "Current page only",
-  "openFromListNote": "Open total calculated from open advances"
+      "allData": "All data",
+      "pageOnly": "Current page only",
+      "openFromListNote": "Open total calculated from open advances"
     },
     "tables": {
       "pending": {
@@ -825,7 +828,6 @@
       "rejectReason": "Rejection reason (required):",
       "rejectNotes": "Notes (optional):"
     },
-    "financeExpenses": {
     "kpi": {
       "total": "Total",
       "pageOnly": "On current page results",
@@ -834,39 +836,37 @@
       "rejected": "Rejected",
       "appealed": "Appealed"
     }
-    
-    },
+  },
   "financeAdvanceDetails": {
-  "title": "تفاصيل العُهدة",
-  "tabs": {
-    "overview": "نظرة عامة",
-    "expenses": "المصروفات",
-    "actions": "إجراءات"
-  },
-  "kpis": {
-    "rejected": "مرفوض",
-    "pending": "معلق",
-    "remaining": "المتبقي",
-    "approvedUsed": "المعتمد المصروف",
-    "advanceAmount": "قيمة العهدة"
-  },
-  "buttons": {
-    "list": "القائمة",
-    "back": "رجوع",
-    "newExpense": "مصروف جديد",
-    "refresh": "تحديث",
-    "closeAdvance": "إغلاق العهدة"
-  },
-  "labels": {
-    "supervisor": "المشرف",
-    "createdAt": "تاريخ الإنشاء",
-    "notes": "ملاحظات",
-    "id": "المعرّف"
-  },
-  "empty": {
-    "noExpenses": "لا توجد مصروفات"
-  }
-
+    "title": "Advance Details",
+    "tabs": {
+      "overview": "Overview",
+      "expenses": "Expenses",
+      "actions": "Actions"
+    },
+    "kpis": {
+      "rejected": "Rejected",
+      "pending": "Pending",
+      "remaining": "Remaining",
+      "approvedUsed": "Approved Spent",
+      "advanceAmount": "Advance Amount"
+    },
+    "buttons": {
+      "list": "List",
+      "back": "Back",
+      "newExpense": "New Expense",
+      "refresh": "Refresh",
+      "closeAdvance": "Close Advance"
+    },
+    "labels": {
+      "supervisor": "Supervisor",
+      "createdAt": "Created At",
+      "notes": "Notes",
+      "id": "ID"
+    },
+    "empty": {
+      "noExpenses": "No expenses"
+    }
   },
   "trips": {
     "title": "Trips",
@@ -918,7 +918,6 @@
       "actions": "Actions"
     }
   },
-
   "tripModals": {
     "assignTitle": "Assign Trip",
     "createTitle": "Create Trip",
@@ -941,7 +940,6 @@
     "create": "Create",
     "toastCloseHint": "Click to close"
   },
-
   "tripFinance": {
     "title": "Trip Finance",
     "tripId": "Trip ID",
@@ -1001,126 +999,120 @@
     }
   },
   "tripDetails": {
-  "title": "Trip Details",
-  "actions": {
-    "financeClose": "Finance Close",
-    "back": "Back"
+    "title": "Trip Details",
+    "actions": {
+      "financeClose": "Finance Close",
+      "back": "Back"
+    },
+    "sections": {
+      "trip": "Trip",
+      "assignmentLatest": "Assignment (latest)"
+    },
+    "fields": {
+      "status": "Status",
+      "financial": "Financial",
+      "scheduled": "Scheduled",
+      "created": "Created",
+      "notes": "Notes",
+      "vehicle": "Vehicle",
+      "driver": "Driver",
+      "supervisor": "Supervisor",
+      "assigned": "Assigned",
+      "active": "Active"
+    },
+    "hints": {
+      "financeTip": "Tip: Use Finance Close to review and lock trip financially."
+    },
+    "states": {
+      "loading": "Loading…",
+      "notFound": "Trip not found"
+    },
+    "errors": {
+      "loadFailed": "Failed to load trip details"
+    }
   },
-  "sections": {
-    "trip": "Trip",
-    "assignmentLatest": "Assignment (latest)"
-  },
-  "fields": {
-    "status": "Status",
-    "financial": "Financial",
-    "scheduled": "Scheduled",
-    "created": "Created",
-    "notes": "Notes",
-    "vehicle": "Vehicle",
-    "driver": "Driver",
-    "supervisor": "Supervisor",
-    "assigned": "Assigned",
-    "active": "Active"
-  },
-  "hints": {
-    "financeTip": "Tip: Use Finance Close to review and lock trip financially."
-  },
-  "states": {
-    "loading": "Loading…",
-    "notFound": "Trip not found"
-  },
-  "errors": {
-    "loadFailed": "Failed to load trip details"
-  }
-},
-"financeExpenseDetails": {
-  "title": "Expense Details",
-  "meta": {
-    "id": "ID:"
-  },
-  "tabs": {
-    "overview": "Overview",
-    "audit": "Audit",
-    "actions": "Actions"
-  },
-  "overview": {
-    "createdAt": "Created At",
-    "type": "Expense Type",
-    "amount": "Amount",
-    "context": "Context",
-    "trip": "Trip",
-    "vehicle": "Vehicle",
-    "workOrder": "Work Order",
-    "creator": "Creator",
-    "notes": "Notes",
-    "advance": "Advance",
-    "cashAdvanceId": "Cash Advance ID",
-    "resolution": "Resolution",
-    "approvedAt": "Approved At",
-    "rejectedAt": "Rejected At",
-    "resolvedAt": "Resolved At"
-  },
-  "audit": {
-    "title": "Audit Timeline",
-    "noRecords": "No audit records.",
-    "actor": "Actor",
-    "showDiff": "Show diff",
-    "before": "Before",
-    "after": "After"
-  },
-  "actions": {
-    "available": "Available Actions",
-    "none": "No approve/reject actions available right now.",
-    "approve": "Approve",
-    "reject": "Reject",
-    "appeal": "Appeal",
-    "resolveApprove": "Resolve Appeal: Approve",
-    "resolveReject": "Resolve Appeal: Reject",
-    "reopen": "Reopen (REJECTED → PENDING)"
-  },
-  "hints": {
-    "endpoints": "Note: Actions are based on endpoints: approve / reject / appeal / resolve-appeal / reopen."
+  "financeExpenseDetails": {
+    "title": "Expense Details",
+    "meta": {
+      "id": "ID:"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "audit": "Audit",
+      "actions": "Actions"
+    },
+    "overview": {
+      "createdAt": "Created At",
+      "type": "Expense Type",
+      "amount": "Amount",
+      "context": "Context",
+      "trip": "Trip",
+      "vehicle": "Vehicle",
+      "workOrder": "Work Order",
+      "creator": "Creator",
+      "notes": "Notes",
+      "advance": "Advance",
+      "cashAdvanceId": "Cash Advance ID",
+      "resolution": "Resolution",
+      "approvedAt": "Approved At",
+      "rejectedAt": "Rejected At",
+      "resolvedAt": "Resolved At"
+    },
+    "audit": {
+      "title": "Audit Timeline",
+      "noRecords": "No audit records.",
+      "actor": "Actor",
+      "showDiff": "Show diff",
+      "before": "Before",
+      "after": "After"
+    },
+    "actions": {
+      "available": "Available Actions",
+      "none": "No approve/reject actions available right now.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "appeal": "Appeal",
+      "resolveApprove": "Resolve Appeal: Approve",
+      "resolveReject": "Resolve Appeal: Reject",
+      "reopen": "Reopen (REJECTED → PENDING)"
+    },
+    "hints": {
+      "endpoints": "Note: Actions are based on endpoints: approve / reject / appeal / resolve-appeal / reopen."
+    }
   },
   "inventory": {
-    "requestsTitle": "طلبات المخزن",
-    "requestsSubtitle": "عرض طلبات الصرف والحجز ومتابعة حالتها",
-    "filterStatus": "الحالة (PENDING/APPROVED/REJECTED/ISSUED)",
+    "requestsTitle": "Inventory Requests",
+    "requestsSubtitle": "View issue/reserve requests and track their status",
+    "filterStatus": "Status (PENDING/APPROVED/REJECTED/ISSUED)",
     "filterWarehouseId": "warehouse_id",
     "filterWorkOrderId": "work_order_id",
     "colId": "ID",
-    "colWarehouse": "المخزن",
-    "colStatus": "الحالة",
-    "colLines": "عدد البنود",
-    "colCreatedAt": "تاريخ الإنشاء",
-    "colOpen": "فتح",
-    "requestDetailsTitle": "تفاصيل طلب مخزني",
-    "createdAt": "تم الإنشاء",
-    "warehouse": "المخزن",
+    "colWarehouse": "Warehouse",
+    "colStatus": "Status",
+    "colLines": "Lines Count",
+    "colCreatedAt": "Created At",
+    "colOpen": "Open",
+    "requestDetailsTitle": "Inventory Request Details",
+    "createdAt": "Created",
+    "warehouse": "Warehouse",
     "workOrderId": "Work Order",
-    "notes": "ملاحظات",
-    "approve": "موافقة + حجز",
-    "reject": "رفض",
-    "unreserve": "إلغاء الحجز",
-    "createIssue": "إنشاء إذن صرف",
-    "approvedOk": "تمت الموافقة وتم حجز السيريالات بنجاح",
-    "rejectedOk": "تم رفض الطلب",
-    "rejectPrompt": "سبب الرفض:",
-    "unreservedOk": "تم إلغاء الحجز وإرجاع {n} سيريال للمخزون",
-    "lines": "بنود الطلب",
-    "colPart": "القطعة",
-    "colNeededQty": "الكمية المطلوبة",
-    "colLineNotes": "ملاحظات البند",
-    "reservations": "السيريالات المحجوزة",
-    "colInternalSerial": "سيريال داخلي",
-    "colManufacturerSerial": "سيريال المصنع",
-    "colItemStatus": "حالة القطعة"
-  },
-  
-  "sidebar": {
-    "inventory": "Inventory",
-    "inventoryRequests": "Requests",
-    "inventoryIssues": "Issues",
-    "inventoryReceipts": "Receipts"
+    "notes": "Notes",
+    "approve": "Approve + Reserve",
+    "reject": "Reject",
+    "unreserve": "Unreserve",
+    "createIssue": "Create Issue",
+    "approvedOk": "Approved and serials reserved successfully",
+    "rejectedOk": "Request rejected",
+    "rejectPrompt": "Rejection reason:",
+    "unreservedOk": "Unreserved and returned {n} serial(s) to stock",
+    "lines": "Request Lines",
+    "colPart": "Part",
+    "colNeededQty": "Needed Qty",
+    "colLineNotes": "Line Notes",
+    "reservations": "Reserved Serials",
+    "colInternalSerial": "Internal Serial",
+    "colManufacturerSerial": "Manufacturer Serial",
+    "colItemStatus": "Item Status"
   },
   "issues": {
     "title": "Inventory Issues",
@@ -1168,7 +1160,6 @@
     "colUnitCost": "Unit Cost",
     "colTotalCost": "Total"
   },
-  
   "receipts": {
     "title": "Inventory Receipts",
     "subtitle": "Record spare parts purchases and auto-create cash expenses",
@@ -1226,12 +1217,3 @@
     "cashExpenseType": "Expense Type"
   }
 }
-}
-}
-
-
-
-
-
-
-
