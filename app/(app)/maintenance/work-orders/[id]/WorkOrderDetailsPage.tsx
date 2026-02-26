@@ -77,6 +77,13 @@ type ReportResponse = {
 type InventoryIssue = { id: string };
 type TabKey = "issues" | "installations" | "qa";
 
+type Warehouse = {
+  id: string;
+  name?: string | null;
+  code?: string | null;
+  is_active?: boolean | null;
+};
+
 export default function WorkOrderDetailsPage() {
   const t = useT();
 
@@ -131,6 +138,10 @@ export default function WorkOrderDetailsPage() {
   const [hubCounts, setHubCounts] = useState({ requests: 0, issues: 0, installations: 0 });
   const [hubCountsLoading, setHubCountsLoading] = useState(false);
 
+  // ✅ Warehouses dropdown
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [whLoading, setWhLoading] = useState(false);
+
   // -------- Issues state --------
   const [issueCreating, setIssueCreating] = useState(false);
   const [issueId, setIssueId] = useState<string | null>(null);
@@ -175,6 +186,32 @@ export default function WorkOrderDetailsPage() {
     [id, router, sp]
   );
 
+  // ✅ load warehouses
+  const loadWarehouses = useCallback(async () => {
+    if (!token) return;
+    setWhLoading(true);
+    try {
+      const res: any = await apiGet("/inventory/warehouses");
+      const arr: Warehouse[] =
+        Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : Array.isArray(res?.data) ? res.data : [];
+
+      setWarehouses(arr);
+
+      // auto pick first warehouse if none selected
+      if (!hubWarehouseId && arr?.[0]?.id) setHubWarehouseId(arr[0].id);
+    } catch (e: any) {
+      setWarehouses([]);
+      showToast(e?.message || "Failed to load warehouses", "error");
+    } finally {
+      setWhLoading(false);
+    }
+  }, [token, hubWarehouseId, showToast]);
+
+  useEffect(() => {
+    if (!token) return;
+    loadWarehouses();
+  }, [token, loadWarehouses]);
+
   // ✅ WO Hub actions
   function hubOpenRequests() {
     if (!id) return;
@@ -189,11 +226,13 @@ export default function WorkOrderDetailsPage() {
   }
   function hubCreateRequest() {
     if (!id) return;
+
     const wh = String(hubWarehouseId || "").trim();
     if (!wh) {
       showToast("warehouse_id مطلوب لإنشاء طلب مخزني من داخل أمر العمل.", "error");
       return;
     }
+
     router.push(
       `/inventory/requests/new?work_order_id=${encodeURIComponent(id)}&warehouse_id=${encodeURIComponent(wh)}`
     );
@@ -570,12 +609,7 @@ export default function WorkOrderDetailsPage() {
             {wo?.status ? <StatusBadge status={wo.status} /> : null}
           </div>
 
-          <Button
-            variant="primary"
-            onClick={completeWO}
-            disabled={completing || !canComplete}
-            isLoading={completing}
-          >
+          <Button variant="primary" onClick={completeWO} disabled={completing || !canComplete} isLoading={completing}>
             {t("woDetails.completeWo")}
           </Button>
         </div>
@@ -601,17 +635,29 @@ export default function WorkOrderDetailsPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="text-xs text-gray-500">warehouse_id</div>
-              <input
+              <div className="text-xs text-gray-500">warehouse</div>
+
+              <select
                 value={hubWarehouseId}
                 onChange={(e) => setHubWarehouseId(e.target.value)}
                 className="w-[260px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-                placeholder="uuid"
-              />
+                disabled={whLoading}
+              >
+                <option value="">{whLoading ? "Loading..." : "Select warehouse"}</option>
+                {warehouses.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name || w.code || w.id}
+                  </option>
+                ))}
+              </select>
+
+              <Button variant="ghost" onClick={loadWarehouses} disabled={whLoading}>
+                Refresh Warehouses
+              </Button>
             </div>
 
             {canManage ? (
-              <Button variant="primary" onClick={hubCreateRequest}>
+              <Button variant="primary" onClick={hubCreateRequest} disabled={!hubWarehouseId}>
                 Create Request
               </Button>
             ) : null}
@@ -800,11 +846,19 @@ export default function WorkOrderDetailsPage() {
 
       {/* Issues Tab */}
       {tab === "issues" ? (
-        <Card title={t("woDetails.issuesTitle")} right={
-          <Button variant="secondary" onClick={createIssue} disabled={issueCreating || !canManage} isLoading={issueCreating}>
-            {t("woDetails.createIssue")}
-          </Button>
-        }>
+        <Card
+          title={t("woDetails.issuesTitle")}
+          right={
+            <Button
+              variant="secondary"
+              onClick={createIssue}
+              disabled={issueCreating || !canManage}
+              isLoading={issueCreating}
+            >
+              {t("woDetails.createIssue")}
+            </Button>
+          }
+        >
           <div className="text-xs text-gray-500">
             {t("woDetails.currentIssueId")}:{" "}
             <span className="font-mono text-gray-900">{issueId ? shortId(issueId) : "—"}</span>
@@ -912,11 +966,10 @@ export default function WorkOrderDetailsPage() {
 
       {/* Installations Tab */}
       {tab === "installations" ? (
-        <Card title={t("woDetails.installationsTitle")} right={
-          <Button variant="secondary" onClick={loadInstallations} disabled={instLoading} isLoading={instLoading}>
-            {t("common.refresh")}
-          </Button>
-        }>
+        <Card
+          title={t("woDetails.installationsTitle")}
+          right={<Button variant="secondary" onClick={loadInstallations} disabled={instLoading} isLoading={instLoading}>{t("common.refresh")}</Button>}
+        >
           <div className="mt-2 text-xs text-gray-500">{instMsg ? `⚠ ${instMsg}` : null}</div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
