@@ -1,116 +1,34 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useCallback,useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 import { apiGet, apiPost, unwrapTotal } from "@/src/lib/api";
 
+// ✅ Design System
+import { Button } from "@/src/components/ui/Button";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { KpiCard } from "@/src/components/ui/KpiCard";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
+
 function fmtDate(d?: string | null) {
   if (!d) return "—";
   const dt = new Date(String(d));
   if (Number.isNaN(dt.getTime())) return String(d);
   return dt.toLocaleString("ar-EG");
 }
+
 function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
-
-// UI
-function Card({
-  title,
-  right,
-  children,
-}: {
-  title: string;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
-        {right}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Button({
-  children,
-  onClick,
-  variant = "secondary",
-  disabled,
-  type = "button",
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  variant?: "primary" | "secondary" | "danger" | "ghost";
-  disabled?: boolean;
-  type?: "button" | "submit";
-}) {
-  const base =
-    "inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium transition border";
-  const styles: Record<string, string> = {
-    primary: "bg-white text-black border-white hover:bg-neutral-200",
-    secondary: "bg-white/5 text-white border-white/10 hover:bg-white/10",
-    danger: "bg-red-600 text-white border-red-600 hover:bg-red-700",
-    ghost: "bg-transparent text-white border-transparent hover:bg-white/10",
-  };
-  return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(base, styles[variant], disabled && "opacity-50 cursor-not-allowed")}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Badge({ value }: { value: string }) {
-  const v = String(value || "").toUpperCase();
-  const cls =
-    v === "OPEN" || v === "IN_PROGRESS"
-      ? "bg-yellow-500/15 text-yellow-200 border-yellow-500/30"
-      : v === "COMPLETED"
-      ? "bg-green-500/15 text-green-200 border-green-500/30"
-      : v === "CANCELED"
-      ? "bg-red-500/15 text-red-200 border-red-500/30"
-      : "bg-white/5 text-white border-white/10";
-  return <span className={cn("rounded-full border px-2 py-0.5 text-xs", cls)}>{v}</span>;
-}
-
-function Pill({
-  active,
-  children,
-  onClick,
-}: {
-  active?: boolean;
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "rounded-xl border px-3 py-2 text-sm transition",
-        active
-          ? "bg-white text-black border-white"
-          : "bg-white/5 text-white border-white/10 hover:bg-white/10"
-      )}
-    >
-      {children}
-    </button>
-  );
 }
 
 function roleUpper(r: any) {
@@ -150,29 +68,27 @@ type ReportResponse = {
   work_order: any;
   vehicle: any;
   post_report_db: any;
-  work_order_expenses: any[]; // ✅ مطابق للباك اند
+  work_order_expenses: any[];
   report_runtime: any;
 };
 
 type InventoryIssue = { id: string };
 type TabKey = "issues" | "installations" | "qa";
 
-const selectCls =
-  "w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white";
-const optionCls = "bg-neutral-900 text-white";
-
 export default function WorkOrderDetailsPage() {
   const t = useT();
   const tRef = useRef(t);
-useEffect(() => {
-  tRef.current = t;
-}, [t]);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
   const router = useRouter();
   const sp = useSearchParams();
 
   const token = useAuth((s: any) => s.token);
   const user = useAuth((s: any) => s.user);
 
+  // hydrate once
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
@@ -270,22 +186,33 @@ useEffect(() => {
   }
 
   const loadInstallations = useCallback(async () => {
-  if (!token || !id) return;
-  setInstLoading(true);
-  setInstMsg(null);
+    if (!token || !id) return;
+    setInstLoading(true);
+    setInstMsg(null);
 
-  try {
-    const res: any = await apiGet(`/maintenance/work-orders/${id}/installations`);
-    // ...
-  } catch (e: any) {
-    setInstItems([]);
-    setInstMsg(e?.message || tRef.current("woDetails.installationsLoadFailed"));
-  } finally {
-    setInstLoading(false);
-  }
-}, [token, id]); // ✅ شيل t
-  
-const loadHubCounts = useCallback(async () => {
+    try {
+      const res: any = await apiGet(`/maintenance/work-orders/${id}/installations`);
+
+      const arr = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.items)
+        ? res.items
+        : Array.isArray(res?.installations)
+        ? res.installations
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+
+      setInstItems(arr);
+    } catch (e: any) {
+      setInstItems([]);
+      setInstMsg(e?.message || tRef.current("woDetails.installationsLoadFailed"));
+    } finally {
+      setInstLoading(false);
+    }
+  }, [token, id]);
+
+  const loadHubCounts = useCallback(async () => {
     if (!token || !id) return;
     setHubCountsLoading(true);
 
@@ -325,30 +252,39 @@ const loadHubCounts = useCallback(async () => {
   }, [token, id]);
 
   const load = useCallback(async () => {
-  if (!token || !id) return;
+    if (!token || !id) return;
 
-  setLoading(true);
-  setErr(null);
+    setLoading(true);
+    setErr(null);
 
-  try {
-    const [woRes, repRes] = await Promise.all([
-      apiGet<WorkOrderByIdResponse>(`/maintenance/work-orders/${id}`),
-      apiGet<ReportResponse>(`/maintenance/work-orders/${id}/report`),
-    ]);
+    try {
+      const [woRes, repRes] = await Promise.all([
+        apiGet<WorkOrderByIdResponse>(`/maintenance/work-orders/${id}`),
+        apiGet<ReportResponse>(`/maintenance/work-orders/${id}/report`),
+      ]);
 
-    setWo(woRes.work_order || null);
-    setReport(repRes || null);
+      setWo(woRes.work_order || null);
+      setReport(repRes || null);
 
-    // ...
-    await loadHubCounts();
-  } catch (e: any) {
-    setWo(null);
-    setReport(null);
-    setErr(e?.message || tRef.current("woDetails.failedToLoad"));
-  } finally {
-    setLoading(false);
-  }
-}, [token, id, loadHubCounts]); // ✅ شيل t
+      const db = repRes?.post_report_db;
+      if (db?.road_test_result) {
+        const r = String(db.road_test_result).toUpperCase();
+        setQaResult(r === "FAIL" ? "FAIL" : "PASS");
+      } else {
+        setQaResult("");
+      }
+      if (typeof db?.remarks === "string") setQaRemarks(db.remarks);
+      else setQaRemarks("");
+
+      await loadHubCounts();
+    } catch (e: any) {
+      setWo(null);
+      setReport(null);
+      setErr(e?.message || tRef.current("woDetails.failedToLoad"));
+    } finally {
+      setLoading(false);
+    }
+  }, [token, id, loadHubCounts]);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -386,12 +322,21 @@ const loadHubCounts = useCallback(async () => {
     installed_not_issued: [],
   };
 
+  const reportHint = useMemo(() => {
+    if (!report) return null;
+    if (rs === "NEEDS_PARTS_RECONCILIATION") return t("woDetails.hintMismatch");
+    if (rs === "NEEDS_QA") return t("woDetails.hintNeedsQa");
+    if (rs === "QA_FAILED") return t("woDetails.hintQaFailed");
+    if (rs === "OK") return t("woDetails.hintReady");
+    return null;
+  }, [report, rs, t]);
+
   async function createIssue() {
     if (!token || !id) return;
     setIssueMsg(null);
 
     if (!canManage) {
-      setIssueMsg(t("woDetails.onlyAdminAccountantCreateIssue"));
+      setIssueMsg(tRef.current("woDetails.onlyAdminAccountantCreateIssue"));
       return;
     }
 
@@ -401,11 +346,11 @@ const loadHubCounts = useCallback(async () => {
         notes: null,
       });
       setIssueId(res?.issue?.id || null);
-      setIssueMsg(t("woDetails.issueCreated"));
+      setIssueMsg(tRef.current("woDetails.issueCreated"));
       await loadHubCounts();
       await load();
     } catch (e: any) {
-      setIssueMsg(`${t("common.failed")}: ${e?.message || t("common.unknownError")}`);
+      setIssueMsg(`${tRef.current("common.failed")}: ${e?.message || tRef.current("common.unknownError")}`);
     } finally {
       setIssueCreating(false);
     }
@@ -416,23 +361,23 @@ const loadHubCounts = useCallback(async () => {
     setLineMsg(null);
 
     if (!canManage) {
-      setLineMsg(t("woDetails.onlyAdminAccountantAddLines"));
+      setLineMsg(tRef.current("woDetails.onlyAdminAccountantAddLines"));
       return;
     }
     if (!issueId) {
-      setLineMsg(t("woDetails.mustCreateIssueFirst"));
+      setLineMsg(tRef.current("woDetails.mustCreateIssueFirst"));
       return;
     }
     if (!linePartId.trim()) {
-      setLineMsg(t("woDetails.partIdRequired"));
+      setLineMsg(tRef.current("woDetails.partIdRequired"));
       return;
     }
     if (!Number.isFinite(lineQty) || lineQty <= 0) {
-      setLineMsg(t("woDetails.qtyMustBeGt0"));
+      setLineMsg(tRef.current("woDetails.qtyMustBeGt0"));
       return;
     }
     if (!Number.isFinite(lineUnitCost) || lineUnitCost < 0) {
-      setLineMsg(t("woDetails.unitCostMustBeGte0"));
+      setLineMsg(tRef.current("woDetails.unitCostMustBeGte0"));
       return;
     }
 
@@ -449,7 +394,7 @@ const loadHubCounts = useCallback(async () => {
         ],
       });
 
-      setLineMsg(t("woDetails.lineAdded"));
+      setLineMsg(tRef.current("woDetails.lineAdded"));
       setLinePartId("");
       setLineQty(1);
       setLineUnitCost(0);
@@ -457,7 +402,7 @@ const loadHubCounts = useCallback(async () => {
 
       await load();
     } catch (e: any) {
-      setLineMsg(`${t("common.failed")}: ${e?.message || t("common.unknownError")}`);
+      setLineMsg(`${tRef.current("common.failed")}: ${e?.message || tRef.current("common.unknownError")}`);
     } finally {
       setLineSaving(false);
     }
@@ -468,16 +413,16 @@ const loadHubCounts = useCallback(async () => {
     setInstMsg(null);
 
     if (!instPartId.trim()) {
-      setInstMsg(t("woDetails.partIdRequired"));
+      setInstMsg(tRef.current("woDetails.partIdRequired"));
       return;
     }
     if (!Number.isFinite(instQty) || instQty <= 0) {
-      setInstMsg(t("woDetails.qtyInstalledMustBeGt0"));
+      setInstMsg(tRef.current("woDetails.qtyInstalledMustBeGt0"));
       return;
     }
     const odometer = instOdo === "" ? null : Number(instOdo);
     if (odometer !== null && (!Number.isFinite(odometer) || odometer < 0)) {
-      setInstMsg(t("woDetails.odometerMustBeGte0"));
+      setInstMsg(tRef.current("woDetails.odometerMustBeGte0"));
       return;
     }
 
@@ -494,7 +439,7 @@ const loadHubCounts = useCallback(async () => {
         ],
       });
 
-      setInstMsg(t("woDetails.installationAdded"));
+      setInstMsg(tRef.current("woDetails.installationAdded"));
       setInstPartId("");
       setInstQty(1);
       setInstOdo("");
@@ -502,7 +447,7 @@ const loadHubCounts = useCallback(async () => {
 
       await Promise.all([load(), loadInstallations(), loadHubCounts()]);
     } catch (e: any) {
-      setInstMsg(`${t("common.failed")}: ${e?.message || t("common.unknownError")}`);
+      setInstMsg(`${tRef.current("common.failed")}: ${e?.message || tRef.current("common.unknownError")}`);
     } finally {
       setInstSaving(false);
     }
@@ -513,15 +458,15 @@ const loadHubCounts = useCallback(async () => {
     setQaMsg(null);
 
     if (!canManage) {
-      setQaMsg(t("woDetails.onlyAdminAccountantQa"));
+      setQaMsg(tRef.current("woDetails.onlyAdminAccountantQa"));
       return;
     }
     if (!qaResult) {
-      setQaMsg(t("woDetails.selectPassOrFail"));
+      setQaMsg(tRef.current("woDetails.selectPassOrFail"));
       return;
     }
     if (rs === "NEEDS_PARTS_RECONCILIATION") {
-      setQaMsg(t("woDetails.fixMismatchFirst"));
+      setQaMsg(tRef.current("woDetails.fixMismatchFirst"));
       return;
     }
 
@@ -533,10 +478,10 @@ const loadHubCounts = useCallback(async () => {
         checklist_json: null,
       });
 
-      setQaMsg(t("woDetails.qaSaved"));
+      setQaMsg(tRef.current("woDetails.qaSaved"));
       await load();
     } catch (e: any) {
-      setQaMsg(`${t("woDetails.qaSaveFailed")}: ${e?.message || t("common.unknownError")}`);
+      setQaMsg(`${tRef.current("woDetails.qaSaveFailed")}: ${e?.message || tRef.current("common.unknownError")}`);
     } finally {
       setQaSaving(false);
     }
@@ -547,674 +492,649 @@ const loadHubCounts = useCallback(async () => {
     setCompleteMsg(null);
 
     if (!canComplete) {
-      setCompleteMsg(t("woDetails.cannotCompleteNow"));
+      setCompleteMsg(tRef.current("woDetails.cannotCompleteNow"));
       return;
     }
 
     setCompleting(true);
     try {
       await apiPost(`/maintenance/work-orders/${id}/complete`, { notes: null });
-      setCompleteMsg(t("woDetails.completed"));
+      setCompleteMsg(tRef.current("woDetails.completed"));
       await load();
     } catch (e: any) {
-      setCompleteMsg(`${t("woDetails.completeFailed")}: ${e?.message || t("common.unknownError")}`);
+      setCompleteMsg(`${tRef.current("woDetails.completeFailed")}: ${e?.message || tRef.current("common.unknownError")}`);
     } finally {
       setCompleting(false);
     }
   }
 
-  const reportHint = useMemo(() => {
-    if (!report) return null;
-    if (rs === "NEEDS_PARTS_RECONCILIATION") return t("woDetails.hintMismatch");
-    if (rs === "NEEDS_QA") return t("woDetails.hintNeedsQa");
-    if (rs === "QA_FAILED") return t("woDetails.hintQaFailed");
-    if (rs === "OK") return t("woDetails.hintReady");
-    return null;
-  }, [report, rs, t]);
+  // ---------------- UI ----------------
 
   if (!token) {
     return (
-      <div className="space-y-4 p-4 text-white">
-        <Card title={t("woDetails.title")}>
-          <div className="text-sm text-white/70">{t("common.loadingSession")}</div>
-        </Card>
+      <div className="p-4">
+        <PageHeader title={t("woDetails.title")} subtitle={t("common.loadingSession")} />
       </div>
     );
   }
 
+  const tabItems = [
+    { key: "issues" as const, label: t("woDetails.tabIssues") },
+    { key: "installations" as const, label: t("woDetails.tabInstallations") },
+    { key: "qa" as const, label: t("woDetails.tabQa") },
+  ];
+
   return (
-    <div className="space-y-4 p-4 text-white">
-      <div className="flex items-center justify-between gap-3">
-        <div className="space-y-1">
-          <div className="text-sm text-white/70">{t("woDetails.breadcrumb")}</div>
-          <div className="text-xl font-semibold">{t("woDetails.title")}</div>
+    <div className="space-y-4 p-4">
+      <PageHeader
+        title={t("woDetails.title")}
+        subtitle={t("woDetails.breadcrumb")}
+        actions={
+          <>
+            <Link href="/maintenance/work-orders">
+              <Button variant="secondary">← {t("common.back")}</Button>
+            </Link>
+            <Button variant="secondary" onClick={load} disabled={loading}>
+              {t("common.refresh")}
+            </Button>
+          </>
+        }
+      />
+
+      {/* Header Card */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="text-base font-semibold">
+              {t("woDetails.wo")} #{shortId(id)}
+            </div>
+            {wo?.status ? <StatusBadge status={wo.status} /> : null}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              onClick={completeWO}
+              disabled={completing || !canComplete}
+              isLoading={completing}
+            >
+              {t("woDetails.completeWo")}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/maintenance/work-orders">
-            <Button variant="secondary">← {t("common.back")}</Button>
-          </Link>
-          <Button variant="secondary" onClick={load} disabled={loading}>
-            {t("common.refresh")}
-          </Button>
+
+        {completeMsg ? (
+          <div className={cn("mt-2 text-sm", String(completeMsg).startsWith("✅") ? "text-green-700" : "text-red-700")}>
+            {completeMsg}
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="mt-3 text-sm text-slate-500">{t("common.loading")}</div>
+        ) : err ? (
+          <div className="mt-3 text-sm text-red-700">
+            {t("common.error")}: {err}
+          </div>
+        ) : null}
+      </div>
+
+      {/* WO Hub */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="text-sm font-semibold">WO Hub</div>
+            <div className="text-xs text-slate-500">
+              ربط المخزن + الطلبات + الصرف + التركيبات من نفس صفحة أمر العمل
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-slate-500">warehouse_id</div>
+              <input
+                value={hubWarehouseId}
+                onChange={(e) => setHubWarehouseId(e.target.value)}
+                className="w-[260px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                placeholder="uuid"
+              />
+            </div>
+
+            {canManage ? (
+              <Button variant="primary" onClick={hubCreateRequest}>
+                Create Request
+              </Button>
+            ) : null}
+
+            <Button variant="secondary" onClick={hubOpenRequests}>
+              Open Requests
+              <span className="ml-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs">
+                {hubCountsLoading ? "…" : hubCounts.requests}
+              </span>
+            </Button>
+
+            <Button variant="secondary" onClick={hubOpenIssues}>
+              Open Issues
+              <span className="ml-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs">
+                {hubCountsLoading ? "…" : hubCounts.issues}
+              </span>
+            </Button>
+
+            <Button variant="secondary" onClick={hubAddInstallations}>
+              Add Installations
+              <span className="ml-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs">
+                {hubCountsLoading ? "…" : hubCounts.installations}
+              </span>
+            </Button>
+
+            <Button variant="ghost" onClick={loadHubCounts} disabled={hubCountsLoading}>
+              Refresh Counts
+            </Button>
+          </div>
+        </div>
+
+        {!canManage ? (
+          <div className="mt-2 text-xs text-slate-500">ملاحظة: Create Request متاح فقط لـ ADMIN / ACCOUNTANT</div>
+        ) : null}
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <KpiCard label={t("woDetails.parts")} value={totals?.parts_cost_total ?? 0} />
+        <KpiCard label={t("woDetails.labor")} value={totals?.labor_cost ?? 0} />
+        <KpiCard label={t("woDetails.service")} value={totals?.service_cost ?? 0} />
+        <KpiCard label={t("woDetails.grandTotal")} value={totals?.grand_total ?? 0} />
+      </div>
+
+      {/* Details + Vehicle/Report */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-sm font-semibold mb-2">{t("woDetails.wo")}</div>
+
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            <div>
+              <span className="text-slate-500">{t("woDetails.type")}:</span> {wo?.type || "—"}
+            </div>
+            <div>
+              <span className="text-slate-500">{t("woDetails.vendor")}:</span> {wo?.vendor_name || "—"}
+            </div>
+            <div>
+              <span className="text-slate-500">{t("woDetails.opened")}:</span> {fmtDate(wo?.opened_at)}
+            </div>
+            <div>
+              <span className="text-slate-500">{t("woDetails.started")}:</span> {fmtDate(wo?.started_at)}
+            </div>
+            <div>
+              <span className="text-slate-500">{t("woDetails.completedAt")}:</span> {fmtDate(wo?.completed_at)}
+            </div>
+            <div>
+              <span className="text-slate-500">{t("woDetails.odometer")}:</span> {wo?.odometer ?? "—"}
+            </div>
+            <div>
+              <span className="text-slate-500">{t("woDetails.notes")}:</span> {wo?.notes || "—"}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-sm font-semibold">{t("woDetails.vehicle")}</div>
+          <div className="mt-1 text-sm">
+            {wo?.vehicles?.fleet_no ? `${wo.vehicles.fleet_no} - ` : ""}
+            {wo?.vehicles?.plate_no || wo?.vehicles?.display_name || "—"}
+          </div>
+          <div className="mt-1 text-xs text-slate-500 font-mono">vehicle_id: {shortId(wo?.vehicle_id)}</div>
+
+          <div className="mt-4 text-sm font-semibold">{t("woDetails.report")}</div>
+          <div className="mt-1 text-sm">
+            <span className="text-slate-500">{t("woDetails.reportStatus")}:</span> {report?.report_status || "—"}
+          </div>
+          {reportHint ? <div className="mt-1 text-xs text-slate-500">{reportHint}</div> : null}
+
+          <div className="mt-3 text-sm">
+            <span className="text-slate-500">{t("woDetails.mismatches")}:</span>{" "}
+            <span className={cn("font-semibold", mismatchTotal > 0 ? "text-amber-700" : "text-green-700")}>
+              {mismatchTotal}
+            </span>
+          </div>
+
+          <div className="mt-3 text-sm">
+            <span className="text-slate-500">{t("woDetails.cashApproved")}:</span>{" "}
+            <span className="font-semibold">{totals?.maintenance_cash_cost_total ?? 0}</span>
+          </div>
         </div>
       </div>
 
-      <Card title={`${t("woDetails.wo")} #${shortId(id)}`} right={wo?.status ? <Badge value={wo.status} /> : null}>
-        {loading ? (
-          <div className="text-sm text-white/70">{t("common.loading")}</div>
-        ) : err ? (
-          <div className="text-sm text-red-200">
-            {t("common.error")}: {err}
+      {/* Tabs */}
+      <FiltersBar
+  left={
+    <div className="flex flex-wrap gap-2">
+      {tabItems.map((x) => (
+        <Button
+          key={x.key}
+          variant={tab === x.key ? "primary" : "secondary"}
+          onClick={() => setTabAndUrl(x.key)}
+        >
+          {x.label}
+        </Button>
+      ))}
+    </div>
+  }
+  right={
+    <div className="flex items-center gap-2">
+      <Button variant="secondary" onClick={load} disabled={loading}>
+        {t("common.refresh")}
+      </Button>
+    </div>
+  }
+/>
+      {/* Reconciliation Table */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-semibold">{t("woDetails.reconTitle")}</div>
+          <div className="text-xs text-slate-500">
+            {t("woDetails.reconMatched")}: {recon.matched?.length || 0} | {t("woDetails.reconIssuedNotInstalled")}:{" "}
+            {recon.issued_not_installed?.length || 0} | {t("woDetails.reconInstalledNotIssued")}:{" "}
+            {recon.installed_not_issued?.length || 0}
           </div>
-        ) : !wo ? (
-          <div className="text-sm text-white/70">{t("common.notFound")}</div>
-        ) : (
-          <div className="space-y-4">
-            {/* ✅ WO HUB */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div className="space-y-1">
-                  <div className="text-sm font-semibold">WO Hub</div>
-                  <div className="text-xs text-white/60">
-                    ربط المخزن + الطلبات + الصرف + التركيبات من نفس صفحة أمر العمل
-                  </div>
-                </div>
+        </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="text-xs text-white/60">warehouse_id</div>
-                    <input
-                      value={hubWarehouseId}
-                      onChange={(e) => setHubWarehouseId(e.target.value)}
-                      className="w-[260px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none text-white placeholder:text-white/40"
-                      placeholder="uuid"
-                    />
-                  </div>
+        <div className="mt-3 overflow-auto rounded-xl border border-slate-200">
+          <table className="min-w-[900px] w-full text-sm">
+            <thead className="bg-slate-50 text-slate-600">
+              <tr>
+                <th className="text-left p-3">{t("woDetails.part")}</th>
+                <th className="text-left p-3">{t("woDetails.issuedQty")}</th>
+                <th className="text-left p-3">{t("woDetails.installedQty")}</th>
+                <th className="text-left p-3">{t("woDetails.issuedCost")}</th>
+                <th className="text-left p-3">{t("common.status")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(recon.matched || []).map((r: any) => (
+                <tr key={`m_${r.part_id}`} className="border-t border-slate-200">
+                  <td className="p-3">
+                    <div className="font-semibold">{r?.part?.name || "—"}</div>
+                    <div className="text-xs text-slate-500 font-mono">{shortId(r.part_id)}</div>
+                  </td>
+                  <td className="p-3">{r.issued_qty}</td>
+                  <td className="p-3">{r.installed_qty}</td>
+                  <td className="p-3">{r.issued_cost}</td>
+                  <td className="p-3">
+                    <span className="text-green-700">{t("woDetails.matched")}</span>
+                  </td>
+                </tr>
+              ))}
 
-                  {canManage ? (
-                    <Button variant="primary" onClick={hubCreateRequest}>
-                      Create Request
-                    </Button>
-                  ) : null}
+              {(recon.issued_not_installed || []).map((r: any) => (
+                <tr key={`i_${r.part_id}`} className="border-t border-slate-200">
+                  <td className="p-3">
+                    <div className="font-semibold">{r?.part?.name || "—"}</div>
+                    <div className="text-xs text-slate-500 font-mono">{shortId(r.part_id)}</div>
+                  </td>
+                  <td className="p-3">{r.issued_qty}</td>
+                  <td className="p-3">{r.installed_qty}</td>
+                  <td className="p-3">{r.issued_cost}</td>
+                  <td className="p-3">
+                    <span className="text-amber-700">{t("woDetails.issuedGtInstalled")}</span>
+                  </td>
+                </tr>
+              ))}
 
-                  <Button variant="secondary" onClick={hubOpenRequests}>
-                    Open Requests
-                    <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs">
-                      {hubCountsLoading ? "…" : hubCounts.requests}
-                    </span>
-                  </Button>
+              {(recon.installed_not_issued || []).map((r: any) => (
+                <tr key={`x_${r.part_id}`} className="border-t border-slate-200">
+                  <td className="p-3">
+                    <div className="font-semibold">{r?.part?.name || "—"}</div>
+                    <div className="text-xs text-slate-500 font-mono">{shortId(r.part_id)}</div>
+                  </td>
+                  <td className="p-3">{r.issued_qty}</td>
+                  <td className="p-3">{r.installed_qty}</td>
+                  <td className="p-3">—</td>
+                  <td className="p-3">
+                    <span className="text-red-700">{t("woDetails.installedGtIssued")}</span>
+                  </td>
+                </tr>
+              ))}
 
-                  <Button variant="secondary" onClick={hubOpenIssues}>
-                    Open Issues
-                    <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs">
-                      {hubCountsLoading ? "…" : hubCounts.issues}
-                    </span>
-                  </Button>
+              {(recon.matched || []).length +
+                (recon.issued_not_installed || []).length +
+                (recon.installed_not_issued || []).length ===
+              0 ? (
+                <tr className="border-t border-slate-200">
+                  <td className="p-3 text-slate-500" colSpan={5}>
+                    {t("woDetails.noReconData")}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                  <Button variant="secondary" onClick={hubAddInstallations}>
-                    Add Installations
-                    <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs">
-                      {hubCountsLoading ? "…" : hubCounts.installations}
-                    </span>
-                  </Button>
+      {/* Issues Tab */}
+      {tab === "issues" ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm font-semibold">{t("woDetails.issuesTitle")}</div>
+            <Button variant="secondary" onClick={createIssue} disabled={issueCreating || !canManage} isLoading={issueCreating}>
+              {t("woDetails.createIssue")}
+            </Button>
+          </div>
 
-                  <Button variant="ghost" onClick={loadHubCounts} disabled={hubCountsLoading}>
-                    Refresh Counts
-                  </Button>
-                </div>
-              </div>
+          <div className="mt-2 text-xs text-slate-500">
+            {t("woDetails.currentIssueId")}: <span className="font-mono text-slate-900">{issueId ? shortId(issueId) : "—"}</span>
+          </div>
 
-              {!canManage ? (
-                <div className="mt-2 text-xs text-white/50">
-                  ملاحظة: Create Request متاح فقط لـ ADMIN / ACCOUNTANT
+          {issueMsg ? (
+            <div className={cn("mt-2 text-sm", String(issueMsg).startsWith("✅") ? "text-green-700" : "text-red-700")}>
+              {issueMsg}
+            </div>
+          ) : null}
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="md:col-span-2">
+              <div className="text-xs text-slate-500 mb-1">{t("woDetails.partIdUuid")}</div>
+              <input
+                value={linePartId}
+                onChange={(e) => setLinePartId(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                placeholder={t("woDetails.uuidPlaceholder")}
+              />
+            </div>
+
+            <div>
+              <div className="text-xs text-slate-500 mb-1">{t("woDetails.qty")}</div>
+              <input
+                type="number"
+                value={lineQty}
+                onChange={(e) => setLineQty(Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+              />
+            </div>
+
+            <div>
+              <div className="text-xs text-slate-500 mb-1">{t("woDetails.unitCost")}</div>
+              <input
+                type="number"
+                value={lineUnitCost}
+                onChange={(e) => setLineUnitCost(Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+              />
+            </div>
+
+            <div className="md:col-span-4">
+              <div className="text-xs text-slate-500 mb-1">{t("woDetails.notesOpt")}</div>
+              <input
+                value={lineNotes}
+                onChange={(e) => setLineNotes(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                placeholder={t("common.optional")}
+              />
+            </div>
+
+            <div className="md:col-span-4 flex items-center gap-2">
+              <Button variant="primary" onClick={addIssueLine} disabled={lineSaving || !canManage} isLoading={lineSaving}>
+                {t("woDetails.addLine")}
+              </Button>
+              {lineMsg ? (
+                <div className={cn("text-sm", String(lineMsg).startsWith("✅") ? "text-green-700" : "text-red-700")}>
+                  {lineMsg}
                 </div>
               ) : null}
             </div>
-
-            {/* Summary */}
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <div className="text-sm">
-                  <span className="text-white/60">{t("woDetails.type")}:</span> {wo.type || "—"}
-                </div>
-                <div className="text-sm">
-                  <span className="text-white/60">{t("woDetails.vendor")}:</span> {wo.vendor_name || "—"}
-                </div>
-                <div className="text-sm">
-                  <span className="text-white/60">{t("woDetails.opened")}:</span> {fmtDate(wo.opened_at)}
-                </div>
-                <div className="text-sm">
-                  <span className="text-white/60">{t("woDetails.started")}:</span> {fmtDate(wo.started_at)}
-                </div>
-                <div className="text-sm">
-                  <span className="text-white/60">{t("woDetails.completedAt")}:</span> {fmtDate(wo.completed_at)}
-                </div>
-                <div className="text-sm">
-                  <span className="text-white/60">{t("woDetails.odometer")}:</span> {wo.odometer ?? "—"}
-                </div>
-                <div className="text-sm">
-                  <span className="text-white/60">{t("woDetails.notes")}:</span> {wo.notes || "—"}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-sm font-semibold">{t("woDetails.vehicle")}</div>
-                <div className="text-sm">
-                  {wo.vehicles?.fleet_no ? `${wo.vehicles.fleet_no} - ` : ""}
-                  {wo.vehicles?.plate_no || wo.vehicles?.display_name || "—"}
-                </div>
-                <div className="text-xs text-white/50 font-mono">vehicle_id: {shortId(wo.vehicle_id)}</div>
-
-                <div className="mt-3 text-sm font-semibold">{t("woDetails.report")}</div>
-                <div className="text-sm">
-                  <span className="text-white/60">{t("woDetails.reportStatus")}:</span>{" "}
-                  {report?.report_status || "—"}
-                  {reportHint ? <div className="mt-1 text-xs text-white/70">{reportHint}</div> : null}
-                </div>
-
-                {totals ? (
-                  <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-white/60">{t("woDetails.parts")}:</span>
-                      <span>{totals.parts_cost_total}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">{t("woDetails.labor")}:</span>
-                      <span>{totals.labor_cost}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">{t("woDetails.service")}:</span>
-                      <span>{totals.service_cost}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">{t("woDetails.cashApproved")}:</span>
-                      <span>{totals.maintenance_cash_cost_total ?? 0}</span>
-                    </div>
-
-                    <div className="mt-2 text-xs text-white/60">
-                      {t("woDetails.mismatches")}:{" "}
-                      <span className={cn("font-semibold", mismatchTotal > 0 ? "text-yellow-200" : "text-green-200")}>
-                        {mismatchTotal}
-                      </span>
-                    </div>
-
-                    <div className="mt-2 flex justify-between font-semibold">
-                      <span>{t("woDetails.grandTotal")}:</span>
-                      <span>{totals.grand_total}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-white/70">{t("woDetails.noTotals")}</div>
-                )}
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Button variant="primary" onClick={completeWO} disabled={completing || !canComplete}>
-                    {completing ? t("woDetails.completing") : t("woDetails.completeWo")}
-                  </Button>
-                  {completeMsg ? (
-                    <span
-                      className={cn(
-                        "text-sm",
-                        String(completeMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
-                      )}
-                    >
-                      {completeMsg}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-2">
-              <Pill active={tab === "issues"} onClick={() => setTabAndUrl("issues")}>
-                {t("woDetails.tabIssues")}
-              </Pill>
-              <Pill active={tab === "installations"} onClick={() => setTabAndUrl("installations")}>
-                {t("woDetails.tabInstallations")}
-              </Pill>
-              <Pill active={tab === "qa"} onClick={() => setTabAndUrl("qa")}>
-                {t("woDetails.tabQa")}
-              </Pill>
-            </div>
-
-            {/* Reconciliation Table */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold">{t("woDetails.reconTitle")}</div>
-                <div className="text-xs text-white/60">
-                  {t("woDetails.reconMatched")}: {recon.matched?.length || 0} |{" "}
-                  {t("woDetails.reconIssuedNotInstalled")}: {recon.issued_not_installed?.length || 0} |{" "}
-                  {t("woDetails.reconInstalledNotIssued")}: {recon.installed_not_issued?.length || 0}
-                </div>
-              </div>
-
-              <div className="mt-3 overflow-auto rounded-2xl border border-white/10">
-                <table className="min-w-[900px] w-full text-sm">
-                  <thead className="bg-white/5 text-white/70">
-                    <tr>
-                      <th className="text-left p-3">{t("woDetails.part")}</th>
-                      <th className="text-left p-3">{t("woDetails.issuedQty")}</th>
-                      <th className="text-left p-3">{t("woDetails.installedQty")}</th>
-                      <th className="text-left p-3">{t("woDetails.issuedCost")}</th>
-                      <th className="text-left p-3">{t("common.status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(recon.matched || []).map((r: any) => (
-                      <tr key={`m_${r.part_id}`} className="border-t border-white/10">
-                        <td className="p-3">
-                          <div className="font-semibold">{r?.part?.name || "—"}</div>
-                          <div className="text-xs text-white/50 font-mono">{shortId(r.part_id)}</div>
-                        </td>
-                        <td className="p-3">{r.issued_qty}</td>
-                        <td className="p-3">{r.installed_qty}</td>
-                        <td className="p-3">{r.issued_cost}</td>
-                        <td className="p-3">
-                          <span className="text-green-200">{t("woDetails.matched")}</span>
-                        </td>
-                      </tr>
-                    ))}
-
-                    {(recon.issued_not_installed || []).map((r: any) => (
-                      <tr key={`i_${r.part_id}`} className="border-t border-white/10">
-                        <td className="p-3">
-                          <div className="font-semibold">{r?.part?.name || "—"}</div>
-                          <div className="text-xs text-white/50 font-mono">{shortId(r.part_id)}</div>
-                        </td>
-                        <td className="p-3">{r.issued_qty}</td>
-                        <td className="p-3">{r.installed_qty}</td>
-                        <td className="p-3">{r.issued_cost}</td>
-                        <td className="p-3">
-                          <span className="text-yellow-200">{t("woDetails.issuedGtInstalled")}</span>
-                        </td>
-                      </tr>
-                    ))}
-
-                    {(recon.installed_not_issued || []).map((r: any) => (
-                      <tr key={`x_${r.part_id}`} className="border-t border-white/10">
-                        <td className="p-3">
-                          <div className="font-semibold">{r?.part?.name || "—"}</div>
-                          <div className="text-xs text-white/50 font-mono">{shortId(r.part_id)}</div>
-                        </td>
-                        <td className="p-3">{r.issued_qty}</td>
-                        <td className="p-3">{r.installed_qty}</td>
-                        <td className="p-3">—</td>
-                        <td className="p-3">
-                          <span className="text-red-200">{t("woDetails.installedGtIssued")}</span>
-                        </td>
-                      </tr>
-                    ))}
-
-                    {(recon.matched || []).length +
-                      (recon.issued_not_installed || []).length +
-                      (recon.installed_not_issued || []).length ===
-                    0 ? (
-                      <tr className="border-t border-white/10">
-                        <td className="p-3 text-white/70" colSpan={5}>
-                          {t("woDetails.noReconData")}
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Issues Tab */}
-            {tab === "issues" ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold">{t("woDetails.issuesTitle")}</div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="secondary" onClick={createIssue} disabled={issueCreating || !canManage}>
-                      {issueCreating ? t("common.creating") : t("woDetails.createIssue")}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-2 text-xs text-white/60">
-                  {t("woDetails.currentIssueId")}:{" "}
-                  <span className="font-mono text-white">{issueId ? shortId(issueId) : "—"}</span>
-                </div>
-
-                {issueMsg ? (
-                  <div
-                    className={cn(
-                      "mt-2 text-sm",
-                      String(issueMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
-                    )}
-                  >
-                    {issueMsg}
-                  </div>
-                ) : null}
-
-                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-white/60 mb-1">{t("woDetails.partIdUuid")}</div>
-                    <input
-                      value={linePartId}
-                      onChange={(e) => setLinePartId(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder={t("woDetails.uuidPlaceholder")}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-white/60 mb-1">{t("woDetails.qty")}</div>
-                    <input
-                      type="number"
-                      value={lineQty}
-                      onChange={(e) => setLineQty(Number(e.target.value))}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-white/60 mb-1">{t("woDetails.unitCost")}</div>
-                    <input
-                      type="number"
-                      value={lineUnitCost}
-                      onChange={(e) => setLineUnitCost(Number(e.target.value))}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                    />
-                  </div>
-
-                  <div className="md:col-span-4">
-                    <div className="text-xs text-white/60 mb-1">{t("woDetails.notesOpt")}</div>
-                    <input
-                      value={lineNotes}
-                      onChange={(e) => setLineNotes(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder={t("common.optional")}
-                    />
-                  </div>
-
-                  <div className="md:col-span-4 flex items-center gap-2">
-                    <Button variant="primary" onClick={addIssueLine} disabled={lineSaving || !canManage}>
-                      {lineSaving ? t("common.saving") : t("woDetails.addLine")}
-                    </Button>
-                    {lineMsg ? (
-                      <div
-                        className={cn(
-                          "text-sm",
-                          String(lineMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
-                        )}
-                      >
-                        {lineMsg}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="mt-4 text-sm font-semibold">{t("woDetails.issuedLinesFromReport")}</div>
-                <div className="mt-2 overflow-auto rounded-2xl border border-white/10">
-                  <table className="min-w-[900px] w-full text-sm">
-                    <thead className="bg-white/5 text-white/70">
-                      <tr>
-                        <th className="text-left p-3">{t("woDetails.part")}</th>
-                        <th className="text-left p-3">{t("woDetails.qty")}</th>
-                        <th className="text-left p-3">{t("woDetails.unitCost")}</th>
-                        <th className="text-left p-3">{t("woDetails.total")}</th>
-                        <th className="text-left p-3">{t("woDetails.issue")}</th>
-                        <th className="text-left p-3">{t("woDetails.notes")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {issuedLines.length === 0 ? (
-                        <tr className="border-t border-white/10">
-                          <td colSpan={6} className="p-3 text-white/70">
-                            {t("woDetails.noIssuedLines")}
-                          </td>
-                        </tr>
-                      ) : (
-                        issuedLines.map((l: any, idx: number) => (
-                          <tr key={`${l.issue_id}_${l.part_id}_${idx}`} className="border-t border-white/10">
-                            <td className="p-3">
-                              <div className="font-semibold">{l?.part?.name || "—"}</div>
-                              <div className="text-xs text-white/50 font-mono">{shortId(l.part_id)}</div>
-                            </td>
-                            <td className="p-3">{l.qty}</td>
-                            <td className="p-3">{l.unit_cost}</td>
-                            <td className="p-3">{l.total_cost}</td>
-                            <td className="p-3 text-xs font-mono text-white/60">{shortId(l.issue_id)}</td>
-                            <td className="p-3">{l.notes || "—"}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : null}
-
-            {/* Installations Tab */}
-            {tab === "installations" ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold">{t("woDetails.installationsTitle")}</div>
-                  <Button variant="secondary" onClick={loadInstallations} disabled={instLoading}>
-                    {instLoading ? t("common.loading") : t("common.refresh")}
-                  </Button>
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-white/60 mb-1">{t("woDetails.partIdUuid")}</div>
-                    <input
-                      value={instPartId}
-                      onChange={(e) => setInstPartId(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder={t("woDetails.uuidPlaceholder")}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-white/60 mb-1">{t("woDetails.qtyInstalled")}</div>
-                    <input
-                      type="number"
-                      value={instQty}
-                      onChange={(e) => setInstQty(Number(e.target.value))}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-white/60 mb-1">{t("woDetails.odometerOpt")}</div>
-                    <input
-                      type="number"
-                      value={instOdo}
-                      onChange={(e) => setInstOdo(e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder={t("common.optional")}
-                    />
-                  </div>
-
-                  <div className="md:col-span-4">
-                    <div className="text-xs text-white/60 mb-1">{t("woDetails.notesOpt")}</div>
-                    <input
-                      value={instNotes}
-                      onChange={(e) => setInstNotes(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      placeholder={t("common.optional")}
-                    />
-                  </div>
-
-                  <div className="md:col-span-4 flex items-center gap-2">
-                    <Button variant="primary" onClick={addInstallation} disabled={instSaving}>
-                      {instSaving ? t("common.saving") : t("woDetails.addInstallation")}
-                    </Button>
-                    {instMsg ? (
-                      <div
-                        className={cn(
-                          "text-sm",
-                          String(instMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
-                        )}
-                      >
-                        {instMsg}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="mt-4 text-sm font-semibold">{t("woDetails.installationsApiList")}</div>
-                <div className="mt-2 overflow-auto rounded-2xl border border-white/10">
-                  <table className="min-w-[900px] w-full text-sm">
-                    <thead className="bg-white/5 text-white/70">
-                      <tr>
-                        <th className="text-left p-3">{t("woDetails.installedAt")}</th>
-                        <th className="text-left p-3">{t("woDetails.part")}</th>
-                        <th className="text-left p-3">{t("woDetails.qty")}</th>
-                        <th className="text-left p-3">{t("woDetails.odometer")}</th>
-                        <th className="text-left p-3">{t("woDetails.notes")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {instLoading ? (
-                        <tr className="border-t border-white/10">
-                          <td colSpan={5} className="p-3 text-white/70">
-                            {t("common.loading")}
-                          </td>
-                        </tr>
-                      ) : instItems.length === 0 ? (
-                        <tr className="border-t border-white/10">
-                          <td colSpan={5} className="p-3 text-white/70">
-                            {t("woDetails.noInstallations")}
-                          </td>
-                        </tr>
-                      ) : (
-                        instItems.map((x: any) => (
-                          <tr key={x.id} className="border-t border-white/10">
-                            <td className="p-3">{fmtDate(x.installed_at)}</td>
-                            <td className="p-3">
-                              <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
-                              <div className="text-xs text-white/50 font-mono">{shortId(x.part_id)}</div>
-                            </td>
-                            <td className="p-3">{x.qty_installed}</td>
-                            <td className="p-3">{x.odometer_at_install ?? "—"}</td>
-                            <td className="p-3">{x.notes || "—"}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-4 text-sm font-semibold">{t("woDetails.installationsRuntimeList")}</div>
-                <div className="mt-2 overflow-auto rounded-2xl border border-white/10">
-                  <table className="min-w-[900px] w-full text-sm">
-                    <thead className="bg-white/5 text-white/70">
-                      <tr>
-                        <th className="text-left p-3">{t("woDetails.installedAt")}</th>
-                        <th className="text-left p-3">{t("woDetails.part")}</th>
-                        <th className="text-left p-3">{t("woDetails.qty")}</th>
-                        <th className="text-left p-3">{t("woDetails.odometer")}</th>
-                        <th className="text-left p-3">{t("woDetails.notes")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {installationsRuntime.length === 0 ? (
-                        <tr className="border-t border-white/10">
-                          <td colSpan={5} className="p-3 text-white/70">
-                            {t("woDetails.noRuntimeInstallations")}
-                          </td>
-                        </tr>
-                      ) : (
-                        installationsRuntime.map((x: any) => (
-                          <tr key={x.id} className="border-t border-white/10">
-                            <td className="p-3">{fmtDate(x.installed_at)}</td>
-                            <td className="p-3">
-                              <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
-                              <div className="text-xs text-white/50 font-mono">{shortId(x.part_id)}</div>
-                            </td>
-                            <td className="p-3">{x.qty_installed}</td>
-                            <td className="p-3">{x.odometer_at_install ?? "—"}</td>
-                            <td className="p-3">{x.notes || "—"}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : null}
-
-            {/* QA Tab */}
-            {tab === "qa" ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div className="text-sm font-semibold">{t("woDetails.qaTitle")}</div>
-                  <div className="text-xs text-white/60">{t("woDetails.qaEndpoint")}</div>
-                </div>
-
-                {!canManage ? (
-                  <div className="text-sm text-white/70">{t("woDetails.onlyAdminAccountantQa")}</div>
-                ) : (
-                  <div className="space-y-3">
-                    {rs === "NEEDS_PARTS_RECONCILIATION" ? (
-                      <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
-                        {t("woDetails.fixMismatchFirst")}
-                      </div>
-                    ) : null}
-
-                    <div>
-                      <div className="text-xs text-white/60 mb-1">{t("woDetails.roadTestResult")}</div>
-                      <select value={qaResult} onChange={(e) => setQaResult(e.target.value as any)} className={selectCls}>
-                        <option value="" className={optionCls}>
-                          {t("common.select")}
-                        </option>
-                        <option value="PASS" className={optionCls}>
-                          {t("woDetails.pass")}
-                        </option>
-                        <option value="FAIL" className={optionCls}>
-                          {t("woDetails.fail")}
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <div className="text-xs text-white/60 mb-1">{t("woDetails.remarks")}</div>
-                      <textarea
-                        value={qaRemarks}
-                        onChange={(e) => setQaRemarks(e.target.value)}
-                        placeholder={t("woDetails.remarksPlaceholder")}
-                        className="min-h-[90px] w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button variant="primary" onClick={saveQA} disabled={qaSaving}>
-                        {qaSaving ? t("common.saving") : t("woDetails.saveQa")}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setQaMsg(null);
-                          setQaResult("");
-                          setQaRemarks("");
-                        }}
-                      >
-                        {t("common.clear")}
-                      </Button>
-                    </div>
-
-                    {qaMsg ? (
-                      <div
-                        className={cn(
-                          "text-sm",
-                          String(qaMsg).startsWith("✅") ? "text-green-200" : "text-red-200"
-                        )}
-                      >
-                        {qaMsg}
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            ) : null}
           </div>
-        )}
-      </Card>
+
+          <div className="mt-6 text-sm font-semibold">{t("woDetails.issuedLinesFromReport")}</div>
+          <div className="mt-2 overflow-auto rounded-xl border border-slate-200">
+            <table className="min-w-[900px] w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="text-left p-3">{t("woDetails.part")}</th>
+                  <th className="text-left p-3">{t("woDetails.qty")}</th>
+                  <th className="text-left p-3">{t("woDetails.unitCost")}</th>
+                  <th className="text-left p-3">{t("woDetails.total")}</th>
+                  <th className="text-left p-3">{t("woDetails.issue")}</th>
+                  <th className="text-left p-3">{t("woDetails.notes")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {issuedLines.length === 0 ? (
+                  <tr className="border-t border-slate-200">
+                    <td colSpan={6} className="p-3 text-slate-500">
+                      {t("woDetails.noIssuedLines")}
+                    </td>
+                  </tr>
+                ) : (
+                  issuedLines.map((l: any, idx: number) => (
+                    <tr key={`${l.issue_id}_${l.part_id}_${idx}`} className="border-t border-slate-200">
+                      <td className="p-3">
+                        <div className="font-semibold">{l?.part?.name || "—"}</div>
+                        <div className="text-xs text-slate-500 font-mono">{shortId(l.part_id)}</div>
+                      </td>
+                      <td className="p-3">{l.qty}</td>
+                      <td className="p-3">{l.unit_cost}</td>
+                      <td className="p-3">{l.total_cost}</td>
+                      <td className="p-3 text-xs font-mono text-slate-500">{shortId(l.issue_id)}</td>
+                      <td className="p-3">{l.notes || "—"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Installations Tab */}
+      {tab === "installations" ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm font-semibold">{t("woDetails.installationsTitle")}</div>
+            <Button variant="secondary" onClick={loadInstallations} disabled={instLoading} isLoading={instLoading}>
+              {t("common.refresh")}
+            </Button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="md:col-span-2">
+              <div className="text-xs text-slate-500 mb-1">{t("woDetails.partIdUuid")}</div>
+              <input
+                value={instPartId}
+                onChange={(e) => setInstPartId(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                placeholder={t("woDetails.uuidPlaceholder")}
+              />
+            </div>
+
+            <div>
+              <div className="text-xs text-slate-500 mb-1">{t("woDetails.qtyInstalled")}</div>
+              <input
+                type="number"
+                value={instQty}
+                onChange={(e) => setInstQty(Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+              />
+            </div>
+
+            <div>
+              <div className="text-xs text-slate-500 mb-1">{t("woDetails.odometerOpt")}</div>
+              <input
+                type="number"
+                value={instOdo}
+                onChange={(e) => setInstOdo(e.target.value === "" ? "" : Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                placeholder={t("common.optional")}
+              />
+            </div>
+
+            <div className="md:col-span-4">
+              <div className="text-xs text-slate-500 mb-1">{t("woDetails.notesOpt")}</div>
+              <input
+                value={instNotes}
+                onChange={(e) => setInstNotes(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                placeholder={t("common.optional")}
+              />
+            </div>
+
+            <div className="md:col-span-4 flex items-center gap-2">
+              <Button variant="primary" onClick={addInstallation} disabled={instSaving} isLoading={instSaving}>
+                {t("woDetails.addInstallation")}
+              </Button>
+              {instMsg ? (
+                <div className={cn("text-sm", String(instMsg).startsWith("✅") ? "text-green-700" : "text-red-700")}>
+                  {instMsg}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-6 text-sm font-semibold">{t("woDetails.installationsApiList")}</div>
+          <div className="mt-2 overflow-auto rounded-xl border border-slate-200">
+            <table className="min-w-[900px] w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="text-left p-3">{t("woDetails.installedAt")}</th>
+                  <th className="text-left p-3">{t("woDetails.part")}</th>
+                  <th className="text-left p-3">{t("woDetails.qty")}</th>
+                  <th className="text-left p-3">{t("woDetails.odometer")}</th>
+                  <th className="text-left p-3">{t("woDetails.notes")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {instLoading ? (
+                  <tr className="border-t border-slate-200">
+                    <td colSpan={5} className="p-3 text-slate-500">
+                      {t("common.loading")}
+                    </td>
+                  </tr>
+                ) : instItems.length === 0 ? (
+                  <tr className="border-t border-slate-200">
+                    <td colSpan={5} className="p-3 text-slate-500">
+                      {t("woDetails.noInstallations")}
+                    </td>
+                  </tr>
+                ) : (
+                  instItems.map((x: any) => (
+                    <tr key={x.id} className="border-t border-slate-200">
+                      <td className="p-3">{fmtDate(x.installed_at)}</td>
+                      <td className="p-3">
+                        <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
+                        <div className="text-xs text-slate-500 font-mono">{shortId(x.part_id)}</div>
+                      </td>
+                      <td className="p-3">{x.qty_installed}</td>
+                      <td className="p-3">{x.odometer_at_install ?? "—"}</td>
+                      <td className="p-3">{x.notes || "—"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 text-sm font-semibold">{t("woDetails.installationsRuntimeList")}</div>
+          <div className="mt-2 overflow-auto rounded-xl border border-slate-200">
+            <table className="min-w-[900px] w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="text-left p-3">{t("woDetails.installedAt")}</th>
+                  <th className="text-left p-3">{t("woDetails.part")}</th>
+                  <th className="text-left p-3">{t("woDetails.qty")}</th>
+                  <th className="text-left p-3">{t("woDetails.odometer")}</th>
+                  <th className="text-left p-3">{t("woDetails.notes")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {installationsRuntime.length === 0 ? (
+                  <tr className="border-t border-slate-200">
+                    <td colSpan={5} className="p-3 text-slate-500">
+                      {t("woDetails.noRuntimeInstallations")}
+                    </td>
+                  </tr>
+                ) : (
+                  installationsRuntime.map((x: any) => (
+                    <tr key={x.id} className="border-t border-slate-200">
+                      <td className="p-3">{fmtDate(x.installed_at)}</td>
+                      <td className="p-3">
+                        <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
+                        <div className="text-xs text-slate-500 font-mono">{shortId(x.part_id)}</div>
+                      </td>
+                      <td className="p-3">{x.qty_installed}</td>
+                      <td className="p-3">{x.odometer_at_install ?? "—"}</td>
+                      <td className="p-3">{x.notes || "—"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {/* QA Tab */}
+      {tab === "qa" ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm font-semibold">{t("woDetails.qaTitle")}</div>
+            <div className="text-xs text-slate-500">{t("woDetails.qaEndpoint")}</div>
+          </div>
+
+          {!canManage ? (
+            <div className="mt-3 text-sm text-slate-600">{t("woDetails.onlyAdminAccountantQa")}</div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {rs === "NEEDS_PARTS_RECONCILIATION" ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  {t("woDetails.fixMismatchFirst")}
+                </div>
+              ) : null}
+
+              <div>
+                <div className="text-xs text-slate-500 mb-1">{t("woDetails.roadTestResult")}</div>
+                <select
+                  value={qaResult}
+                  onChange={(e) => setQaResult(e.target.value as any)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                >
+                  <option value="">{t("common.select")}</option>
+                  <option value="PASS">{t("woDetails.pass")}</option>
+                  <option value="FAIL">{t("woDetails.fail")}</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="text-xs text-slate-500 mb-1">{t("woDetails.remarks")}</div>
+                <textarea
+                  value={qaRemarks}
+                  onChange={(e) => setQaRemarks(e.target.value)}
+                  placeholder={t("woDetails.remarksPlaceholder")}
+                  className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="primary" onClick={saveQA} disabled={qaSaving} isLoading={qaSaving}>
+                  {t("woDetails.saveQa")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setQaMsg(null);
+                    setQaResult("");
+                    setQaRemarks("");
+                  }}
+                >
+                  {t("common.clear")}
+                </Button>
+              </div>
+
+              {qaMsg ? (
+                <div className={cn("text-sm", String(qaMsg).startsWith("✅") ? "text-green-700" : "text-red-700")}>
+                  {qaMsg}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
