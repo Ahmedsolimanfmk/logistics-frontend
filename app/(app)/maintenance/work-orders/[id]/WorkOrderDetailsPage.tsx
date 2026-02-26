@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback,useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
@@ -163,6 +163,10 @@ const optionCls = "bg-neutral-900 text-white";
 
 export default function WorkOrderDetailsPage() {
   const t = useT();
+  const tRef = useRef(t);
+useEffect(() => {
+  tRef.current = t;
+}, [t]);
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -266,33 +270,22 @@ export default function WorkOrderDetailsPage() {
   }
 
   const loadInstallations = useCallback(async () => {
-    if (!token || !id) return;
-    setInstLoading(true);
-    setInstMsg(null);
+  if (!token || !id) return;
+  setInstLoading(true);
+  setInstMsg(null);
 
-    try {
-      const res: any = await apiGet(`/maintenance/work-orders/${id}/installations`);
-
-      const arr = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.items)
-        ? res.items
-        : Array.isArray(res?.installations)
-        ? res.installations
-        : Array.isArray(res?.data)
-        ? res.data
-        : [];
-
-      setInstItems(arr);
-    } catch (e: any) {
-      setInstItems([]);
-      setInstMsg(e?.message || t("woDetails.installationsLoadFailed"));
-    } finally {
-      setInstLoading(false);
-    }
-  }, [token, id, t]);
-
-  const loadHubCounts = useCallback(async () => {
+  try {
+    const res: any = await apiGet(`/maintenance/work-orders/${id}/installations`);
+    // ...
+  } catch (e: any) {
+    setInstItems([]);
+    setInstMsg(e?.message || tRef.current("woDetails.installationsLoadFailed"));
+  } finally {
+    setInstLoading(false);
+  }
+}, [token, id]); // ✅ شيل t
+  
+const loadHubCounts = useCallback(async () => {
     if (!token || !id) return;
     setHubCountsLoading(true);
 
@@ -332,36 +325,30 @@ export default function WorkOrderDetailsPage() {
   }, [token, id]);
 
   const load = useCallback(async () => {
-    if (!token || !id) return;
+  if (!token || !id) return;
 
-    setLoading(true);
-    setErr(null);
+  setLoading(true);
+  setErr(null);
 
-    try {
-      const [woRes, repRes] = await Promise.all([
-        apiGet<WorkOrderByIdResponse>(`/maintenance/work-orders/${id}`),
-        apiGet<ReportResponse>(`/maintenance/work-orders/${id}/report`),
-      ]);
+  try {
+    const [woRes, repRes] = await Promise.all([
+      apiGet<WorkOrderByIdResponse>(`/maintenance/work-orders/${id}`),
+      apiGet<ReportResponse>(`/maintenance/work-orders/${id}/report`),
+    ]);
 
-      setWo(woRes.work_order || null);
-      setReport(repRes || null);
+    setWo(woRes.work_order || null);
+    setReport(repRes || null);
 
-      const db = repRes?.post_report_db;
-      if (db?.road_test_result) {
-        const r = String(db.road_test_result).toUpperCase();
-        setQaResult(r === "FAIL" ? "FAIL" : "PASS");
-      }
-      if (typeof db?.remarks === "string") setQaRemarks(db.remarks);
-
-      await loadHubCounts();
-    } catch (e: any) {
-      setWo(null);
-      setReport(null);
-      setErr(e?.message || t("woDetails.failedToLoad"));
-    } finally {
-      setLoading(false);
-    }
-  }, [token, id, t, loadHubCounts]);
+    // ...
+    await loadHubCounts();
+  } catch (e: any) {
+    setWo(null);
+    setReport(null);
+    setErr(e?.message || tRef.current("woDetails.failedToLoad"));
+  } finally {
+    setLoading(false);
+  }
+}, [token, id, loadHubCounts]); // ✅ شيل t
 
   useEffect(() => {
     if (!token || !id) return;
