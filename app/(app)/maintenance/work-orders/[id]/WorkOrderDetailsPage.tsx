@@ -7,12 +7,14 @@ import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 import { apiGet, apiPost, unwrapTotal } from "@/src/lib/api";
 
-// ✅ Design System
+// ✅ Design System (الموحد)
 import { Button } from "@/src/components/ui/Button";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { KpiCard } from "@/src/components/ui/KpiCard";
-import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { Card } from "@/src/components/ui/Card";
+import { TabsBar } from "@/src/components/ui/TabsBar";
+import { Toast } from "@/src/components/Toast";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -77,6 +79,8 @@ type TabKey = "issues" | "installations" | "qa";
 
 export default function WorkOrderDetailsPage() {
   const t = useT();
+
+  // ✅ تثبيت t لتفادي loops
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
@@ -111,6 +115,16 @@ export default function WorkOrderDetailsPage() {
 
   const [wo, setWo] = useState<WorkOrder | null>(null);
   const [report, setReport] = useState<ReportResponse | null>(null);
+
+  // Toast
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+  const showToast = useCallback((m: string, type: "success" | "error" = "success") => {
+    setToastMsg(m);
+    setToastType(type);
+    setToastOpen(true);
+  }, []);
 
   // ✅ WO Hub
   const [hubWarehouseId, setHubWarehouseId] = useState("");
@@ -177,7 +191,7 @@ export default function WorkOrderDetailsPage() {
     if (!id) return;
     const wh = String(hubWarehouseId || "").trim();
     if (!wh) {
-      alert("warehouse_id مطلوب لإنشاء طلب مخزني من داخل أمر العمل.");
+      showToast("warehouse_id مطلوب لإنشاء طلب مخزني من داخل أمر العمل.", "error");
       return;
     }
     router.push(
@@ -192,7 +206,6 @@ export default function WorkOrderDetailsPage() {
 
     try {
       const res: any = await apiGet(`/maintenance/work-orders/${id}/installations`);
-
       const arr = Array.isArray(res)
         ? res
         : Array.isArray(res?.items)
@@ -243,9 +256,13 @@ export default function WorkOrderDetailsPage() {
         : [];
       const installationsTotal = instArr.length;
 
-      setHubCounts({ requests: requestsTotal, issues: issuesTotal, installations: installationsTotal });
+      setHubCounts({
+        requests: Number.isFinite(requestsTotal) ? requestsTotal : 0,
+        issues: Number.isFinite(issuesTotal) ? issuesTotal : 0,
+        installations: installationsTotal,
+      });
     } catch {
-      // لا نعطل الصفحة لو endpoints غير موجودة
+      // ignore
     } finally {
       setHubCountsLoading(false);
     }
@@ -346,7 +363,7 @@ export default function WorkOrderDetailsPage() {
         notes: null,
       });
       setIssueId(res?.issue?.id || null);
-      setIssueMsg(tRef.current("woDetails.issueCreated"));
+      setIssueMsg("✅ " + tRef.current("woDetails.issueCreated"));
       await loadHubCounts();
       await load();
     } catch (e: any) {
@@ -394,7 +411,7 @@ export default function WorkOrderDetailsPage() {
         ],
       });
 
-      setLineMsg(tRef.current("woDetails.lineAdded"));
+      setLineMsg("✅ " + tRef.current("woDetails.lineAdded"));
       setLinePartId("");
       setLineQty(1);
       setLineUnitCost(0);
@@ -439,7 +456,7 @@ export default function WorkOrderDetailsPage() {
         ],
       });
 
-      setInstMsg(tRef.current("woDetails.installationAdded"));
+      showToast("✅ " + tRef.current("woDetails.installationAdded"), "success");
       setInstPartId("");
       setInstQty(1);
       setInstOdo("");
@@ -448,6 +465,7 @@ export default function WorkOrderDetailsPage() {
       await Promise.all([load(), loadInstallations(), loadHubCounts()]);
     } catch (e: any) {
       setInstMsg(`${tRef.current("common.failed")}: ${e?.message || tRef.current("common.unknownError")}`);
+      showToast(String(e?.message || "فشل الإضافة"), "error");
     } finally {
       setInstSaving(false);
     }
@@ -478,10 +496,12 @@ export default function WorkOrderDetailsPage() {
         checklist_json: null,
       });
 
-      setQaMsg(tRef.current("woDetails.qaSaved"));
+      setQaMsg("✅ " + tRef.current("woDetails.qaSaved"));
+      showToast("✅ " + tRef.current("woDetails.qaSaved"), "success");
       await load();
     } catch (e: any) {
       setQaMsg(`${tRef.current("woDetails.qaSaveFailed")}: ${e?.message || tRef.current("common.unknownError")}`);
+      showToast(String(e?.message || "فشل الحفظ"), "error");
     } finally {
       setQaSaving(false);
     }
@@ -499,16 +519,16 @@ export default function WorkOrderDetailsPage() {
     setCompleting(true);
     try {
       await apiPost(`/maintenance/work-orders/${id}/complete`, { notes: null });
-      setCompleteMsg(tRef.current("woDetails.completed"));
+      setCompleteMsg("✅ " + tRef.current("woDetails.completed"));
+      showToast("✅ " + tRef.current("woDetails.completed"), "success");
       await load();
     } catch (e: any) {
       setCompleteMsg(`${tRef.current("woDetails.completeFailed")}: ${e?.message || tRef.current("common.unknownError")}`);
+      showToast(String(e?.message || "فشل الإتمام"), "error");
     } finally {
       setCompleting(false);
     }
   }
-
-  // ---------------- UI ----------------
 
   if (!token) {
     return (
@@ -541,8 +561,7 @@ export default function WorkOrderDetailsPage() {
         }
       />
 
-      {/* Header Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="text-base font-semibold">
@@ -551,16 +570,14 @@ export default function WorkOrderDetailsPage() {
             {wo?.status ? <StatusBadge status={wo.status} /> : null}
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="primary"
-              onClick={completeWO}
-              disabled={completing || !canComplete}
-              isLoading={completing}
-            >
-              {t("woDetails.completeWo")}
-            </Button>
-          </div>
+          <Button
+            variant="primary"
+            onClick={completeWO}
+            disabled={completing || !canComplete}
+            isLoading={completing}
+          >
+            {t("woDetails.completeWo")}
+          </Button>
         </div>
 
         {completeMsg ? (
@@ -570,31 +587,25 @@ export default function WorkOrderDetailsPage() {
         ) : null}
 
         {loading ? (
-          <div className="mt-3 text-sm text-slate-500">{t("common.loading")}</div>
+          <div className="mt-3 text-sm text-gray-500">{t("common.loading")}</div>
         ) : err ? (
           <div className="mt-3 text-sm text-red-700">
             {t("common.error")}: {err}
           </div>
         ) : null}
-      </div>
+      </Card>
 
-      {/* WO Hub */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <Card title="WO Hub">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="text-sm font-semibold">WO Hub</div>
-            <div className="text-xs text-slate-500">
-              ربط المخزن + الطلبات + الصرف + التركيبات من نفس صفحة أمر العمل
-            </div>
-          </div>
+          <div className="text-xs text-gray-500">ربط المخزن + الطلبات + الصرف + التركيبات من نفس صفحة أمر العمل</div>
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
-              <div className="text-xs text-slate-500">warehouse_id</div>
+              <div className="text-xs text-gray-500">warehouse_id</div>
               <input
                 value={hubWarehouseId}
                 onChange={(e) => setHubWarehouseId(e.target.value)}
-                className="w-[260px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-[260px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
                 placeholder="uuid"
               />
             </div>
@@ -607,21 +618,21 @@ export default function WorkOrderDetailsPage() {
 
             <Button variant="secondary" onClick={hubOpenRequests}>
               Open Requests
-              <span className="ml-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs">
+              <span className="ml-2 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs">
                 {hubCountsLoading ? "…" : hubCounts.requests}
               </span>
             </Button>
 
             <Button variant="secondary" onClick={hubOpenIssues}>
               Open Issues
-              <span className="ml-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs">
+              <span className="ml-2 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs">
                 {hubCountsLoading ? "…" : hubCounts.issues}
               </span>
             </Button>
 
             <Button variant="secondary" onClick={hubAddInstallations}>
               Add Installations
-              <span className="ml-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs">
+              <span className="ml-2 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs">
                 {hubCountsLoading ? "…" : hubCounts.installations}
               </span>
             </Button>
@@ -633,11 +644,10 @@ export default function WorkOrderDetailsPage() {
         </div>
 
         {!canManage ? (
-          <div className="mt-2 text-xs text-slate-500">ملاحظة: Create Request متاح فقط لـ ADMIN / ACCOUNTANT</div>
+          <div className="mt-2 text-xs text-gray-500">ملاحظة: Create Request متاح فقط لـ ADMIN / ACCOUNTANT</div>
         ) : null}
-      </div>
+      </Card>
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <KpiCard label={t("woDetails.parts")} value={totals?.parts_cost_total ?? 0} />
         <KpiCard label={t("woDetails.labor")} value={totals?.labor_cost ?? 0} />
@@ -645,101 +655,80 @@ export default function WorkOrderDetailsPage() {
         <KpiCard label={t("woDetails.grandTotal")} value={totals?.grand_total ?? 0} />
       </div>
 
-      {/* Details + Vehicle/Report */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-sm font-semibold mb-2">{t("woDetails.wo")}</div>
-
+        <Card title={t("woDetails.wo")}>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <div>
-              <span className="text-slate-500">{t("woDetails.type")}:</span> {wo?.type || "—"}
+              <span className="text-gray-500">{t("woDetails.type")}:</span> {wo?.type || "—"}
             </div>
             <div>
-              <span className="text-slate-500">{t("woDetails.vendor")}:</span> {wo?.vendor_name || "—"}
+              <span className="text-gray-500">{t("woDetails.vendor")}:</span> {wo?.vendor_name || "—"}
             </div>
             <div>
-              <span className="text-slate-500">{t("woDetails.opened")}:</span> {fmtDate(wo?.opened_at)}
+              <span className="text-gray-500">{t("woDetails.opened")}:</span> {fmtDate(wo?.opened_at)}
             </div>
             <div>
-              <span className="text-slate-500">{t("woDetails.started")}:</span> {fmtDate(wo?.started_at)}
+              <span className="text-gray-500">{t("woDetails.started")}:</span> {fmtDate(wo?.started_at)}
             </div>
             <div>
-              <span className="text-slate-500">{t("woDetails.completedAt")}:</span> {fmtDate(wo?.completed_at)}
+              <span className="text-gray-500">{t("woDetails.completedAt")}:</span> {fmtDate(wo?.completed_at)}
             </div>
             <div>
-              <span className="text-slate-500">{t("woDetails.odometer")}:</span> {wo?.odometer ?? "—"}
+              <span className="text-gray-500">{t("woDetails.odometer")}:</span> {wo?.odometer ?? "—"}
             </div>
             <div>
-              <span className="text-slate-500">{t("woDetails.notes")}:</span> {wo?.notes || "—"}
+              <span className="text-gray-500">{t("woDetails.notes")}:</span> {wo?.notes || "—"}
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-sm font-semibold">{t("woDetails.vehicle")}</div>
-          <div className="mt-1 text-sm">
+        <Card title={t("woDetails.vehicle")}>
+          <div className="text-sm">
             {wo?.vehicles?.fleet_no ? `${wo.vehicles.fleet_no} - ` : ""}
             {wo?.vehicles?.plate_no || wo?.vehicles?.display_name || "—"}
           </div>
-          <div className="mt-1 text-xs text-slate-500 font-mono">vehicle_id: {shortId(wo?.vehicle_id)}</div>
+          <div className="mt-1 text-xs text-gray-500 font-mono">vehicle_id: {shortId(wo?.vehicle_id)}</div>
 
           <div className="mt-4 text-sm font-semibold">{t("woDetails.report")}</div>
           <div className="mt-1 text-sm">
-            <span className="text-slate-500">{t("woDetails.reportStatus")}:</span> {report?.report_status || "—"}
+            <span className="text-gray-500">{t("woDetails.reportStatus")}:</span> {report?.report_status || "—"}
           </div>
-          {reportHint ? <div className="mt-1 text-xs text-slate-500">{reportHint}</div> : null}
+          {reportHint ? <div className="mt-1 text-xs text-gray-500">{reportHint}</div> : null}
 
           <div className="mt-3 text-sm">
-            <span className="text-slate-500">{t("woDetails.mismatches")}:</span>{" "}
+            <span className="text-gray-500">{t("woDetails.mismatches")}:</span>{" "}
             <span className={cn("font-semibold", mismatchTotal > 0 ? "text-amber-700" : "text-green-700")}>
               {mismatchTotal}
             </span>
           </div>
 
           <div className="mt-3 text-sm">
-            <span className="text-slate-500">{t("woDetails.cashApproved")}:</span>{" "}
+            <span className="text-gray-500">{t("woDetails.cashApproved")}:</span>{" "}
             <span className="font-semibold">{totals?.maintenance_cash_cost_total ?? 0}</span>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Tabs */}
-      <FiltersBar
-  left={
-    <div className="flex flex-wrap gap-2">
-      {tabItems.map((x) => (
-        <Button
-          key={x.key}
-          variant={tab === x.key ? "primary" : "secondary"}
-          onClick={() => setTabAndUrl(x.key)}
-        >
-          {x.label}
-        </Button>
-      ))}
-    </div>
-  }
-  right={
-    <div className="flex items-center gap-2">
-      <Button variant="secondary" onClick={load} disabled={loading}>
-        {t("common.refresh")}
-      </Button>
-    </div>
-  }
-/>
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabsBar<TabKey> tabs={tabItems} value={tab} onChange={setTabAndUrl} />
+          <Button variant="secondary" onClick={load} disabled={loading}>
+            {t("common.refresh")}
+          </Button>
+        </div>
+      </Card>
+
       {/* Reconciliation Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-sm font-semibold">{t("woDetails.reconTitle")}</div>
-          <div className="text-xs text-slate-500">
-            {t("woDetails.reconMatched")}: {recon.matched?.length || 0} | {t("woDetails.reconIssuedNotInstalled")}:{" "}
-            {recon.issued_not_installed?.length || 0} | {t("woDetails.reconInstalledNotIssued")}:{" "}
-            {recon.installed_not_issued?.length || 0}
-          </div>
+      <Card title={t("woDetails.reconTitle")}>
+        <div className="text-xs text-gray-500">
+          {t("woDetails.reconMatched")}: {recon.matched?.length || 0} | {t("woDetails.reconIssuedNotInstalled")}:{" "}
+          {recon.issued_not_installed?.length || 0} | {t("woDetails.reconInstalledNotIssued")}:{" "}
+          {recon.installed_not_issued?.length || 0}
         </div>
 
-        <div className="mt-3 overflow-auto rounded-xl border border-slate-200">
+        <div className="mt-3 overflow-auto rounded-xl border border-gray-200">
           <table className="min-w-[900px] w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-gray-50 text-gray-600">
               <tr>
                 <th className="text-left p-3">{t("woDetails.part")}</th>
                 <th className="text-left p-3">{t("woDetails.issuedQty")}</th>
@@ -750,10 +739,10 @@ export default function WorkOrderDetailsPage() {
             </thead>
             <tbody>
               {(recon.matched || []).map((r: any) => (
-                <tr key={`m_${r.part_id}`} className="border-t border-slate-200">
+                <tr key={`m_${r.part_id}`} className="border-t border-gray-200">
                   <td className="p-3">
                     <div className="font-semibold">{r?.part?.name || "—"}</div>
-                    <div className="text-xs text-slate-500 font-mono">{shortId(r.part_id)}</div>
+                    <div className="text-xs text-gray-500 font-mono">{shortId(r.part_id)}</div>
                   </td>
                   <td className="p-3">{r.issued_qty}</td>
                   <td className="p-3">{r.installed_qty}</td>
@@ -765,10 +754,10 @@ export default function WorkOrderDetailsPage() {
               ))}
 
               {(recon.issued_not_installed || []).map((r: any) => (
-                <tr key={`i_${r.part_id}`} className="border-t border-slate-200">
+                <tr key={`i_${r.part_id}`} className="border-t border-gray-200">
                   <td className="p-3">
                     <div className="font-semibold">{r?.part?.name || "—"}</div>
-                    <div className="text-xs text-slate-500 font-mono">{shortId(r.part_id)}</div>
+                    <div className="text-xs text-gray-500 font-mono">{shortId(r.part_id)}</div>
                   </td>
                   <td className="p-3">{r.issued_qty}</td>
                   <td className="p-3">{r.installed_qty}</td>
@@ -780,10 +769,10 @@ export default function WorkOrderDetailsPage() {
               ))}
 
               {(recon.installed_not_issued || []).map((r: any) => (
-                <tr key={`x_${r.part_id}`} className="border-t border-slate-200">
+                <tr key={`x_${r.part_id}`} className="border-t border-gray-200">
                   <td className="p-3">
                     <div className="font-semibold">{r?.part?.name || "—"}</div>
-                    <div className="text-xs text-slate-500 font-mono">{shortId(r.part_id)}</div>
+                    <div className="text-xs text-gray-500 font-mono">{shortId(r.part_id)}</div>
                   </td>
                   <td className="p-3">{r.issued_qty}</td>
                   <td className="p-3">{r.installed_qty}</td>
@@ -798,8 +787,8 @@ export default function WorkOrderDetailsPage() {
                 (recon.issued_not_installed || []).length +
                 (recon.installed_not_issued || []).length ===
               0 ? (
-                <tr className="border-t border-slate-200">
-                  <td className="p-3 text-slate-500" colSpan={5}>
+                <tr className="border-t border-gray-200">
+                  <td className="p-3 text-gray-500" colSpan={5}>
                     {t("woDetails.noReconData")}
                   </td>
                 </tr>
@@ -807,20 +796,18 @@ export default function WorkOrderDetailsPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Issues Tab */}
       {tab === "issues" ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm font-semibold">{t("woDetails.issuesTitle")}</div>
-            <Button variant="secondary" onClick={createIssue} disabled={issueCreating || !canManage} isLoading={issueCreating}>
-              {t("woDetails.createIssue")}
-            </Button>
-          </div>
-
-          <div className="mt-2 text-xs text-slate-500">
-            {t("woDetails.currentIssueId")}: <span className="font-mono text-slate-900">{issueId ? shortId(issueId) : "—"}</span>
+        <Card title={t("woDetails.issuesTitle")} right={
+          <Button variant="secondary" onClick={createIssue} disabled={issueCreating || !canManage} isLoading={issueCreating}>
+            {t("woDetails.createIssue")}
+          </Button>
+        }>
+          <div className="text-xs text-gray-500">
+            {t("woDetails.currentIssueId")}:{" "}
+            <span className="font-mono text-gray-900">{issueId ? shortId(issueId) : "—"}</span>
           </div>
 
           {issueMsg ? (
@@ -831,41 +818,41 @@ export default function WorkOrderDetailsPage() {
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="md:col-span-2">
-              <div className="text-xs text-slate-500 mb-1">{t("woDetails.partIdUuid")}</div>
+              <div className="text-xs text-gray-500 mb-1">{t("woDetails.partIdUuid")}</div>
               <input
                 value={linePartId}
                 onChange={(e) => setLinePartId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
                 placeholder={t("woDetails.uuidPlaceholder")}
               />
             </div>
 
             <div>
-              <div className="text-xs text-slate-500 mb-1">{t("woDetails.qty")}</div>
+              <div className="text-xs text-gray-500 mb-1">{t("woDetails.qty")}</div>
               <input
                 type="number"
                 value={lineQty}
                 onChange={(e) => setLineQty(Number(e.target.value))}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
               />
             </div>
 
             <div>
-              <div className="text-xs text-slate-500 mb-1">{t("woDetails.unitCost")}</div>
+              <div className="text-xs text-gray-500 mb-1">{t("woDetails.unitCost")}</div>
               <input
                 type="number"
                 value={lineUnitCost}
                 onChange={(e) => setLineUnitCost(Number(e.target.value))}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
               />
             </div>
 
             <div className="md:col-span-4">
-              <div className="text-xs text-slate-500 mb-1">{t("woDetails.notesOpt")}</div>
+              <div className="text-xs text-gray-500 mb-1">{t("woDetails.notesOpt")}</div>
               <input
                 value={lineNotes}
                 onChange={(e) => setLineNotes(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
                 placeholder={t("common.optional")}
               />
             </div>
@@ -883,9 +870,9 @@ export default function WorkOrderDetailsPage() {
           </div>
 
           <div className="mt-6 text-sm font-semibold">{t("woDetails.issuedLinesFromReport")}</div>
-          <div className="mt-2 overflow-auto rounded-xl border border-slate-200">
+          <div className="mt-2 overflow-auto rounded-xl border border-gray-200">
             <table className="min-w-[900px] w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
+              <thead className="bg-gray-50 text-gray-600">
                 <tr>
                   <th className="text-left p-3">{t("woDetails.part")}</th>
                   <th className="text-left p-3">{t("woDetails.qty")}</th>
@@ -897,22 +884,22 @@ export default function WorkOrderDetailsPage() {
               </thead>
               <tbody>
                 {issuedLines.length === 0 ? (
-                  <tr className="border-t border-slate-200">
-                    <td colSpan={6} className="p-3 text-slate-500">
+                  <tr className="border-t border-gray-200">
+                    <td colSpan={6} className="p-3 text-gray-500">
                       {t("woDetails.noIssuedLines")}
                     </td>
                   </tr>
                 ) : (
                   issuedLines.map((l: any, idx: number) => (
-                    <tr key={`${l.issue_id}_${l.part_id}_${idx}`} className="border-t border-slate-200">
+                    <tr key={`${l.issue_id}_${l.part_id}_${idx}`} className="border-t border-gray-200">
                       <td className="p-3">
                         <div className="font-semibold">{l?.part?.name || "—"}</div>
-                        <div className="text-xs text-slate-500 font-mono">{shortId(l.part_id)}</div>
+                        <div className="text-xs text-gray-500 font-mono">{shortId(l.part_id)}</div>
                       </td>
                       <td className="p-3">{l.qty}</td>
                       <td className="p-3">{l.unit_cost}</td>
                       <td className="p-3">{l.total_cost}</td>
-                      <td className="p-3 text-xs font-mono text-slate-500">{shortId(l.issue_id)}</td>
+                      <td className="p-3 text-xs font-mono text-gray-500">{shortId(l.issue_id)}</td>
                       <td className="p-3">{l.notes || "—"}</td>
                     </tr>
                   ))
@@ -920,57 +907,56 @@ export default function WorkOrderDetailsPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       {/* Installations Tab */}
       {tab === "installations" ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm font-semibold">{t("woDetails.installationsTitle")}</div>
-            <Button variant="secondary" onClick={loadInstallations} disabled={instLoading} isLoading={instLoading}>
-              {t("common.refresh")}
-            </Button>
-          </div>
+        <Card title={t("woDetails.installationsTitle")} right={
+          <Button variant="secondary" onClick={loadInstallations} disabled={instLoading} isLoading={instLoading}>
+            {t("common.refresh")}
+          </Button>
+        }>
+          <div className="mt-2 text-xs text-gray-500">{instMsg ? `⚠ ${instMsg}` : null}</div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="md:col-span-2">
-              <div className="text-xs text-slate-500 mb-1">{t("woDetails.partIdUuid")}</div>
+              <div className="text-xs text-gray-500 mb-1">{t("woDetails.partIdUuid")}</div>
               <input
                 value={instPartId}
                 onChange={(e) => setInstPartId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
                 placeholder={t("woDetails.uuidPlaceholder")}
               />
             </div>
 
             <div>
-              <div className="text-xs text-slate-500 mb-1">{t("woDetails.qtyInstalled")}</div>
+              <div className="text-xs text-gray-500 mb-1">{t("woDetails.qtyInstalled")}</div>
               <input
                 type="number"
                 value={instQty}
                 onChange={(e) => setInstQty(Number(e.target.value))}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
               />
             </div>
 
             <div>
-              <div className="text-xs text-slate-500 mb-1">{t("woDetails.odometerOpt")}</div>
+              <div className="text-xs text-gray-500 mb-1">{t("woDetails.odometerOpt")}</div>
               <input
                 type="number"
                 value={instOdo}
                 onChange={(e) => setInstOdo(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
                 placeholder={t("common.optional")}
               />
             </div>
 
             <div className="md:col-span-4">
-              <div className="text-xs text-slate-500 mb-1">{t("woDetails.notesOpt")}</div>
+              <div className="text-xs text-gray-500 mb-1">{t("woDetails.notesOpt")}</div>
               <input
                 value={instNotes}
                 onChange={(e) => setInstNotes(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
                 placeholder={t("common.optional")}
               />
             </div>
@@ -979,18 +965,13 @@ export default function WorkOrderDetailsPage() {
               <Button variant="primary" onClick={addInstallation} disabled={instSaving} isLoading={instSaving}>
                 {t("woDetails.addInstallation")}
               </Button>
-              {instMsg ? (
-                <div className={cn("text-sm", String(instMsg).startsWith("✅") ? "text-green-700" : "text-red-700")}>
-                  {instMsg}
-                </div>
-              ) : null}
             </div>
           </div>
 
           <div className="mt-6 text-sm font-semibold">{t("woDetails.installationsApiList")}</div>
-          <div className="mt-2 overflow-auto rounded-xl border border-slate-200">
+          <div className="mt-2 overflow-auto rounded-xl border border-gray-200">
             <table className="min-w-[900px] w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
+              <thead className="bg-gray-50 text-gray-600">
                 <tr>
                   <th className="text-left p-3">{t("woDetails.installedAt")}</th>
                   <th className="text-left p-3">{t("woDetails.part")}</th>
@@ -1001,24 +982,24 @@ export default function WorkOrderDetailsPage() {
               </thead>
               <tbody>
                 {instLoading ? (
-                  <tr className="border-t border-slate-200">
-                    <td colSpan={5} className="p-3 text-slate-500">
+                  <tr className="border-t border-gray-200">
+                    <td colSpan={5} className="p-3 text-gray-500">
                       {t("common.loading")}
                     </td>
                   </tr>
                 ) : instItems.length === 0 ? (
-                  <tr className="border-t border-slate-200">
-                    <td colSpan={5} className="p-3 text-slate-500">
+                  <tr className="border-t border-gray-200">
+                    <td colSpan={5} className="p-3 text-gray-500">
                       {t("woDetails.noInstallations")}
                     </td>
                   </tr>
                 ) : (
                   instItems.map((x: any) => (
-                    <tr key={x.id} className="border-t border-slate-200">
+                    <tr key={x.id} className="border-t border-gray-200">
                       <td className="p-3">{fmtDate(x.installed_at)}</td>
                       <td className="p-3">
                         <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
-                        <div className="text-xs text-slate-500 font-mono">{shortId(x.part_id)}</div>
+                        <div className="text-xs text-gray-500 font-mono">{shortId(x.part_id)}</div>
                       </td>
                       <td className="p-3">{x.qty_installed}</td>
                       <td className="p-3">{x.odometer_at_install ?? "—"}</td>
@@ -1031,9 +1012,9 @@ export default function WorkOrderDetailsPage() {
           </div>
 
           <div className="mt-6 text-sm font-semibold">{t("woDetails.installationsRuntimeList")}</div>
-          <div className="mt-2 overflow-auto rounded-xl border border-slate-200">
+          <div className="mt-2 overflow-auto rounded-xl border border-gray-200">
             <table className="min-w-[900px] w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
+              <thead className="bg-gray-50 text-gray-600">
                 <tr>
                   <th className="text-left p-3">{t("woDetails.installedAt")}</th>
                   <th className="text-left p-3">{t("woDetails.part")}</th>
@@ -1044,18 +1025,18 @@ export default function WorkOrderDetailsPage() {
               </thead>
               <tbody>
                 {installationsRuntime.length === 0 ? (
-                  <tr className="border-t border-slate-200">
-                    <td colSpan={5} className="p-3 text-slate-500">
+                  <tr className="border-t border-gray-200">
+                    <td colSpan={5} className="p-3 text-gray-500">
                       {t("woDetails.noRuntimeInstallations")}
                     </td>
                   </tr>
                 ) : (
                   installationsRuntime.map((x: any) => (
-                    <tr key={x.id} className="border-t border-slate-200">
+                    <tr key={x.id} className="border-t border-gray-200">
                       <td className="p-3">{fmtDate(x.installed_at)}</td>
                       <td className="p-3">
                         <div className="font-semibold">{x?.part?.name || x?.part_name || "—"}</div>
-                        <div className="text-xs text-slate-500 font-mono">{shortId(x.part_id)}</div>
+                        <div className="text-xs text-gray-500 font-mono">{shortId(x.part_id)}</div>
                       </td>
                       <td className="p-3">{x.qty_installed}</td>
                       <td className="p-3">{x.odometer_at_install ?? "—"}</td>
@@ -1066,21 +1047,16 @@ export default function WorkOrderDetailsPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       {/* QA Tab */}
       {tab === "qa" ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm font-semibold">{t("woDetails.qaTitle")}</div>
-            <div className="text-xs text-slate-500">{t("woDetails.qaEndpoint")}</div>
-          </div>
-
+        <Card title={t("woDetails.qaTitle")}>
           {!canManage ? (
-            <div className="mt-3 text-sm text-slate-600">{t("woDetails.onlyAdminAccountantQa")}</div>
+            <div className="text-sm text-gray-600">{t("woDetails.onlyAdminAccountantQa")}</div>
           ) : (
-            <div className="mt-3 space-y-3">
+            <div className="space-y-3">
               {rs === "NEEDS_PARTS_RECONCILIATION" ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                   {t("woDetails.fixMismatchFirst")}
@@ -1088,11 +1064,11 @@ export default function WorkOrderDetailsPage() {
               ) : null}
 
               <div>
-                <div className="text-xs text-slate-500 mb-1">{t("woDetails.roadTestResult")}</div>
+                <div className="text-xs text-gray-500 mb-1">{t("woDetails.roadTestResult")}</div>
                 <select
                   value={qaResult}
                   onChange={(e) => setQaResult(e.target.value as any)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
                 >
                   <option value="">{t("common.select")}</option>
                   <option value="PASS">{t("woDetails.pass")}</option>
@@ -1101,12 +1077,12 @@ export default function WorkOrderDetailsPage() {
               </div>
 
               <div>
-                <div className="text-xs text-slate-500 mb-1">{t("woDetails.remarks")}</div>
+                <div className="text-xs text-gray-500 mb-1">{t("woDetails.remarks")}</div>
                 <textarea
                   value={qaRemarks}
                   onChange={(e) => setQaRemarks(e.target.value)}
                   placeholder={t("woDetails.remarksPlaceholder")}
-                  className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+                  className="min-h-[90px] w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
                 />
               </div>
 
@@ -1133,8 +1109,10 @@ export default function WorkOrderDetailsPage() {
               ) : null}
             </div>
           )}
-        </div>
+        </Card>
       ) : null}
+
+      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
     </div>
   );
 }

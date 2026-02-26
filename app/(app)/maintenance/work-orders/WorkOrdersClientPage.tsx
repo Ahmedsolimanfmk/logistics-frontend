@@ -1,15 +1,18 @@
-// ✅ imports (تأكد منها)
+"use client";
+
 import Link from "next/link";
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
-import { apiGet } from "@/src/lib/api";
+import { apiGet, unwrapTotal } from "@/src/lib/api";
 
+// ✅ Design System (الموحد)
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { Toast } from "@/src/components/Toast";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -17,6 +20,7 @@ function fmtDate(d?: string | null) {
   if (Number.isNaN(dt.getTime())) return String(d);
   return dt.toLocaleString("ar-EG");
 }
+
 function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
@@ -51,8 +55,16 @@ function normalizeList(res: any): WorkOrderListItem[] {
 
 export default function WorkOrdersClientPage() {
   const t = useT();
+
+  // ✅ تثبيت t لتجنب loop
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
   const token = useAuth((s: any) => s.token);
 
+  // hydrate once
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
@@ -66,11 +78,25 @@ export default function WorkOrdersClientPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("");
 
+  // server-side pagination
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
+  const [total, setTotal] = useState<number>(0);
+
+  // toast
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
+    setToastMsg(message);
+    setToastType(type);
+    setToastOpen(true);
+  }, []);
 
   const load = useCallback(async () => {
     if (!token) return;
+
     setLoading(true);
     setErr(null);
 
@@ -80,20 +106,35 @@ export default function WorkOrdersClientPage() {
       if (status) params.status = status;
 
       const res: any = await apiGet(`/maintenance/work-orders`, params);
-      setItems(normalizeList(res));
+
+      const list = normalizeList(res);
+      setItems(list);
+
+      // total/pages
+      const ttotal = unwrapTotal(res);
+      if (typeof ttotal === "number" && Number.isFinite(ttotal)) setTotal(ttotal);
+      else setTotal(list.length);
     } catch (e: any) {
       setItems([]);
-      setErr(e?.message || t("workOrders.list.loading"));
+      setTotal(0);
+      const msg = e?.message || tRef.current("workOrders.list.loading");
+      setErr(msg);
     } finally {
       setLoading(false);
     }
-  }, [token, page, limit, q, status, t]);
+  }, [token, page, limit, q, status]);
 
   useEffect(() => {
     if (!token) return;
     load();
-  }, [token, page, load]);
+  }, [token, page, q, status, load]);
 
+  const pages = useMemo(() => {
+    if (!total || total <= 0) return 1;
+    return Math.max(1, Math.ceil(total / limit));
+  }, [total, limit]);
+
+  // Local filter (اختياري) — يخدم كـ fallback لو السيرفر مش بيفلتر
   const filteredLocal = useMemo(() => {
     const qq = q.trim().toLowerCase();
     return items.filter((x) => {
@@ -114,7 +155,6 @@ export default function WorkOrdersClientPage() {
     });
   }, [items, q, status]);
 
-  // ✅ DataTable columns (حل مشكلة label/render + row types)
   const columns: DataTableColumn<WorkOrderListItem>[] = useMemo(
     () => [
       {
@@ -134,8 +174,7 @@ export default function WorkOrdersClientPage() {
       {
         key: "status",
         label: t("workOrders.list.columns.status"),
-        render: (row) =>
-          row.status ? <StatusBadge status={row.status} /> : "—", // ✅ status مش value
+        render: (row) => (row.status ? <StatusBadge status={row.status} /> : "—"),
       },
       {
         key: "type",
@@ -157,9 +196,7 @@ export default function WorkOrdersClientPage() {
           return (
             <div>
               <div>{name}</div>
-              <div className="text-xs font-mono text-gray-500">
-                vehicle_id: {shortId(row.vehicle_id)}
-              </div>
+              <div className="text-xs font-mono text-gray-500">vehicle_id: {shortId(row.vehicle_id)}</div>
             </div>
           );
         },
@@ -184,30 +221,39 @@ export default function WorkOrdersClientPage() {
         title={t("workOrders.title")}
         subtitle={`${t("workOrders.breadcrumb")} / ${t("workOrders.title")}`}
         actions={
-          <Button variant="secondary" onClick={load} isLoading={loading}>
-            {t("workOrders.actions.refresh")}
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                load();
+                showToast(t("common.refresh"), "success");
+              }}
+              isLoading={loading}
+            >
+              {t("workOrders.actions.refresh")}
+            </Button>
+          </>
         }
       />
 
       <Card>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div>
-            <div className="mb-1 text-xs text-slate-500">{t("workOrders.filters.searchTitle")}</div>
+            <div className="mb-1 text-xs text-gray-500">{t("workOrders.filters.searchTitle")}</div>
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
               placeholder={t("maintenanceRequests.filters.searchPlaceholder")}
             />
           </div>
 
           <div>
-            <div className="mb-1 text-xs text-slate-500">{t("workOrders.filters.status")}</div>
+            <div className="mb-1 text-xs text-gray-500">{t("workOrders.filters.status")}</div>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
             >
               <option value="">{t("workOrders.status.all")}</option>
               <option value="OPEN">{t("workOrders.status.open")}</option>
@@ -245,34 +291,20 @@ export default function WorkOrdersClientPage() {
 
       <DataTable<WorkOrderListItem>
         title={t("workOrders.list.title")}
-        right={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={loading || page <= 1}
-            >
-              ←
-            </Button>
-            <div className="text-xs text-slate-500">
-              {t("workOrders.pagination.page")}: {page}
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={loading}
-            >
-              →
-            </Button>
-          </div>
-        }
+        right={<div className="text-xs text-gray-500">{err ? `⚠ ${err}` : null}</div>}
         columns={columns}
-        rows={filteredLocal}                 // ✅ rows مش data
+        rows={filteredLocal}
         loading={loading}
         emptyTitle={err ? err : t("workOrders.list.empty")}
         emptyHint={err ? t("common.tryAgain") : t("maintenanceRequests.filters.searchPlaceholder")}
-        total={filteredLocal.length}
+        total={total}
+        page={page}
+        pages={pages}
+        onPrev={page > 1 && !loading ? () => setPage((p) => Math.max(1, p - 1)) : undefined}
+        onNext={page < pages && !loading ? () => setPage((p) => p + 1) : undefined}
       />
+
+      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
     </div>
   );
 }
