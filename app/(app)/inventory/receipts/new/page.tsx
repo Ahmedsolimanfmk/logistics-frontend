@@ -4,8 +4,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
-import { apiGet, apiPost, unwrapItems } from "@/src/lib/api"; // ✅ استخدم apiPost بدل api.post
+import { apiGet, apiPost, unwrapItems } from "@/src/lib/api";
 import { createReceipt } from "@/src/lib/receipts.api";
+
+// ✅ Design System
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Card } from "@/src/components/ui/Card";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -46,6 +52,91 @@ function suggestPartNumber(name: string) {
   if (!base) return "";
   const suffix = Date.now().toString(36).slice(-4).toUpperCase();
   return `${base.slice(0, 18)}-${suffix}`;
+}
+
+function shortId(id: any) {
+  const s = String(id ?? "");
+  if (s.length <= 14) return s;
+  return `${s.slice(0, 8)}…${s.slice(-4)}`;
+}
+
+// ======================
+// Local DS Inputs (Light)
+// ======================
+function Label({ children }: { children: React.ReactNode }) {
+  return <div className="text-xs text-gray-500 mb-1">{children}</div>;
+}
+function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={cn(
+        "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none",
+        "focus:ring-2 focus:ring-gray-300",
+        props.className
+      )}
+    />
+  );
+}
+function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...props}
+      className={cn(
+        "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none",
+        "focus:ring-2 focus:ring-gray-300",
+        props.className
+      )}
+    />
+  );
+}
+
+// ======================
+// Modal Shell (Light DS)
+// ======================
+function ModalShell({
+  open,
+  title,
+  onClose,
+  children,
+  footer,
+}: {
+  open: boolean;
+  title: React.ReactNode;
+  onClose: () => void;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-xl overflow-hidden"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-2">
+          <div className="font-semibold text-gray-900">{title}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-2 py-1 rounded-lg hover:bg-gray-100"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-4">{children}</div>
+
+        {footer ? <div className="px-4 py-3 border-t border-gray-200">{footer}</div> : null}
+      </div>
+    </div>
+  );
 }
 
 export default function NewReceiptPage() {
@@ -92,7 +183,6 @@ export default function NewReceiptPage() {
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [newWarehouseLocation, setNewWarehouseLocation] = useState("");
 
-  // load warehouses once
   useEffect(() => {
     const load = async () => {
       try {
@@ -108,7 +198,6 @@ export default function NewReceiptPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ reload warehouses helper
   const reloadWarehouses = async (opts?: { selectId?: string }) => {
     try {
       const res = await apiGet<any>("/inventory/warehouses");
@@ -125,7 +214,6 @@ export default function NewReceiptPage() {
     }
   };
 
-  // ✅ create warehouse quick (FIXED)
   const createWarehouseQuick = async () => {
     const nm = newWarehouseName.trim();
     const loc = newWarehouseLocation.trim();
@@ -138,8 +226,6 @@ export default function NewReceiptPage() {
     setWarehouseSaving(true);
     try {
       const payload = { name: nm, location: loc ? loc : null };
-
-      // ✅ FIX: apiPost بيرجع data مباشرة (Warehouse)
       const created = await apiPost<Warehouse>("/inventory/warehouses", payload);
 
       setToast({ open: true, message: "تمت إضافة المخزن ✅", type: "success" });
@@ -168,7 +254,6 @@ export default function NewReceiptPage() {
     }
   };
 
-  // parts search
   const searchParts = async () => {
     if (!warehouseId.trim()) {
       setToast({ open: true, message: t("receipts.errWarehouse"), type: "error" });
@@ -186,7 +271,10 @@ export default function NewReceiptPage() {
   };
 
   const addRow = () => {
-    setItems((p) => [...p, { part_id: "", internal_serial: "", manufacturer_serial: "", unit_cost: "", notes: "" }]);
+    setItems((p) => [
+      ...p,
+      { part_id: "", internal_serial: "", manufacturer_serial: "", unit_cost: "", notes: "" },
+    ]);
   };
 
   const removeRow = (idx: number) => {
@@ -226,7 +314,11 @@ export default function NewReceiptPage() {
       if (!it.part_id.trim())
         return setToast({ open: true, message: t("receipts.errPartId", { i: i + 1 }), type: "error" });
       if (!it.manufacturer_serial.trim())
-        return setToast({ open: true, message: t("receipts.errManufacturerSerial", { i: i + 1 }), type: "error" });
+        return setToast({
+          open: true,
+          message: t("receipts.errManufacturerSerial", { i: i + 1 }),
+          type: "error",
+        });
       if (!it.internal_serial.trim())
         return setToast({ open: true, message: t("common.failed"), type: "error" });
     }
@@ -270,7 +362,6 @@ export default function NewReceiptPage() {
     setPartModalOpen(true);
   };
 
-  // ✅ create part (FIXED)
   const createPartQuick = async () => {
     const pn = newPartNumber.trim();
     const nm = newPartName.trim();
@@ -296,7 +387,6 @@ export default function NewReceiptPage() {
         min_stock: ms == null ? null : Math.floor(ms),
       };
 
-      // ✅ FIX
       const created = await apiPost<Part>("/inventory/parts", payload);
 
       setParts((p) => {
@@ -345,6 +435,129 @@ export default function NewReceiptPage() {
     }
   };
 
+  // ✅ DataTable rows with idx for actions
+  const itemsWithIdx = useMemo(() => items.map((x, i) => ({ ...x, __idx: i } as any)), [items]);
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      key: "part_id",
+      label: t("receipts.colPartId"),
+      className: "min-w-[320px]",
+      render: (r) => {
+        const idx = r.__idx as number;
+        const it = items[idx];
+        const p = it.part_id ? partById.get(it.part_id) : null;
+
+        return (
+          <div className="space-y-1">
+            <Select value={it.part_id} onChange={(e) => onPickPart(idx, e.target.value)}>
+              <option value="">{t("receipts.selectPart") || "اختر part"}</option>
+              {parts.map((pp) => (
+                <option key={pp.id} value={pp.id}>
+                  {pp.name ? `${pp.name}${pp.brand ? ` (${pp.brand})` : ""} — ${shortId(pp.id)}` : shortId(pp.id)}
+                </option>
+              ))}
+            </Select>
+            {p?.part_number ? (
+              <div className="text-xs text-gray-500">
+                كود: <span className="font-mono text-gray-700">{p.part_number}</span>
+              </div>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      key: "part_name",
+      label: "اسم القطعة",
+      className: "min-w-[220px]",
+      render: (r) => {
+        const it = items[r.__idx];
+        const p = it.part_id ? partById.get(it.part_id) : null;
+        return (
+          <div>
+            <div className="text-gray-900 font-semibold">{p?.name || "—"}</div>
+            <div className="text-xs text-gray-500">{p?.brand || ""}</div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "internal_serial",
+      label: t("receipts.colInternalSerial"),
+      className: "min-w-[320px]",
+      render: (r) => {
+        const idx = r.__idx as number;
+        const it = items[idx];
+        return (
+          <div className="flex items-center gap-2">
+            <TextInput value={it.internal_serial} readOnly placeholder="AUTO" className="bg-gray-50" />
+            <Button variant="secondary" disabled={!it.part_id} onClick={() => regenSerial(idx)}>
+              إعادة
+            </Button>
+          </div>
+        );
+      },
+    },
+    {
+      key: "manufacturer_serial",
+      label: t("receipts.colManufacturerSerial"),
+      className: "min-w-[220px]",
+      render: (r) => {
+        const idx = r.__idx as number;
+        const it = items[idx];
+        return (
+          <TextInput
+            value={it.manufacturer_serial}
+            onChange={(e) => updateRow(idx, { manufacturer_serial: e.target.value })}
+            placeholder="MFG-999"
+          />
+        );
+      },
+    },
+    {
+      key: "unit_cost",
+      label: t("receipts.colUnitCost"),
+      className: "min-w-[160px]",
+      render: (r) => {
+        const idx = r.__idx as number;
+        const it = items[idx];
+        return (
+          <TextInput
+            value={it.unit_cost}
+            onChange={(e) => updateRow(idx, { unit_cost: e.target.value })}
+            placeholder="1200"
+          />
+        );
+      },
+    },
+    {
+      key: "notes",
+      label: t("receipts.colNotes"),
+      className: "min-w-[240px]",
+      render: (r) => {
+        const idx = r.__idx as number;
+        const it = items[idx];
+        return (
+          <TextInput
+            value={it.notes}
+            onChange={(e) => updateRow(idx, { notes: e.target.value })}
+            placeholder={t("receipts.notesPh")}
+          />
+        );
+      },
+    },
+    {
+      key: "remove",
+      label: t("receipts.colRemove"),
+      render: (r) => (
+        <Button variant="danger" disabled={items.length <= 1} onClick={() => removeRow(r.__idx)}>
+          {t("receipts.remove")}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="p-6 space-y-4">
       <Toast
@@ -354,448 +567,211 @@ export default function NewReceiptPage() {
         onClose={() => setToast((p) => ({ ...p, open: false }))}
       />
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xl font-bold">{t("receipts.newTitle")}</div>
-          <div className="text-sm text-slate-400">{t("receipts.newSubtitle")}</div>
-        </div>
-
-        <button
-          onClick={() => router.back()}
-          className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-        >
-          {t("common.prev")}
-        </button>
-      </div>
+      <PageHeader
+        title={t("receipts.newTitle")}
+        subtitle={t("receipts.newSubtitle")}
+        actions={
+          <Button variant="secondary" onClick={() => router.back()}>
+            {t("common.prev")}
+          </Button>
+        }
+      />
 
       {/* Header fields */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+      <Card title="Header">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <div className="text-xs text-slate-400 mb-1">{t("receipts.warehouseId")}</div>
-
+            <Label>{t("receipts.warehouseId")}</Label>
             <div className="flex gap-2">
-              {/* ✅ Select محسّن للـ Dark Mode */}
-              <div className="relative w-full">
-                <select
-                  value={warehouseId}
-                  onChange={(e) => setWarehouseId(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-white/10 bg-slate-900 text-slate-100 px-3 py-2 text-sm outline-none focus:border-white/20"
-                >
+              <div className="w-full">
+                <Select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
                   <option value="">{t("common.all")}</option>
-
                   {warehouses.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name ? `${w.name} — ${w.id}` : w.id}
+                      {w.name ? `${w.name} — ${shortId(w.id)}` : shortId(w.id)}
                     </option>
                   ))}
-                </select>
-
-                {/* سهم للوضوح */}
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
-                  ▼
-                </div>
+                </Select>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setWarehouseModalOpen(true)}
-                className="shrink-0 px-3 py-2 rounded-xl border border-white/10 bg-sky-500/10 hover:bg-sky-500/20 text-sm"
-              >
+              <Button variant="secondary" onClick={() => setWarehouseModalOpen(true)}>
                 + إضافة مخزن
-              </button>
+              </Button>
             </div>
-
-            {/* ✅ Debug اختياري (احذفه بعد التأكد) */}
-            <div className="mt-1 text-xs text-slate-500">warehouses: {warehouses.length}</div>
           </div>
 
           <div>
-            <div className="text-xs text-slate-400 mb-1">{t("receipts.supplier")}</div>
-            <input
+            <Label>{t("receipts.supplier")}</Label>
+            <TextInput
               value={supplier}
               onChange={(e) => setSupplier(e.target.value)}
               placeholder={t("receipts.supplierPh")}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <div className="text-xs text-slate-400 mb-1">{t("receipts.invoiceNo")}</div>
-            <input
+            <Label>{t("receipts.invoiceNo")}</Label>
+            <TextInput
               value={invoiceNo}
               onChange={(e) => setInvoiceNo(e.target.value)}
               placeholder={t("receipts.invoiceNoPh")}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
             />
           </div>
 
           <div>
-            <div className="text-xs text-slate-400 mb-1">{t("receipts.invoiceDate")}</div>
-            <input
-              type="date"
-              value={invoiceDate}
-              onChange={(e) => setInvoiceDate(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-            />
+            <Label>{t("receipts.invoiceDate")}</Label>
+            <TextInput type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
           </div>
         </div>
 
-        {/* parts search + add catalog */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
           <div className="md:col-span-2">
-            <div className="text-xs text-slate-400 mb-1">{t("common.search")}</div>
-            <input
+            <Label>{t("common.search")}</Label>
+            <TextInput
               value={partQ}
               onChange={(e) => setPartQ(e.target.value)}
               placeholder="ابحث عن قطعة (كود/اسم/براند...)"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
             />
           </div>
 
           <div className="flex gap-2">
-            <button
-              onClick={searchParts}
-              className="flex-1 px-3 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 text-sm"
-            >
+            <Button variant="secondary" onClick={searchParts} isLoading={loading}>
               بحث القطع
-            </button>
-            <button
-              type="button"
-              onClick={openCatalogModal}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm"
-            >
+            </Button>
+            <Button variant="primary" onClick={openCatalogModal}>
               + إضافة للكتالوج
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="text-xs text-slate-400">
+        <div className="mt-2 text-xs text-gray-500">
           * الـ internal serial بيتولد تلقائيًا — والمستخدم بس يدخل Serial المصنع من المورد.
         </div>
-      </div>
+      </Card>
 
       {/* Items table */}
-      <div className="rounded-2xl border border-white/10 overflow-hidden">
-        <div className="bg-white/5 px-4 py-3 font-semibold flex items-center justify-between">
-          <span>{t("receipts.items")}</span>
-          <button
-            onClick={addRow}
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 text-sm"
-          >
-            {t("receipts.addRow")}
-          </button>
-        </div>
-
-        <div className="overflow-auto">
-          <table className="min-w-[1400px] w-full text-sm">
-            <thead className="bg-white/5 text-slate-200">
-              <tr>
-                <th className="text-left px-4 py-3">{t("receipts.colPartId")}</th>
-                <th className="text-left px-4 py-3">اسم القطعة</th>
-                <th className="text-left px-4 py-3">{t("receipts.colInternalSerial")}</th>
-                <th className="text-left px-4 py-3">{t("receipts.colManufacturerSerial")}</th>
-                <th className="text-left px-4 py-3">{t("receipts.colUnitCost")}</th>
-                <th className="text-left px-4 py-3">{t("receipts.colNotes")}</th>
-                <th className="text-left px-4 py-3">{t("receipts.colRemove")}</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {items.map((it, idx) => {
-                const p = it.part_id ? partById.get(it.part_id) : null;
-                return (
-                  <tr key={idx} className="border-t border-white/10">
-                    <td className="px-4 py-3">
-                      <select
-                        value={it.part_id}
-                        onChange={(e) => onPickPart(idx, e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-                      >
-                        <option value="">{t("receipts.selectPart") || "اختر part"}</option>
-
-                        {parts.map((pp) => (
-                          <option key={pp.id} value={pp.id}>
-                            {pp.name ? `${pp.name} (${pp.brand || ""}) — ${pp.id}` : pp.id}
-                          </option>
-                        ))}
-                      </select>
-
-                      {p?.part_number ? (
-                        <div className="mt-1 text-xs text-slate-400">
-                          كود: <span className="font-mono text-slate-300">{p.part_number}</span>
-                        </div>
-                      ) : null}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="text-slate-100">{p?.name || "—"}</div>
-                      <div className="text-xs text-slate-400">{p?.brand || ""}</div>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2 items-center">
-                        <input
-                          value={it.internal_serial}
-                          readOnly
-                          placeholder="AUTO"
-                          className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none opacity-90 text-slate-100"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => regenSerial(idx)}
-                          disabled={!it.part_id}
-                          className={cn(
-                            "px-3 py-2 rounded-xl border text-sm",
-                            !it.part_id
-                              ? "border-white/10 bg-white/5 text-slate-500"
-                              : "border-white/10 bg-white/10 hover:bg-white/15"
-                          )}
-                        >
-                          إعادة
-                        </button>
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <input
-                        value={it.manufacturer_serial}
-                        onChange={(e) => updateRow(idx, { manufacturer_serial: e.target.value })}
-                        placeholder="MFG-999"
-                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-                      />
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <input
-                        value={it.unit_cost}
-                        onChange={(e) => updateRow(idx, { unit_cost: e.target.value })}
-                        placeholder="1200"
-                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-                      />
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <input
-                        value={it.notes}
-                        onChange={(e) => updateRow(idx, { notes: e.target.value })}
-                        placeholder={t("receipts.notesPh")}
-                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-                      />
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => removeRow(idx)}
-                        disabled={items.length <= 1}
-                        className={cn(
-                          "px-3 py-2 rounded-xl border text-sm",
-                          items.length <= 1
-                            ? "border-white/10 bg-white/5 text-slate-500 cursor-not-allowed"
-                            : "border-white/10 bg-white/10 hover:bg-white/15"
-                        )}
-                      >
-                        {t("receipts.remove")}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {items.length === 0 && (
-                <tr>
-                  <td className="px-4 py-6 text-slate-400" colSpan={7}>
-                    {t("common.noData")}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="p-4 border-t border-white/10 flex gap-2">
-          <button
-            onClick={onCreate}
-            disabled={loading}
-            className={cn(
-              "px-3 py-2 rounded-xl border text-sm",
-              loading ? "border-white/10 bg-white/5 text-slate-500" : "border-white/10 bg-white/10 hover:bg-white/15"
-            )}
-          >
-            {loading ? t("common.loading") : t("receipts.createDraft")}
-          </button>
-        </div>
-      </div>
+      <DataTable
+        title={t("receipts.items")}
+        subtitle={`Rows: ${items.length}`}
+        right={
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={addRow}>
+              {t("receipts.addRow")}
+            </Button>
+            <Button variant="primary" onClick={onCreate} isLoading={loading}>
+              {t("receipts.createDraft")}
+            </Button>
+          </div>
+        }
+        columns={columns}
+        rows={itemsWithIdx}
+        loading={false}
+        emptyTitle={t("common.noData")}
+        emptyHint="أضف صف جديد ثم اختر القطعة."
+        minWidthClassName="min-w-[1400px]"
+      />
 
       {/* ✅ Add-to-catalog modal */}
-      {partModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setPartModalOpen(false)} />
-
-          <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-slate-950 p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-lg font-semibold">إضافة قطعة للكتالوج</div>
-              <button
-                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-                onClick={() => setPartModalOpen(false)}
+      <ModalShell
+        open={partModalOpen}
+        title="إضافة قطعة للكتالوج"
+        onClose={() => setPartModalOpen(false)}
+        footer={
+          <div className="flex flex-wrap gap-2 justify-start">
+            <Button variant="primary" onClick={createPartQuick} isLoading={partSaving}>
+              حفظ في الكتالوج
+            </Button>
+            <Button variant="secondary" onClick={() => setPartModalOpen(false)} disabled={partSaving}>
+              {t("common.cancel")}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <Label>كود القطعة (part_number) *</Label>
+            <div className="flex gap-2">
+              <TextInput value={newPartNumber} onChange={(e) => setNewPartNumber(e.target.value)} placeholder="مثال: FILT-OIL-001" />
+              <Button
+                variant="secondary"
+                onClick={() => setNewPartNumber(suggestPartNumber(newPartName || partQ))}
+                disabled={partSaving}
               >
-                {t("common.cancel")}
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <Field
-                label="كود القطعة (part_number) *"
-                value={newPartNumber}
-                onChange={setNewPartNumber}
-                ph="مثال: FILT-OIL-001"
-                rightAction={
-                  <button
-                    type="button"
-                    onClick={() => setNewPartNumber(suggestPartNumber(newPartName || partQ))}
-                    className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                  >
-                    اقتراح
-                  </button>
-                }
-              />
-
-              <Field label="اسم القطعة *" value={newPartName} onChange={setNewPartName} ph="مثال: فلتر زيت" />
-              <Field label="البراند (اختياري)" value={newPartBrand} onChange={setNewPartBrand} ph="مثال: MANN" />
-              <Field label="التصنيف (اختياري)" value={newPartCategory} onChange={setNewPartCategory} ph="مثال: Filters" />
-              <Field label="الوحدة (اختياري)" value={newPartUnit} onChange={setNewPartUnit} ph="مثال: pcs" />
-              <Field label="حد أدنى للمخزون (اختياري)" value={newPartMinStock} onChange={setNewPartMinStock} ph="مثال: 5" />
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  disabled={partSaving}
-                  onClick={createPartQuick}
-                  className={cn(
-                    "px-3 py-2 rounded-xl border text-sm",
-                    partSaving
-                      ? "border-white/10 bg-white/5 text-slate-500"
-                      : "border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20"
-                  )}
-                >
-                  {partSaving ? t("common.loading") : "حفظ في الكتالوج"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPartModalOpen(false)}
-                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-                >
-                  {t("common.cancel")}
-                </button>
-              </div>
-
-              <div className="text-xs text-slate-400">
-                * لازم تدخل <span className="font-mono">part_number</span> لأنه Required في الباك-إند الحالي.
-              </div>
+                اقتراح
+              </Button>
             </div>
           </div>
+
+          <div>
+            <Label>اسم القطعة *</Label>
+            <TextInput value={newPartName} onChange={(e) => setNewPartName(e.target.value)} placeholder="مثال: فلتر زيت" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>البراند (اختياري)</Label>
+              <TextInput value={newPartBrand} onChange={(e) => setNewPartBrand(e.target.value)} placeholder="مثال: MANN" />
+            </div>
+            <div>
+              <Label>التصنيف (اختياري)</Label>
+              <TextInput value={newPartCategory} onChange={(e) => setNewPartCategory(e.target.value)} placeholder="مثال: Filters" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>الوحدة (اختياري)</Label>
+              <TextInput value={newPartUnit} onChange={(e) => setNewPartUnit(e.target.value)} placeholder="مثال: pcs" />
+            </div>
+            <div>
+              <Label>حد أدنى للمخزون (اختياري)</Label>
+              <TextInput value={newPartMinStock} onChange={(e) => setNewPartMinStock(e.target.value)} placeholder="مثال: 5" />
+            </div>
+          </div>
+
+          <div className="text-xs text-gray-500">
+            * لازم تدخل <span className="font-mono">part_number</span> لأنه Required في الباك-إند الحالي.
+          </div>
         </div>
-      )}
+      </ModalShell>
 
       {/* ✅ Add Warehouse Modal */}
-      {warehouseModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setWarehouseModalOpen(false)} />
+      <ModalShell
+        open={warehouseModalOpen}
+        title="إضافة مخزن"
+        onClose={() => setWarehouseModalOpen(false)}
+        footer={
+          <div className="flex flex-wrap gap-2 justify-start">
+            <Button variant="primary" onClick={createWarehouseQuick} isLoading={warehouseSaving}>
+              حفظ المخزن
+            </Button>
+            <Button variant="secondary" onClick={() => setWarehouseModalOpen(false)} disabled={warehouseSaving}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="ghost" onClick={() => reloadWarehouses()} disabled={warehouseSaving}>
+              تحديث القائمة
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <Label>اسم المخزن *</Label>
+            <TextInput value={newWarehouseName} onChange={(e) => setNewWarehouseName(e.target.value)} placeholder="مثال: Main Warehouse" />
+          </div>
 
-          <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-slate-950 p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-lg font-semibold">إضافة مخزن</div>
-              <button
-                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-                onClick={() => setWarehouseModalOpen(false)}
-              >
-                {t("common.cancel")}
-              </button>
-            </div>
+          <div>
+            <Label>الموقع (اختياري)</Label>
+            <TextInput value={newWarehouseLocation} onChange={(e) => setNewWarehouseLocation(e.target.value)} placeholder="مثال: Cairo / 6th October / ..." />
+          </div>
 
-            <div className="mt-4 space-y-3">
-              <Field
-                label="اسم المخزن *"
-                value={newWarehouseName}
-                onChange={setNewWarehouseName}
-                ph="مثال: Main Warehouse"
-              />
-              <Field
-                label="الموقع (اختياري)"
-                value={newWarehouseLocation}
-                onChange={setNewWarehouseLocation}
-                ph="مثال: Cairo / 6th October / ..."
-              />
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  disabled={warehouseSaving}
-                  onClick={createWarehouseQuick}
-                  className={cn(
-                    "px-3 py-2 rounded-xl border text-sm",
-                    warehouseSaving
-                      ? "border-white/10 bg-white/5 text-slate-500"
-                      : "border-sky-500/20 bg-sky-500/10 hover:bg-sky-500/20"
-                  )}
-                >
-                  {warehouseSaving ? t("common.loading") : "حفظ المخزن"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setWarehouseModalOpen(false)}
-                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-                >
-                  {t("common.cancel")}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => reloadWarehouses()}
-                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-                >
-                  تحديث القائمة
-                </button>
-              </div>
-
-              <div className="text-xs text-slate-400">
-                * سيتم إنشاء المخزن عبر <span className="font-mono">POST /inventory/warehouses</span> ثم اختياره تلقائيًا.
-              </div>
-            </div>
+          <div className="text-xs text-gray-500">
+            * سيتم إنشاء المخزن عبر <span className="font-mono">POST /inventory/warehouses</span> ثم اختياره تلقائيًا.
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  ph,
-  rightAction,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  ph?: string;
-  rightAction?: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="text-xs text-slate-400 mb-1">{label}</div>
-      <div className="flex gap-2 items-center">
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={ph}
-          className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-        />
-        {rightAction}
-      </div>
+      </ModalShell>
     </div>
   );
 }

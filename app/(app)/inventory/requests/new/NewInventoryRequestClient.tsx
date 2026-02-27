@@ -10,6 +10,7 @@ import { useT } from "@/src/i18n/useT";
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -44,10 +45,54 @@ type DraftLine = {
   part_id: string;
   needed_qty: number;
   notes?: string | null;
-  // UI-only (للعرض)
+
+  // UI-only
   part_name?: string | null;
   part_number?: string | null;
 };
+
+// ======================
+// Small DS Input helper (local)
+// ======================
+function Label({ children }: { children: React.ReactNode }) {
+  return <div className="text-xs text-gray-500 mb-1">{children}</div>;
+}
+function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={cn(
+        "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none",
+        "focus:ring-2 focus:ring-gray-300",
+        props.className
+      )}
+    />
+  );
+}
+function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={cn(
+        "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none",
+        "focus:ring-2 focus:ring-gray-300",
+        props.className
+      )}
+    />
+  );
+}
+function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...props}
+      className={cn(
+        "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none",
+        "focus:ring-2 focus:ring-gray-300",
+        props.className
+      )}
+    />
+  );
+}
 
 // ======================
 // Part Search Select (Design-System friendly)
@@ -88,7 +133,6 @@ function PartSearchSelect({
 
     setLoading(true);
     try {
-      // حاول بعدة باراميترز عشان ما نعتمدش على كنترولر واحد
       const r1 = await api
         .get("/inventory/parts", { params: { q: termTrim, page: 1, limit: 20 } })
         .then((r) => r.data)
@@ -132,7 +176,6 @@ function PartSearchSelect({
     }
   }
 
-  // debounce
   useEffect(() => {
     const h = setTimeout(() => fetchParts(q), 300);
     return () => clearTimeout(h);
@@ -145,10 +188,9 @@ function PartSearchSelect({
 
   return (
     <div className="relative">
-      {/* Selected Preview */}
       {selected ? (
         <div className="mb-2 rounded-2xl border border-gray-200 bg-gray-50 p-3">
-          <div className="text-sm font-semibold">{selected.name || "—"}</div>
+          <div className="text-sm font-semibold text-gray-900">{selected.name || "—"}</div>
           <div className="mt-1 text-xs text-gray-600">
             {selected.part_number ? `PN: ${selected.part_number} • ` : ""}
             <span className="font-mono">{shortId(selected.id)}</span>
@@ -156,14 +198,13 @@ function PartSearchSelect({
         </div>
       ) : null}
 
-      <input
+      <TextInput
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
         placeholder={placeholder || "ابحث باسم القطعة أو Part Number…"}
       />
 
@@ -290,7 +331,6 @@ export default function InventoryRequestNewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qWarehouseId, qWorkOrderId]);
 
-  // ✅ Optional: منع تكرار نفس القطعة (يزود الكمية)
   function addLine() {
     const pid = linePartId.trim();
     const qty = Number(lineQty);
@@ -378,6 +418,48 @@ export default function InventoryRequestNewPage() {
     }
   }
 
+  const linesColumns: DataTableColumn<DraftLine>[] = [
+    {
+      key: "part",
+      label: "Part",
+      render: (l) => (
+        <div>
+          <div className="font-semibold text-gray-900">{l.part_name || "—"}</div>
+          <div className="text-xs text-gray-500">
+            {l.part_number ? `PN: ${l.part_number} • ` : ""}
+            <span className="font-mono">{shortId(l.part_id)}</span>
+          </div>
+        </div>
+      ),
+    },
+    { key: "needed_qty", label: "Needed", render: (l) => String(l.needed_qty) },
+    { key: "notes", label: "Notes", render: (l) => <span className="text-gray-700">{l.notes || "—"}</span> },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (_l, ) => null, // placeholder; DataTable wants per-row render below
+    },
+  ];
+
+  // ✅ We need per-row actions: implement via render on the column using index
+  // We'll pass a derived rows array with __idx
+  const rowsWithIdx = useMemo(() => lines.map((l, i) => ({ ...l, __idx: i } as any)), [lines]);
+
+  const linesColumnsWithActions: DataTableColumn<any>[] = [
+    linesColumns[0],
+    linesColumns[1],
+    linesColumns[2],
+    {
+      key: "actions",
+      label: "Actions",
+      render: (r) => (
+        <Button variant="danger" onClick={() => removeLine(r.__idx)}>
+          Remove
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4 p-4">
       <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
@@ -404,7 +486,12 @@ export default function InventoryRequestNewPage() {
             {workOrderId ? ` • work_order_id: ${shortId(workOrderId)}` : ""}
           </div>
 
-          <Button variant="primary" onClick={createRequest} disabled={!canSubmit || saving} isLoading={saving}>
+          <Button
+            variant="primary"
+            onClick={createRequest}
+            disabled={!canSubmit || saving}
+            isLoading={saving}
+          >
             {t("inventory.createRequest") || "Create Request"}
           </Button>
         </div>
@@ -414,33 +501,28 @@ export default function InventoryRequestNewPage() {
         ) : null}
       </Card>
 
-      <Card>
+      <Card title="Request Info">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div>
-            <div className="text-xs text-gray-500 mb-1">warehouse</div>
-            <select
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-            >
+            <Label>warehouse</Label>
+            <Select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
               <option value="">{whLoading ? "Loading…" : "Select warehouse"}</option>
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name || w.id}
                 </option>
               ))}
-            </select>
+            </Select>
             {warehouseId && !isUuid(warehouseId) ? (
               <div className="mt-1 text-xs text-red-700">⚠ warehouse_id غير صحيح</div>
             ) : null}
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">work_order_id (optional)</div>
-            <input
+            <Label>work_order_id (optional)</Label>
+            <TextInput
               value={workOrderId}
               onChange={(e) => setWorkOrderId(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
               placeholder="uuid"
             />
             {workOrderId && !isUuid(workOrderId) ? (
@@ -449,28 +531,27 @@ export default function InventoryRequestNewPage() {
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">notes (optional)</div>
-            <input
+            <Label>notes (optional)</Label>
+            <TextInput
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
               placeholder={t("common.optional") || "Optional"}
             />
           </div>
         </div>
       </Card>
 
-      <Card>
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-base font-semibold">Lines</div>
+      <Card
+        title="Lines"
+        right={
           <div className="text-xs text-gray-500">
-            Count: <span className="font-semibold">{lines.length}</span>
+            Count: <span className="font-semibold text-gray-900">{lines.length}</span>
           </div>
-        </div>
-
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+        }
+      >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div className="md:col-span-2">
-            <div className="text-xs text-gray-500 mb-1">Part (search)</div>
+            <Label>Part (search)</Label>
             <PartSearchSelect
               value={linePartId}
               onChange={(pid, p) => {
@@ -486,21 +567,19 @@ export default function InventoryRequestNewPage() {
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">needed_qty</div>
-            <input
+            <Label>needed_qty</Label>
+            <TextInput
               type="number"
               value={lineQty}
               onChange={(e) => setLineQty(Number(e.target.value))}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
             />
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">line notes (optional)</div>
-            <input
+            <Label>line notes (optional)</Label>
+            <TextInput
               value={lineNotes}
               onChange={(e) => setLineNotes(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
               placeholder={t("common.optional") || "Optional"}
             />
           </div>
@@ -516,45 +595,15 @@ export default function InventoryRequestNewPage() {
           </div>
         </div>
 
-        <div className="mt-4 overflow-auto rounded-xl border border-gray-200">
-          <table className="min-w-[900px] w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="text-left p-3">Part</th>
-                <th className="text-left p-3">Needed</th>
-                <th className="text-left p-3">Notes</th>
-                <th className="text-left p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lines.length ? (
-                lines.map((l, idx) => (
-                  <tr key={`${l.part_id}_${idx}`} className="border-t border-gray-200">
-                    <td className="p-3">
-                      <div className="font-semibold">{l.part_name || "—"}</div>
-                      <div className="text-xs text-gray-500">
-                        {l.part_number ? `PN: ${l.part_number} • ` : ""}
-                        <span className="font-mono">{shortId(l.part_id)}</span>
-                      </div>
-                    </td>
-                    <td className="p-3">{l.needed_qty}</td>
-                    <td className="p-3 text-gray-600">{l.notes || "—"}</td>
-                    <td className="p-3">
-                      <Button variant="danger" onClick={() => removeLine(idx)}>
-                        Remove
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr className="border-t border-gray-200">
-                  <td colSpan={4} className="p-3 text-gray-500">
-                    {t("common.noData") || "No lines yet"}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="mt-4">
+          <DataTable
+            columns={linesColumnsWithActions}
+            rows={rowsWithIdx}
+            loading={false}
+            emptyTitle={t("common.noData") || "No lines yet"}
+            emptyHint="ابدأ بإضافة Line من الأعلى."
+            minWidthClassName="min-w-[900px]"
+          />
         </div>
       </Card>
     </div>

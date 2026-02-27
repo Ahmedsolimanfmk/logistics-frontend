@@ -31,6 +31,11 @@ export function StatusBadge({ status, className = "" }: { status: any; className
     PENDING: "bg-yellow-100 text-yellow-800",
     APPEALED: "bg-purple-100 text-purple-800",
     REJECTED: "bg-red-100 text-red-800",
+    IN_STOCK: "bg-green-100 text-green-800",
+RESERVED: "bg-yellow-100 text-yellow-800",
+ISSUED: "bg-blue-100 text-blue-800",
+INSTALLED: "bg-purple-100 text-purple-800",
+SCRAPPED: "bg-red-100 text-red-800",
 
     DRAFT: "bg-gray-100 text-gray-700",
     ASSIGNED: "bg-blue-100 text-blue-800",
@@ -40,6 +45,7 @@ export function StatusBadge({ status, className = "" }: { status: any; className
     OPEN: "bg-gray-100 text-gray-700",
     IN_REVIEW: "bg-yellow-100 text-yellow-800",
     CLOSED: "bg-green-100 text-green-800",
+    CANCELLED: "bg-red-100 text-red-800",
 
     POSTED: "bg-blue-100 text-blue-800",
   };

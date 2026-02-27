@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
@@ -8,8 +9,18 @@ import { unwrapItems } from "@/src/lib/api";
 import { listPartItems, type PartItem } from "@/src/lib/partItems.api";
 import { createIssueDraft } from "@/src/lib/issues.api";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
+// ✅ Design System
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Card } from "@/src/components/ui/Card";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+
+function shortId(id: any) {
+  const s = String(id ?? "");
+  if (s.length <= 14) return s;
+  return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
 export default function NewDirectIssueClientPage() {
@@ -32,34 +43,8 @@ export default function NewDirectIssueClientPage() {
     type: "success" as "success" | "error",
   });
 
-  const loadStock = async () => {
-    if (!warehouseId.trim()) {
-      setToast({ open: true, message: t("directIssue.errWarehouse"), type: "error" });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await listPartItems({
-        warehouse_id: warehouseId.trim(),
-        status: "IN_STOCK",
-        q: q.trim() || undefined,
-      });
-      setStock(unwrapItems<PartItem>(res));
-    } catch (e: any) {
-      setToast({
-        open: true,
-        message: e?.response?.data?.message || e?.message || t("common.failed"),
-        type: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // load nothing by default; user picks warehouse first
-  }, []);
+  const showError = (msg: string) => setToast({ open: true, message: msg, type: "error" });
+  const showOk = (msg: string) => setToast({ open: true, message: msg, type: "success" });
 
   const toggle = (it: PartItem) => {
     setSelected((p) => {
@@ -73,11 +58,29 @@ export default function NewDirectIssueClientPage() {
   const selectedList = useMemo(() => Object.values(selected), [selected]);
   const selectedCount = selectedList.length;
 
+  const loadStock = async () => {
+    if (!warehouseId.trim()) return showError(t("directIssue.errWarehouse"));
+
+    setLoading(true);
+    try {
+      const res = await listPartItems({
+        warehouse_id: warehouseId.trim(),
+        status: "IN_STOCK",
+        q: q.trim() || undefined,
+      });
+      setStock(unwrapItems<PartItem>(res));
+    } catch (e: any) {
+      showError(e?.response?.data?.message || e?.message || t("common.failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onCreateDraft = async () => {
-    if (!warehouseId.trim()) return setToast({ open: true, message: t("directIssue.errWarehouse"), type: "error" });
-    if (!workOrderId.trim()) return setToast({ open: true, message: t("directIssue.errWorkOrder"), type: "error" });
-    if (!notes.trim() || notes.trim().length < 5) return setToast({ open: true, message: t("directIssue.errNotes"), type: "error" });
-    if (selectedCount === 0) return setToast({ open: true, message: t("directIssue.errPick"), type: "error" });
+    if (!warehouseId.trim()) return showError(t("directIssue.errWarehouse"));
+    if (!workOrderId.trim()) return showError(t("directIssue.errWorkOrder"));
+    if (!notes.trim() || notes.trim().length < 5) return showError(t("directIssue.errNotes"));
+    if (selectedCount === 0) return showError(t("directIssue.errPick"));
 
     setLoading(true);
     try {
@@ -93,18 +96,70 @@ export default function NewDirectIssueClientPage() {
         })),
       });
 
-      setToast({ open: true, message: t("directIssue.createdOk"), type: "success" });
+      showOk(t("directIssue.createdOk"));
       router.push(`/inventory/issues/${created.id}`);
     } catch (e: any) {
-      setToast({
-        open: true,
-        message: e?.response?.data?.message || e?.message || t("common.failed"),
-        type: "error",
-      });
+      showError(e?.response?.data?.message || e?.message || t("common.failed"));
     } finally {
       setLoading(false);
     }
   };
+
+  const columns: DataTableColumn<PartItem>[] = [
+    {
+      key: "pick",
+      label: t("directIssue.colPick"),
+      render: (pi) => {
+        const isSel = !!selected[pi.id];
+        return (
+          <Button
+            variant={isSel ? "primary" : "secondary"}
+            onClick={() => toggle(pi)}
+            disabled={loading}
+          >
+            {isSel ? t("directIssue.picked") : t("directIssue.pick")}
+          </Button>
+        );
+      },
+    },
+    {
+      key: "serial",
+      label: t("directIssue.colSerial"),
+      render: (pi) => (
+        <div>
+          <div className="font-mono text-xs text-gray-900">{pi.internal_serial || "—"}</div>
+          <div className="font-mono text-xs text-gray-600">{pi.manufacturer_serial || "—"}</div>
+          <div className="font-mono text-[11px] text-gray-500">{shortId(pi.id)}</div>
+        </div>
+      ),
+    },
+    {
+      key: "part",
+      label: t("directIssue.colPart"),
+      render: (pi) => (
+        <div>
+          <div className="text-gray-900">{pi.parts?.name || "—"}</div>
+          <div className="text-xs text-gray-600">{pi.parts?.brand || ""}</div>
+          <div className="text-xs text-gray-500 font-mono">{shortId(pi.part_id)}</div>
+        </div>
+      ),
+    },
+    {
+      key: "warehouse",
+      label: t("directIssue.colWarehouse"),
+      render: (pi) => (
+        <div>
+          <div className="text-gray-900">{pi.warehouses?.name || "—"}</div>
+          <div className="text-xs text-gray-500 font-mono">{shortId(pi.warehouse_id)}</div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      label: t("directIssue.colStatus"),
+      render: (pi) => <StatusBadge status={pi.status} />,
+    },
+  ];
 
   return (
     <div className="p-6 space-y-4">
@@ -115,160 +170,99 @@ export default function NewDirectIssueClientPage() {
         onClose={() => setToast((p) => ({ ...p, open: false }))}
       />
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xl font-bold">{t("directIssue.title")}</div>
-          <div className="text-sm text-slate-400">{t("directIssue.subtitle")}</div>
-        </div>
+      <PageHeader
+        title={t("directIssue.title")}
+        subtitle={t("directIssue.subtitle")}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => router.back()}>
+              {t("common.prev")}
+            </Button>
+            <Button variant="primary" onClick={onCreateDraft} isLoading={loading}>
+              {t("directIssue.createDraft")}
+            </Button>
+          </>
+        }
+      />
 
-        <button
-          onClick={() => router.back()}
-          className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-        >
-          {t("common.prev")}
-        </button>
-      </div>
+      <Card>
+        <FiltersBar
+          left={
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full">
+              <input
+                value={warehouseId}
+                onChange={(e) => setWarehouseId(e.target.value)}
+                placeholder={t("directIssue.warehouseId") || "warehouse_id"}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+              />
+              <input
+                value={workOrderId}
+                onChange={(e) => setWorkOrderId(e.target.value)}
+                placeholder={t("directIssue.workOrderId") || "work_order_id"}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+              />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("directIssue.searchPh")}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+              />
+            </div>
+          }
+          right={
+            <>
+              <Button variant="secondary" onClick={loadStock} isLoading={loading}>
+                {t("directIssue.loadStock")}
+              </Button>
 
-      {/* Header */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <div className="text-xs text-slate-400 mb-1">{t("directIssue.warehouseId")}</div>
-            <input
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              placeholder="warehouse_id"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
-            />
-          </div>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSelected({});
+                }}
+                disabled={selectedCount === 0 || loading}
+              >
+                {t("common.clear") || "Clear"}
+              </Button>
+            </>
+          }
+        />
 
-          <div>
-            <div className="text-xs text-slate-400 mb-1">{t("directIssue.workOrderId")}</div>
-            <input
-              value={workOrderId}
-              onChange={(e) => setWorkOrderId(e.target.value)}
-              placeholder="work_order_id"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs text-slate-400 mb-1">{t("directIssue.notes")}</div>
+        <div className="mt-3">
+          <div className="text-xs text-gray-500 mb-1">{t("directIssue.notes")}</div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t("directIssue.notesPh")}
-            className="w-full min-h-[90px] rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+            className="w-full min-h-[90px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-          <div className="md:col-span-2">
-            <div className="text-xs text-slate-400 mb-1">{t("directIssue.search")}</div>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t("directIssue.searchPh")}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
-            />
-          </div>
-          <button
-            onClick={loadStock}
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 text-sm"
-          >
-            {t("directIssue.loadStock")}
-          </button>
+        <div className="mt-3 text-sm text-gray-700">
+          {t("directIssue.selectedCount", { n: selectedCount })}{" "}
+          {selectedCount ? `(${selectedList.map((x) => shortId(x.id)).slice(0, 3).join(", ")}${selectedCount > 3 ? "…" : ""})` : ""}
         </div>
 
-        <div className="text-xs text-slate-400">{t("directIssue.selectedCount", { n: selectedCount })}</div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={onCreateDraft}
-            disabled={loading}
-            className={cn(
-              "px-3 py-2 rounded-xl border text-sm",
-              loading
-                ? "border-white/10 bg-white/5 text-slate-500"
-                : "border-white/10 bg-white/10 hover:bg-white/15"
-            )}
-          >
-            {loading ? t("common.loading") : t("directIssue.createDraft")}
-          </button>
+        <div className="mt-3 flex gap-2">
+          <Button variant="primary" onClick={onCreateDraft} isLoading={loading}>
+            {t("directIssue.createDraft")}
+          </Button>
+          <Link href="/inventory/part-items">
+            <Button variant="secondary">{t("partItems.title") || "Part Items"}</Button>
+          </Link>
         </div>
-      </div>
+      </Card>
 
-      {/* Stock list */}
-      <div className="rounded-2xl border border-white/10 overflow-hidden">
-        <div className="bg-white/5 px-4 py-3 font-semibold">{t("directIssue.stockTitle")}</div>
-        <div className="overflow-auto">
-          <table className="min-w-[1400px] w-full text-sm">
-            <thead className="bg-white/5 text-slate-200">
-              <tr>
-                <th className="text-left px-4 py-3">{t("directIssue.colPick")}</th>
-                <th className="text-left px-4 py-3">{t("directIssue.colSerial")}</th>
-                <th className="text-left px-4 py-3">{t("directIssue.colPart")}</th>
-                <th className="text-left px-4 py-3">{t("directIssue.colWarehouse")}</th>
-                <th className="text-left px-4 py-3">{t("directIssue.colStatus")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stock.map((pi) => {
-                const isSel = !!selected[pi.id];
-                return (
-                  <tr key={pi.id} className="border-t border-white/10">
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggle(pi)}
-                        className={cn(
-                          "px-3 py-2 rounded-xl border text-sm",
-                          isSel
-                            ? "border-green-400/30 bg-green-400/10 text-green-200"
-                            : "border-white/10 bg-white/5 hover:bg-white/10"
-                        )}
-                      >
-                        {isSel ? t("directIssue.picked") : t("directIssue.pick")}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-mono text-xs text-slate-200">{pi.internal_serial}</div>
-                      <div className="font-mono text-xs text-slate-400">{pi.manufacturer_serial}</div>
-                      <div className="font-mono text-[11px] text-slate-500">{pi.id}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-slate-100">{pi.parts?.name || "—"}</div>
-                      <div className="text-xs text-slate-400">{pi.parts?.brand || ""}</div>
-                      <div className="text-xs text-slate-400 font-mono">{pi.part_id}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-slate-100">{pi.warehouses?.name || "—"}</div>
-                      <div className="text-xs text-slate-400 font-mono">{pi.warehouse_id}</div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-200">{pi.status}</td>
-                  </tr>
-                );
-              })}
-
-              {!loading && stock.length === 0 && (
-                <tr>
-                  <td className="px-4 py-6 text-slate-400" colSpan={5}>
-                    {t("directIssue.noStock")}
-                  </td>
-                </tr>
-              )}
-
-              {loading && (
-                <tr>
-                  <td className="px-4 py-6 text-slate-400" colSpan={5}>
-                    {t("common.loading")}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        title={t("directIssue.stockTitle")}
+        subtitle={t("directIssue.subtitle")}
+        columns={columns}
+        rows={stock}
+        loading={loading}
+        emptyTitle={t("directIssue.noStock")}
+        emptyHint={t("directIssue.noStockHint") || "اختر مخزن ثم اضغط تحميل المخزون."}
+        minWidthClassName="min-w-[1100px]"
+      />
     </div>
   );
 }

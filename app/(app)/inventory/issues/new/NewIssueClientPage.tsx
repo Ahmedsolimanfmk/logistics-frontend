@@ -1,14 +1,25 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
 import { getInventoryRequest, type InventoryRequest } from "@/src/lib/inventory.api";
 import { createIssueDraft } from "@/src/lib/issues.api";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
+// ✅ Design System
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Card } from "@/src/components/ui/Card";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+
+function shortId(id: any) {
+  const s = String(id ?? "");
+  if (s.length <= 14) return s;
+  return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
 export default function NewIssueClientPage() {
@@ -17,6 +28,7 @@ export default function NewIssueClientPage() {
   const sp = useSearchParams();
 
   const requestId = sp.get("requestId") || "";
+  const showRequest = !!requestId;
 
   const [loading, setLoading] = useState(false);
   const [reqRow, setReqRow] = useState<InventoryRequest | null>(null);
@@ -31,9 +43,15 @@ export default function NewIssueClientPage() {
     type: "success" as "success" | "error",
   });
 
+  const showError = (msg: string) => setToast({ open: true, message: msg, type: "error" });
+  const showOk = (msg: string) => setToast({ open: true, message: msg, type: "success" });
+
   const reservedItems = useMemo(() => {
-    const res = reqRow?.reservations || [];
-    return res.map((r) => r.part_items).filter(Boolean).map((x) => x!);
+    const res: any[] = (reqRow as any)?.reservations || [];
+    return res
+      .map((r) => r?.part_items)
+      .filter(Boolean)
+      .map((x) => x!);
   }, [reqRow]);
 
   useEffect(() => {
@@ -44,52 +62,74 @@ export default function NewIssueClientPage() {
       try {
         const r = await getInventoryRequest(requestId);
         setReqRow(r);
-        setWarehouseId(r.warehouse_id || "");
-        setWorkOrderId(r.work_order_id || "");
+        setWarehouseId((r as any)?.warehouse_id || "");
+        setWorkOrderId((r as any)?.work_order_id || "");
       } catch (e: any) {
-        setToast({ open: true, message: e?.message || t("common.failed"), type: "error" });
+        showError(e?.message || t("common.failed"));
       } finally {
         setLoading(false);
       }
     };
+
     boot();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestId]);
 
   const onCreate = async () => {
-    if (!warehouseId) return setToast({ open: true, message: t("issues.errWarehouse"), type: "error" });
-    if (!workOrderId) return setToast({ open: true, message: t("issues.errWorkOrder"), type: "error" });
-    if (!requestId) return setToast({ open: true, message: t("issues.errRequestId"), type: "error" });
-    if (reservedItems.length === 0) return setToast({ open: true, message: t("issues.errNoReserved"), type: "error" });
+    if (!warehouseId.trim()) return showError(t("issues.errWarehouse"));
+    if (!workOrderId.trim()) return showError(t("issues.errWorkOrder"));
+    if (!requestId) return showError(t("issues.errRequestId"));
+    if (reservedItems.length === 0) return showError(t("issues.errNoReserved"));
 
     setLoading(true);
     try {
       const created = await createIssueDraft({
-        warehouse_id: warehouseId,
-        work_order_id: workOrderId,
+        warehouse_id: warehouseId.trim(),
+        work_order_id: workOrderId.trim(),
         request_id: requestId,
-        notes: notes || null,
-        lines: reservedItems.map((pi) => ({
+        notes: notes.trim() ? notes.trim() : null,
+        lines: reservedItems.map((pi: any) => ({
           part_id: pi.part_id,
           part_item_id: pi.id,
           qty: 1,
         })),
       });
 
-      setToast({ open: true, message: t("issues.createdOk"), type: "success" });
+      showOk(t("issues.createdOk"));
       router.push(`/inventory/issues/${created.id}`);
     } catch (e: any) {
-      setToast({
-        open: true,
-        message: e?.response?.data?.message || e?.message || t("common.failed"),
-        type: "error",
-      });
+      showError(e?.response?.data?.message || e?.message || t("common.failed"));
     } finally {
       setLoading(false);
     }
   };
 
-  const showRequest = !!requestId;
+  const columns: DataTableColumn<any>[] = [
+    {
+      key: "part",
+      label: t("issues.colPart"),
+      render: (pi) => (
+        <div>
+          <div className="text-gray-900">{pi?.parts?.name || "—"}</div>
+          <div className="text-xs text-gray-500 font-mono">{shortId(pi?.part_id)}</div>
+        </div>
+      ),
+    },
+    {
+      key: "serial",
+      label: t("issues.colSerial"),
+      render: (pi) => (
+        <div className="font-mono text-xs text-gray-900">
+          {pi?.internal_serial || pi?.manufacturer_serial || pi?.id || "—"}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      label: t("issues.colStatus"),
+      render: (pi) => <StatusBadge status={pi?.status} />,
+    },
+  ];
 
   return (
     <div className="p-6 space-y-4">
@@ -100,125 +140,105 @@ export default function NewIssueClientPage() {
         onClose={() => setToast((p) => ({ ...p, open: false }))}
       />
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xl font-bold">{t("issues.newTitle")}</div>
-          <div className="text-sm text-slate-400">{t("issues.newSubtitle")}</div>
-        </div>
-
-        <button
-          onClick={() => router.back()}
-          className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-        >
-          {t("common.prev")}
-        </button>
-      </div>
+      <PageHeader
+        title={t("issues.newTitle")}
+        subtitle={t("issues.newSubtitle")}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => router.back()}>
+              {t("common.prev")}
+            </Button>
+            <Button variant="primary" onClick={onCreate} isLoading={loading}>
+              {t("issues.createDraft")}
+            </Button>
+          </>
+        }
+      />
 
       {/* Form */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-        {showRequest && (
-          <div className="text-sm">
-            <div className="text-slate-400">{t("issues.requestId")}</div>
-            <div className="font-mono text-xs text-slate-200">{requestId}</div>
-            <div className="mt-1 text-xs text-slate-400">
+      <Card>
+        {showRequest ? (
+          <div className="text-sm text-gray-700">
+            <div className="text-xs text-gray-500">{t("issues.requestId")}</div>
+            <div className="font-mono">{requestId}</div>
+            <div className="mt-1 text-xs text-gray-500">
               {t("issues.reservedCount", { n: reservedItems.length })}
             </div>
           </div>
+        ) : (
+          <div className="text-sm text-gray-600">{t("issues.noRequest")}</div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <div className="text-xs text-slate-400 mb-1">{t("issues.warehouseId")}</div>
-            <input
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              placeholder="warehouse_id"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
-            />
-          </div>
+        <div className="mt-4">
+          <FiltersBar
+            left={
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full">
+                <input
+                  value={warehouseId}
+                  onChange={(e) => setWarehouseId(e.target.value)}
+                  placeholder={t("issues.warehouseId") || "warehouse_id"}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+                />
+                <input
+                  value={workOrderId}
+                  onChange={(e) => setWorkOrderId(e.target.value)}
+                  placeholder={t("issues.workOrderId") || "work_order_id"}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+                />
+              </div>
+            }
+            right={
+              <>
+                {requestId ? (
+                  <Link href={`/inventory/requests/${requestId}`}>
+                    <Button variant="secondary">{t("common.open") || "Open Request"}</Button>
+                  </Link>
+                ) : null}
 
-          <div>
-            <div className="text-xs text-slate-400 mb-1">{t("issues.workOrderId")}</div>
-            <input
-              value={workOrderId}
-              onChange={(e) => setWorkOrderId(e.target.value)}
-              placeholder="work_order_id"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
-            />
-          </div>
+                <Button variant="primary" onClick={onCreate} isLoading={loading}>
+                  {t("issues.createDraft")}
+                </Button>
+              </>
+            }
+          />
         </div>
 
-        <div>
-          <div className="text-xs text-slate-400 mb-1">{t("issues.notes")}</div>
+        <div className="mt-3">
+          <div className="text-xs text-gray-500 mb-1">{t("issues.notes")}</div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t("issues.notesPh")}
-            className="w-full min-h-[90px] rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none"
+            className="w-full min-h-[90px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
           />
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={onCreate}
-            disabled={loading}
-            className={cn(
-              "px-3 py-2 rounded-xl border text-sm",
-              loading
-                ? "border-white/10 bg-white/5 text-slate-500"
-                : "border-white/10 bg-white/10 hover:bg-white/15"
-            )}
-          >
-            {loading ? t("common.loading") : t("issues.createDraft")}
-          </button>
+        <div className="mt-3 text-xs text-gray-500">
+          warehouse_id: <span className="font-mono">{warehouseId ? shortId(warehouseId) : "—"}</span>
+          {workOrderId ? (
+            <>
+              {" "}
+              • work_order_id: <span className="font-mono">{shortId(workOrderId)}</span>
+            </>
+          ) : null}
         </div>
-      </div>
+      </Card>
 
-      {/* Preview reserved serials */}
-      <div className="rounded-2xl border border-white/10 overflow-hidden">
-        <div className="bg-white/5 px-4 py-3 font-semibold">{t("issues.linesPreview")}</div>
-        <div className="overflow-auto">
-          <table className="min-w-[1100px] w-full text-sm">
-            <thead className="bg-white/5 text-slate-200">
-              <tr>
-                <th className="text-left px-4 py-3">{t("issues.colPart")}</th>
-                <th className="text-left px-4 py-3">{t("issues.colSerial")}</th>
-                <th className="text-left px-4 py-3">{t("issues.colStatus")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reservedItems.map((pi) => (
-                <tr key={pi.id} className="border-t border-white/10">
-                  <td className="px-4 py-3">
-                    <div className="text-slate-100">{pi.parts?.name || "—"}</div>
-                    <div className="text-xs text-slate-400 font-mono">{pi.part_id}</div>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-200">
-                    {pi.internal_serial || pi.manufacturer_serial || pi.id}
-                  </td>
-                  <td className="px-4 py-3 text-slate-200">{pi.status}</td>
-                </tr>
-              ))}
-
-              {!loading && reservedItems.length === 0 && (
-                <tr>
-                  <td className="px-4 py-6 text-slate-400" colSpan={3}>
-                    {showRequest ? t("issues.noReserved") : t("issues.noRequest")}
-                  </td>
-                </tr>
-              )}
-
-              {loading && (
-                <tr>
-                  <td className="px-4 py-6 text-slate-400" colSpan={3}>
-                    {t("common.loading")}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Preview reserved items */}
+      <DataTable
+        title={t("issues.linesPreview")}
+        subtitle={
+          showRequest
+            ? t("issues.reservedCount", { n: reservedItems.length })
+            : t("issues.noRequest")
+        }
+        columns={columns}
+        rows={reservedItems}
+        loading={loading}
+        emptyTitle={showRequest ? t("issues.noReserved") : t("issues.noRequest")}
+        emptyHint={showRequest ? t("issues.noReservedHint") || "" : ""}
+        minWidthClassName="min-w-[900px]"
+      />
     </div>
   );
 }
