@@ -11,12 +11,7 @@ import { listIssues, type InventoryIssue } from "@/src/lib/issues.api";
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
-// لو عندك FiltersBar استخدمه، لو مش موجود سيبه:
-// import { FiltersBar } from "@/src/components/ui/FiltersBar";
-
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -31,15 +26,9 @@ function shortId(id: any) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
-function StatusBadge({ value }: { value?: string | null }) {
-  const s = String(value || "").toUpperCase();
-  const base = "inline-flex items-center px-2 py-0.5 rounded-lg text-xs border";
-  if (s === "DRAFT") return <span className={cn(base, "border-yellow-400/30 text-yellow-200 bg-yellow-400/10")}>{s}</span>;
-  if (s === "POSTED") return <span className={cn(base, "border-green-400/30 text-green-200 bg-green-400/10")}>{s}</span>;
-  if (s === "CANCELLED") return <span className={cn(base, "border-red-400/30 text-red-200 bg-red-400/10")}>{s}</span>;
-  return <span className={cn(base, "border-white/15 text-slate-200 bg-white/5")}>{s || "—"}</span>;
-}
-
+const inputCls =
+"w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none " +
+  "text-gray-900 placeholder:text-gray-400 focus:border-gray-300";
 export default function InventoryIssuesPage() {
   const t = useT();
 
@@ -70,7 +59,11 @@ export default function InventoryIssuesPage() {
       });
       setRows(unwrapItems<InventoryIssue>(res));
     } catch (e: any) {
-      setToast({ open: true, message: e?.response?.data?.message || e?.message || t("common.failed"), type: "error" });
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || t("common.failed"),
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -90,7 +83,7 @@ export default function InventoryIssuesPage() {
   };
 
   return (
-    <div className="p-6 space-y-4 text-white">
+    <div className="space-y-4">
       <Toast
         open={toast.open}
         message={toast.message}
@@ -117,47 +110,27 @@ export default function InventoryIssuesPage() {
       <Card>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
-            <div className="text-xs text-slate-400 mb-1">{t("issues.filterStatus") || "الحالة"}</div>
-            <input
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              placeholder="DRAFT / POSTED / ..."
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-            />
+            <div className="text-xs text-gray-500 mb-1">{t("issues.filterStatus") || "الحالة"}</div>
+            <input value={status} onChange={(e) => setStatus(e.target.value)} placeholder="DRAFT / POSTED / ..." className={inputCls} />
           </div>
 
           <div>
-            <div className="text-xs text-slate-400 mb-1">{t("issues.filterWarehouseId") || "warehouse_id"}</div>
-            <input
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              placeholder="uuid"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-            />
+            <div className="text-xs text-gray-500 mb-1">{t("issues.filterWarehouseId") || "warehouse_id"}</div>
+            <input value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} placeholder="uuid" className={inputCls} />
           </div>
 
           <div>
-            <div className="text-xs text-slate-400 mb-1">{t("issues.filterRequestId") || "request_id"}</div>
-            <input
-              value={requestId}
-              onChange={(e) => setRequestId(e.target.value)}
-              placeholder="uuid"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-            />
+            <div className="text-xs text-gray-500 mb-1">{t("issues.filterRequestId") || "request_id"}</div>
+            <input value={requestId} onChange={(e) => setRequestId(e.target.value)} placeholder="uuid" className={inputCls} />
           </div>
 
           <div>
-            <div className="text-xs text-slate-400 mb-1">{t("issues.filterWorkOrderId") || "work_order_id"}</div>
-            <input
-              value={workOrderId}
-              onChange={(e) => setWorkOrderId(e.target.value)}
-              placeholder="uuid"
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm outline-none text-slate-100"
-            />
+            <div className="text-xs text-gray-500 mb-1">{t("issues.filterWorkOrderId") || "work_order_id"}</div>
+            <input value={workOrderId} onChange={(e) => setWorkOrderId(e.target.value)} placeholder="uuid" className={inputCls} />
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 items-center">
           <Button variant="primary" onClick={load} isLoading={loading}>
             {t("common.search") || "بحث"}
           </Button>
@@ -165,18 +138,18 @@ export default function InventoryIssuesPage() {
             {t("common.reset") || "إعادة ضبط"}
           </Button>
 
-          <div className="ml-auto text-xs text-slate-400 self-center">
-            {t("common.count") || "العدد"}: <span className="text-slate-200 font-semibold">{items.length}</span>
+          <div className="ml-auto text-xs text-gray-500">
+            {t("common.count") || "العدد"}: <span className="text-gray-700 font-semibold">{items.length}</span>
           </div>
         </div>
       </Card>
 
       {/* Table */}
       <Card>
-        <div className="overflow-hidden rounded-2xl border border-white/10">
+        <div className="overflow-hidden rounded-2xl border border-border-gray-200">
           <div className="overflow-auto">
             <table className="min-w-[1100px] w-full text-sm">
-              <thead className="bg-white/5 text-slate-200">
+              <thead className="bg-gray-50 text-gray-700">
                 <tr>
                   <th className="text-left px-4 py-3">{t("issues.colId") || "ID"}</th>
                   <th className="text-left px-4 py-3">{t("issues.colStatus") || "الحالة"}</th>
@@ -191,24 +164,21 @@ export default function InventoryIssuesPage() {
 
               <tbody>
                 {items.map((r) => (
-                  <tr key={r.id} className="border-t border-white/10">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-300">{shortId(r.id)}</td>
+                  <tr key={r.id} className="border-t border-gray-200">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-700/600">{shortId(r.id)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge value={r.status} />
+                      <StatusBadge status={r.status} />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-slate-100">{r.warehouses?.name || "—"}</div>
-                      <div className="text-xs text-slate-400 font-mono">{shortId(r.warehouse_id)}</div>
+                      <div className="text-gray-900">{r.warehouses?.name || "—"}</div>
+                      <div className="text-xs text-gray-500 font-mono">{shortId(r.warehouse_id)}</div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-200">{r.request_id ? shortId(r.request_id) : "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-200">{r.work_order_id ? shortId(r.work_order_id) : "—"}</td>
-                    <td className="px-4 py-3 text-slate-200">{r.inventory_issue_lines?.length ?? 0}</td>
-                    <td className="px-4 py-3 text-slate-300">{fmtDate(r.created_at)}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-700">{r.request_id ? shortId(r.request_id) : "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-700">{r.work_order_id ? shortId(r.work_order_id) : "—"}</td>
+                    <td className="px-4 py-3 text-gray-700">{r.inventory_issue_lines?.length ?? 0}</td>
+                    <td className="px-4 py-3 text-gray-700/600">{fmtDate(r.created_at)}</td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/inventory/issues/${r.id}`}
-                        className="inline-flex px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"
-                      >
+                      <Link href={`/inventory/issues/${r.id}`} className="inline-flex px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 hover:bg-white/10">
                         {t("common.open") || "فتح"}
                       </Link>
                     </td>
@@ -217,7 +187,7 @@ export default function InventoryIssuesPage() {
 
                 {!loading && items.length === 0 && (
                   <tr>
-                    <td className="px-4 py-6 text-slate-400" colSpan={8}>
+                    <td className="px-4 py-6 text-gray-500" colSpan={8}>
                       {t("common.noData") || "لا توجد بيانات"}
                     </td>
                   </tr>
@@ -225,7 +195,7 @@ export default function InventoryIssuesPage() {
 
                 {loading && (
                   <tr>
-                    <td className="px-4 py-6 text-slate-400" colSpan={8}>
+                    <td className="px-4 py-6 text-gray-500" colSpan={8}>
                       {t("common.loading") || "جاري التحميل..."}
                     </td>
                   </tr>

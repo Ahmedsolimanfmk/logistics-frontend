@@ -14,18 +14,20 @@ export function Card({
   return (
     <div
       className={[
-        "rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm",
+        // ✅ Theme-aware container
+        "rounded-2xl border border-black/10 bg-[rgba(var(--trex-surface),0.92)] backdrop-blur-xl overflow-hidden",
+        "shadow-[0_10px_30px_rgba(0,0,0,0.06)]",
         className,
       ].join(" ")}
     >
       {title ? (
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
-          <div className="font-semibold text-gray-900">{title}</div>
+        <div className="px-4 py-3 border-b border-black/10 flex items-center justify-between gap-3">
+          <div className="font-semibold text-[rgb(var(--trex-fg))]">{title}</div>
           {right ? <div className="flex items-center gap-2">{right}</div> : null}
         </div>
       ) : null}
 
-      <div className="p-4">{children}</div>
+      <div className="p-4 text-[rgb(var(--trex-fg))]">{children}</div>
     </div>
   );
 }

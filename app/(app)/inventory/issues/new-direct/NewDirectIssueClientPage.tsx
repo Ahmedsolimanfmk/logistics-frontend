@@ -23,6 +23,14 @@ function shortId(id: any) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
+const inputCls =
+  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none " +
+  "text-gray-900 placeholder:text-gray-400 focus:border-gray-300";
+
+const textareaCls =
+  "w-full min-h-[90px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none " +
+  "text-gray-900 placeholder:text-gray-400 focus:border-gray-300";
+
 export default function NewDirectIssueClientPage() {
   const t = useT();
   const router = useRouter();
@@ -112,48 +120,44 @@ export default function NewDirectIssueClientPage() {
       render: (pi) => {
         const isSel = !!selected[pi.id];
         return (
-          <Button
-            variant={isSel ? "primary" : "secondary"}
-            onClick={() => toggle(pi)}
-            disabled={loading}
-          >
+          <Button variant={isSel ? "primary" : "secondary"} onClick={() => toggle(pi)} disabled={loading}>
             {isSel ? t("directIssue.picked") : t("directIssue.pick")}
           </Button>
         );
       },
     },
     {
-      key: "serial",
-      label: t("directIssue.colSerial"),
-      render: (pi) => (
-        <div>
-          <div className="font-mono text-xs text-gray-900">{pi.internal_serial || "—"}</div>
-          <div className="font-mono text-xs text-gray-600">{pi.manufacturer_serial || "—"}</div>
-          <div className="font-mono text-[11px] text-gray-500">{shortId(pi.id)}</div>
-        </div>
-      ),
-    },
-    {
-      key: "part",
-      label: t("directIssue.colPart"),
-      render: (pi) => (
-        <div>
-          <div className="text-gray-900">{pi.parts?.name || "—"}</div>
-          <div className="text-xs text-gray-600">{pi.parts?.brand || ""}</div>
-          <div className="text-xs text-gray-500 font-mono">{shortId(pi.part_id)}</div>
-        </div>
-      ),
-    },
-    {
-      key: "warehouse",
-      label: t("directIssue.colWarehouse"),
-      render: (pi) => (
-        <div>
-          <div className="text-gray-900">{pi.warehouses?.name || "—"}</div>
-          <div className="text-xs text-gray-500 font-mono">{shortId(pi.warehouse_id)}</div>
-        </div>
-      ),
-    },
+  key: "serial",
+  label: t("directIssue.colSerial"),
+  render: (pi) => (
+    <div>
+      <div className="font-mono text-xs text-gray-900">{pi.internal_serial || "—"}</div>
+      <div className="font-mono text-xs text-gray-600">{pi.manufacturer_serial || "—"}</div>
+      <div className="font-mono text-[11px] text-gray-500">{shortId(pi.id)}</div>
+    </div>
+  ),
+},
+{
+  key: "part",
+  label: t("directIssue.colPart"),
+  render: (pi) => (
+    <div>
+      <div className="text-gray-900">{pi.parts?.name || "—"}</div>
+      <div className="text-xs text-gray-600">{pi.parts?.brand || ""}</div>
+      <div className="text-xs text-gray-500 font-mono">{shortId(pi.part_id)}</div>
+    </div>
+  ),
+},
+{
+  key: "warehouse",
+  label: t("directIssue.colWarehouse"),
+  render: (pi) => (
+    <div>
+      <div className="text-gray-900">{pi.warehouses?.name || "—"}</div>
+      <div className="text-xs text-gray-500 font-mono">{shortId(pi.warehouse_id)}</div>
+    </div>
+  ),
+},
     {
       key: "status",
       label: t("directIssue.colStatus"),
@@ -162,13 +166,8 @@ export default function NewDirectIssueClientPage() {
   ];
 
   return (
-    <div className="p-6 space-y-4">
-      <Toast
-        open={toast.open}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast((p) => ({ ...p, open: false }))}
-      />
+    <div className="space-y-4">
+      <Toast open={toast.open} message={toast.message} type={toast.type} onClose={() => setToast((p) => ({ ...p, open: false }))} />
 
       <PageHeader
         title={t("directIssue.title")}
@@ -189,24 +188,9 @@ export default function NewDirectIssueClientPage() {
         <FiltersBar
           left={
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full">
-              <input
-                value={warehouseId}
-                onChange={(e) => setWarehouseId(e.target.value)}
-                placeholder={t("directIssue.warehouseId") || "warehouse_id"}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-              />
-              <input
-                value={workOrderId}
-                onChange={(e) => setWorkOrderId(e.target.value)}
-                placeholder={t("directIssue.workOrderId") || "work_order_id"}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-              />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={t("directIssue.searchPh")}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-              />
+              <input value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} placeholder={t("directIssue.warehouseId") || "warehouse_id"} className={inputCls} />
+              <input value={workOrderId} onChange={(e) => setWorkOrderId(e.target.value)} placeholder={t("directIssue.workOrderId") || "work_order_id"} className={inputCls} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("directIssue.searchPh")} className={inputCls} />
             </div>
           }
           right={
@@ -217,9 +201,7 @@ export default function NewDirectIssueClientPage() {
 
               <Button
                 variant="secondary"
-                onClick={() => {
-                  setSelected({});
-                }}
+                onClick={() => setSelected({})}
                 disabled={selectedCount === 0 || loading}
               >
                 {t("common.clear") || "Clear"}
@@ -229,18 +211,18 @@ export default function NewDirectIssueClientPage() {
         />
 
         <div className="mt-3">
-          <div className="text-xs text-gray-500 mb-1">{t("directIssue.notes")}</div>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder={t("directIssue.notesPh")}
-            className="w-full min-h-[90px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-          />
+          <div className="text-xs text-slate-400 mb-1">{t("directIssue.notes")}</div>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("directIssue.notesPh")} className={textareaCls} />
         </div>
 
         <div className="mt-3 text-sm text-gray-700">
           {t("directIssue.selectedCount", { n: selectedCount })}{" "}
-          {selectedCount ? `(${selectedList.map((x) => shortId(x.id)).slice(0, 3).join(", ")}${selectedCount > 3 ? "…" : ""})` : ""}
+          {selectedCount ? (
+            <span className="text-gray-500">
+              ({selectedList.map((x) => shortId(x.id)).slice(0, 3).join(", ")}
+              {selectedCount > 3 ? "…" : ""})
+            </span>
+          ) : null}
         </div>
 
         <div className="mt-3 flex gap-2">

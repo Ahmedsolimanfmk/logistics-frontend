@@ -64,16 +64,23 @@ export function DataTable<T>({
   const hasHeader = Boolean(title || subtitle || right || typeof total === "number");
   const clickable = Boolean(onRowClick);
 
+  const shellCls =
+    "rounded-2xl border border-black/10 bg-[rgba(var(--trex-surface),0.92)] backdrop-blur-xl overflow-hidden " +
+    "shadow-[0_10px_30px_rgba(0,0,0,0.06)]";
+
+  const muted = "text-slate-500";
+  const fg = "text-[rgb(var(--trex-fg))]";
+
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+    <div className={shellCls}>
       {hasHeader ? (
-        <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-4 py-3 border-b border-black/10 flex flex-wrap items-center justify-between gap-3">
           <div>
-            {title ? <div className="text-sm font-semibold text-gray-900">{title}</div> : null}
-            {subtitle ? <div className="text-xs text-gray-500 mt-0.5">{subtitle}</div> : null}
+            {title ? <div className={cn("text-sm font-semibold", fg)}>{title}</div> : null}
+            {subtitle ? <div className={cn("text-xs mt-0.5", muted)}>{subtitle}</div> : null}
             {typeof total === "number" ? (
-              <div className="text-xs text-gray-500 mt-0.5">
-                الإجمالي: <span className="font-semibold text-gray-900">{total}</span>
+              <div className={cn("text-xs mt-0.5", muted)}>
+                الإجمالي: <span className={cn("font-semibold", fg)}>{total}</span>
               </div>
             ) : null}
           </div>
@@ -81,9 +88,9 @@ export function DataTable<T>({
           <div className="flex items-center gap-2">
             {right}
             {typeof page === "number" && typeof pages === "number" ? (
-              <div className="text-xs text-gray-600">
-                صفحة <span className="font-semibold text-gray-900">{page}</span> /{" "}
-                <span className="font-semibold text-gray-900">{pages}</span>
+              <div className={cn("text-xs", muted)}>
+                صفحة <span className={cn("font-semibold", fg)}>{page}</span> /{" "}
+                <span className={cn("font-semibold", fg)}>{pages}</span>
               </div>
             ) : null}
           </div>
@@ -94,11 +101,11 @@ export function DataTable<T>({
       {loading ? (
         <div className="p-4">
           <div className="space-y-2">
-            <div className="h-8 rounded-lg bg-gray-100" />
-            <div className="h-8 rounded-lg bg-gray-100" />
-            <div className="h-8 rounded-lg bg-gray-100" />
-            <div className="h-8 rounded-lg bg-gray-100" />
-            <div className="h-8 rounded-lg bg-gray-100" />
+            <div className="h-8 rounded-lg bg-black/[0.06]" />
+            <div className="h-8 rounded-lg bg-black/[0.06]" />
+            <div className="h-8 rounded-lg bg-black/[0.06]" />
+            <div className="h-8 rounded-lg bg-black/[0.06]" />
+            <div className="h-8 rounded-lg bg-black/[0.06]" />
           </div>
         </div>
       ) : !rows || rows.length === 0 ? (
@@ -111,13 +118,13 @@ export function DataTable<T>({
       ) : (
         <div className="overflow-auto">
           <table className={cn("w-full text-sm", minWidthClassName)}>
-            <thead className="bg-gray-50">
+            <thead className="bg-black/[0.04]">
               <tr>
                 {columns.map((c) => (
                   <th
                     key={c.key}
                     className={cn(
-                      "text-left px-4 py-3 font-semibold text-gray-700 whitespace-nowrap",
+                      "text-left px-4 py-3 font-semibold whitespace-nowrap text-slate-600",
                       c.headerClassName
                     )}
                   >
@@ -132,15 +139,18 @@ export function DataTable<T>({
                 <tr
                   key={idx}
                   className={cn(
-                    "border-t border-gray-200",
-                    clickable && "cursor-pointer hover:bg-gray-50"
+                    "border-t border-black/10",
+                    clickable && "cursor-pointer hover:bg-black/[0.03]"
                   )}
                   onClick={() => onRowClick?.(row)}
                 >
                   {columns.map((c) => (
                     <td
                       key={c.key}
-                      className={cn("px-4 py-3 text-gray-900 whitespace-nowrap", c.className)}
+                      className={cn(
+                        "px-4 py-3 whitespace-nowrap text-slate-800",
+                        c.className
+                      )}
                     >
                       {c.render ? c.render(row) : String((row as any)?.[c.key] ?? "")}
                     </td>
@@ -153,11 +163,11 @@ export function DataTable<T>({
       )}
 
       {/* Footer */}
-      {(footer || onPrev || onNext) ? (
-        <div className="px-4 py-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
+      {footer || onPrev || onNext ? (
+        <div className="px-4 py-3 border-t border-black/10 flex flex-wrap items-center justify-between gap-3">
           <div>{footer}</div>
 
-          {(onPrev || onNext) ? (
+          {onPrev || onNext ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -166,12 +176,13 @@ export function DataTable<T>({
                 className={cn(
                   "px-3 py-2 rounded-xl border text-sm transition",
                   onPrev
-                    ? "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
-                    : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                    ? "border-black/10 bg-black/[0.02] text-slate-700 hover:bg-black/[0.04]"
+                    : "border-black/10 bg-black/[0.02] text-slate-400 cursor-not-allowed"
                 )}
               >
                 السابق
               </button>
+
               <button
                 type="button"
                 onClick={onNext}
@@ -179,8 +190,8 @@ export function DataTable<T>({
                 className={cn(
                   "px-3 py-2 rounded-xl border text-sm transition",
                   onNext
-                    ? "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
-                    : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                    ? "border-black/10 bg-black/[0.02] text-slate-700 hover:bg-black/[0.04]"
+                    : "border-black/10 bg-black/[0.02] text-slate-400 cursor-not-allowed"
                 )}
               >
                 التالي
