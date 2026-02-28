@@ -1,3 +1,4 @@
+// app/(app)/inventory/issues/new-direct/NewDirectIssueClientPage.tsx
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -51,8 +52,15 @@ export default function NewDirectIssueClientPage() {
     type: "success" as "success" | "error",
   });
 
-  const showError = (msg: string) => setToast({ open: true, message: msg, type: "error" });
-  const showOk = (msg: string) => setToast({ open: true, message: msg, type: "success" });
+  const showError = (msg: string) => {
+    setToast({ open: true, message: msg, type: "error" });
+    setTimeout(() => setToast((p) => ({ ...p, open: false })), 2500);
+  };
+
+  const showOk = (msg: string) => {
+    setToast({ open: true, message: msg, type: "success" });
+    setTimeout(() => setToast((p) => ({ ...p, open: false })), 2500);
+  };
 
   const toggle = (it: PartItem) => {
     setSelected((p) => {
@@ -65,6 +73,14 @@ export default function NewDirectIssueClientPage() {
 
   const selectedList = useMemo(() => Object.values(selected), [selected]);
   const selectedCount = selectedList.length;
+
+  const canLoad = !!warehouseId.trim();
+  const canCreate =
+    !!warehouseId.trim() &&
+    !!workOrderId.trim() &&
+    !!notes.trim() &&
+    notes.trim().length >= 5 &&
+    selectedCount > 0;
 
   const loadStock = async () => {
     if (!warehouseId.trim()) return showError(t("directIssue.errWarehouse"));
@@ -127,37 +143,37 @@ export default function NewDirectIssueClientPage() {
       },
     },
     {
-  key: "serial",
-  label: t("directIssue.colSerial"),
-  render: (pi) => (
-    <div>
-      <div className="font-mono text-xs text-gray-900">{pi.internal_serial || "—"}</div>
-      <div className="font-mono text-xs text-gray-600">{pi.manufacturer_serial || "—"}</div>
-      <div className="font-mono text-[11px] text-gray-500">{shortId(pi.id)}</div>
-    </div>
-  ),
-},
-{
-  key: "part",
-  label: t("directIssue.colPart"),
-  render: (pi) => (
-    <div>
-      <div className="text-gray-900">{pi.parts?.name || "—"}</div>
-      <div className="text-xs text-gray-600">{pi.parts?.brand || ""}</div>
-      <div className="text-xs text-gray-500 font-mono">{shortId(pi.part_id)}</div>
-    </div>
-  ),
-},
-{
-  key: "warehouse",
-  label: t("directIssue.colWarehouse"),
-  render: (pi) => (
-    <div>
-      <div className="text-gray-900">{pi.warehouses?.name || "—"}</div>
-      <div className="text-xs text-gray-500 font-mono">{shortId(pi.warehouse_id)}</div>
-    </div>
-  ),
-},
+      key: "serial",
+      label: t("directIssue.colSerial"),
+      render: (pi) => (
+        <div>
+          <div className="font-mono text-xs text-gray-900">{pi.internal_serial || "—"}</div>
+          <div className="font-mono text-xs text-gray-600">{pi.manufacturer_serial || "—"}</div>
+          <div className="font-mono text-[11px] text-gray-500">{shortId(pi.id)}</div>
+        </div>
+      ),
+    },
+    {
+      key: "part",
+      label: t("directIssue.colPart"),
+      render: (pi) => (
+        <div>
+          <div className="text-gray-900">{pi.parts?.name || "—"}</div>
+          <div className="text-xs text-gray-600">{pi.parts?.brand || ""}</div>
+          <div className="text-xs text-gray-500 font-mono">{shortId(pi.part_id)}</div>
+        </div>
+      ),
+    },
+    {
+      key: "warehouse",
+      label: t("directIssue.colWarehouse"),
+      render: (pi) => (
+        <div>
+          <div className="text-gray-900">{pi.warehouses?.name || "—"}</div>
+          <div className="text-xs text-gray-500 font-mono">{shortId(pi.warehouse_id)}</div>
+        </div>
+      ),
+    },
     {
       key: "status",
       label: t("directIssue.colStatus"),
@@ -166,8 +182,13 @@ export default function NewDirectIssueClientPage() {
   ];
 
   return (
-    <div className="space-y-4">
-      <Toast open={toast.open} message={toast.message} type={toast.type} onClose={() => setToast((p) => ({ ...p, open: false }))} />
+    <div className="space-y-4" dir="rtl">
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((p) => ({ ...p, open: false }))}
+      />
 
       <PageHeader
         title={t("directIssue.title")}
@@ -177,7 +198,7 @@ export default function NewDirectIssueClientPage() {
             <Button variant="secondary" onClick={() => router.back()}>
               {t("common.prev")}
             </Button>
-            <Button variant="primary" onClick={onCreateDraft} isLoading={loading}>
+            <Button variant="primary" onClick={onCreateDraft} isLoading={loading} disabled={!canCreate}>
               {t("directIssue.createDraft")}
             </Button>
           </>
@@ -188,23 +209,29 @@ export default function NewDirectIssueClientPage() {
         <FiltersBar
           left={
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full">
-              <input value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} placeholder={t("directIssue.warehouseId") || "warehouse_id"} className={inputCls} />
-              <input value={workOrderId} onChange={(e) => setWorkOrderId(e.target.value)} placeholder={t("directIssue.workOrderId") || "work_order_id"} className={inputCls} />
+              <input
+                value={warehouseId}
+                onChange={(e) => setWarehouseId(e.target.value)}
+                placeholder={t("directIssue.warehouseId") || "warehouse_id"}
+                className={inputCls}
+              />
+              <input
+                value={workOrderId}
+                onChange={(e) => setWorkOrderId(e.target.value)}
+                placeholder={t("directIssue.workOrderId") || "work_order_id"}
+                className={inputCls}
+              />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("directIssue.searchPh")} className={inputCls} />
             </div>
           }
           right={
             <>
-              <Button variant="secondary" onClick={loadStock} isLoading={loading}>
+              <Button variant="secondary" onClick={loadStock} isLoading={loading} disabled={!canLoad}>
                 {t("directIssue.loadStock")}
               </Button>
 
-              <Button
-                variant="secondary"
-                onClick={() => setSelected({})}
-                disabled={selectedCount === 0 || loading}
-              >
-                {t("common.clear") || "Clear"}
+              <Button variant="secondary" onClick={() => setSelected({})} disabled={selectedCount === 0 || loading}>
+                {t("common.clear")}
               </Button>
             </>
           }
@@ -226,11 +253,11 @@ export default function NewDirectIssueClientPage() {
         </div>
 
         <div className="mt-3 flex gap-2">
-          <Button variant="primary" onClick={onCreateDraft} isLoading={loading}>
+          <Button variant="primary" onClick={onCreateDraft} isLoading={loading} disabled={!canCreate}>
             {t("directIssue.createDraft")}
           </Button>
           <Link href="/inventory/part-items">
-            <Button variant="secondary">{t("partItems.title") || "Part Items"}</Button>
+            <Button variant="secondary">{t("partItems.title")}</Button>
           </Link>
         </div>
       </Card>
@@ -242,7 +269,7 @@ export default function NewDirectIssueClientPage() {
         rows={stock}
         loading={loading}
         emptyTitle={t("directIssue.noStock")}
-        emptyHint={t("directIssue.noStockHint") || "اختر مخزن ثم اضغط تحميل المخزون."}
+        emptyHint={t("directIssue.noStockHint") || "اختر مخزن ثم اضغط تحميل المتاح"}
         minWidthClassName="min-w-[1100px]"
       />
     </div>
