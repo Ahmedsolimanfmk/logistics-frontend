@@ -1,3 +1,4 @@
+// app/(app)/finance/purchases/[id]/PurchaseDetailsClientPage.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -52,6 +53,7 @@ type ReceiptDetails = {
   total_amount?: number | null;
   notes?: string | null;
   created_at?: string | null;
+  submitted_at?: string | null;
   posted_at?: string | null;
 
   warehouses?: { name?: string | null } | null;
@@ -69,13 +71,17 @@ export default function PurchaseDetailsClientPage() {
 
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
+
+  // ✅ Permissions
   const canPost = role === "ADMIN" || role === "ACCOUNTANT";
+  const canSubmit = role === "ADMIN" || role === "STOREKEEPER";
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [data, setData] = useState<ReceiptDetails | null>(null);
 
+  // Toast
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -83,11 +89,22 @@ export default function PurchaseDetailsClientPage() {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
+    setTimeout(() => setToastOpen(false), 2500);
   };
 
+  // ConfirmDialog
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>(t("common.confirm") || "تأكيد");
+  const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
   const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
+
+  function openConfirm(opts: { title: React.ReactNode; description?: React.ReactNode; action: () => Promise<void> | void }) {
+    setConfirmTitle(opts.title);
+    setConfirmDesc(opts.description ?? "");
+    setConfirmAction(() => opts.action);
+    setConfirmOpen(true);
+  }
 
   const status = String(data?.status || "").toUpperCase();
 
@@ -116,28 +133,63 @@ export default function PurchaseDetailsClientPage() {
 
   const items = data?.items || [];
   const itemsCount = items.length;
+
   const itemsSum = useMemo(() => items.reduce((acc, x) => acc + Number(x.unit_cost || 0), 0), [items]);
 
   const cash = data?.cash_expense || (Array.isArray(data?.cash_expenses) ? data?.cash_expenses?.[0] : null);
 
+  // ✅ Submit: DRAFT -> SUBMITTED
+  async function submitReceipt() {
+    if (!canSubmit) return;
+
+    openConfirm({
+      title: t("financePurchases.confirm.submitTitle") || "Submit Receipt",
+      description:
+        t("financePurchases.confirm.submitDesc") ||
+        "سيتم إرسال الإضافة للمحاسبة (DRAFT → SUBMITTED).",
+      action: async () => {
+        setConfirmBusy(true);
+        setBusy(true);
+        try {
+          await api.post(`/inventory/receipts/${id}/submit`, {});
+          showToast("success", t("financePurchases.toast.submittedOk") || "تم Submit بنجاح");
+          await load();
+        } catch (e: any) {
+          showToast("error", e?.response?.data?.message || e?.message || t("financePurchases.errors.submitFailed") || "Failed to submit receipt");
+        } finally {
+          setBusy(false);
+          setConfirmBusy(false);
+          setConfirmOpen(false);
+        }
+      },
+    });
+  }
+
+  // ✅ Post: SUBMITTED -> POSTED
   async function postReceipt() {
     if (!canPost) return;
-    setConfirmAction(() => async () => {
-      setConfirmBusy(true);
-      setBusy(true);
-      try {
-        await api.post(`/inventory/receipts/${id}/post`, {});
-        showToast("success", t("financePurchases.toast.postedOk"));
-        await load();
-      } catch (e: any) {
-        showToast("error", e?.response?.data?.message || e?.message || t("financePurchases.errors.postFailed"));
-      } finally {
-        setBusy(false);
-        setConfirmBusy(false);
-        setConfirmOpen(false);
-      }
+
+    openConfirm({
+      title: t("financePurchases.confirm.postTitle") || "Post Receipt",
+      description:
+        t("financePurchases.confirm.postDesc") ||
+        "سيتم إدخال القطع للمخزن وإنشاء مصروف (COMPANY) بحالة Pending للمراجعة.",
+      action: async () => {
+        setConfirmBusy(true);
+        setBusy(true);
+        try {
+          await api.post(`/inventory/receipts/${id}/post`, {});
+          showToast("success", t("financePurchases.toast.postedOk") || "تم Post بنجاح");
+          await load();
+        } catch (e: any) {
+          showToast("error", e?.response?.data?.message || e?.message || t("financePurchases.errors.postFailed") || "Failed to post receipt");
+        } finally {
+          setBusy(false);
+          setConfirmBusy(false);
+          setConfirmOpen(false);
+        }
+      },
     });
-    setConfirmOpen(true);
   }
 
   const columns: DataTableColumn<ReceiptItem>[] = [
@@ -153,11 +205,26 @@ export default function PurchaseDetailsClientPage() {
         </div>
       ),
     },
-    { key: "internal", label: t("financePurchases.details.table.internalSerial"), render: (x) => <span className="font-mono text-xs">{x.internal_serial || "—"}</span> },
-    { key: "manufacturer", label: t("financePurchases.details.table.manufacturerSerial"), render: (x) => <span className="font-mono text-xs">{x.manufacturer_serial || "—"}</span> },
-    { key: "unitCost", label: t("financePurchases.details.table.unitCost"), render: (x) => <span className="font-semibold">{fmtMoney(x.unit_cost)}</span> },
+    {
+      key: "internal",
+      label: t("financePurchases.details.table.internalSerial"),
+      render: (x) => <span className="font-mono text-xs">{x.internal_serial || "—"}</span>,
+    },
+    {
+      key: "manufacturer",
+      label: t("financePurchases.details.table.manufacturerSerial"),
+      render: (x) => <span className="font-mono text-xs">{x.manufacturer_serial || "—"}</span>,
+    },
+    {
+      key: "unitCost",
+      label: t("financePurchases.details.table.unitCost"),
+      render: (x) => <span className="font-semibold">{fmtMoney(x.unit_cost)}</span>,
+    },
     { key: "notes", label: t("financePurchases.details.table.notes"), render: (x) => <span className="text-gray-700">{x.notes || "—"}</span> },
   ];
+
+  const showSubmit = canSubmit && status === "DRAFT";
+  const showPost = canPost && status === "SUBMITTED";
 
   return (
     <div className="p-4 md:p-6 space-y-4" dir="rtl">
@@ -168,12 +235,17 @@ export default function PurchaseDetailsClientPage() {
             <div>
               {t("financePurchases.details.id")}: <span className="font-mono">{id}</span>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex flex-wrap items-center gap-2">
               <span>{t("common.status")}:</span>
               <StatusBadge status={status || "—"} />
+
               <span className="text-gray-400">•</span>
+
               <span>{t("common.role")}:</span>
               <span className="font-semibold text-gray-900">{role || "—"}</span>
+
+              {!canPost ? <span className="text-gray-500">({t("financePurchases.viewOnly") || "view only"})</span> : null}
             </div>
           </div>
         }
@@ -182,10 +254,20 @@ export default function PurchaseDetailsClientPage() {
             <Link href="/finance/purchases">
               <Button variant="secondary">{t("common.back")}</Button>
             </Link>
+
             <Button variant="secondary" onClick={load} disabled={loading || busy} isLoading={loading || busy}>
               {t("common.refresh")}
             </Button>
-            {canPost && status === "SUBMITTED" ? (
+
+            {/* ✅ Submit for DRAFT */}
+            {showSubmit ? (
+              <Button variant="primary" onClick={submitReceipt} disabled={busy}>
+                {t("financePurchases.actions.submit") || "Submit"}
+              </Button>
+            ) : null}
+
+            {/* ✅ Post for SUBMITTED */}
+            {showPost ? (
               <Button variant="primary" onClick={postReceipt} disabled={busy}>
                 {t("financePurchases.actions.post")}
               </Button>
@@ -211,25 +293,35 @@ export default function PurchaseDetailsClientPage() {
                 <div className="text-xs text-gray-500">{t("financePurchases.details.fields.warehouse")}</div>
                 <div className="font-medium">{data.warehouses?.name || "—"}</div>
               </div>
+
               <div>
                 <div className="text-xs text-gray-500">{t("financePurchases.details.fields.supplier")}</div>
                 <div className="font-medium">{data.supplier_name || "—"}</div>
               </div>
+
               <div>
                 <div className="text-xs text-gray-500">{t("financePurchases.details.fields.invoice")}</div>
                 <div className="font-medium">
                   {data.invoice_no || "—"} <span className="text-gray-400">•</span> {fmtDate(data.invoice_date)}
                 </div>
               </div>
+
               <div>
                 <div className="text-xs text-gray-500">{t("financePurchases.details.fields.createdAt")}</div>
                 <div className="font-medium">{fmtDate(data.created_at)}</div>
               </div>
+
+              <div>
+                <div className="text-xs text-gray-500">{t("financePurchases.details.fields.submittedAt") || "Submitted At"}</div>
+                <div className="font-medium">{fmtDate(data.submitted_at)}</div>
+              </div>
+
               <div>
                 <div className="text-xs text-gray-500">{t("financePurchases.details.fields.postedAt")}</div>
                 <div className="font-medium">{fmtDate(data.posted_at)}</div>
               </div>
-              <div>
+
+              <div className="md:col-span-3">
                 <div className="text-xs text-gray-500">{t("financePurchases.details.fields.notes")}</div>
                 <div className="font-medium">{data.notes || "—"}</div>
               </div>
@@ -252,8 +344,8 @@ export default function PurchaseDetailsClientPage() {
 
       <ConfirmDialog
         open={confirmOpen}
-        title={t("financePurchases.confirm.postTitle")}
-        description={t("financePurchases.confirm.postDesc")}
+        title={confirmTitle}
+        description={confirmDesc}
         confirmText={t("common.yes")}
         cancelText={t("common.no")}
         tone="warning"
