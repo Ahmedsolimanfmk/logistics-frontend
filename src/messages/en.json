@@ -871,81 +871,91 @@
   },
   "financePurchases": {
   "title": "Purchases",
-  "subtitle": "Manage spare parts purchases and related inventory expenses",
-  "viewOnly": "View only",
-
-  "filters": {
-    "searchPlaceholder": "Search (invoice no / supplier / type / rejection reason)…",
-    "warehouse": "Warehouse",
-    "status": "Status",
-    "type": "Type",
-    "dateFrom": "Date from",
-    "dateTo": "Date to"
-  },
-
+  "viewOnly": "view only",
   "tabs": {
-    "ALL": "All",
-    "PENDING": "Pending",
-    "APPROVED": "Approved",
-    "REJECTED": "Rejected"
+    "all": "All",
+    "draft": "Draft",
+    "posted": "Posted",
+    "submitted": "Submitted"
   },
-
-  "types": {
-    "SPARE_PARTS_PURCHASE": "Spare parts purchase",
-    "OTHER": "Other"
+  "filters": {
+    "searchPh": "supplier / invoice / id / warehouse"
   },
-
-  "table": {
-    "id": "ID",
-    "supplier": "Supplier",
-    "invoiceNo": "Invoice No.",
-    "invoiceDate": "Invoice Date",
-    "warehouse": "Warehouse",
-    "type": "Type",
-    "amount": "Amount",
-    "status": "Status",
-    "created": "Created At",
-    "actions": "Actions"
-  },
-
-  "actions": {
-    "create": "+ Create Purchase",
-    "view": "View",
-    "approve": "Approve",
-    "reject": "Reject"
-  },
-
-  "prompts": {
-    "approveNotes": "Notes (optional):",
-    "rejectReason": "Rejection reason (required):",
-    "rejectNotes": "Notes (optional):"
-  },
-
   "kpi": {
+    "submittedCount": "Submitted Count (this page)",
+    "submittedSum": "Submitted Sum (this page)",
+    "postedCount": "Posted Count (this page)",
+    "postedSum": "Posted Sum (this page)"
+  },
+  "table": {
+    "title": "Purchases (Receipts)",
+    "id": "ID",
+    "warehouse": "Warehouse",
+    "supplier": "Supplier",
+    "invoice": "Invoice",
+    "items": "Items",
     "total": "Total",
-    "pageOnly": "For current page results",
-    "approved": "Approved",
-    "pending": "Pending",
-    "rejected": "Rejected",
-    "allData": "All data"
+    "status": "Status",
+    "createdAt": "Created At"
   },
-
+  "actions": {
+    "post": "Post"
+  },
   "meta": {
-    "showing": "Showing {count} of {total}"
+    "postedAt": "Posted at"
   },
-
-  "empty": "No purchases found.",
+  "empty": {
+    "title": "No purchases found",
+    "hint": "Try changing the tab or search."
+  },
+  "confirm": {
+    "postTitle": "Confirm Post",
+    "postDesc": "This will add items to inventory and create a COMPANY expense in Pending status."
+  },
+  "toast": {
+    "postedOk": "Posted successfully"
+  },
   "errors": {
     "loadFailed": "Failed to load purchases",
-    "createFailed": "Failed to create purchase",
-    "approveFailed": "Failed to approve",
-    "rejectFailed": "Failed to reject"
+    "postFailed": "Failed to post receipt",
+    "detailsLoadFailed": "Failed to load purchase details"
   },
-
-  "toast": {
-    "created": "Purchase created ✅",
-    "approved": "Approved ✅",
-    "rejected": "Rejected ✅"
+  "details": {
+    "title": "Purchase Details",
+    "id": "ID",
+    "kpi": {
+      "items": "Items count",
+      "itemsSum": "Items unit cost sum",
+      "total": "Invoice total",
+      "cashExpense": "Linked expense"
+    },
+    "fields": {
+      "warehouse": "Warehouse",
+      "supplier": "Supplier",
+      "invoice": "Invoice",
+      "createdAt": "Created At",
+      "postedAt": "Posted At",
+      "notes": "Notes"
+    },
+    "table": {
+      "title": "Items",
+      "part": "Part",
+      "internalSerial": "Internal serial",
+      "manufacturerSerial": "Manufacturer serial",
+      "unitCost": "Unit cost",
+      "notes": "Notes"
+    },
+    "empty": {
+      "title": "No items",
+      "hint": "No items were added to this receipt."
+    },
+    "actions": { "submit": "Submit", "post": "Post" },
+"confirm": {
+  "submitTitle": "Confirm Submit",
+  "submitDesc": "This will submit the receipt for accounting review and posting."
+},
+"toast": { "submittedOk": "Submitted successfully", "postedOk": "Posted successfully" },
+"errors": { "submitFailed": "Failed to submit receipt" }
   }
 },
   "trips": {

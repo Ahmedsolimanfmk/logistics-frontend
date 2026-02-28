@@ -998,84 +998,93 @@
   "amountPh": "اكتب المبلغ"
   }
 },
-
 "financePurchases": {
   "title": "المشتريات",
-  "subtitle": "إدارة مشتريات قطع الغيار والمصروفات المرتبطة بالمخزن",
   "viewOnly": "عرض فقط",
-
-  "filters": {
-    "searchPlaceholder": "بحث (رقم الفاتورة/المورد/النوع/سبب الرفض)…",
-    "warehouse": "المخزن",
-    "status": "الحالة",
-    "type": "النوع",
-    "dateFrom": "من تاريخ",
-    "dateTo": "إلى تاريخ"
-  },
-
   "tabs": {
-    "ALL": "الكل",
-    "PENDING": "قيد المراجعة",
-    "APPROVED": "معتمد",
-    "REJECTED": "مرفوض"
+    "all": "الكل",
+    "draft": "Draft",
+    "posted": "Posted",
+    "submitted": "Submitted"
   },
-
-  "types": {
-    "SPARE_PARTS_PURCHASE": "شراء قطع غيار",
-    "OTHER": "أخرى"
+  "filters": {
+    "searchPh": "المورد / الفاتورة / المعرّف / المخزن"
   },
-
-  "table": {
-    "id": "المعرّف",
-    "supplier": "المورد",
-    "invoiceNo": "رقم الفاتورة",
-    "invoiceDate": "تاريخ الفاتورة",
-    "warehouse": "المخزن",
-    "type": "النوع",
-    "amount": "المبلغ",
-    "status": "الحالة",
-    "created": "تاريخ الإنشاء",
-    "actions": "إجراءات"
-  },
-
-  "actions": {
-    "create": "+ إنشاء عملية شراء",
-    "view": "عرض",
-    "approve": "اعتماد",
-    "reject": "رفض"
-  },
-
-  "prompts": {
-    "approveNotes": "ملاحظات (اختياري):",
-    "rejectReason": "سبب الرفض (مطلوب):",
-    "rejectNotes": "ملاحظات (اختياري):"
-  },
-
   "kpi": {
+    "submittedCount": "عدد Submitted (هذه الصفحة)",
+    "submittedSum": "إجمالي Submitted (هذه الصفحة)",
+    "postedCount": "عدد Posted (هذه الصفحة)",
+    "postedSum": "إجمالي Posted (هذه الصفحة)"
+  },
+  "table": {
+    "title": "المشتريات (Receipts)",
+    "id": "ID",
+    "warehouse": "المخزن",
+    "supplier": "المورد",
+    "invoice": "الفاتورة",
+    "items": "Items",
     "total": "الإجمالي",
-    "pageOnly": "على نتائج الصفحة الحالية",
-    "approved": "معتمد",
-    "pending": "قيد المراجعة",
-    "rejected": "مرفوض",
-    "allData": "كل البيانات"
+    "status": "الحالة",
+    "createdAt": "تاريخ الإنشاء"
   },
-
+  "actions": {
+    "post": "Post"
+  },
   "meta": {
-    "showing": "عرض {count} من {total}"
+    "postedAt": "تم الترحيل"
   },
-
-  "empty": "لا توجد مشتريات.",
+  "empty": {
+    "title": "لا توجد مشتريات",
+    "hint": "جرّب تغيير التبويب أو البحث."
+  },
+  "confirm": {
+    "postTitle": "تأكيد الترحيل (Post)",
+    "postDesc": "سيتم إدخال القطع للمخزن وإنشاء مصروف (COMPANY) بحالة Pending للمراجعة."
+  },
+  "toast": {
+    "postedOk": "تم Post بنجاح"
+  },
   "errors": {
     "loadFailed": "فشل تحميل المشتريات",
-    "createFailed": "فشل إنشاء عملية الشراء",
-    "approveFailed": "فشل الاعتماد",
-    "rejectFailed": "فشل الرفض"
+    "postFailed": "فشل ترحيل الإضافة",
+    "detailsLoadFailed": "فشل تحميل تفاصيل الإضافة"
   },
-
-  "toast": {
-    "created": "تم إنشاء عملية الشراء ✅",
-    "approved": "تم الاعتماد ✅",
-    "rejected": "تم الرفض ✅"
+  "details": {
+    "title": "تفاصيل الشراء",
+    "id": "المعرّف",
+    "kpi": {
+      "items": "عدد العناصر",
+      "itemsSum": "مجموع أسعار العناصر",
+      "total": "إجمالي الفاتورة",
+      "cashExpense": "المصروف المرتبط"
+    },
+    "fields": {
+      "warehouse": "المخزن",
+      "supplier": "المورد",
+      "invoice": "الفاتورة",
+      "createdAt": "تاريخ الإنشاء",
+      "postedAt": "تاريخ الترحيل",
+      "notes": "ملاحظات"
+    },
+    "table": {
+      "title": "العناصر",
+      "part": "القطعة",
+      "internalSerial": "السيريال الداخلي",
+      "manufacturerSerial": "سيريال المصنع",
+      "unitCost": "سعر الوحدة",
+      "notes": "ملاحظات"
+    },
+    "empty": {
+      "title": "لا توجد عناصر",
+      "hint": "لم يتم إضافة عناصر لهذه الفاتورة."
+    },
+    "actions": { "submit": "Submit", "post": "Post" },
+"confirm": {
+  "submitTitle": "تأكيد الإرسال (Submit)",
+  "submitDesc": "سيتم إرسال الإضافة للمحاسبة للمراجعة والترحيل."
+},
+"toast": { "submittedOk": "تم Submit بنجاح", "postedOk": "تم Post بنجاح" },
+"errors": { "submitFailed": "فشل Submit" }
   }
 },
   

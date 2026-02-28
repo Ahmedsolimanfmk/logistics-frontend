@@ -1,10 +1,9 @@
-// app/(app)/finance/purchases/page.tsx
-import React, { Suspense } from "react";
+import { Suspense } from "react";
 import PurchasesClientPage from "./PurchasesClientPage";
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-gray-500">Loading…</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-slate-500">جار التحميل…</div>}>
       <PurchasesClientPage />
     </Suspense>
   );
