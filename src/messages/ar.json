@@ -1081,7 +1081,9 @@
     "actions": { "submit": "Submit", "post": "Post" },
 "confirm": {
   "submitTitle": "تأكيد الإرسال (Submit)",
-  "submitDesc": "سيتم إرسال الإضافة للمحاسبة للمراجعة والترحيل."
+  "submitDesc": "سيتم إرسال الإضافة للمحاسبة للمراجعة والترحيل.",
+  "submit": "إرسال للمراجعة",
+  "post": "ترحيل (اعتماد)"
 },
 "toast": { "submittedOk": "تم Submit بنجاح", "postedOk": "تم Post بنجاح" },
 "errors": { "submitFailed": "فشل Submit" }

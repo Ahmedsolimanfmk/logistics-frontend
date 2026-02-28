@@ -952,7 +952,9 @@
     "actions": { "submit": "Submit", "post": "Post" },
 "confirm": {
   "submitTitle": "Confirm Submit",
-  "submitDesc": "This will submit the receipt for accounting review and posting."
+  "submitDesc": "This will submit the receipt for accounting review and posting.",
+  "submit": "Submit",
+  "post": "Post"
 },
 "toast": { "submittedOk": "Submitted successfully", "postedOk": "Posted successfully" },
 "errors": { "submitFailed": "Failed to submit receipt" }
