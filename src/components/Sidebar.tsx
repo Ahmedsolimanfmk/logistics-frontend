@@ -59,6 +59,9 @@ export function Sidebar() {
           { labelKey: "sidebar.financeOverview", href: "/finance" },
           { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
           { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
+
+          // ✅ NEW: Purchases
+          { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
         ],
       },
 
@@ -126,8 +129,7 @@ export function Sidebar() {
       <div className="p-4 border-b border-black/10 bg-[rgba(var(--trex-card),0.7)]">
         <div className="text-lg font-bold tracking-wide">{t("sidebar.appName")}</div>
         <div className="mt-1 text-xs text-slate-500">
-          {user?.full_name || user?.email || "—"} —{" "}
-          <span className="text-slate-900">{role || "—"}</span>
+          {user?.full_name || user?.email || "—"} — <span className="text-slate-900">{role || "—"}</span>
         </div>
       </div>
 

@@ -59,6 +59,7 @@
     "financeOverview": "Overview",
     "financeExpenses": "Expenses",
     "financeAdvances": "Advances",
+    "financePurchases": "Purchases",
     "clients": "Clients",
     "sites": "Sites",
     "vehicles": "Vehicles",
@@ -868,6 +869,85 @@
       "noExpenses": "No expenses"
     }
   },
+  "financePurchases": {
+  "title": "Purchases",
+  "subtitle": "Manage spare parts purchases and related inventory expenses",
+  "viewOnly": "View only",
+
+  "filters": {
+    "searchPlaceholder": "Search (invoice no / supplier / type / rejection reason)…",
+    "warehouse": "Warehouse",
+    "status": "Status",
+    "type": "Type",
+    "dateFrom": "Date from",
+    "dateTo": "Date to"
+  },
+
+  "tabs": {
+    "ALL": "All",
+    "PENDING": "Pending",
+    "APPROVED": "Approved",
+    "REJECTED": "Rejected"
+  },
+
+  "types": {
+    "SPARE_PARTS_PURCHASE": "Spare parts purchase",
+    "OTHER": "Other"
+  },
+
+  "table": {
+    "id": "ID",
+    "supplier": "Supplier",
+    "invoiceNo": "Invoice No.",
+    "invoiceDate": "Invoice Date",
+    "warehouse": "Warehouse",
+    "type": "Type",
+    "amount": "Amount",
+    "status": "Status",
+    "created": "Created At",
+    "actions": "Actions"
+  },
+
+  "actions": {
+    "create": "+ Create Purchase",
+    "view": "View",
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+
+  "prompts": {
+    "approveNotes": "Notes (optional):",
+    "rejectReason": "Rejection reason (required):",
+    "rejectNotes": "Notes (optional):"
+  },
+
+  "kpi": {
+    "total": "Total",
+    "pageOnly": "For current page results",
+    "approved": "Approved",
+    "pending": "Pending",
+    "rejected": "Rejected",
+    "allData": "All data"
+  },
+
+  "meta": {
+    "showing": "Showing {count} of {total}"
+  },
+
+  "empty": "No purchases found.",
+  "errors": {
+    "loadFailed": "Failed to load purchases",
+    "createFailed": "Failed to create purchase",
+    "approveFailed": "Failed to approve",
+    "rejectFailed": "Failed to reject"
+  },
+
+  "toast": {
+    "created": "Purchase created ✅",
+    "approved": "Approved ✅",
+    "rejected": "Rejected ✅"
+  }
+},
   "trips": {
     "title": "Trips",
     "subtitle": "Trips list + drill-down to details",

@@ -64,6 +64,7 @@
     "financeOverview": "نظرة عامة",
     "financeExpenses": "المصروفات",
     "financeAdvances": "السلف",
+    "financePurchases": "المشتريات",
     "clients": "العملاء",
     "sites": "المواقع",
     "vehicles": "المركبات",
@@ -995,8 +996,89 @@
   "selectSupervisor": "اختر مشرف",
   "amount": "المبلغ",
   "amountPh": "اكتب المبلغ"
-}
+  }
+},
+
+"financePurchases": {
+  "title": "المشتريات",
+  "subtitle": "إدارة مشتريات قطع الغيار والمصروفات المرتبطة بالمخزن",
+  "viewOnly": "عرض فقط",
+
+  "filters": {
+    "searchPlaceholder": "بحث (رقم الفاتورة/المورد/النوع/سبب الرفض)…",
+    "warehouse": "المخزن",
+    "status": "الحالة",
+    "type": "النوع",
+    "dateFrom": "من تاريخ",
+    "dateTo": "إلى تاريخ"
   },
+
+  "tabs": {
+    "ALL": "الكل",
+    "PENDING": "قيد المراجعة",
+    "APPROVED": "معتمد",
+    "REJECTED": "مرفوض"
+  },
+
+  "types": {
+    "SPARE_PARTS_PURCHASE": "شراء قطع غيار",
+    "OTHER": "أخرى"
+  },
+
+  "table": {
+    "id": "المعرّف",
+    "supplier": "المورد",
+    "invoiceNo": "رقم الفاتورة",
+    "invoiceDate": "تاريخ الفاتورة",
+    "warehouse": "المخزن",
+    "type": "النوع",
+    "amount": "المبلغ",
+    "status": "الحالة",
+    "created": "تاريخ الإنشاء",
+    "actions": "إجراءات"
+  },
+
+  "actions": {
+    "create": "+ إنشاء عملية شراء",
+    "view": "عرض",
+    "approve": "اعتماد",
+    "reject": "رفض"
+  },
+
+  "prompts": {
+    "approveNotes": "ملاحظات (اختياري):",
+    "rejectReason": "سبب الرفض (مطلوب):",
+    "rejectNotes": "ملاحظات (اختياري):"
+  },
+
+  "kpi": {
+    "total": "الإجمالي",
+    "pageOnly": "على نتائج الصفحة الحالية",
+    "approved": "معتمد",
+    "pending": "قيد المراجعة",
+    "rejected": "مرفوض",
+    "allData": "كل البيانات"
+  },
+
+  "meta": {
+    "showing": "عرض {count} من {total}"
+  },
+
+  "empty": "لا توجد مشتريات.",
+  "errors": {
+    "loadFailed": "فشل تحميل المشتريات",
+    "createFailed": "فشل إنشاء عملية الشراء",
+    "approveFailed": "فشل الاعتماد",
+    "rejectFailed": "فشل الرفض"
+  },
+
+  "toast": {
+    "created": "تم إنشاء عملية الشراء ✅",
+    "approved": "تم الاعتماد ✅",
+    "rejected": "تم الرفض ✅"
+  }
+},
+  
 
   "trips": {
     "title": "الرحلات",
