@@ -52,8 +52,8 @@ export function ConfirmDialog({
       : "text-sky-700";
 
   const overlay = "bg-black/35 backdrop-blur-[1px]";
-  const surface = "bg-[rgba(var(--trex-surface),0.98)] text-[rgb(var(--trex-fg))] border-black/10";
-  const muted = "text-slate-500";
+const surface =
+  "bg-[rgba(var(--trex-surface,255,255,255),0.98)] text-[rgb(var(--trex-fg,15,23,42))] border-black/10";  const muted = "text-slate-500";
 
   useEffect(() => {
     if (!open) return;

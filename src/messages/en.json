@@ -846,6 +846,13 @@
       "expenses": "Expenses",
       "actions": "Actions"
     },
+    "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+    "confirm": {
+      "approve": "Are you sure you want to approve this expense?"
+    },
     "kpis": {
       "rejected": "Rejected",
       "pending": "Pending",
