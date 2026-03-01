@@ -51,10 +51,10 @@ export function ConfirmDialog({
       ? "text-amber-700"
       : "text-sky-700";
 
-  const overlay = "bg-black/35 backdrop-blur-[1px]";
+  const overlay = "bg-black/45"; // بدون blur عشان مايبقاش زجاجي
 const surface =
-  "bg-[rgba(var(--trex-surface,255,255,255),0.98)] text-[rgb(var(--trex-fg,15,23,42))] border-black/10";  const muted = "text-slate-500";
-
+  "bg-white text-slate-900 border-black/10 dark:bg-slate-900 dark:text-white";
+  const muted = "text-slate-500";
   useEffect(() => {
     if (!open) return;
 
