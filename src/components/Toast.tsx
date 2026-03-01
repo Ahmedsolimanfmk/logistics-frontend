@@ -27,16 +27,14 @@ export function Toast({
 
   if (!open) return null;
 
-  const tone =
-    type === "success"
-      ? "bg-emerald-600"
-      : "bg-red-600";
+  const tone = type === "success" ? "bg-emerald-600" : "bg-red-600";
 
   return (
     <div
       dir={dir}
       className={cn(
-        "fixed bottom-4 z-[70] max-w-[360px] rounded-xl px-4 py-3 text-white shadow-[0_10px_25px_rgba(0,0,0,0.2)] cursor-pointer",
+        "fixed bottom-4 z-[70] max-w-[360px] rounded-xl px-4 py-3 text-white",
+        "shadow-[0_10px_25px_rgba(0,0,0,0.2)] cursor-pointer",
         tone,
         dir === "rtl" ? "left-4" : "right-4"
       )}

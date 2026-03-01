@@ -1,4 +1,3 @@
-// src/components/ui/FiltersBar.tsx
 import React from "react";
 
 export function FiltersBar({

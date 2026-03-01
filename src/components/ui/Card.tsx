@@ -14,7 +14,6 @@ export function Card({
   return (
     <div
       className={[
-        // ✅ Theme-aware container
         "rounded-2xl border border-black/10 bg-[rgba(var(--trex-surface),0.92)] backdrop-blur-xl overflow-hidden",
         "shadow-[0_10px_30px_rgba(0,0,0,0.06)]",
         className,

@@ -8,9 +8,11 @@ import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-// ✅ UI System (Light)
+// ✅ UI System (TREX)
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Card } from "@/src/components/ui/Card";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
 // ✅ Toast + ConfirmDialog
 import { Toast } from "@/src/components/Toast";
@@ -34,26 +36,6 @@ function fmtDate(d?: string | null) {
   const dt = new Date(String(d));
   if (Number.isNaN(dt.getTime())) return String(d);
   return dt.toLocaleString("ar-EG");
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const st = String(status || "").toUpperCase();
-  const cls =
-    st === "APPROVED" || st === "REAPPROVED"
-      ? "bg-green-50 text-green-700 border-green-200"
-      : st === "REJECTED"
-      ? "bg-red-50 text-red-700 border-red-200"
-      : st === "APPEALED"
-      ? "bg-amber-50 text-amber-700 border-amber-200"
-      : st === "PENDING"
-      ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-      : "bg-gray-50 text-gray-700 border-gray-200";
-
-  return (
-    <span className={cn("inline-flex items-center px-2 py-1 rounded-full text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
 }
 
 type TabKey = "overview" | "audit" | "actions";
@@ -139,7 +121,9 @@ export default function ExpenseDetailsPage(): React.ReactElement {
       const advData = (advRes as any)?.data ?? advRes;
       const advances = Array.isArray(advData) ? advData : (advData as any)?.items || [];
 
-      const visibleAdvances = isSupervisor ? advances.filter((a: any) => a.field_supervisor_id === user?.id) : advances;
+      const visibleAdvances = isSupervisor
+        ? advances.filter((a: any) => a.field_supervisor_id === user?.id)
+        : advances;
 
       const lists = await Promise.all(
         visibleAdvances.slice(0, 60).map(async (a: any) => {
@@ -235,7 +219,10 @@ export default function ExpenseDetailsPage(): React.ReactElement {
           await loadAll();
           setTab("overview");
         } catch (e: any) {
-          const msg = e?.response?.data?.message || e?.message || t("financeExpenseDetails.errors.approveFailed");
+          const msg =
+            e?.response?.data?.message ||
+            e?.message ||
+            t("financeExpenseDetails.errors.approveFailed");
           setError(msg);
           showToast("error", msg);
         } finally {
@@ -258,9 +245,9 @@ export default function ExpenseDetailsPage(): React.ReactElement {
       description: (
         <div className="space-y-2">
           <div>{t("financeExpenseDetails.confirm.reject") || "هل أنت متأكد من رفض هذا المصروف؟"}</div>
-          <div className="text-xs text-gray-600">
+          <div className="text-xs text-slate-600">
             {t("financeExpenseDetails.labels.reason") || "السبب"}:{" "}
-            <span className="font-semibold text-gray-900">{reason.trim()}</span>
+            <span className="font-semibold text-[rgb(var(--trex-fg))]">{reason.trim()}</span>
           </div>
         </div>
       ),
@@ -276,7 +263,10 @@ export default function ExpenseDetailsPage(): React.ReactElement {
           await loadAll();
           setTab("overview");
         } catch (e: any) {
-          const msg = e?.response?.data?.message || e?.message || t("financeExpenseDetails.errors.rejectFailed");
+          const msg =
+            e?.response?.data?.message ||
+            e?.message ||
+            t("financeExpenseDetails.errors.rejectFailed");
           setError(msg);
           showToast("error", msg);
         } finally {
@@ -299,9 +289,9 @@ export default function ExpenseDetailsPage(): React.ReactElement {
       description: (
         <div className="space-y-2">
           <div>{t("financeExpenseDetails.confirm.appeal") || "هل تريد إرسال استئناف على هذا المصروف؟"}</div>
-          <div className="text-xs text-gray-600">
+          <div className="text-xs text-slate-600">
             {t("financeExpenseDetails.labels.notes") || "ملاحظات"}:{" "}
-            <span className="font-semibold text-gray-900">{notes.trim()}</span>
+            <span className="font-semibold text-[rgb(var(--trex-fg))]">{notes.trim()}</span>
           </div>
         </div>
       ),
@@ -317,7 +307,10 @@ export default function ExpenseDetailsPage(): React.ReactElement {
           await loadAll();
           setTab("overview");
         } catch (e: any) {
-          const msg = e?.response?.data?.message || e?.message || t("financeExpenseDetails.errors.appealFailed");
+          const msg =
+            e?.response?.data?.message ||
+            e?.message ||
+            t("financeExpenseDetails.errors.appealFailed");
           setError(msg);
           showToast("error", msg);
         } finally {
@@ -349,7 +342,10 @@ export default function ExpenseDetailsPage(): React.ReactElement {
           await loadAll();
           setTab("overview");
         } catch (e: any) {
-          const msg = e?.response?.data?.message || e?.message || t("financeExpenseDetails.errors.reopenFailed");
+          const msg =
+            e?.response?.data?.message ||
+            e?.message ||
+            t("financeExpenseDetails.errors.reopenFailed");
           setError(msg);
           showToast("error", msg);
         } finally {
@@ -420,9 +416,11 @@ export default function ExpenseDetailsPage(): React.ReactElement {
     [t]
   );
 
-  // ---------- UI ----------
+  const fg = "text-[rgb(var(--trex-fg))]";
+  const muted = "text-slate-500";
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
+    <div className="space-y-4" dir="rtl">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
         <PageHeader
           title={
@@ -434,14 +432,14 @@ export default function ExpenseDetailsPage(): React.ReactElement {
             </div>
           }
           subtitle={
-            <div className="text-sm text-gray-600">
+            <div className={cn("text-sm", muted)}>
               {t("financeExpenseDetails.meta.id")}:{" "}
-              <span className="font-mono text-gray-900">{expenseId || "—"}</span>
+              <span className={cn("font-mono", fg)}>{expenseId || "—"}</span>
               {paymentSource ? (
                 <>
                   {" "}
                   — {t("financeExpenseDetails.meta.source")}:{" "}
-                  <span className="font-semibold text-gray-900">{paymentSource}</span>
+                  <span className={cn("font-semibold", fg)}>{paymentSource}</span>
                 </>
               ) : null}
             </div>
@@ -454,7 +452,12 @@ export default function ExpenseDetailsPage(): React.ReactElement {
               <Link href="/finance/expenses">
                 <Button variant="secondary">{t("common.list")}</Button>
               </Link>
-              <Button variant="secondary" onClick={loadAll} disabled={loading || busy} isLoading={loading || busy}>
+              <Button
+                variant="secondary"
+                onClick={loadAll}
+                disabled={loading || busy}
+                isLoading={loading || busy}
+              >
                 {t("common.refresh")}
               </Button>
             </div>
@@ -462,9 +465,9 @@ export default function ExpenseDetailsPage(): React.ReactElement {
         />
 
         {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            ⚠️ {error}
-          </div>
+          <Card className="border-red-500/20">
+            <div className="text-sm text-red-600">⚠️ {error}</div>
+          </Card>
         ) : null}
 
         {/* Tabs */}
@@ -476,8 +479,8 @@ export default function ExpenseDetailsPage(): React.ReactElement {
               className={cn(
                 "px-3 py-2 rounded-xl text-sm border transition",
                 tab === tt.key
-                  ? "bg-gray-900 text-white border-gray-900"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-[rgba(var(--trex-surface),0.7)] text-slate-700 border-black/10 hover:bg-black/[0.03]"
               )}
             >
               {tt.label}
@@ -485,220 +488,213 @@ export default function ExpenseDetailsPage(): React.ReactElement {
           ))}
         </div>
 
-        {/* Content Card */}
-        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-          <div className="p-4">
-            {loading ? (
-              <div className="text-sm text-gray-600">{t("common.loading")}</div>
-            ) : tab === "overview" ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.amount")}</div>
-                    <div className="text-lg font-semibold text-gray-900">{fmtMoney(expense?.amount)}</div>
-                  </div>
+        {/* Content */}
+        {loading ? (
+          <Card>
+            <div className={cn("text-sm", muted)}>{t("common.loading")}</div>
+          </Card>
+        ) : tab === "overview" ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Card>
+                <div className="text-xs text-slate-500">{t("financeExpenseDetails.overview.amount")}</div>
+                <div className={cn("text-lg font-semibold mt-1", fg)}>{fmtMoney(expense?.amount)}</div>
+              </Card>
 
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.type")}</div>
-                    <div className="text-sm text-gray-900">{expense?.expense_type || "—"}</div>
-                  </div>
+              <Card>
+                <div className="text-xs text-slate-500">{t("financeExpenseDetails.overview.type")}</div>
+                <div className={cn("text-sm mt-1", fg)}>{expense?.expense_type || "—"}</div>
+              </Card>
 
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.createdAt")}</div>
-                    <div className="text-sm text-gray-900">{fmtDate(expense?.created_at)}</div>
-                  </div>
+              <Card>
+                <div className="text-xs text-slate-500">{t("financeExpenseDetails.overview.createdAt")}</div>
+                <div className={cn("text-sm mt-1", fg)}>{fmtDate(expense?.created_at)}</div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Card title={t("financeExpenseDetails.overview.creator")}>
+                <div className={cn("text-sm", fg)}>
+                  {expense?.users_cash_expenses_created_byTousers?.full_name ||
+                    expense?.users_cash_expenses_created_byTousers?.email ||
+                    expense?.created_by ||
+                    "—"}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
-                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.creator")}</div>
-                    <div className="text-sm text-gray-900">
-                      {expense?.users_cash_expenses_created_byTousers?.full_name ||
-                        expense?.users_cash_expenses_created_byTousers?.email ||
-                        expense?.created_by ||
-                        "—"}
-                    </div>
+                <div className="mt-3 text-xs text-slate-500">{t("financeExpenseDetails.overview.notes")}</div>
+                <div className={cn("text-sm mt-1 whitespace-pre-wrap", fg)}>{expense?.notes || "—"}</div>
+              </Card>
 
-                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.notes")}</div>
-                    <div className="text-sm text-gray-900 whitespace-pre-wrap">{expense?.notes || "—"}</div>
-                  </div>
-
-                  <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-1">
-                    <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.context")}</div>
-
-                    <div className="text-sm text-gray-900">
-                      {t("financeExpenseDetails.overview.trip")}:{" "}
-                      <span className="font-mono text-gray-700">{expense?.trip_id || "—"}</span>
-                    </div>
-                    <div className="text-sm text-gray-900">
-                      {t("financeExpenseDetails.overview.vehicle")}:{" "}
-                      <span className="font-mono text-gray-700">{expense?.vehicle_id || "—"}</span>
-                    </div>
-                    <div className="text-sm text-gray-900">
-                      {t("financeExpenseDetails.overview.workOrder")}:{" "}
-                      <span className="font-mono text-gray-700">{expense?.maintenance_work_order_id || "—"}</span>
-                    </div>
-
-                    {paymentSource === "COMPANY" ? (
-                      <div className="mt-2 space-y-1">
-                        <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.companyFields")}</div>
-
-                        <div className="text-sm text-gray-900">
-                          {t("financeExpenseDetails.overview.vendor")}:{" "}
-                          <span className="text-gray-700">{expense?.vendor_name || "—"}</span>
-                        </div>
-                        <div className="text-sm text-gray-900">
-                          {t("financeExpenseDetails.overview.invoiceNo")}:{" "}
-                          <span className="text-gray-700">{expense?.invoice_no || "—"}</span>
-                        </div>
-                        <div className="text-sm text-gray-900">
-                          {t("financeExpenseDetails.overview.invoiceDate")}:{" "}
-                          <span className="text-gray-700">{fmtDate(expense?.invoice_date || null)}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-2 space-y-1">
-                        <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.advance")}</div>
-                        <div className="text-sm text-gray-900">
-                          {t("financeExpenseDetails.overview.cashAdvanceId")}:{" "}
-                          <span className="font-mono text-gray-700">{expense?.cash_advance_id || "—"}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+              <Card title={t("financeExpenseDetails.overview.context")}>
+                <div className={cn("text-sm", fg)}>
+                  {t("financeExpenseDetails.overview.trip")}:{" "}
+                  <span className="font-mono text-slate-600">{expense?.trip_id || "—"}</span>
                 </div>
-
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-1">
-                  <div className="text-xs text-gray-600">{t("financeExpenseDetails.overview.resolution")}</div>
-
-                  <div className="text-sm text-gray-900">
-                    {t("financeExpenseDetails.overview.approvedAt")}:{" "}
-                    <span className="text-gray-700">{fmtDate(expense?.approved_at || null)}</span>
-                  </div>
-                  <div className="text-sm text-gray-900">
-                    {t("financeExpenseDetails.overview.rejectedAt")}:{" "}
-                    <span className="text-gray-700">{fmtDate(expense?.rejected_at || null)}</span>
-                  </div>
-                  <div className="text-sm text-gray-900">
-                    {t("financeExpenseDetails.overview.resolvedAt")}:{" "}
-                    <span className="text-gray-700">{fmtDate(expense?.resolved_at || null)}</span>
-                  </div>
-
-                  {expense?.rejection_reason ? (
-                    <div className="mt-2 text-sm text-red-700">
-                      {t("financeExpenseDetails.overview.rejectionReason")}:{" "}
-                      <span className="font-semibold">{String(expense.rejection_reason)}</span>
-                    </div>
-                  ) : null}
+                <div className={cn("text-sm mt-1", fg)}>
+                  {t("financeExpenseDetails.overview.vehicle")}:{" "}
+                  <span className="font-mono text-slate-600">{expense?.vehicle_id || "—"}</span>
                 </div>
-              </div>
-            ) : tab === "audit" ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm font-semibold text-gray-900">
-                    {t("financeExpenseDetails.audit.title")}
-                  </div>
-                  {auditNote ? <div className="text-xs text-gray-600">{auditNote}</div> : null}
-                </div>
-
-                {audits.length === 0 ? (
-                  <div className="text-sm text-gray-600">{t("financeExpenseDetails.audit.empty")}</div>
-                ) : (
-                  <div className="space-y-2">
-                    {audits.map((a) => (
-                      <div key={a.id} className="rounded-xl border border-gray-200 bg-white p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-sm font-semibold text-gray-900">{String(a.action || "ACTION")}</div>
-                          <div className="text-xs text-gray-600">{fmtDate(a.created_at)}</div>
-                        </div>
-
-                        <div className="mt-1 text-xs text-gray-600">
-                          {t("financeExpenseDetails.audit.actor")}:{" "}
-                          <span className="font-mono text-gray-900">{a.actor_id || "—"}</span>
-                        </div>
-
-                        {a.notes ? (
-                          <div className="mt-2 text-sm text-gray-900 whitespace-pre-wrap">{a.notes}</div>
-                        ) : null}
-
-                        {a.before || a.after ? (
-                          <details className="mt-2">
-                            <summary className="cursor-pointer text-xs text-gray-700 hover:text-gray-900">
-                              {t("financeExpenseDetails.audit.showDiff")}
-                            </summary>
-                            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                              <pre className="text-xs overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
-                                {a.before || "—"}
-                              </pre>
-                              <pre className="text-xs overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
-                                {a.after || "—"}
-                              </pre>
-                            </div>
-                          </details>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              // actions tab
-              <div className="space-y-3">
-                <div className="text-sm text-gray-900">
-                  <span className="font-semibold">{t("financeExpenseDetails.actions.title")}</span>{" "}
-                  <span className="text-xs text-gray-600">
-                    ({t("financeExpenseDetails.actions.metaRole")}: {role || "—"} /{" "}
-                    {t("financeExpenseDetails.actions.metaStatus")}: {approvalStatus || "—"})
+                <div className={cn("text-sm mt-1", fg)}>
+                  {t("financeExpenseDetails.overview.workOrder")}:{" "}
+                  <span className="font-mono text-slate-600">
+                    {expense?.maintenance_work_order_id || "—"}
                   </span>
                 </div>
 
-                <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
-                  {canApproveReject ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="primary" onClick={onApprove} disabled={busy}>
-                        {t("financeExpenseDetails.actions.approve")}
-                      </Button>
-                      <Button variant="danger" onClick={onReject} disabled={busy}>
-                        {t("financeExpenseDetails.actions.reject")}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-600">{t("financeExpenseDetails.actions.none")}</div>
-                  )}
+                {paymentSource === "COMPANY" ? (
+                  <div className="mt-3 space-y-1">
+                    <div className="text-xs text-slate-500">{t("financeExpenseDetails.overview.companyFields")}</div>
 
-                  {canAppeal ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="secondary" onClick={onAppeal} disabled={busy}>
-                        {t("financeExpenseDetails.actions.appeal")}
-                      </Button>
+                    <div className={cn("text-sm", fg)}>
+                      {t("financeExpenseDetails.overview.vendor")}:{" "}
+                      <span className="text-slate-700">{expense?.vendor_name || "—"}</span>
                     </div>
-                  ) : null}
+                    <div className={cn("text-sm", fg)}>
+                      {t("financeExpenseDetails.overview.invoiceNo")}:{" "}
+                      <span className="text-slate-700">{expense?.invoice_no || "—"}</span>
+                    </div>
+                    <div className={cn("text-sm", fg)}>
+                      {t("financeExpenseDetails.overview.invoiceDate")}:{" "}
+                      <span className="text-slate-700">{fmtDate(expense?.invoice_date || null)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 space-y-1">
+                    <div className="text-xs text-slate-500">{t("financeExpenseDetails.overview.advance")}</div>
+                    <div className={cn("text-sm", fg)}>
+                      {t("financeExpenseDetails.overview.cashAdvanceId")}:{" "}
+                      <span className="font-mono text-slate-600">{expense?.cash_advance_id || "—"}</span>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
 
-                  {canResolveAppeal ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="primary" onClick={() => onResolveAppeal("APPROVE")} disabled={busy}>
-                        {t("financeExpenseDetails.actions.resolveApprove")}
-                      </Button>
-                      <Button variant="danger" onClick={() => onResolveAppeal("REJECT")} disabled={busy}>
-                        {t("financeExpenseDetails.actions.resolveReject")}
-                      </Button>
-                    </div>
-                  ) : null}
-
-                  {canReopenRejected ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="secondary" onClick={onReopenRejected} disabled={busy}>
-                        {t("financeExpenseDetails.actions.reopenToPending")}
-                      </Button>
-                    </div>
-                  ) : null}
+            <Card title={t("financeExpenseDetails.overview.resolution")}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <div className="text-xs text-slate-500">{t("financeExpenseDetails.overview.approvedAt")}</div>
+                  <div className={cn("text-sm mt-1", fg)}>{fmtDate(expense?.approved_at || null)}</div>
                 </div>
+                <div>
+                  <div className="text-xs text-slate-500">{t("financeExpenseDetails.overview.rejectedAt")}</div>
+                  <div className={cn("text-sm mt-1", fg)}>{fmtDate(expense?.rejected_at || null)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">{t("financeExpenseDetails.overview.resolvedAt")}</div>
+                  <div className={cn("text-sm mt-1", fg)}>{fmtDate(expense?.resolved_at || null)}</div>
+                </div>
+              </div>
 
-                <div className="text-xs text-gray-600">{t("financeExpenseDetails.actions.hint")}</div>
+              {expense?.rejection_reason ? (
+                <div className="mt-3 text-sm text-red-600">
+                  {t("financeExpenseDetails.overview.rejectionReason")}:{" "}
+                  <span className="font-semibold">{String(expense.rejection_reason)}</span>
+                </div>
+              ) : null}
+            </Card>
+          </div>
+        ) : tab === "audit" ? (
+          <Card
+            title={t("financeExpenseDetails.audit.title")}
+            right={auditNote ? <span className="text-xs text-slate-500">{auditNote}</span> : null}
+          >
+            {audits.length === 0 ? (
+              <div className={cn("text-sm", muted)}>{t("financeExpenseDetails.audit.empty")}</div>
+            ) : (
+              <div className="space-y-2">
+                {audits.map((a) => (
+                  <div key={a.id} className="rounded-2xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className={cn("text-sm font-semibold", fg)}>{String(a.action || "ACTION")}</div>
+                      <div className="text-xs text-slate-500">{fmtDate(a.created_at)}</div>
+                    </div>
+
+                    <div className="mt-1 text-xs text-slate-500">
+                      {t("financeExpenseDetails.audit.actor")}:{" "}
+                      <span className={cn("font-mono", fg)}>{a.actor_id || "—"}</span>
+                    </div>
+
+                    {a.notes ? (
+                      <div className={cn("mt-2 text-sm whitespace-pre-wrap", fg)}>{a.notes}</div>
+                    ) : null}
+
+                    {a.before || a.after ? (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-xs text-slate-600 hover:text-slate-900">
+                          {t("financeExpenseDetails.audit.showDiff")}
+                        </summary>
+
+                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <pre className="text-xs overflow-auto rounded-2xl border border-black/10 bg-black/[0.03] p-2">
+                            {a.before || "—"}
+                          </pre>
+                          <pre className="text-xs overflow-auto rounded-2xl border border-black/10 bg-black/[0.03] p-2">
+                            {a.after || "—"}
+                          </pre>
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                ))}
               </div>
             )}
-          </div>
-        </div>
+          </Card>
+        ) : (
+          <Card title={t("financeExpenseDetails.actions.title")}>
+            <div className={cn("text-sm", fg)}>
+              <span className="font-semibold">{t("financeExpenseDetails.actions.title")}</span>{" "}
+              <span className="text-xs text-slate-500">
+                ({t("financeExpenseDetails.actions.metaRole")}: {role || "—"} /{" "}
+                {t("financeExpenseDetails.actions.metaStatus")}: {approvalStatus || "—"})
+              </span>
+            </div>
+
+            <div className="mt-3 rounded-2xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] p-3 space-y-2">
+              {canApproveReject ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="primary" onClick={onApprove} disabled={busy}>
+                    {t("financeExpenseDetails.actions.approve")}
+                  </Button>
+                  <Button variant="danger" onClick={onReject} disabled={busy}>
+                    {t("financeExpenseDetails.actions.reject")}
+                  </Button>
+                </div>
+              ) : (
+                <div className={cn("text-sm", muted)}>{t("financeExpenseDetails.actions.none")}</div>
+              )}
+
+              {canAppeal ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={onAppeal} disabled={busy}>
+                    {t("financeExpenseDetails.actions.appeal")}
+                  </Button>
+                </div>
+              ) : null}
+
+              {canResolveAppeal ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="primary" onClick={() => onResolveAppeal("APPROVE")} disabled={busy}>
+                    {t("financeExpenseDetails.actions.resolveApprove")}
+                  </Button>
+                  <Button variant="danger" onClick={() => onResolveAppeal("REJECT")} disabled={busy}>
+                    {t("financeExpenseDetails.actions.resolveReject")}
+                  </Button>
+                </div>
+              ) : null}
+
+              {canReopenRejected ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={onReopenRejected} disabled={busy}>
+                    {t("financeExpenseDetails.actions.reopenToPending")}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-3 text-xs text-slate-500">{t("financeExpenseDetails.actions.hint")}</div>
+          </Card>
+        )}
       </div>
 
       <ConfirmDialog
@@ -720,7 +716,13 @@ export default function ExpenseDetailsPage(): React.ReactElement {
         }}
       />
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        dir="rtl"
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-// src/components/ui/PageHeader.tsx
 import React from "react";
 
 export function PageHeader({
@@ -13,9 +12,9 @@ export function PageHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <div className="text-xl font-bold">{title}</div>
+        <div className="text-xl font-bold text-[rgb(var(--trex-fg))]">{title}</div>
         {subtitle ? (
-          <div className="text-xs text-slate-400 mt-1">{subtitle}</div>
+          <div className="text-xs text-slate-500 mt-1">{subtitle}</div>
         ) : null}
       </div>
 

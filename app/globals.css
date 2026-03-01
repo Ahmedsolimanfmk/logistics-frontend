@@ -12,9 +12,15 @@
   --trex-card: 255 255 255;      /* white */
   --trex-sidebar: 255 255 255;   /* white */
   --trex-accent: 249 115 22;     /* orange-500 */
+
+  /* helpers */
+  --trex-border: 15 23 42;       /* base for alpha borders in light */
+  --trex-radius: 16px;
+
+  color-scheme: light;
 }
 
-/* OPTIONAL: لو حبيت Dark لاحقًا */
+/* OPTIONAL: Dark */
 html.dark {
   --trex-bg: 2 6 23;             /* slate-950 */
   --trex-fg: 248 250 252;        /* slate-50 */
@@ -22,6 +28,10 @@ html.dark {
   --trex-card: 15 23 42;         /* slate-900 */
   --trex-sidebar: 2 6 23;        /* slate-950 */
   --trex-accent: 249 115 22;     /* orange-500 */
+
+  --trex-border: 248 250 252;    /* base for alpha borders in dark */
+
+  color-scheme: dark;
 }
 
 html,
@@ -31,18 +41,33 @@ body {
 }
 
 body {
-  min-height: 100%;
-  color: rgb(var(--trex-text));
+  min-height: 100dvh; /* safer on mobile than 100% */
+  color: rgb(var(--trex-fg));
   background: rgb(var(--trex-bg));
   font-family: Arial, Helvetica, sans-serif;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Make default borders theme-aware (helps when pages use border-black/10 etc.) */
+*,
+::before,
+::after {
+  border-color: rgba(var(--trex-border), 0.12);
+}
+
+/* Selection */
+::selection {
+  background: rgba(var(--trex-accent), 0.22);
 }
 
 /* =========================
-   Scrollbars (dark-friendly)
+   Scrollbars (theme-aware)
    ========================= */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) rgba(255, 255, 255, 0.06);
+  scrollbar-color: rgba(var(--trex-border), 0.28) rgba(var(--trex-border), 0.10);
 }
 
 *::-webkit-scrollbar {
@@ -51,16 +76,16 @@ body {
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--trex-border), 0.10);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--trex-border), 0.28);
   border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--trex-border), 0.38);
 }
 
 /* =========================
@@ -69,19 +94,19 @@ body {
 
 .trex-card {
   background: rgba(var(--trex-card), 0.55);
-  border: 1px solid rgba(var(--trex-border), 0.1);
+  border: 1px solid rgba(var(--trex-border), 0.10);
   border-radius: var(--trex-radius);
 }
 
 .trex-card-solid {
   background: rgba(var(--trex-card), 0.75);
-  border: 1px solid rgba(var(--trex-border), 0.1);
+  border: 1px solid rgba(var(--trex-border), 0.10);
   border-radius: var(--trex-radius);
 }
 
 .trex-input {
   background: rgba(var(--trex-bg), 0.25);
-  border: 1px solid rgba(var(--trex-border), 0.1);
+  border: 1px solid rgba(var(--trex-border), 0.12);
   border-radius: 14px;
   outline: none;
 }
@@ -93,7 +118,7 @@ body {
 
 .trex-sidebar {
   background: rgb(var(--trex-sidebar));
-  color: rgb(var(--trex-text));
+  color: rgb(var(--trex-fg));
 }
 
 .trex-sidebar a.active {

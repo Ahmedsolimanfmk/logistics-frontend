@@ -5,12 +5,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useSearchParams } from "next/navigation";
-import { Toast } from "@/src/components/Toast";
 import { useT } from "@/src/i18n/useT";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
+// ✅ Design System
+import { Toast } from "@/src/components/Toast";
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { KpiCard } from "@/src/components/ui/KpiCard";
+import { Card } from "@/src/components/ui/Card";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { TabsBar } from "@/src/components/ui/TabsBar";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
@@ -37,36 +42,15 @@ function daysBetween(a?: string | null, b?: string | null) {
   return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
-function StatusBadge({ s }: { s: string }) {
-  const st = String(s || "").toUpperCase();
+// ✅ Local small badge for payment_source (until we add SourceBadge component)
+function PaymentSourceBadge({ source }: { source: any }) {
+  const s = String(source || "").toUpperCase();
   const cls =
-    st === "APPROVED" || st === "REAPPROVED"
-      ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/20"
-      : st === "REJECTED"
-      ? "bg-red-500/15 text-red-200 border-red-500/20"
-      : st === "PENDING" || st === "IN_REVIEW"
-      ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
-      : "bg-white/5 text-slate-200 border-white/10";
+    s === "COMPANY"
+      ? "bg-sky-500/15 text-sky-800 border-sky-500/20"
+      : "bg-violet-500/15 text-violet-800 border-violet-500/20";
 
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
-}
-
-function SourceBadge({ s }: { s: string }) {
-  const st = String(s || "").toUpperCase();
-  const cls =
-    st === "COMPANY"
-      ? "bg-sky-500/15 text-sky-200 border-sky-500/20"
-      : "bg-violet-500/15 text-violet-200 border-violet-500/20";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
+  return <span className={`px-2 py-0.5 rounded-md text-xs border ${cls}`}>{s || "—"}</span>;
 }
 
 type TabKey = "pending" | "advances" | "alerts";
@@ -85,14 +69,15 @@ export default function FinanceClientPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // Lists for tables/alerts
+  // Lists
   const [pendingExpenses, setPendingExpenses] = useState<any[]>([]);
   const [advances, setAdvances] = useState<any[]>([]);
 
-  // ✅ Summary for KPIs (Phase B)
+  // Summaries
   const [expensesSummary, setExpensesSummary] = useState<any | null>(null);
   const [advancesSummary, setAdvancesSummary] = useState<any | null>(null);
 
+  // Toast
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -101,7 +86,6 @@ export default function FinanceClientPage() {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
-    setTimeout(() => setToastOpen(false), 2500);
   }
 
   // thresholds
@@ -113,11 +97,6 @@ export default function FinanceClientPage() {
     setErr(null);
 
     try {
-      // ✅ Load in parallel:
-      // 1) pending list (for table/alerts)
-      // 2) pending summary (for KPI = ALL DATA)
-      // 3) advances list (for table/alerts)
-      // 4) advances summary (for KPI = ALL DATA)
       const [expRes, expSumRes, advRes, advSumRes] = await Promise.all([
         api.get("/cash/cash-expenses", {
           params: { status: "PENDING", page: 1, page_size: 200 },
@@ -129,34 +108,27 @@ export default function FinanceClientPage() {
         api.get("/cash/cash-advances/summary"),
       ]);
 
-      // pending list
       const expData = (expRes as any)?.data ?? expRes;
       const expItems = Array.isArray(expData) ? expData : expData?.items || [];
       setPendingExpenses(Array.isArray(expItems) ? expItems : []);
 
-      // pending summary
       const expSumData = (expSumRes as any)?.data ?? expSumRes;
       setExpensesSummary(expSumData?.totals || null);
 
-      // advances list
       const advData = (advRes as any)?.data ?? advRes;
       const advItems = Array.isArray(advData) ? advData : advData?.items || [];
       setAdvances(Array.isArray(advItems) ? advItems : []);
 
-      // advances summary
       const advSumData = (advSumRes as any)?.data ?? advSumRes;
       setAdvancesSummary(advSumData?.totals || null);
 
       showToast("success", t("common.refresh"));
     } catch (e: any) {
       const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        t("financeDashboard.errors.loadFailed");
+        e?.response?.data?.message || e?.message || t("financeDashboard.errors.loadFailed");
       setErr(msg);
       showToast("error", msg);
 
-      // keep UI stable
       setPendingExpenses([]);
       setAdvances([]);
       setExpensesSummary(null);
@@ -177,7 +149,7 @@ export default function FinanceClientPage() {
     if (v === "pending" || v === "advances" || v === "alerts") setTab(v as TabKey);
   }, [sp]);
 
-  // visibility (role scoping for lists)
+  // visibility (role scoping)
   const visiblePending = useMemo(() => {
     if (!isSupervisor) return pendingExpenses;
     return pendingExpenses.filter((x) => x.created_by === user?.id);
@@ -195,30 +167,35 @@ export default function FinanceClientPage() {
     });
   }, [visibleAdvances]);
 
-  // ✅ KPIs: prefer summary for ALL DATA, fallback to list
+  // KPIs
   const kpis = useMemo(() => {
-    // pending KPI from summary (PENDING only)
     const pendingCount =
-      expensesSummary?.countAll != null ? Number(expensesSummary.countAll || 0) : visiblePending.length;
+      expensesSummary?.countAll != null
+        ? Number(expensesSummary.countAll || 0)
+        : visiblePending.length;
 
     const pendingTotal =
       expensesSummary?.sumAll != null
         ? Number(expensesSummary.sumAll || 0)
         : visiblePending.reduce((s, x) => s + Number(x.amount || 0), 0);
 
-    // open advances KPI:
-    // summary endpoint gives openCount/settledCount/canceledCount but sumAmount is for ALL advances
-    // so openTotal is best computed from open list for now (until we add sumOpen server-side).
     const openCount =
-      advancesSummary?.openCount != null ? Number(advancesSummary.openCount || 0) : openAdvances.length;
+      advancesSummary?.openCount != null
+        ? Number(advancesSummary.openCount || 0)
+        : openAdvances.length;
 
     const openTotal =
-  advancesSummary?.sumOpen != null
-    ? Number(advancesSummary.sumOpen || 0)
-    : openAdvances.reduce((s, x) => s + Number(x.amount || 0), 0);
+      advancesSummary?.sumOpen != null
+        ? Number(advancesSummary.sumOpen || 0)
+        : openAdvances.reduce((s, x) => s + Number(x.amount || 0), 0);
 
-    const overduePendingCount = visiblePending.filter((x) => daysBetween(x.created_at) >= PENDING_DAYS).length;
-    const overdueAdvCount = openAdvances.filter((a) => daysBetween(a.created_at) >= ADVANCE_OPEN_DAYS).length;
+    const overduePendingCount = visiblePending.filter(
+      (x) => daysBetween(x.created_at) >= PENDING_DAYS
+    ).length;
+
+    const overdueAdvCount = openAdvances.filter(
+      (a) => daysBetween(a.created_at) >= ADVANCE_OPEN_DAYS
+    ).length;
 
     return {
       pendingCount,
@@ -227,8 +204,10 @@ export default function FinanceClientPage() {
       openTotal,
       overduePendingCount,
       overdueAdvCount,
+      pendingFrom: expensesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly"),
+      advancesFrom: advancesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly"),
     };
-  }, [expensesSummary, advancesSummary, visiblePending, openAdvances]);
+  }, [expensesSummary, advancesSummary, visiblePending, openAdvances, t]);
 
   const alerts = useMemo(() => {
     const overduePending = visiblePending
@@ -250,388 +229,420 @@ export default function FinanceClientPage() {
     { key: "alerts" as const, label: t("financeDashboard.tabs.alerts") },
   ];
 
+  // Columns (DataTable)
+  const pendingColumns: DataTableColumn<any>[] = useMemo(
+    () => [
+      {
+        key: "amount",
+        label: t("financeDashboard.tables.pending.amount"),
+        className: "font-semibold",
+        render: (x) => fmtMoney(x.amount),
+      },
+      {
+        key: "expense_type",
+        label: t("financeDashboard.tables.pending.type"),
+        render: (x) => x.expense_type || "—",
+      },
+      {
+        key: "payment_source",
+        label: t("financeDashboard.tables.pending.source"),
+        render: (x) => <PaymentSourceBadge source={x.payment_source} />,
+      },
+      {
+        key: "age",
+        label: t("financeDashboard.tables.pending.age"),
+        render: (x) => {
+          const age = daysBetween(x.created_at);
+          return (
+            <span className={age >= PENDING_DAYS ? "text-amber-700 font-semibold" : ""}>
+              {t("financeDashboard.meta.days", { n: age })}
+            </span>
+          );
+        },
+      },
+      {
+        key: "created_at",
+        label: t("financeDashboard.tables.pending.created"),
+        render: (x) => <span className="text-slate-600">{fmtDate(x.created_at)}</span>,
+      },
+      {
+        key: "view",
+        label: t("financeDashboard.tables.pending.view"),
+        headerClassName: "text-right",
+        className: "text-right",
+        render: (x) => (
+          <Link
+            href={`/finance/expenses/${x.id}`}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-black/10 bg-black/[0.02] hover:bg-black/[0.04] text-slate-700"
+            aria-label="View"
+          >
+            →
+          </Link>
+        ),
+      },
+    ],
+    [t]
+  );
+
+  const advancesColumns: DataTableColumn<any>[] = useMemo(
+    () => [
+      {
+        key: "supervisor",
+        label: t("financeDashboard.tables.advances.supervisor"),
+        render: (a) => {
+          const sup =
+            a?.users_cash_advances_field_supervisor_idTousers?.full_name ||
+            a?.users_cash_advances_field_supervisor_idTousers?.email ||
+            a?.supervisors?.full_name ||
+            a?.supervisor?.full_name ||
+            a?.supervisor_name ||
+            a.field_supervisor_id ||
+            "—";
+          return sup;
+        },
+      },
+      {
+        key: "amount",
+        label: t("financeDashboard.tables.advances.amount"),
+        className: "font-semibold",
+        render: (a) => fmtMoney(a.amount),
+      },
+      {
+        key: "status",
+        label: t("financeDashboard.tables.advances.status"),
+        render: (a) => <StatusBadge status={a.status} />,
+      },
+      {
+        key: "age",
+        label: t("financeDashboard.tables.advances.age"),
+        render: (a) => {
+          const age = daysBetween(a.created_at);
+          return (
+            <span className={age >= ADVANCE_OPEN_DAYS ? "text-amber-700 font-semibold" : ""}>
+              {t("financeDashboard.meta.days", { n: age })}
+            </span>
+          );
+        },
+      },
+      {
+        key: "view",
+        label: t("financeDashboard.tables.advances.view"),
+        headerClassName: "text-right",
+        className: "text-right",
+        render: (a) => (
+          <Link
+            href={`/finance/advances/${a.id}`}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-black/10 bg-black/[0.02] hover:bg-black/[0.04] text-slate-700"
+            aria-label="View"
+          >
+            →
+          </Link>
+        ),
+      },
+    ],
+    [t]
+  );
+
+  const alertsPendingColumns: DataTableColumn<any>[] = useMemo(
+    () => [
+      {
+        key: "age_days",
+        label: t("financeDashboard.tables.alertsPending.age"),
+        render: (x) => (
+          <span className="text-amber-700 font-semibold">
+            {t("financeDashboard.meta.days", { n: x.age_days })}
+          </span>
+        ),
+      },
+      {
+        key: "amount",
+        label: t("financeDashboard.tables.alertsPending.amount"),
+        className: "font-semibold",
+        render: (x) => fmtMoney(x.amount),
+      },
+      {
+        key: "expense_type",
+        label: t("financeDashboard.tables.alertsPending.type"),
+        render: (x) => x.expense_type || "—",
+      },
+      {
+        key: "payment_source",
+        label: t("financeDashboard.tables.alertsPending.source"),
+        render: (x) => <PaymentSourceBadge source={x.payment_source} />,
+      },
+      {
+        key: "created_at",
+        label: t("financeDashboard.tables.alertsPending.created"),
+        render: (x) => <span className="text-slate-600">{fmtDate(x.created_at)}</span>,
+      },
+      {
+        key: "view",
+        label: t("financeDashboard.tables.alertsPending.view"),
+        headerClassName: "text-right",
+        className: "text-right",
+        render: (x) => (
+          <Link
+            href={`/finance/expenses/${x.id}`}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-black/10 bg-black/[0.02] hover:bg-black/[0.04] text-slate-700"
+            aria-label="View"
+          >
+            →
+          </Link>
+        ),
+      },
+    ],
+    [t]
+  );
+
+  const alertsAdvColumns: DataTableColumn<any>[] = useMemo(
+    () => [
+      {
+        key: "age_days",
+        label: t("financeDashboard.tables.alertsAdvances.age"),
+        render: (a) => (
+          <span className="text-amber-700 font-semibold">
+            {t("financeDashboard.meta.days", { n: a.age_days })}
+          </span>
+        ),
+      },
+      {
+        key: "supervisor",
+        label: t("financeDashboard.tables.alertsAdvances.supervisor"),
+        render: (a) => {
+          const sup =
+            a?.users_cash_advances_field_supervisor_idTousers?.full_name ||
+            a?.users_cash_advances_field_supervisor_idTousers?.email ||
+            a?.supervisors?.full_name ||
+            a?.supervisor?.full_name ||
+            a?.supervisor_name ||
+            a.field_supervisor_id ||
+            "—";
+          return sup;
+        },
+      },
+      {
+        key: "amount",
+        label: t("financeDashboard.tables.alertsAdvances.amount"),
+        className: "font-semibold",
+        render: (a) => fmtMoney(a.amount),
+      },
+      {
+        key: "status",
+        label: t("financeDashboard.tables.alertsAdvances.status"),
+        render: (a) => <StatusBadge status={a.status} />,
+      },
+      {
+        key: "view",
+        label: t("financeDashboard.tables.alertsAdvances.view"),
+        headerClassName: "text-right",
+        className: "text-right",
+        render: (a) => (
+          <Link
+            href={`/finance/advances/${a.id}`}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-black/10 bg-black/[0.02] hover:bg-black/[0.04] text-slate-700"
+            aria-label="View"
+          >
+            →
+          </Link>
+        ),
+      },
+    ],
+    [t]
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">{t("financeDashboard.title")}</h1>
-          <div className="text-xs text-slate-400">
+      <PageHeader
+        title={t("financeDashboard.title")}
+        subtitle={
+          <span className="text-slate-500">
             {t("financeDashboard.roleLabel")}:{" "}
-            <span className="text-slate-200">{role || "—"}</span>
+            <span className="font-semibold text-[rgb(var(--trex-fg))]">{role || "—"}</span>
+          </span>
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <Link href="/finance/expenses">
+              <Button variant="secondary">{t("financeDashboard.actions.expenses")}</Button>
+            </Link>
+            <Link href="/finance/advances">
+              <Button variant="secondary">{t("financeDashboard.actions.advances")}</Button>
+            </Link>
+            <Button onClick={load} isLoading={loading}>
+              {loading ? t("common.loading") : t("financeDashboard.actions.refresh")}
+            </Button>
           </div>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <Link
-            href="/finance/expenses"
-            className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-          >
-            {t("financeDashboard.actions.expenses")}
-          </Link>
-          <Link
-            href="/finance/advances"
-            className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-          >
-            {t("financeDashboard.actions.advances")}
-          </Link>
-          <button
-            onClick={load}
-            disabled={loading}
-            className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm disabled:opacity-60"
-          >
-            {loading ? t("common.loading") : t("financeDashboard.actions.refresh")}
-          </button>
-        </div>
-      </div>
-
-      {err && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-300">
-          {err}
-        </div>
-      )}
+      {err ? (
+        <Card
+          title={t("financeDashboard.errors.loadFailed")}
+          className="border-red-500/20"
+        >
+          <div className="text-sm text-red-600">{err}</div>
+        </Card>
+      ) : null}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.pendingCount")}</div>
-          <div className="text-lg font-semibold">{kpis.pendingCount}</div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {expensesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly")}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.pendingTotal")}</div>
-          <div className="text-lg font-semibold">{fmtMoney(kpis.pendingTotal)}</div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {expensesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly")}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.openAdvances")}</div>
-          <div className="text-lg font-semibold">{kpis.openCount}</div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {advancesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly")}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.openAdvancesTotal")}</div>
-          <div className="text-lg font-semibold">{fmtMoney(kpis.openTotal)}</div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {t("financeDashboard.meta.openFromListNote")}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.pendingDays", { days: PENDING_DAYS })}</div>
-          <div className="text-lg font-semibold">{kpis.overduePendingCount}</div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-slate-400">{t("financeDashboard.kpis.advanceDays", { days: ADVANCE_OPEN_DAYS })}</div>
-          <div className="text-lg font-semibold">{kpis.overdueAdvCount}</div>
-        </div>
+        <KpiCard
+          label={t("financeDashboard.kpis.pendingCount")}
+          value={kpis.pendingCount}
+          hint={kpis.pendingFrom}
+        />
+        <KpiCard
+          label={t("financeDashboard.kpis.pendingTotal")}
+          value={fmtMoney(kpis.pendingTotal)}
+          hint={kpis.pendingFrom}
+        />
+        <KpiCard
+          label={t("financeDashboard.kpis.openAdvances")}
+          value={kpis.openCount}
+          hint={kpis.advancesFrom}
+        />
+        <KpiCard
+          label={t("financeDashboard.kpis.openAdvancesTotal")}
+          value={fmtMoney(kpis.openTotal)}
+          hint={t("financeDashboard.meta.openFromListNote")}
+        />
+        <KpiCard
+          label={t("financeDashboard.kpis.pendingDays", { days: PENDING_DAYS })}
+          value={kpis.overduePendingCount}
+        />
+        <KpiCard
+          label={t("financeDashboard.kpis.advanceDays", { days: ADVANCE_OPEN_DAYS })}
+          value={kpis.overdueAdvCount}
+        />
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((x) => (
-          <button
-            key={x.key}
-            onClick={() => setTab(x.key)}
-            className={cn(
-              "px-3 py-2 rounded-lg text-sm border transition",
-              tab === x.key
-                ? "bg-white/10 border-white/10 text-white"
-                : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            {x.label}
-          </button>
-        ))}
-      </div>
+      <TabsBar<TabKey> tabs={tabs} value={tab} onChange={setTab} />
 
       {/* Content */}
-      <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-        {loading ? (
-          <div className="text-sm text-slate-300">{t("common.loading")}</div>
-        ) : tab === "pending" ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-200">
-                {t("financeDashboard.sections.pendingHeader")}{" "}
-                <span className="text-xs text-slate-400">
-                  {t("financeDashboard.links.showing", { count: visiblePending.length })}
-                </span>
-              </div>
-              <Link
-                href="/finance/expenses?status=PENDING"
-                className="text-xs text-slate-300 hover:text-white"
-              >
-                {t("financeDashboard.links.openList")}
-              </Link>
+      {loading ? (
+        <Card title={t("common.loading")}>
+          <div className="text-sm text-slate-600">{t("common.loading")}</div>
+        </Card>
+      ) : tab === "pending" ? (
+        <DataTable
+          title={
+            <div className="flex items-center gap-2">
+              <span>{t("financeDashboard.sections.pendingHeader")}</span>
+              <span className="text-xs text-slate-500">
+                {t("financeDashboard.links.showing", { count: visiblePending.length })}
+              </span>
             </div>
-
-            {visiblePending.length === 0 ? (
-              <div className="text-sm text-slate-300">{t("financeDashboard.empty.noPending")}</div>
-            ) : (
-              <div className="rounded-xl border border-white/10 overflow-hidden">
-                <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                  <div className="col-span-2">{t("financeDashboard.tables.pending.amount")}</div>
-                  <div className="col-span-3">{t("financeDashboard.tables.pending.type")}</div>
-                  <div className="col-span-2">{t("financeDashboard.tables.pending.source")}</div>
-                  <div className="col-span-2">{t("financeDashboard.tables.pending.age")}</div>
-                  <div className="col-span-2">{t("financeDashboard.tables.pending.created")}</div>
-                  <div className="col-span-1 text-right">{t("financeDashboard.tables.pending.view")}</div>
-                </div>
-
-                {visiblePending.slice(0, 30).map((x) => {
-                  const age = daysBetween(x.created_at);
-                  return (
-                    <div
-                      key={x.id}
-                      className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
-                    >
-                      <div className="col-span-2 font-medium">{fmtMoney(x.amount)}</div>
-                      <div className="col-span-3">{x.expense_type || "—"}</div>
-                      <div className="col-span-2">
-                        <SourceBadge s={x.payment_source} />
-                      </div>
-                      <div className="col-span-2">
-                        <span className={cn(age >= PENDING_DAYS && "text-amber-200")}>
-                          {t("financeDashboard.meta.days", { n: age })}
-                        </span>
-                      </div>
-                      <div className="col-span-2 text-slate-300">{fmtDate(x.created_at)}</div>
-                      <div className="col-span-1 flex justify-end">
-                        <Link
-                          href={`/finance/expenses/${x.id}`}
-                          className="px-2 py-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                        >
-                          →
-                        </Link>
-                      </div>
+          }
+          right={
+            <Link href="/finance/expenses?status=PENDING">
+              <Button variant="ghost">{t("financeDashboard.links.openList")}</Button>
+            </Link>
+          }
+          columns={pendingColumns}
+          rows={visiblePending.slice(0, 30)}
+          emptyTitle={t("financeDashboard.empty.noPending")}
+          emptyHint={t("financeDashboard.meta.tryFilters") || "جرّب تغيير الفلاتر أو البحث."}
+          footer={
+            visiblePending.length > 30 ? (
+              <div className="text-xs text-slate-500">{t("financeDashboard.meta.showingFirst30")}</div>
+            ) : null
+          }
+        />
+      ) : tab === "advances" ? (
+        <DataTable
+          title={
+            <div className="flex items-center gap-2">
+              <span>{t("financeDashboard.sections.advancesHeader")}</span>
+              <span className="text-xs text-slate-500">
+                {t("financeDashboard.links.showing", { count: openAdvances.length })}
+              </span>
+            </div>
+          }
+          right={
+            <Link href="/finance/advances">
+              <Button variant="ghost">{t("financeDashboard.links.openList")}</Button>
+            </Link>
+          }
+          columns={advancesColumns}
+          rows={openAdvances.slice(0, 30)}
+          emptyTitle={t("financeDashboard.empty.noOpenAdvances")}
+          emptyHint={t("financeDashboard.meta.tryFilters") || "جرّب تغيير الفلاتر أو البحث."}
+          footer={
+            openAdvances.length > 30 ? (
+              <div className="text-xs text-slate-500">{t("financeDashboard.meta.showingFirst30")}</div>
+            ) : null
+          }
+        />
+      ) : (
+        <div className="space-y-4">
+          <Card
+            title={
+              <div className="flex items-center gap-2">
+                <span>{t("financeDashboard.sections.alertsHeader")}</span>
+                <span className="text-xs text-slate-500">{t("financeDashboard.sections.alertsHint")}</span>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <DataTable
+                title={`${t("financeDashboard.tabs.pending")} (${alerts.overduePending.length})`}
+                right={
+                  <Link href="/finance/expenses?status=PENDING">
+                    <Button variant="ghost">{t("financeDashboard.links.openList")}</Button>
+                  </Link>
+                }
+                columns={alertsPendingColumns}
+                rows={alerts.overduePending.slice(0, 20)}
+                emptyTitle={t("financeDashboard.empty.noOverduePending")}
+                emptyHint={t("financeDashboard.meta.tryFilters") || "جرّب تغيير الفلاتر أو البحث."}
+                footer={
+                  alerts.overduePending.length > 20 ? (
+                    <div className="text-xs text-slate-500">
+                      {t("financeDashboard.meta.showingFirst20Pending")}
                     </div>
-                  );
-                })}
+                  ) : null
+                }
+              />
 
-                {visiblePending.length > 30 ? (
-                  <div className="p-3 text-xs text-slate-400">{t("financeDashboard.meta.showingFirst30")}</div>
-                ) : null}
-              </div>
-            )}
-          </div>
-        ) : tab === "advances" ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-200">
-                {t("financeDashboard.sections.advancesHeader")}{" "}
-                <span className="text-xs text-slate-400">
-                  {t("financeDashboard.links.showing", { count: openAdvances.length })}
-                </span>
-              </div>
-              <Link href="/finance/advances" className="text-xs text-slate-300 hover:text-white">
-                {t("financeDashboard.links.openList")}
-              </Link>
-            </div>
-
-            {openAdvances.length === 0 ? (
-              <div className="text-sm text-slate-300">{t("financeDashboard.empty.noOpenAdvances")}</div>
-            ) : (
-              <div className="rounded-xl border border-white/10 overflow-hidden">
-                <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                  <div className="col-span-4">{t("financeDashboard.tables.advances.supervisor")}</div>
-                  <div className="col-span-2">{t("financeDashboard.tables.advances.amount")}</div>
-                  <div className="col-span-2">{t("financeDashboard.tables.advances.status")}</div>
-                  <div className="col-span-2">{t("financeDashboard.tables.advances.age")}</div>
-                  <div className="col-span-2 text-right">{t("financeDashboard.tables.advances.view")}</div>
-                </div>
-
-                {openAdvances.slice(0, 30).map((a) => {
-                  const age = daysBetween(a.created_at);
-
-                  // ✅ FIX: correct include name from backend controller
-                  const sup =
-                    a?.users_cash_advances_field_supervisor_idTousers?.full_name ||
-                    a?.users_cash_advances_field_supervisor_idTousers?.email ||
-                    a?.supervisors?.full_name ||
-                    a?.supervisor?.full_name ||
-                    a?.supervisor_name ||
-                    a.field_supervisor_id ||
-                    "—";
-
-                  return (
-                    <div
-                      key={a.id}
-                      className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
-                    >
-                      <div className="col-span-4">{sup}</div>
-                      <div className="col-span-2 font-medium">{fmtMoney(a.amount)}</div>
-                      <div className="col-span-2">
-                        <StatusBadge s={a.status} />
-                      </div>
-                      <div className="col-span-2">
-                        <span className={cn(age >= ADVANCE_OPEN_DAYS && "text-amber-200")}>
-                          {t("financeDashboard.meta.days", { n: age })}
-                        </span>
-                      </div>
-                      <div className="col-span-2 flex justify-end">
-                        <Link
-                          href={`/finance/advances/${a.id}`}
-                          className="px-2 py-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                        >
-                          →
-                        </Link>
-                      </div>
+              <DataTable
+                title={`${t("financeDashboard.tabs.advances")} (${alerts.overdueAdv.length})`}
+                right={
+                  <Link href="/finance/advances">
+                    <Button variant="ghost">{t("financeDashboard.links.openList")}</Button>
+                  </Link>
+                }
+                columns={alertsAdvColumns}
+                rows={alerts.overdueAdv.slice(0, 20)}
+                emptyTitle={t("financeDashboard.empty.noOverdueAdvances")}
+                emptyHint={t("financeDashboard.meta.tryFilters") || "جرّب تغيير الفلاتر أو البحث."}
+                footer={
+                  alerts.overdueAdv.length > 20 ? (
+                    <div className="text-xs text-slate-500">
+                      {t("financeDashboard.meta.showingFirst20Adv")}
                     </div>
-                  );
-                })}
-
-                {openAdvances.length > 30 ? (
-                  <div className="p-3 text-xs text-slate-400">{t("financeDashboard.meta.showingFirst30")}</div>
-                ) : null}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="text-sm text-slate-200">
-              {t("financeDashboard.sections.alertsHeader")}{" "}
-              <span className="text-xs text-slate-400">{t("financeDashboard.sections.alertsHint")}</span>
+                  ) : null
+                }
+              />
             </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-200">
-                  {t("financeDashboard.tabs.pending")} ({alerts.overduePending.length})
-                </div>
-                <Link
-                  href="/finance/expenses?status=PENDING"
-                  className="text-xs text-slate-300 hover:text-white"
-                >
-                  {t("financeDashboard.links.openList")}
-                </Link>
-              </div>
-
-              {alerts.overduePending.length === 0 ? (
-                <div className="text-sm text-slate-300">{t("financeDashboard.empty.noOverduePending")}</div>
-              ) : (
-                <div className="rounded-xl border border-white/10 overflow-hidden">
-                  <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                    <div className="col-span-2">{t("financeDashboard.tables.alertsPending.age")}</div>
-                    <div className="col-span-2">{t("financeDashboard.tables.alertsPending.amount")}</div>
-                    <div className="col-span-3">{t("financeDashboard.tables.alertsPending.type")}</div>
-                    <div className="col-span-2">{t("financeDashboard.tables.alertsPending.source")}</div>
-                    <div className="col-span-2">{t("financeDashboard.tables.alertsPending.created")}</div>
-                    <div className="col-span-1 text-right">{t("financeDashboard.tables.alertsPending.view")}</div>
-                  </div>
-
-                  {alerts.overduePending.slice(0, 20).map((x: any) => (
-                    <div
-                      key={x.id}
-                      className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
-                    >
-                      <div className="col-span-2 text-amber-200">{t("financeDashboard.meta.days", { n: x.age_days })}</div>
-                      <div className="col-span-2 font-medium">{fmtMoney(x.amount)}</div>
-                      <div className="col-span-3">{x.expense_type || "—"}</div>
-                      <div className="col-span-2">
-                        <SourceBadge s={x.payment_source} />
-                      </div>
-                      <div className="col-span-2 text-slate-300">{fmtDate(x.created_at)}</div>
-                      <div className="col-span-1 flex justify-end">
-                        <Link
-                          href={`/finance/expenses/${x.id}`}
-                          className="px-2 py-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                        >
-                          →
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-
-                  {alerts.overduePending.length > 20 ? (
-                    <div className="p-3 text-xs text-slate-400">{t("financeDashboard.meta.showingFirst20Pending")}</div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-200">
-                  {t("financeDashboard.tabs.advances")} ({alerts.overdueAdv.length})
-                </div>
-                <Link href="/finance/advances" className="text-xs text-slate-300 hover:text-white">
-                  {t("financeDashboard.links.openList")}
-                </Link>
-              </div>
-
-              {alerts.overdueAdv.length === 0 ? (
-                <div className="text-sm text-slate-300">{t("financeDashboard.empty.noOverdueAdvances")}</div>
-              ) : (
-                <div className="rounded-xl border border-white/10 overflow-hidden">
-                  <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-slate-400 bg-slate-950 border-b border-white/10">
-                    <div className="col-span-2">{t("financeDashboard.tables.alertsAdvances.age")}</div>
-                    <div className="col-span-4">{t("financeDashboard.tables.alertsAdvances.supervisor")}</div>
-                    <div className="col-span-2">{t("financeDashboard.tables.alertsAdvances.amount")}</div>
-                    <div className="col-span-2">{t("financeDashboard.tables.alertsAdvances.status")}</div>
-                    <div className="col-span-2 text-right">{t("financeDashboard.tables.alertsAdvances.view")}</div>
-                  </div>
-
-                  {alerts.overdueAdv.slice(0, 20).map((a: any) => {
-                    const sup =
-                      a?.users_cash_advances_field_supervisor_idTousers?.full_name ||
-                      a?.users_cash_advances_field_supervisor_idTousers?.email ||
-                      a?.supervisors?.full_name ||
-                      a?.supervisor?.full_name ||
-                      a?.supervisor_name ||
-                      a.field_supervisor_id ||
-                      "—";
-
-                    return (
-                      <div
-                        key={a.id}
-                        className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-white/10 hover:bg-white/5"
-                      >
-                        <div className="col-span-2 text-amber-200">{t("financeDashboard.meta.days", { n: a.age_days })}</div>
-                        <div className="col-span-4">{sup}</div>
-                        <div className="col-span-2 font-medium">{fmtMoney(a.amount)}</div>
-                        <div className="col-span-2">
-                          <StatusBadge s={a.status} />
-                        </div>
-                        <div className="col-span-2 flex justify-end">
-                          <Link
-                            href={`/finance/advances/${a.id}`}
-                            className="px-2 py-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                          >
-                            →
-                          </Link>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {alerts.overdueAdv.length > 20 ? (
-                    <div className="p-3 text-xs text-slate-400">{t("financeDashboard.meta.showingFirst20Adv")}</div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+          </Card>
+        </div>
+      )}
 
       {!isPrivileged && !isSupervisor ? (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-200">
-          {t("financeDashboard.notes.roleLimited")}
-        </div>
+        <Card className="border-amber-500/20">
+          <div className="text-sm text-amber-700">{t("financeDashboard.notes.roleLimited")}</div>
+        </Card>
       ) : null}
 
       <div className="text-xs text-slate-500">{t("financeDashboard.notes.tipPrivileged")}</div>
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

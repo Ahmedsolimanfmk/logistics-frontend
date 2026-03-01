@@ -80,7 +80,7 @@ export default function WorkOrdersClientPage() {
 
   // server-side pagination
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const limit = 20;
   const [total, setTotal] = useState<number>(0);
 
   // toast
@@ -92,6 +92,7 @@ export default function WorkOrdersClientPage() {
     setToastMsg(message);
     setToastType(type);
     setToastOpen(true);
+    setTimeout(() => setToastOpen(false), 2500);
   }, []);
 
   const load = useCallback(async () => {
@@ -103,14 +104,13 @@ export default function WorkOrdersClientPage() {
     try {
       const params: any = { page, limit };
       if (q.trim()) params.q = q.trim();
-      if (status) params.status = status;
+      if (status) params.status = String(status).toUpperCase();
 
       const res: any = await apiGet(`/maintenance/work-orders`, params);
 
       const list = normalizeList(res);
       setItems(list);
 
-      // total/pages
       const ttotal = unwrapTotal(res);
       if (typeof ttotal === "number" && Number.isFinite(ttotal)) setTotal(ttotal);
       else setTotal(list.length);
@@ -119,10 +119,11 @@ export default function WorkOrdersClientPage() {
       setTotal(0);
       const msg = e?.message || tRef.current("workOrders.list.loading");
       setErr(msg);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
-  }, [token, page, limit, q, status]);
+  }, [token, page, limit, q, status, showToast]);
 
   useEffect(() => {
     if (!token) return;
@@ -134,12 +135,15 @@ export default function WorkOrdersClientPage() {
     return Math.max(1, Math.ceil(total / limit));
   }, [total, limit]);
 
-  // Local filter (اختياري) — يخدم كـ fallback لو السيرفر مش بيفلتر
+  // Local filter (fallback) — لو السيرفر مش بيفلتر
   const filteredLocal = useMemo(() => {
     const qq = q.trim().toLowerCase();
+    const st = String(status || "").toUpperCase();
+
     return items.filter((x) => {
-      const stOk = !status || String(x.status || "").toUpperCase() === status;
+      const stOk = !st || String(x.status || "").toUpperCase() === st;
       if (!qq) return stOk;
+
       const hay = [
         x.id,
         x.type,
@@ -151,9 +155,17 @@ export default function WorkOrdersClientPage() {
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
+
       return stOk && hay.includes(qq);
     });
   }, [items, q, status]);
+
+  // ✅ total shown should match what we display (avoid mismatch)
+  const totalShown = useMemo(() => {
+    // لو بتستخدم fallback local filter، اعرض عدد النتائج الظاهرة
+    // (لو انت متأكد السيرفر بيفلتر، ممكن تحط total هنا بدل filteredLocal.length)
+    return filteredLocal.length;
+  }, [filteredLocal.length]);
 
   const columns: DataTableColumn<WorkOrderListItem>[] = useMemo(
     () => [
@@ -191,8 +203,7 @@ export default function WorkOrdersClientPage() {
         label: t("workOrders.list.columns.vehicle"),
         render: (row) => {
           const v = row.vehicles;
-          const name =
-            (v?.fleet_no ? `${v.fleet_no} - ` : "") + (v?.plate_no || v?.display_name || "—");
+          const name = (v?.fleet_no ? `${v.fleet_no} - ` : "") + (v?.plate_no || v?.display_name || "—");
           return (
             <div>
               <div>{name}</div>
@@ -216,12 +227,12 @@ export default function WorkOrdersClientPage() {
   );
 
   return (
-    <div className="space-y-4 p-4">
-      <PageHeader
-        title={t("workOrders.title")}
-        subtitle={`${t("workOrders.breadcrumb")} / ${t("workOrders.title")}`}
-        actions={
-          <>
+    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
+      <div className="space-y-4 p-4">
+        <PageHeader
+          title={t("workOrders.title")}
+          subtitle={`${t("workOrders.breadcrumb")} / ${t("workOrders.title")}`}
+          actions={
             <Button
               variant="secondary"
               onClick={() => {
@@ -232,79 +243,81 @@ export default function WorkOrdersClientPage() {
             >
               {t("workOrders.actions.refresh")}
             </Button>
-          </>
-        }
-      />
+          }
+        />
 
-      <Card>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div>
-            <div className="mb-1 text-xs text-gray-500">{t("workOrders.filters.searchTitle")}</div>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-              placeholder={t("maintenanceRequests.filters.searchPlaceholder")}
-            />
+        <Card>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div>
+              <div className="mb-1 text-xs text-gray-500">{t("workOrders.filters.searchTitle")}</div>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="trex-input w-full px-3 py-2 text-sm"
+                placeholder={t("workOrders.filters.searchPlaceholder")}
+              />
+            </div>
+
+            <div>
+              <div className="mb-1 text-xs text-gray-500">{t("workOrders.filters.status")}</div>
+              <select
+                value={status}
+                onChange={(e) => {
+                  setStatus(e.target.value);
+                  setPage(1);
+                }}
+                className="trex-input w-full px-3 py-2 text-sm"
+              >
+                <option value="">{t("workOrders.status.all")}</option>
+                <option value="OPEN">{t("workOrders.status.open")}</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="COMPLETED">{t("workOrders.status.completed")}</option>
+                <option value="CANCELED">{t("workOrders.status.canceled")}</option>
+              </select>
+            </div>
+
+            <div className="flex items-end gap-2">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setPage(1); // ✅ rely on useEffect to reload (avoid double request)
+                }}
+                isLoading={loading}
+              >
+                {t("workOrders.filters.searchBtn")}
+              </Button>
+
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setQ("");
+                  setStatus("");
+                  setPage(1);
+                }}
+              >
+                {t("common.clear")}
+              </Button>
+            </div>
           </div>
+        </Card>
 
-          <div>
-            <div className="mb-1 text-xs text-gray-500">{t("workOrders.filters.status")}</div>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-            >
-              <option value="">{t("workOrders.status.all")}</option>
-              <option value="OPEN">{t("workOrders.status.open")}</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="COMPLETED">{t("workOrders.status.completed")}</option>
-              <option value="CANCELED">{t("workOrders.status.canceled")}</option>
-            </select>
-          </div>
+        <DataTable<WorkOrderListItem>
+          title={t("workOrders.list.title")}
+          right={<div className="text-xs text-gray-500">{err ? `⚠ ${err}` : null}</div>}
+          columns={columns}
+          rows={filteredLocal}
+          loading={loading}
+          emptyTitle={err ? err : t("workOrders.list.empty")}
+          emptyHint={err ? t("common.tryAgain") : t("workOrders.filters.searchPlaceholder")}
+          total={totalShown}
+          page={page}
+          pages={pages}
+          onPrev={page > 1 && !loading ? () => setPage((p) => Math.max(1, p - 1)) : undefined}
+          onNext={page < pages && !loading ? () => setPage((p) => p + 1) : undefined}
+        />
 
-          <div className="flex items-end gap-2">
-            <Button
-              variant="primary"
-              onClick={() => {
-                setPage(1);
-                load();
-              }}
-              isLoading={loading}
-            >
-              {t("workOrders.filters.searchBtn")}
-            </Button>
-
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setQ("");
-                setStatus("");
-                setPage(1);
-              }}
-            >
-              {t("common.clear")}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      <DataTable<WorkOrderListItem>
-        title={t("workOrders.list.title")}
-        right={<div className="text-xs text-gray-500">{err ? `⚠ ${err}` : null}</div>}
-        columns={columns}
-        rows={filteredLocal}
-        loading={loading}
-        emptyTitle={err ? err : t("workOrders.list.empty")}
-        emptyHint={err ? t("common.tryAgain") : t("maintenanceRequests.filters.searchPlaceholder")}
-        total={total}
-        page={page}
-        pages={pages}
-        onPrev={page > 1 && !loading ? () => setPage((p) => Math.max(1, p - 1)) : undefined}
-        onNext={page < pages && !loading ? () => setPage((p) => p + 1) : undefined}
-      />
-
-      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} />
+        <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
+      </div>
     </div>
   );
 }

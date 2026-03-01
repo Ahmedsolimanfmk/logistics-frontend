@@ -1,26 +1,48 @@
+"use client";
+
 import React from "react";
+import { Button } from "@/src/components/ui/Button";
+
+function cn(...v: Array<string | false | null | undefined>) {
+  return v.filter(Boolean).join(" ");
+}
 
 export function EmptyState({
-  title = "لا يوجد بيانات",
+  title = "لا توجد بيانات",
   hint,
-  action,
-  className = "",
+  actionText,
+  onAction,
+  icon,
+  className,
 }: {
   title?: React.ReactNode;
   hint?: React.ReactNode;
-  action?: React.ReactNode;
+  actionText?: string;
+  onAction?: () => void;
+  icon?: React.ReactNode;
   className?: string;
 }) {
   return (
     <div
-      className={[
-        "rounded-2xl border border-gray-200 bg-white p-8 text-center",
-        className,
-      ].join(" ")}
+      className={cn(
+        // ✅ Trex surface + border alpha (dark/light friendly)
+        "rounded-2xl border border-black/10 bg-[rgba(var(--trex-surface),0.85)] p-6 text-center",
+        className
+      )}
     >
-      <div className="text-sm font-semibold text-gray-900">{title}</div>
-      {hint ? <div className="mt-1 text-sm text-gray-600">{hint}</div> : null}
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+      {icon ? <div className="mx-auto mb-3 w-fit opacity-80">{icon}</div> : null}
+
+      <div className="text-sm font-semibold text-[rgb(var(--trex-fg))]">{title}</div>
+
+      {hint ? <div className="mt-1 text-xs text-slate-500">{hint}</div> : null}
+
+      {actionText && onAction ? (
+        <div className="mt-4 flex justify-center">
+          <Button variant="secondary" onClick={onAction}>
+            {actionText}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

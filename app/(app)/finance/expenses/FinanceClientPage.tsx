@@ -7,9 +7,18 @@ import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
+// ✅ Design System
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { TabsBar } from "@/src/components/ui/TabsBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { Button } from "@/src/components/ui/Button";
+import { Card } from "@/src/components/ui/Card";
+import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+
+// ✅ Toast path (as you said)
+import { Toast } from "@/src/components/Toast";
 
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
@@ -31,22 +40,6 @@ function shortId(id: any) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
-
-function StatusBadge({ s }: { s: string }) {
-  const st = String(s || "").toUpperCase();
-  const cls =
-    st === "APPROVED" || st === "REAPPROVED"
-      ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/20"
-      : st === "REJECTED"
-      ? "bg-red-500/15 text-red-200 border-red-500/20"
-      : st === "APPEALED"
-      ? "bg-indigo-500/15 text-indigo-200 border-indigo-500/20"
-      : st === "PENDING"
-      ? "bg-amber-500/15 text-amber-200 border-amber-500/20"
-      : "bg-white/5 text-slate-200 border-white/10";
-
-  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
 }
 
 type TabKey = "PENDING" | "APPROVED" | "REJECTED" | "APPEALED" | "ALL";
@@ -76,6 +69,17 @@ export default function ExpensesClientPage() {
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
+  // toast
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToastType(type);
+    setToastMsg(msg);
+    setToastOpen(true);
+  }
+
   const setParam = (k: string, v: string) => {
     const p = new URLSearchParams(sp.toString());
     if (v) p.set(k, v);
@@ -97,16 +101,19 @@ export default function ExpensesClientPage() {
         params: { status, page, page_size: pageSize, q: q || undefined },
       });
 
-      // api.ts returns data directly
       const list = Array.isArray(data) ? data : (data as any)?.items || [];
       const tt = Array.isArray(data) ? list.length : Number((data as any)?.total || 0);
 
       setItems(list);
       setTotal(tt);
+
+      showToast("success", t("common.refresh"));
     } catch (e: any) {
-      setErr(e?.message || t("financeExpenses.errors.loadFailed"));
+      const msg = e?.message || t("financeExpenses.errors.loadFailed");
+      setErr(msg);
       setItems([]);
       setTotal(0);
+      showToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -117,30 +124,81 @@ export default function ExpensesClientPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qsKey, token]);
 
-  async function approve(expenseId: string) {
+  // =========================
+  // Approve / Reject Dialogs
+  // =========================
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const [approveNotes, setApproveNotes] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectNotes, setRejectNotes] = useState("");
+
+  function openApprove(expenseId: string) {
     if (!canReview) return;
-    const notes = window.prompt(t("financeExpenses.prompts.approveNotes")) || "";
+    setActiveId(expenseId);
+    setApproveNotes("");
+    setApproveOpen(true);
+  }
+
+  function openReject(expenseId: string) {
+    if (!canReview) return;
+    setActiveId(expenseId);
+    setRejectReason("");
+    setRejectNotes("");
+    setRejectOpen(true);
+  }
+
+  async function confirmApprove() {
+    if (!canReview) return;
+    if (!activeId) return;
+
+    setActionLoading(true);
     try {
-      await api.post(`/cash/cash-expenses/${expenseId}/approve`, { notes: notes || null });
+      await api.post(`/cash/cash-expenses/${activeId}/approve`, { notes: approveNotes || null });
+      setApproveOpen(false);
+      setActiveId(null);
+      showToast("success", t("financeExpenses.actions.approve"));
       await load();
     } catch (e: any) {
-      alert(e?.message || t("financeExpenses.errors.approveFailed"));
+      showToast("error", e?.message || t("financeExpenses.errors.approveFailed"));
+    } finally {
+      setActionLoading(false);
     }
   }
 
-  async function reject(expenseId: string) {
+  async function confirmReject() {
     if (!canReview) return;
-    const reason = window.prompt(t("financeExpenses.prompts.rejectReason"));
-    if (!reason || reason.trim().length < 2) return;
-    const notes = window.prompt(t("financeExpenses.prompts.rejectNotes")) || "";
+    if (!activeId) return;
+
+    const reason = (rejectReason || "").trim();
+    if (reason.length < 2) {
+      showToast("error", t("financeExpenses.prompts.rejectReason"));
+      return;
+    }
+
+    setActionLoading(true);
     try {
-      await api.post(`/cash/cash-expenses/${expenseId}/reject`, { reason: reason.trim(), notes: notes || null });
+      await api.post(`/cash/cash-expenses/${activeId}/reject`, {
+        reason,
+        notes: rejectNotes || null,
+      });
+      setRejectOpen(false);
+      setActiveId(null);
+      showToast("success", t("financeExpenses.actions.reject"));
       await load();
     } catch (e: any) {
-      alert(e?.message || t("financeExpenses.errors.rejectFailed"));
+      showToast("error", e?.message || t("financeExpenses.errors.rejectFailed"));
+    } finally {
+      setActionLoading(false);
     }
   }
 
+  // =========================
+  // Tabs
+  // =========================
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: "PENDING", label: t("financeExpenses.tabs.PENDING") },
     { key: "APPROVED", label: t("financeExpenses.tabs.APPROVED") },
@@ -149,187 +207,256 @@ export default function ExpensesClientPage() {
     { key: "ALL", label: t("financeExpenses.tabs.ALL") },
   ];
 
+  // =========================
+  // DataTable Columns
+  // =========================
+  const columns: DataTableColumn<any>[] = useMemo(
+    () => [
+      {
+        key: "id",
+        label: t("financeExpenses.table.id"),
+        className: "font-mono",
+        render: (x) => shortId(x.id),
+      },
+      {
+        key: "amount",
+        label: t("financeExpenses.table.amount"),
+        className: "font-semibold",
+        render: (x) => fmtMoney(x.amount),
+      },
+      {
+        key: "expense_type",
+        label: t("financeExpenses.table.type"),
+        render: (x) => x.expense_type || "—",
+      },
+      {
+        key: "status",
+        label: t("financeExpenses.table.status"),
+        render: (x) => {
+          const st = String(x.approval_status || x.status || "").toUpperCase();
+          return <StatusBadge status={st} />;
+        },
+      },
+      {
+        key: "trip",
+        label: t("financeExpenses.table.trip"),
+        className: "font-mono",
+        render: (x) => (x.trip_id ? shortId(x.trip_id) : "—"),
+      },
+      {
+        key: "vehicle",
+        label: t("financeExpenses.table.vehicle"),
+        render: (x) => x.vehicles?.plate_no || x.vehicles?.plate_number || "—",
+      },
+      {
+        key: "created_at",
+        label: t("financeExpenses.table.created"),
+        render: (x) => <span className="text-slate-600">{fmtDate(x.created_at)}</span>,
+      },
+      {
+        key: "actions",
+        label: t("financeExpenses.table.actions"),
+        render: (x) => {
+          const st = String(x.approval_status || x.status || "").toUpperCase();
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href={`/finance/expenses/${x.id}`}>
+                <Button variant="secondary" className="px-3 py-1.5">
+                  {t("common.view")}
+                </Button>
+              </Link>
+
+              {canReview && st === "PENDING" ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    className="px-3 py-1.5"
+                    onClick={() => openApprove(String(x.id))}
+                  >
+                    {t("financeExpenses.actions.approve")}
+                  </Button>
+
+                  <Button
+                    variant="danger"
+                    className="px-3 py-1.5"
+                    onClick={() => openReject(String(x.id))}
+                  >
+                    {t("financeExpenses.actions.reject")}
+                  </Button>
+                </>
+              ) : null}
+
+              {st === "REJECTED" && x.rejection_reason ? (
+                <span className="text-xs text-slate-500">
+                  {t("financeExpenses.table.reason")}:{" "}
+                  <span className="text-[rgb(var(--trex-fg))]">{String(x.rejection_reason)}</span>
+                </span>
+              ) : null}
+            </div>
+          );
+        },
+      },
+    ],
+    [t, canReview]
+  );
+
+  const headerRight = (
+    <div className="flex items-center gap-2">
+      <Link href="/finance">
+        <Button variant="secondary">← {t("sidebar.finance")}</Button>
+      </Link>
+      <Button onClick={load} isLoading={loading}>
+        {loading ? t("common.loading") : t("common.refresh")}
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold">{t("financeExpenses.title")}</div>
-            <div className="text-xs text-slate-400">
-              {t("common.role")}: <span className="text-slate-200">{role || "—"}</span>
-              {!canReview ? <span className="ml-2">({t("financeExpenses.viewOnly")})</span> : null}
+    <div className="space-y-4">
+      <PageHeader
+        title={t("financeExpenses.title")}
+        subtitle={
+          <span className="text-slate-500">
+            {t("common.role")}:{" "}
+            <span className="font-semibold text-[rgb(var(--trex-fg))]">{role || "—"}</span>
+            {!canReview ? <span className="ms-2">({t("financeExpenses.viewOnly")})</span> : null}
+          </span>
+        }
+        actions={headerRight}
+      />
+
+      {/* Tabs */}
+      <TabsBar<TabKey> tabs={tabs} value={status} onChange={(k) => setParam("status", k)} />
+
+      {/* Filters */}
+      <Card>
+        <FiltersBar
+          left={
+            <input
+              value={q}
+              onChange={(e) => setParam("q", e.target.value)}
+              placeholder={t("financeExpenses.filters.searchPlaceholder")}
+              className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] text-sm outline-none"
+            />
+          }
+          right={
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-slate-500">
+                {t("common.total")}:{" "}
+                <span className="font-semibold text-[rgb(var(--trex-fg))]">{total}</span>
+                {" — "}
+                {t("common.page")}{" "}
+                <span className="font-semibold text-[rgb(var(--trex-fg))]">
+                  {page}/{totalPages}
+                </span>
+              </div>
+
+              <select
+                value={String(pageSize)}
+                onChange={(e) => setParam("pageSize", e.target.value)}
+                className="px-3 py-2 rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] text-sm outline-none"
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+              </select>
             </div>
+          }
+        />
+      </Card>
+
+      {err ? (
+        <Card className="border-red-500/20">
+          <div className="text-sm text-red-600">{err}</div>
+        </Card>
+      ) : null}
+
+      <DataTable
+        title={t("financeExpenses.title")}
+        subtitle={t("financeExpenses.meta.showing", { count: items.length, total })}
+        columns={columns}
+        rows={items}
+        loading={loading}
+        emptyTitle={t("financeExpenses.empty")}
+        emptyHint={t("financeExpenses.filters.searchPlaceholder")}
+        total={total}
+        page={page}
+        pages={totalPages}
+        onPrev={page > 1 ? () => setParam("page", String(page - 1)) : undefined}
+        onNext={page < totalPages ? () => setParam("page", String(page + 1)) : undefined}
+      />
+
+      {/* Approve Dialog */}
+      <ConfirmDialog
+        open={approveOpen}
+        title={t("financeExpenses.actions.approve")}
+        description={
+          <div className="space-y-2">
+            <div className="text-sm text-slate-600">{t("financeExpenses.prompts.approveNotes")}</div>
+            <textarea
+              value={approveNotes}
+              onChange={(e) => setApproveNotes(e.target.value)}
+              className="w-full min-h-[90px] px-3 py-2 rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] text-sm outline-none"
+              placeholder={t("financeExpenses.prompts.approveNotes")}
+            />
+            <div className="text-xs text-slate-500">{t("common.optional") || "اختياري"}</div>
           </div>
+        }
+        confirmText={t("financeExpenses.actions.approve")}
+        cancelText={t("common.cancel")}
+        tone="info"
+        isLoading={actionLoading}
+        onClose={() => {
+          if (actionLoading) return;
+          setApproveOpen(false);
+          setActiveId(null);
+        }}
+        onConfirm={confirmApprove}
+      />
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/finance"
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm"
-            >
-              ← {t("sidebar.finance")}
-            </Link>
+      {/* Reject Dialog */}
+      <ConfirmDialog
+        open={rejectOpen}
+        title={t("financeExpenses.actions.reject")}
+        description={
+          <div className="space-y-2">
+            <div className="text-sm text-slate-600">{t("financeExpenses.prompts.rejectReason")}</div>
+            <input
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] text-sm outline-none"
+              placeholder={t("financeExpenses.prompts.rejectReason")}
+            />
 
-            <button
-              onClick={load}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm disabled:opacity-60"
-            >
-              {loading ? t("common.loading") : t("common.refresh")}
-            </button>
+            <div className="text-sm text-slate-600">{t("financeExpenses.prompts.rejectNotes")}</div>
+            <textarea
+              value={rejectNotes}
+              onChange={(e) => setRejectNotes(e.target.value)}
+              className="w-full min-h-[90px] px-3 py-2 rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] text-sm outline-none"
+              placeholder={t("financeExpenses.prompts.rejectNotes")}
+            />
           </div>
-        </div>
+        }
+        confirmText={t("financeExpenses.actions.reject")}
+        cancelText={t("common.cancel")}
+        tone="danger"
+        isLoading={actionLoading}
+        onClose={() => {
+          if (actionLoading) return;
+          setRejectOpen(false);
+          setActiveId(null);
+        }}
+        onConfirm={confirmReject}
+      />
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((x) => (
-            <button
-              key={x.key}
-              onClick={() => setParam("status", x.key)}
-              className={cn(
-                "px-3 py-2 rounded-xl text-sm border transition",
-                status === x.key
-                  ? "bg-white/10 border-white/10 text-white"
-                  : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
-              )}
-            >
-              {x.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Search + meta */}
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={q}
-            onChange={(e) => setParam("q", e.target.value)}
-            placeholder={t("financeExpenses.filters.searchPlaceholder")}
-            className="w-full md:w-[420px] px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          />
-
-          <div className="text-xs text-slate-400">
-            {t("common.total")}: <span className="text-slate-200">{total}</span> — {t("common.page")}{" "}
-            <span className="text-slate-200">
-              {page}/{totalPages}
-            </span>
-          </div>
-
-          <select
-            value={String(pageSize)}
-            onChange={(e) => setParam("pageSize", e.target.value)}
-            className="ml-auto px-3 py-2 rounded-xl bg-slate-950/30 border border-white/10 text-sm outline-none"
-          >
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="200">200</option>
-          </select>
-        </div>
-
-        {err ? (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{err}</div>
-        ) : null}
-
-        {/* Table */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-          {loading ? (
-            <div className="p-4 text-sm text-slate-300">{t("common.loading")}</div>
-          ) : items.length === 0 ? (
-            <div className="p-4 text-sm text-slate-300">{t("financeExpenses.empty")}</div>
-          ) : (
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-white/5">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.id")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.amount")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.type")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.trip")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.vehicle")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-200">{t("financeExpenses.table.actions")}</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {items.map((x: any) => {
-                    const st = String(x.approval_status || x.status || "").toUpperCase();
-                    return (
-                      <tr key={x.id} className="border-t border-white/10 hover:bg-white/5">
-                        <td className="px-4 py-2 font-mono">{shortId(x.id)}</td>
-                        <td className="px-4 py-2 font-semibold">{fmtMoney(x.amount)}</td>
-                        <td className="px-4 py-2">{x.expense_type || "—"}</td>
-                        <td className="px-4 py-2">
-                          <StatusBadge s={st} />
-                        </td>
-                        <td className="px-4 py-2 font-mono">{x.trip_id ? shortId(x.trip_id) : "—"}</td>
-                        <td className="px-4 py-2">{x.vehicles?.plate_no || x.vehicles?.plate_number || "—"}</td>
-                        <td className="px-4 py-2 text-slate-300">{fmtDate(x.created_at)}</td>
-                        <td className="px-4 py-2">
-                          <div className="flex flex-wrap gap-2">
-                            <Link
-                              href={`/finance/expenses/${x.id}`}
-                              className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs"
-                            >
-                              {t("common.view")}
-                            </Link>
-
-                            {canReview && st === "PENDING" ? (
-                              <>
-                                <button
-                                  onClick={() => approve(x.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-white/10 bg-emerald-600/70 hover:bg-emerald-600 text-xs"
-                                >
-                                  {t("financeExpenses.actions.approve")}
-                                </button>
-                                <button
-                                  onClick={() => reject(x.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-white/10 bg-red-600/70 hover:bg-red-600 text-xs"
-                                >
-                                  {t("financeExpenses.actions.reject")}
-                                </button>
-                              </>
-                            ) : null}
-
-                            {st === "REJECTED" && x.rejection_reason ? (
-                              <span className="text-xs text-slate-400">
-                                {t("financeExpenses.table.reason")}:{" "}
-                                <span className="text-slate-200">{String(x.rejection_reason)}</span>
-                              </span>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between gap-3 p-4 border-t border-white/10">
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
-              disabled={page <= 1}
-              onClick={() => setParam("page", String(page - 1))}
-            >
-              {t("common.prev")}
-            </button>
-
-            <div className="text-xs text-slate-400">{t("financeExpenses.meta.showing", { count: items.length, total })}</div>
-
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50"
-              disabled={page >= totalPages}
-              onClick={() => setParam("page", String(page + 1))}
-            >
-              {t("common.next")}
-            </button>
-          </div>
-        </div>
-      </div>
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

@@ -10,15 +10,16 @@ import { useT } from "@/src/i18n/useT";
 
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Card } from "@/src/components/ui/Card";
+import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
+
 function isUuid(v: any) {
-  return typeof v === "string" && v.length > 30;
+  if (typeof v !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
 }
 
 export default function NewCashExpensePage() {
@@ -37,7 +38,9 @@ export default function NewCashExpensePage() {
   }, [isSupervisor, isPrivileged]);
 
   const [paymentSource, setPaymentSource] = useState<string>(allowedSources[0] || "");
-  useEffect(() => setPaymentSource(allowedSources[0] || ""), [allowedSources]);
+  useEffect(() => {
+    setPaymentSource(allowedSources[0] || "");
+  }, [allowedSources]);
 
   const [loading, setLoading] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
@@ -70,6 +73,14 @@ export default function NewCashExpensePage() {
     trip_id: "",
   });
 
+  // Confirm before submit
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const inputCls =
+    "w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.70)] px-3 py-2 outline-none text-sm " +
+    "focus:ring-4 focus:ring-[rgba(var(--trex-accent),0.12)] focus:border-[rgba(var(--trex-accent),0.35)]";
+  const labelCls = "text-xs text-slate-500 mb-1";
+
   useEffect(() => {
     let mounted = true;
 
@@ -84,7 +95,8 @@ export default function NewCashExpensePage() {
           const list = Array.isArray(data) ? data : (data as any)?.items || [];
 
           const openMine = list.filter(
-            (a: any) => String(a.status).toUpperCase() === "OPEN" && a.field_supervisor_id === user?.id
+            (a: any) =>
+              String(a.status).toUpperCase() === "OPEN" && a.field_supervisor_id === user?.id
           );
 
           if (mounted) setAdvances(openMine);
@@ -135,17 +147,21 @@ export default function NewCashExpensePage() {
 
     if (paymentSource === "COMPANY") {
       if (!isPrivileged) return t("financeNewExpense.errors.companyOnlyPrivileged");
-      if (!form.vendor_name || String(form.vendor_name).trim().length < 2) return t("financeNewExpense.errors.vendorRequired");
+      if (!form.vendor_name || String(form.vendor_name).trim().length < 2)
+        return t("financeNewExpense.errors.vendorRequired");
       if (!form.invoice_date) return t("financeNewExpense.errors.invoiceDateRequired");
     }
 
     if (form.trip_id && !isUuid(form.trip_id)) return t("financeNewExpense.errors.tripInvalid");
-    if (form.maintenance_work_order_id && !isUuid(form.maintenance_work_order_id)) return t("financeNewExpense.errors.woInvalid");
+    if (form.maintenance_work_order_id && !isUuid(form.maintenance_work_order_id))
+      return t("financeNewExpense.errors.woInvalid");
 
     return null;
   }
 
   async function submit() {
+    if (loading) return;
+
     const e = validate();
     if (e) {
       setError(e);
@@ -162,10 +178,14 @@ export default function NewCashExpensePage() {
         expense_type: form.expense_type,
         amount: Number(form.amount),
         notes: form.notes?.trim() ? form.notes.trim() : undefined,
+
         cash_advance_id: paymentSource === "ADVANCE" ? form.cash_advance_id : undefined,
+
         vendor_name: paymentSource === "COMPANY" ? String(form.vendor_name).trim() : undefined,
-        invoice_no: paymentSource === "COMPANY" && form.invoice_no?.trim() ? form.invoice_no.trim() : undefined,
+        invoice_no:
+          paymentSource === "COMPANY" && form.invoice_no?.trim() ? form.invoice_no.trim() : undefined,
         invoice_date: paymentSource === "COMPANY" ? form.invoice_date : undefined,
+
         maintenance_work_order_id: form.maintenance_work_order_id || undefined,
         trip_id: form.trip_id || undefined,
       });
@@ -173,7 +193,10 @@ export default function NewCashExpensePage() {
       showToast("success", t("financeNewExpense.toast.created"));
       router.push("/finance/expenses");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || t("financeNewExpense.toast.createFailed");
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        t("financeNewExpense.toast.createFailed");
       setError(msg);
       showToast("error", msg);
     } finally {
@@ -181,11 +204,21 @@ export default function NewCashExpensePage() {
     }
   }
 
+  function openConfirmIfValid() {
+    const e = validate();
+    if (e) {
+      setError(e);
+      showToast("error", e);
+      return;
+    }
+    setConfirmOpen(true);
+  }
+
   if (bootLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
+      <div className="space-y-4" dir="rtl">
         <div className="max-w-3xl mx-auto p-4 md:p-6">
-          <div className="text-sm text-gray-600">{t("common.loading")}</div>
+          <div className="text-sm text-slate-500">{t("common.loading")}</div>
         </div>
       </div>
     );
@@ -193,14 +226,15 @@ export default function NewCashExpensePage() {
 
   if (!paymentSource) {
     return (
-      <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
+      <div className="space-y-4" dir="rtl">
         <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-3">
           <PageHeader
             title={t("financeNewExpense.title")}
             subtitle={
-              <>
-                {t("common.role")}: <span className="text-gray-700">{role || "—"}</span>
-              </>
+              <span className="text-slate-500">
+                {t("common.role")}:{" "}
+                <span className="font-semibold text-[rgb(var(--trex-fg))]">{role || "—"}</span>
+              </span>
             }
             actions={
               <Link href="/finance/expenses">
@@ -208,23 +242,27 @@ export default function NewCashExpensePage() {
               </Link>
             }
           />
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            {t("financeNewExpense.notAllowedBanner")}
-          </div>
+
+          <Card className="border-amber-500/20">
+            <div className="text-sm text-amber-700">{t("financeNewExpense.notAllowedBanner")}</div>
+          </Card>
         </div>
       </div>
     );
   }
 
+  const showNoOpenAdvanceHint = paymentSource === "ADVANCE" && isSupervisor && advances.length === 0;
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
+    <div className="space-y-4" dir="rtl">
       <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
         <PageHeader
           title={t("financeNewExpense.title")}
           subtitle={
-            <>
-              {t("common.role")}: <span className="text-gray-700">{role || "—"}</span>
-            </>
+            <span className="text-slate-500">
+              {t("common.role")}:{" "}
+              <span className="font-semibold text-[rgb(var(--trex-fg))]">{role || "—"}</span>
+            </span>
           }
           actions={
             <Link href="/finance/expenses">
@@ -233,16 +271,29 @@ export default function NewCashExpensePage() {
           }
         />
 
-        {error ? <div className="text-sm text-red-600">⚠️ {error}</div> : null}
+        {error ? (
+          <Card className="border-red-500/20">
+            <div className="text-sm text-red-600">⚠️ {error}</div>
+          </Card>
+        ) : null}
 
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="p-4 space-y-4">
+        {showNoOpenAdvanceHint ? (
+          <Card className="border-amber-500/20">
+            <div className="text-sm text-amber-700">
+              {t("financeNewExpense.errors.selectOpenAdvance") || "لا يوجد عهدة مفتوحة لاختيارها."}
+            </div>
+          </Card>
+        ) : null}
+
+        <Card title={t("financeNewExpense.title")}>
+          <div className="space-y-4">
             <div className="space-y-1">
-              <div className="text-xs text-gray-600">{t("financeNewExpense.fields.paymentSource")}</div>
+              <div className={labelCls}>{t("financeNewExpense.fields.paymentSource")}</div>
               <select
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                className={inputCls}
                 value={paymentSource}
                 onChange={(e) => setPaymentSource(e.target.value)}
+                disabled={loading}
               >
                 {allowedSources.map((s) => (
                   <option key={s} value={s}>
@@ -252,40 +303,43 @@ export default function NewCashExpensePage() {
               </select>
 
               {paymentSource === "ADVANCE" ? (
-                <div className="text-xs text-gray-500">{t("financeNewExpense.hints.advance")}</div>
+                <div className="text-xs text-slate-500">{t("financeNewExpense.hints.advance")}</div>
               ) : (
-                <div className="text-xs text-gray-500">{t("financeNewExpense.hints.company")}</div>
+                <div className="text-xs text-slate-500">{t("financeNewExpense.hints.company")}</div>
               )}
             </div>
 
             <div>
-              <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.expenseType")}</div>
+              <div className={labelCls}>{t("financeNewExpense.fields.expenseType")}</div>
               <input
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                className={inputCls}
                 placeholder={t("financeNewExpense.fields.expenseType")}
                 value={form.expense_type}
                 onChange={(e) => setForm({ ...form, expense_type: e.target.value })}
+                disabled={loading}
               />
             </div>
 
             <div>
-              <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.amount")}</div>
+              <div className={labelCls}>{t("financeNewExpense.fields.amount")}</div>
               <input
                 type="number"
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                className={inputCls}
                 placeholder={t("financeNewExpense.fields.amount")}
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                disabled={loading}
               />
             </div>
 
             {paymentSource === "ADVANCE" ? (
               <div>
-                <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.cashAdvance")}</div>
+                <div className={labelCls}>{t("financeNewExpense.fields.cashAdvance")}</div>
                 <select
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                  className={inputCls}
                   value={form.cash_advance_id}
                   onChange={(e) => setForm({ ...form, cash_advance_id: e.target.value })}
+                  disabled={loading}
                 >
                   <option value="">{t("financeNewExpense.fields.cashAdvance")}</option>
                   {advances.map((a) => (
@@ -298,43 +352,47 @@ export default function NewCashExpensePage() {
             ) : (
               <>
                 <div>
-                  <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.vendorName")}</div>
+                  <div className={labelCls}>{t("financeNewExpense.fields.vendorName")}</div>
                   <input
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    className={inputCls}
                     placeholder={t("financeNewExpense.fields.vendorName")}
                     value={form.vendor_name}
                     onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.invoiceNo")}</div>
+                  <div className={labelCls}>{t("financeNewExpense.fields.invoiceNo")}</div>
                   <input
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    className={inputCls}
                     placeholder={t("financeNewExpense.fields.invoiceNo")}
                     value={form.invoice_no}
                     onChange={(e) => setForm({ ...form, invoice_no: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.invoiceDate")}</div>
+                  <div className={labelCls}>{t("financeNewExpense.fields.invoiceDate")}</div>
                   <input
                     type="date"
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    className={inputCls}
                     value={form.invoice_date}
                     onChange={(e) => setForm({ ...form, invoice_date: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
               </>
             )}
 
             <div>
-              <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.linkWorkOrder")}</div>
+              <div className={labelCls}>{t("financeNewExpense.fields.linkWorkOrder")}</div>
               <select
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                className={inputCls}
                 value={form.maintenance_work_order_id}
                 onChange={(e) => setForm({ ...form, maintenance_work_order_id: e.target.value })}
+                disabled={loading}
               >
                 <option value="">{t("financeNewExpense.fields.linkWorkOrder")}</option>
                 {workOrders.map((w) => (
@@ -346,11 +404,12 @@ export default function NewCashExpensePage() {
             </div>
 
             <div>
-              <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.linkTrip")}</div>
+              <div className={labelCls}>{t("financeNewExpense.fields.linkTrip")}</div>
               <select
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                className={inputCls}
                 value={form.trip_id}
                 onChange={(e) => setForm({ ...form, trip_id: e.target.value })}
+                disabled={loading}
               >
                 <option value="">{t("financeNewExpense.fields.linkTrip")}</option>
                 {trips.map((x) => (
@@ -362,29 +421,67 @@ export default function NewCashExpensePage() {
             </div>
 
             <div>
-              <div className="text-xs text-gray-600 mb-1">{t("financeNewExpense.fields.notes")}</div>
+              <div className={labelCls}>{t("financeNewExpense.fields.notes")}</div>
               <textarea
                 rows={3}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                className={inputCls}
                 placeholder={t("financeNewExpense.fields.notes")}
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                disabled={loading}
               />
             </div>
           </div>
 
-          <div className="px-4 py-3 border-t border-gray-200 flex gap-2 justify-start">
-            <Button variant="secondary" onClick={() => router.push("/finance/expenses")} disabled={loading}>
+          <div className="mt-4 flex gap-2 justify-start">
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/finance/expenses")}
+              disabled={loading}
+            >
               {t("common.cancel") || "إلغاء"}
             </Button>
 
-            <Button variant="primary" onClick={submit} disabled={loading} isLoading={loading}>
+            <Button
+              variant="primary"
+              onClick={openConfirmIfValid}
+              disabled={loading}
+              isLoading={loading}
+            >
               {loading ? t("common.saving") : t("financeNewExpense.actions.create")}
             </Button>
           </div>
-        </div>
+        </Card>
 
-        <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
+        <ConfirmDialog
+          open={confirmOpen}
+          title={t("financeNewExpense.actions.create") || "إنشاء مصروف"}
+          description={t("financeNewExpense.confirmCreate") || "هل تريد إنشاء المصروف الآن؟"}
+          confirmText={t("common.confirm") || "تأكيد"}
+          cancelText={t("common.cancel") || "إلغاء"}
+          tone="warning"
+          isLoading={loading}
+          dir="rtl"
+          onClose={() => {
+            if (loading) return;
+            setConfirmOpen(false);
+          }}
+          onConfirm={async () => {
+            // keep dialog open while loading (ConfirmDialog will show spinner)
+            await submit();
+            // close only if request started/finished without blocking
+            // If submit navigates away, no need; otherwise close safely when not loading.
+            if (!loading) setConfirmOpen(false);
+          }}
+        />
+
+        <Toast
+          open={toastOpen}
+          message={toastMsg}
+          type={toastType}
+          dir="rtl"
+          onClose={() => setToastOpen(false)}
+        />
       </div>
     </div>
   );
