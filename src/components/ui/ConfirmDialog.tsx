@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Button } from "@/src/components/ui/Button";
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -33,6 +33,27 @@ export function ConfirmDialog({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const lastActiveRef = useRef<HTMLElement | null>(null);
+
+  // ✅ no hook after conditional return
+  const confirmVariant = tone === "danger" ? "danger" : tone === "warning" ? "primary" : "secondary";
+
+  const toneRing =
+    tone === "danger"
+      ? "ring-red-500/20"
+      : tone === "warning"
+      ? "ring-amber-500/20"
+      : "ring-sky-500/20";
+
+  const toneHeader =
+    tone === "danger"
+      ? "text-red-600"
+      : tone === "warning"
+      ? "text-amber-700"
+      : "text-sky-700";
+
+  const overlay = "bg-black/35 backdrop-blur-[1px]";
+  const surface = "bg-[rgba(var(--trex-surface),0.98)] text-[rgb(var(--trex-fg))] border-black/10";
+  const muted = "text-slate-500";
 
   useEffect(() => {
     if (!open) return;
@@ -96,28 +117,6 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
-  const toneRing =
-    tone === "danger"
-      ? "ring-red-500/20"
-      : tone === "warning"
-      ? "ring-amber-500/20"
-      : "ring-sky-500/20";
-
-  const toneHeader =
-    tone === "danger"
-      ? "text-red-600"
-      : tone === "warning"
-      ? "text-amber-700"
-      : "text-sky-700";
-
-  const confirmVariant = useMemo(() => {
-    return tone === "danger" ? "danger" : tone === "warning" ? "primary" : "secondary";
-  }, [tone]);
-
-  const overlay = "bg-black/35 backdrop-blur-[1px]";
-  const surface = "bg-[rgba(var(--trex-surface),0.98)] text-[rgb(var(--trex-fg))] border-black/10";
-  const muted = "text-slate-500";
-
   return (
     <div
       className={cn("fixed inset-0 z-[80] flex items-center justify-center p-4", overlay)}
@@ -141,13 +140,7 @@ export function ConfirmDialog({
         <div className="px-4 py-3 border-b border-black/10 flex items-center justify-between gap-3">
           <div className={cn("font-semibold text-sm", toneHeader)}>{title}</div>
 
-          <Button
-            ref={closeBtnRef}
-            variant="ghost"
-            onClick={onClose}
-            disabled={isLoading}
-            aria-label="Close"
-          >
+          <Button ref={closeBtnRef} variant="ghost" onClick={onClose} disabled={isLoading} aria-label="Close">
             ✕
           </Button>
         </div>
@@ -163,12 +156,7 @@ export function ConfirmDialog({
             {cancelText}
           </Button>
 
-          <Button
-            variant={confirmVariant}
-            onClick={onConfirm}
-            disabled={isLoading}
-            isLoading={isLoading}
-          >
+          <Button variant={confirmVariant as any} onClick={onConfirm} disabled={isLoading} isLoading={isLoading}>
             {confirmText}
           </Button>
         </div>
