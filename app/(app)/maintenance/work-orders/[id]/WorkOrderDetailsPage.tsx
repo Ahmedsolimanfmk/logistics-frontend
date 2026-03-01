@@ -113,8 +113,7 @@ export default function WorkOrderDetailsPage() {
   const id = params?.id;
 
   const tabQ = String(sp?.get("tab") || "").toLowerCase();
-  const initialTab: TabKey =
-    tabQ === "installations" ? "installations" : tabQ === "qa" ? "qa" : "issues";
+  const initialTab: TabKey = tabQ === "installations" ? "installations" : tabQ === "qa" ? "qa" : "issues";
   const [tab, setTab] = useState<TabKey>(initialTab);
 
   const [loading, setLoading] = useState(true);
@@ -159,7 +158,10 @@ export default function WorkOrderDetailsPage() {
   const [instItems, setInstItems] = useState<any[]>([]);
   const [instMsg, setInstMsg] = useState<string | null>(null);
 
+  // ✅ Changed: instPartId now selected from issued-only dropdown (not manual uuid input)
   const [instPartId, setInstPartId] = useState("");
+  // ✅ Optional serial (only if backend returns it in issued lines later)
+  const [instPartItemId, setInstPartItemId] = useState("");
   const [instQty, setInstQty] = useState<number>(1);
   const [instOdo, setInstOdo] = useState<number | "">("");
   const [instNotes, setInstNotes] = useState("");
@@ -233,9 +235,7 @@ export default function WorkOrderDetailsPage() {
       return;
     }
 
-    router.push(
-      `/inventory/requests/new?work_order_id=${encodeURIComponent(id)}&warehouse_id=${encodeURIComponent(wh)}`
-    );
+    router.push(`/inventory/requests/new?work_order_id=${encodeURIComponent(id)}&warehouse_id=${encodeURIComponent(wh)}`);
   }
 
   const loadInstallations = useCallback(async () => {
@@ -360,8 +360,7 @@ export default function WorkOrderDetailsPage() {
   const totals = report?.report_runtime?.totals;
   const rs = String(report?.report_status || "");
   const mismatchCounts = totals?.mismatch_counts;
-  const mismatchTotal =
-    (mismatchCounts?.issued_not_installed || 0) + (mismatchCounts?.installed_not_issued || 0);
+  const mismatchTotal = (mismatchCounts?.issued_not_installed || 0) + (mismatchCounts?.installed_not_issued || 0);
 
   const canComplete =
     canManage &&
@@ -386,6 +385,81 @@ export default function WorkOrderDetailsPage() {
     if (rs === "OK") return t("woDetails.hintReady");
     return null;
   }, [report, rs, t]);
+
+  // ✅ NEW: Build dropdown options from issued parts ONLY + remaining qty
+  const installableParts = useMemo(() => {
+    const issuedByPart = new Map<string, { part: any; qty: number }>();
+    for (const l of issuedLines || []) {
+      const pid = String(l?.part_id || "");
+      if (!pid) continue;
+      const qty = Number(l?.qty ?? 0) || 0;
+      const prev = issuedByPart.get(pid) || { part: l?.part || null, qty: 0 };
+      issuedByPart.set(pid, { part: prev.part || l?.part || null, qty: prev.qty + qty });
+    }
+
+    const installedByPart = new Map<string, number>();
+    for (const ins of installationsRuntime || []) {
+      const pid = String(ins?.part_id || "");
+      if (!pid) continue;
+      const qty = Number(ins?.qty_installed ?? 0) || 0;
+      installedByPart.set(pid, (installedByPart.get(pid) || 0) + qty);
+    }
+
+    const rows: Array<{
+      part_id: string;
+      part: any;
+      issued_qty: number;
+      installed_qty: number;
+      remaining_qty: number;
+    }> = [];
+
+    for (const [part_id, v] of issuedByPart.entries()) {
+      const installed_qty = installedByPart.get(part_id) || 0;
+      const remaining_qty = v.qty - installed_qty;
+      if (remaining_qty > 0.0005) {
+        rows.push({
+          part_id,
+          part: v.part,
+          issued_qty: v.qty,
+          installed_qty,
+          remaining_qty,
+        });
+      }
+    }
+
+    // sort by name then id
+    rows.sort((a, b) => String(a?.part?.name || "").localeCompare(String(b?.part?.name || "")));
+    return rows;
+  }, [issuedLines, installationsRuntime]);
+
+  const selectedPartRow = useMemo(() => {
+    return installableParts.find((x) => x.part_id === instPartId) || null;
+  }, [installableParts, instPartId]);
+
+  // ✅ Optional serial options (will appear only if issued lines later include part_item_id details)
+  const serialOptions = useMemo(() => {
+    if (!instPartId) return [];
+    // Expecting something like issued line containing part_item_id + maybe part_item details (future-ready)
+    const rows = (issuedLines || [])
+      .filter((l: any) => String(l?.part_id || "") === instPartId && l?.part_item_id)
+      .map((l: any) => ({
+        id: String(l.part_item_id),
+        internal_serial: l?.part_item?.internal_serial || l?.internal_serial || null,
+        manufacturer_serial: l?.part_item?.manufacturer_serial || l?.manufacturer_serial || null,
+      }));
+
+    // dedupe by id
+    const seen = new Set<string>();
+    const out: any[] = [];
+    for (const r of rows) {
+      if (!r.id || seen.has(r.id)) continue;
+      seen.add(r.id);
+      out.push(r);
+    }
+    return out;
+  }, [issuedLines, instPartId]);
+
+  const isSerialSelected = Boolean(instPartItemId) || serialOptions.length > 0;
 
   async function createIssue() {
     if (!token || !id) return;
@@ -468,17 +542,38 @@ export default function WorkOrderDetailsPage() {
     if (!token || !id) return;
     setInstMsg(null);
 
+    // ✅ Must pick part from issued-only dropdown
     if (!instPartId.trim()) {
-      setInstMsg(tRef.current("woDetails.partIdRequired"));
+      setInstMsg("اختر قطعة من القطع المصروفة لأمر الشغل.");
       return;
     }
-    if (!Number.isFinite(instQty) || instQty <= 0) {
-      setInstMsg(tRef.current("woDetails.qtyInstalledMustBeGt0"));
-      return;
-    }
+
+    // odometer validation (same logic)
     const odometer = instOdo === "" ? null : Number(instOdo);
     if (odometer !== null && (!Number.isFinite(odometer) || odometer < 0)) {
       setInstMsg(tRef.current("woDetails.odometerMustBeGte0"));
+      return;
+    }
+
+    // ✅ enforce remaining qty for bulk items
+    const remaining = Number(selectedPartRow?.remaining_qty ?? 0) || 0;
+
+    // serial mode: qty must be 1
+    const qty = isSerialSelected ? 1 : Number(instQty);
+
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setInstMsg(tRef.current("woDetails.qtyInstalledMustBeGt0"));
+      return;
+    }
+
+    if (!isSerialSelected && remaining > 0 && qty - remaining > 0.0005) {
+      setInstMsg("الكمية أكبر من المتبقي من المصروف لهذا أمر الشغل.");
+      return;
+    }
+
+    // if serial dropdown is shown and user didn't pick
+    if (serialOptions.length > 0 && !instPartItemId) {
+      setInstMsg("اختر السيريال للقطعة (Serial).");
       return;
     }
 
@@ -488,7 +583,8 @@ export default function WorkOrderDetailsPage() {
         items: [
           {
             part_id: instPartId.trim(),
-            qty_installed: Number(instQty),
+            ...(instPartItemId ? { part_item_id: instPartItemId } : {}),
+            qty_installed: qty,
             odometer,
             notes: instNotes || null,
           },
@@ -496,7 +592,10 @@ export default function WorkOrderDetailsPage() {
       });
 
       showToast("✅ " + tRef.current("woDetails.installationAdded"), "success");
+
+      // reset
       setInstPartId("");
+      setInstPartItemId("");
       setInstQty(1);
       setInstOdo("");
       setInstNotes("");
@@ -689,9 +788,7 @@ export default function WorkOrderDetailsPage() {
           </div>
         </div>
 
-        {!canManage ? (
-          <div className="mt-2 text-xs text-gray-500">ملاحظة: Create Request متاح فقط لـ ADMIN / ACCOUNTANT</div>
-        ) : null}
+        {!canManage ? <div className="mt-2 text-xs text-gray-500">ملاحظة: Create Request متاح فقط لـ ADMIN / ACCOUNTANT</div> : null}
       </Card>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -743,9 +840,7 @@ export default function WorkOrderDetailsPage() {
 
           <div className="mt-3 text-sm">
             <span className="text-gray-500">{t("woDetails.mismatches")}:</span>{" "}
-            <span className={cn("font-semibold", mismatchTotal > 0 ? "text-amber-700" : "text-green-700")}>
-              {mismatchTotal}
-            </span>
+            <span className={cn("font-semibold", mismatchTotal > 0 ? "text-amber-700" : "text-green-700")}>{mismatchTotal}</span>
           </div>
 
           <div className="mt-3 text-sm">
@@ -849,12 +944,7 @@ export default function WorkOrderDetailsPage() {
         <Card
           title={t("woDetails.issuesTitle")}
           right={
-            <Button
-              variant="secondary"
-              onClick={createIssue}
-              disabled={issueCreating || !canManage}
-              isLoading={issueCreating}
-            >
+            <Button variant="secondary" onClick={createIssue} disabled={issueCreating || !canManage} isLoading={issueCreating}>
               {t("woDetails.createIssue")}
             </Button>
           }
@@ -968,20 +1058,65 @@ export default function WorkOrderDetailsPage() {
       {tab === "installations" ? (
         <Card
           title={t("woDetails.installationsTitle")}
-          right={<Button variant="secondary" onClick={loadInstallations} disabled={instLoading} isLoading={instLoading}>{t("common.refresh")}</Button>}
+          right={
+            <Button variant="secondary" onClick={loadInstallations} disabled={instLoading} isLoading={instLoading}>
+              {t("common.refresh")}
+            </Button>
+          }
         >
           <div className="mt-2 text-xs text-gray-500">{instMsg ? `⚠ ${instMsg}` : null}</div>
 
+          {/* ✅ NEW FORM: select from issued-only */}
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="md:col-span-2">
-              <div className="text-xs text-gray-500 mb-1">{t("woDetails.partIdUuid")}</div>
-              <input
+              <div className="text-xs text-gray-500 mb-1">القطعة (من المصروف لهذا أمر الشغل)</div>
+              <select
                 value={instPartId}
-                onChange={(e) => setInstPartId(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setInstPartId(v);
+                  setInstPartItemId("");
+                  setInstQty(1);
+                  setInstMsg(null);
+                }}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
-                placeholder={t("woDetails.uuidPlaceholder")}
-              />
+              >
+                <option value="">{installableParts.length ? "اختر قطعة" : "لا توجد قطع متبقية للتركيب"}</option>
+                {installableParts.map((p) => (
+                  <option key={p.part_id} value={p.part_id}>
+                    {(p.part?.name || "Part") + ` | متبقي: ${p.remaining_qty}`}
+                  </option>
+                ))}
+              </select>
+
+              {selectedPartRow ? (
+                <div className="mt-1 text-xs text-gray-500">
+                  Issued: <span className="font-semibold">{selectedPartRow.issued_qty}</span> | Installed:{" "}
+                  <span className="font-semibold">{selectedPartRow.installed_qty}</span> | Remaining:{" "}
+                  <span className="font-semibold">{selectedPartRow.remaining_qty}</span>
+                </div>
+              ) : null}
             </div>
+
+            {/* ✅ Optional serial selector (only if data exists) */}
+            {serialOptions.length > 0 ? (
+              <div className="md:col-span-2">
+                <div className="text-xs text-gray-500 mb-1">Serial (للقطع المسلسلة)</div>
+                <select
+                  value={instPartItemId}
+                  onChange={(e) => setInstPartItemId(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+                >
+                  <option value="">اختر السيريال</option>
+                  {serialOptions.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {(s.internal_serial || "—") + " / " + (s.manufacturer_serial || "—")}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-1 text-xs text-gray-500">ملاحظة: في حالة السيريال، الكمية = 1 تلقائيًا.</div>
+              </div>
+            ) : null}
 
             <div>
               <div className="text-xs text-gray-500 mb-1">{t("woDetails.qtyInstalled")}</div>
@@ -989,8 +1124,12 @@ export default function WorkOrderDetailsPage() {
                 type="number"
                 value={instQty}
                 onChange={(e) => setInstQty(Number(e.target.value))}
+                disabled={serialOptions.length > 0 || Boolean(instPartItemId)}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
               />
+              {serialOptions.length > 0 || Boolean(instPartItemId) ? (
+                <div className="mt-1 text-xs text-gray-500">تم تعطيل الكمية لأن القطعة Serial.</div>
+              ) : null}
             </div>
 
             <div>
@@ -1018,6 +1157,11 @@ export default function WorkOrderDetailsPage() {
               <Button variant="primary" onClick={addInstallation} disabled={instSaving} isLoading={instSaving}>
                 {t("woDetails.addInstallation")}
               </Button>
+              {selectedPartRow ? (
+                <div className="text-xs text-gray-500">
+                  الحد الأقصى: <span className="font-semibold">{selectedPartRow.remaining_qty}</span>
+                </div>
+              ) : null}
             </div>
           </div>
 
