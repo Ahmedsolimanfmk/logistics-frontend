@@ -1087,7 +1087,58 @@
 },
 "toast": { "submittedOk": "تم Submit بنجاح", "postedOk": "تم Post بنجاح" },
 "errors": { "submitFailed": "فشل Submit" }
+}
+  },
+
+  "financeExpenseDetails": {
+  "title": "تفاصيل المصروف",
+  "meta": {
+    "id": "المعرّف:"
+  },
+  "tabs": {
+    "overview": "نظرة عامة",
+    "audit": "سجل التعديلات",
+    "actions": "إجراءات"
+  },
+  "overview": {
+    "createdAt": "تاريخ الإنشاء",
+    "type": "نوع المصروف",
+    "amount": "المبلغ",
+    "context": "السياق",
+    "trip": "الرحلة",
+    "vehicle": "المركبة",
+    "workOrder": "أمر العمل",
+    "creator": "المنشئ",
+    "notes": "ملاحظات",
+    "advance": "العُهدة",
+    "cashAdvanceId": "معرّف العُهدة",
+    "resolution": "النتيجة",
+    "approvedAt": "تاريخ الاعتماد",
+    "rejectedAt": "تاريخ الرفض",
+    "resolvedAt": "تاريخ الحسم"
+  },
+  "audit": {
+    "title": "سجل التغييرات",
+    "noRecords": "لا توجد سجلات.",
+    "actor": "المنفّذ",
+    "showDiff": "عرض الفروقات",
+    "before": "قبل",
+    "after": "بعد"
+  },
+  "actions": {
+    "available": "الإجراءات المتاحة",
+    "none": "لا توجد إجراءات اعتماد/رفض متاحة حالياً.",
+    "approve": "اعتماد",
+    "reject": "رفض",
+    "appeal": "تظلم",
+    "resolveApprove": "حسم التظلم: اعتماد",
+    "resolveReject": "حسم التظلم: رفض",
+    "reopen": "إعادة فتح (REJECTED → PENDING)"
+  },
+  "hints": {
+    "endpoints": "ملاحظة: الإجراءات مرتبطة بمسارات: approve / reject / appeal / resolve-appeal / reopen."
   }
+
 },
   
 
