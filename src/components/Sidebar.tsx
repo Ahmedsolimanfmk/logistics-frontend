@@ -52,18 +52,23 @@ export function Sidebar() {
       { labelKey: "sidebar.trips", href: "/trips" },
 
       {
-        labelKey: "sidebar.finance",
-        key: "finance",
-        roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR"],
-        children: [
-          { labelKey: "sidebar.financeOverview", href: "/finance" },
-          { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
-          { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
+  labelKey: "sidebar.finance",
+  key: "finance",
+  roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR"],
+  children: [
+    { labelKey: "sidebar.financeOverview", href: "/finance" },
+    { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
+    { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
+    { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
 
-          // ✅ NEW: Purchases
-          { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
-        ],
-      },
+    // ✅ NEW: AR (Group-like by ordering)
+    { labelKey: "sidebar.financeARClients", href: "/finance/ar/clients" },
+    { labelKey: "sidebar.financeARInvoices", href: "/finance/ar/invoices" },
+    { labelKey: "sidebar.financeARPayments", href: "/finance/ar/payments" }
+    // لو عندك Ledger عام للعميل: يفضل يفتح من صفحة العملاء
+    // { labelKey: "sidebar.financeARLedger", href: "/finance/ar/ledger" },
+  ],
+},
 
       { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR"] },
       { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR"] },

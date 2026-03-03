@@ -57,32 +57,42 @@
   "en": "English"
 },
   "sidebar": {
-    "appName": "النظام اللوجستي",
-    "dashboard": "لوحة التحكم",
-    "trips": "الرحلات",
-    "finance": "المالية",
-    "financeOverview": "نظرة عامة",
-    "financeExpenses": "المصروفات",
-    "financeAdvances": "السلف",
-    "financePurchases": "المشتريات",
-    "clients": "العملاء",
-    "sites": "المواقع",
-    "vehicles": "المركبات",
-    "drivers": "السائقين",
-    "cash": "الكاش",
-    "maintenance": "الصيانة",
-    "maintenanceRequests": "طلبات الصيانة",
-    "maintenanceWorkOrders": "أوامر العمل",
-    "users": "المستخدمين",
-    "supervisors": "المشرفين",
+  "appName": "النظام اللوجستي",
+  "dashboard": "لوحة التحكم",
+  "trips": "الرحلات",
 
-    "inventory": "المخازن",
-    "inventoryRequests": "طلبات المخزن",
-    "inventoryIssues": "أذون الصرف",
-    "inventoryReceipts": "الإضافة المخزنية",
-    "inventoryPartItems": "السيريالات"
-  },
+  "finance": "المالية",
+  "financeOverview": "نظرة عامة",
+  "financeExpenses": "المصروفات",
+  "financeAdvances": "السلف",
+  "financePurchases": "المشتريات",
+  
 
+  "financeAR": "حسابات العملاء (AR)",
+  "financeARClients": "عملاء AR",
+  "financeARInvoices": "فواتير AR",
+  "financeARPayments": "مدفوعات AR",
+  "financeARLedger": "كشف حساب AR",
+
+  "clients": "العملاء",
+  "sites": "المواقع",
+  "vehicles": "المركبات",
+  "drivers": "السائقين",
+  "cash": "الكاش",
+
+  "maintenance": "الصيانة",
+  "maintenanceRequests": "طلبات الصيانة",
+  "maintenanceWorkOrders": "أوامر العمل",
+
+  "inventory": "المخازن",
+  "inventoryRequests": "طلبات المخزن",
+  "inventoryIssues": "أذون الصرف",
+  "inventoryReceipts": "الإضافة المخزنية",
+  "inventoryPartItems": "السيريالات",
+
+  "users": "المستخدمين",
+  "supervisors": "المشرفين"
+},
   "dashboard": {
     "title": "لوحة التحكم",
     "columns": {
@@ -1155,7 +1165,61 @@
   }
 
 },
-  
+  "financeARSection": {
+  "clients": {
+    "title": "عملاء الحسابات المدينة (AR)",
+    "subtitle": "إدارة عملاء الفواتير الآجلة",
+    "add": "+ إضافة عميل AR",
+    "name": "اسم العميل",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "creditLimit": "حد الائتمان",
+    "active": "نشط",
+    "created": "تاريخ الإنشاء",
+    "empty": "لا يوجد عملاء AR",
+    "createdOk": "تم إنشاء العميل بنجاح",
+    "updatedOk": "تم تحديث العميل بنجاح",
+    "saveFailed": "فشل الحفظ"
+  },
+  "invoices": {
+    "title": "فواتير AR",
+    "create": "+ إنشاء فاتورة",
+    "client": "العميل",
+    "issueDate": "تاريخ الإصدار",
+    "dueDate": "تاريخ الاستحقاق",
+    "amount": "المبلغ",
+    "status": "الحالة",
+    "notes": "ملاحظات",
+    "empty": "لا توجد فواتير",
+    "statusTypes": {
+      "DRAFT": "مسودة",
+      "ISSUED": "صادرة",
+      "PARTIAL": "مدفوعة جزئياً",
+      "PAID": "مدفوعة",
+      "OVERDUE": "متأخرة"
+    }
+  },
+  "payments": {
+    "title": "مدفوعات AR",
+    "add": "+ تسجيل دفعة",
+    "invoice": "الفاتورة",
+    "amount": "المبلغ",
+    "paymentDate": "تاريخ الدفع",
+    "method": "طريقة الدفع",
+    "reference": "المرجع",
+    "empty": "لا توجد مدفوعات"
+  },
+  "ledger": {
+    "title": "كشف حساب العميل",
+    "client": "العميل",
+    "date": "التاريخ",
+    "description": "الوصف",
+    "debit": "مدين",
+    "credit": "دائن",
+    "balance": "الرصيد",
+    "empty": "لا توجد حركات"
+  }
+},
 
   "trips": {
     "title": "الرحلات",

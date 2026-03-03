@@ -52,29 +52,41 @@
     "dev": "Dev"
   },
   "sidebar": {
-    "appName": "Logistics",
-    "dashboard": "Dashboard",
-    "trips": "Trips",
-    "finance": "Finance",
-    "financeOverview": "Overview",
-    "financeExpenses": "Expenses",
-    "financeAdvances": "Advances",
-    "financePurchases": "Purchases",
-    "clients": "Clients",
-    "sites": "Sites",
-    "vehicles": "Vehicles",
-    "drivers": "Drivers",
-    "cash": "Cash",
-    "maintenance": "Maintenance",
-    "maintenanceRequests": "Requests",
-    "maintenanceWorkOrders": "Work Orders",
-    "users": "Users",
-    "supervisors": "Supervisors",
-    "inventory": "Inventory",
-    "inventoryRequests": "Requests",
-    "inventoryIssues": "Issues",
-    "inventoryReceipts": "Receipts"
-  },
+  "appName": "Logistics",
+  "dashboard": "Dashboard",
+  "trips": "Trips",
+
+  "finance": "Finance",
+  "financeOverview": "Overview",
+  "financeExpenses": "Expenses",
+  "financeAdvances": "Advances",
+  "financePurchases": "Purchases",
+
+  "financeAR": "Accounts Receivable (AR)",
+  "financeARClients": "AR Clients",
+  "financeARInvoices": "AR Invoices",
+  "financeARPayments": "AR Payments",
+  "financeARLedger": "AR Ledger",
+
+  "clients": "Clients",
+  "sites": "Sites",
+  "vehicles": "Vehicles",
+  "drivers": "Drivers",
+  "cash": "Cash",
+
+  "maintenance": "Maintenance",
+  "maintenanceRequests": "Requests",
+  "maintenanceWorkOrders": "Work Orders",
+
+  "inventory": "Inventory",
+  "inventoryRequests": "Requests",
+  "inventoryIssues": "Issues",
+  "inventoryReceipts": "Receipts",
+  "inventoryPartItems": "Part Items",
+
+  "users": "Users",
+  "supervisors": "Supervisors"
+},
   "dashboard": {
     "title": "Dashboard",
     "columns": {
@@ -966,6 +978,61 @@
 },
 "toast": { "submittedOk": "Submitted successfully", "postedOk": "Posted successfully" },
 "errors": { "submitFailed": "Failed to submit receipt" }
+  }
+},
+"financeARSection": {
+  "clients": {
+    "title": "Accounts Receivable Clients",
+    "subtitle": "Manage credit customers",
+    "add": "+ Add AR Client",
+    "name": "Client Name",
+    "phone": "Phone",
+    "email": "Email",
+    "creditLimit": "Credit Limit",
+    "active": "Active",
+    "created": "Created At",
+    "empty": "No AR clients found",
+    "createdOk": "Client created successfully",
+    "updatedOk": "Client updated successfully",
+    "saveFailed": "Save failed"
+  },
+  "invoices": {
+    "title": "AR Invoices",
+    "create": "+ Create Invoice",
+    "client": "Client",
+    "issueDate": "Issue Date",
+    "dueDate": "Due Date",
+    "amount": "Amount",
+    "status": "Status",
+    "notes": "Notes",
+    "empty": "No invoices found",
+    "statusTypes": {
+      "DRAFT": "Draft",
+      "ISSUED": "Issued",
+      "PARTIAL": "Partially Paid",
+      "PAID": "Paid",
+      "OVERDUE": "Overdue"
+    }
+  },
+  "payments": {
+    "title": "AR Payments",
+    "add": "+ Add Payment",
+    "invoice": "Invoice",
+    "amount": "Amount",
+    "paymentDate": "Payment Date",
+    "method": "Payment Method",
+    "reference": "Reference",
+    "empty": "No payments found"
+  },
+  "ledger": {
+    "title": "Client Ledger",
+    "client": "Client",
+    "date": "Date",
+    "description": "Description",
+    "debit": "Debit",
+    "credit": "Credit",
+    "balance": "Balance",
+    "empty": "No ledger entries"
   }
 },
   "trips": {

@@ -96,6 +96,12 @@ export async function apiPatch<T = any>(path: string, body?: any): Promise<T> {
   return res.data as T;
 }
 
+// ✅ NEW: DELETE wrapper (same interceptors + base + token)
+export async function apiDelete<T = any>(path: string): Promise<T> {
+  const res = await api.delete(path);
+  return res.data as T;
+}
+
 // =====================
 // Helpers used by pages
 // =====================
