@@ -1,9 +1,8 @@
 // app/(app)/clients/[id]/page.tsx
 "use client";
 
-import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
@@ -14,6 +13,7 @@ import { Button } from "@/src/components/ui/Button";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
 import { KpiCard } from "@/src/components/ui/KpiCard";
+import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -21,7 +21,7 @@ function cn(...v: Array<string | false | null | undefined>) {
 
 function fmtMoney(v: any) {
   const n = Number(v || 0);
-  if (!Number.isFinite(n)) return v;
+  if (!Number.isFinite(n)) return String(v ?? "0");
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
 }
 
@@ -64,7 +64,9 @@ type DashboardPayload = {
 
 export default function ClientDetailsPage() {
   const t = useT();
+  const router = useRouter();
   const token = useAuth((s) => s.token);
+
   const params = useParams();
   const id = String((params as any)?.id || "");
 
@@ -74,6 +76,10 @@ export default function ClientDetailsPage() {
 
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
+  // Toggle dialog
+  const [toggleOpen, setToggleOpen] = useState(false);
+  const [toggleLoading, setToggleLoading] = useState(false);
+
   async function load() {
     if (!token || !id) return;
     setLoading(true);
@@ -82,10 +88,31 @@ export default function ClientDetailsPage() {
       const payload = (res as any)?.data ?? res;
       setData(payload);
     } catch (e: any) {
-      setToast({ type: "error", msg: e?.response?.data?.message || e?.message || t("clients.details.errors.loadFailed") });
+      setToast({
+        type: "error",
+        msg: e?.response?.data?.message || e?.message || t("clients.details.errors.loadFailed"),
+      });
       setData(null);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function doToggle() {
+    if (!id) return;
+    setToggleLoading(true);
+    try {
+      await api.patch(`/clients/${id}/toggle`);
+      setToast({ type: "success", msg: t("clients.toast.toggled") });
+      setToggleOpen(false);
+      await load(); // refresh status + data
+    } catch (e: any) {
+      setToast({
+        type: "error",
+        msg: e?.response?.data?.message || e?.message || t("clients.errors.toggleFailed"),
+      });
+    } finally {
+      setToggleLoading(false);
     }
   }
 
@@ -137,11 +164,21 @@ export default function ClientDetailsPage() {
     <div className="min-h-screen">
       <PageHeader
         title={t("clients.details.title")}
-        subtitle={client ? client.name : t("clients.details.subtitle")}
+        subtitle={t("clients.details.subtitle")}
         actions={
-          <Link href="/clients">
-            <Button variant="secondary">{t("clients.details.actions.backToList")}</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => router.push(`/clients/${id}/edit`)}>
+              {t("common.edit")}
+            </Button>
+
+            <Button
+              variant={client?.is_active ? "danger" : "primary"}
+              onClick={() => setToggleOpen(true)}
+              disabled={!client}
+            >
+              {client?.is_active ? t("common.disable") : t("common.enable")}
+            </Button>
+          </div>
         }
       />
 
@@ -255,6 +292,26 @@ export default function ClientDetailsPage() {
         loading={loading}
         emptyTitle={t("clients.details.sites.empty")}
         emptyHint={t("clients.details.sites.emptyHint") || ""}
+      />
+
+      {/* Toggle Confirm */}
+      <ConfirmDialog
+        open={toggleOpen}
+        title={t("common.confirm")}
+        description={
+          client?.is_active
+            ? t("clients.confirm.disableDesc")
+            : t("clients.confirm.enableDesc")
+        }
+        confirmText={client?.is_active ? t("common.disable") : t("common.enable")}
+        cancelText={t("common.cancel")}
+        tone="warning"
+        isLoading={toggleLoading}
+        onClose={() => {
+          if (toggleLoading) return;
+          setToggleOpen(false);
+        }}
+        onConfirm={doToggle}
       />
 
       {toast && <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />}

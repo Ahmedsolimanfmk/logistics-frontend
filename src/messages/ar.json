@@ -773,7 +773,9 @@
 
   "actions": {
     "add": "إضافة",
-    "viewDetails": "عرض التفاصيل"
+    "viewDetails": "عرض التفاصيل",
+    "edit": "تعديل",
+    "toggle": "تفعيل/تعطيل"
   },
 
   "filters": {
@@ -789,12 +791,6 @@
 
   "empty": "لا يوجد عملاء",
   "emptyHint": "قم بإضافة أول عميل للبدء.",
-
-  "modal": {
-    "addTitle": "إضافة عميل",
-    "editTitle": "تعديل عميل",
-    "namePlaceholder": "اسم العميل"
-  },
 
   "confirm": {
     "disableDesc": "هل تريد إيقاف هذا العميل؟",
@@ -823,7 +819,11 @@
       "email": "البريد الإلكتروني",
       "phone": "الهاتف",
       "address": "عنوان المقر",
-      "notes": "ملاحظات"
+      "notes": "ملاحظات",
+      "taxNo": "الرقم الضريبي",
+      "contactName": "اسم جهة الاتصال",
+      "contactPhone": "هاتف جهة الاتصال",
+      "contactEmail": "بريد جهة الاتصال"
     },
 
     "placeholders": {
@@ -831,7 +831,11 @@
       "email": "مثال: info@company.com",
       "phone": "مثال: 01000000000",
       "address": "مثال: القاهرة - مدينة نصر",
-      "notes": "أي ملاحظات إضافية..."
+      "notes": "أي ملاحظات إضافية...",
+      "taxNo": "مثال: 123456789",
+      "contactName": "مثال: أحمد علي",
+      "contactPhone": "مثال: 01000000000",
+      "contactEmail": "مثال: ahmed@company.com"
     },
 
     "buttons": {
@@ -846,6 +850,41 @@
     "errors": {
       "nameRequired": "اسم العميل مطلوب",
       "createFailed": "فشل إنشاء العميل"
+    }
+  },
+
+  "edit": {
+    "title": "تعديل العميل",
+    "subtitle": "تحديث بيانات العميل",
+
+    "sections": {
+      "basic": "البيانات الأساسية",
+      "contact": "بيانات جهة الاتصال",
+      "finance": "بيانات مالية"
+    },
+
+    "form": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "hqAddress": "عنوان المقر",
+      "contactName": "اسم جهة الاتصال",
+      "contactPhone": "هاتف جهة الاتصال",
+      "contactEmail": "بريد جهة الاتصال",
+      "taxNo": "الرقم الضريبي",
+      "notes": "ملاحظات"
+    },
+
+    "placeholders": {
+      "name": "اسم العميل",
+      "email": "example@email.com",
+      "phone": "+20...",
+      "hqAddress": "العنوان",
+      "contactName": "اسم جهة الاتصال",
+      "contactPhone": "+20...",
+      "contactEmail": "contact@email.com",
+      "taxNo": "الرقم الضريبي",
+      "notes": "ملاحظات"
     }
   },
 
