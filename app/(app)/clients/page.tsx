@@ -85,7 +85,15 @@ export default function ClientsPage() {
 
   return (
     <div className="min-h-screen">
-      <PageHeader title={t("clients.title")} subtitle={t("clients.subtitleList")} />
+      <PageHeader
+  title={t("clients.title")}
+  subtitle={t("clients.subtitleList")}
+  actions={
+    <Link href="/clients/new">
+      <Button>+ {t("clients.actions.add")}</Button>
+    </Link>
+  }
+/>
 
       <FiltersBar
         left={
