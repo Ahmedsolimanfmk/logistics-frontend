@@ -814,6 +814,41 @@
     "nameRequired": "اسم العميل مطلوب"
   },
 
+  "new": {
+    "title": "إضافة عميل",
+    "subtitle": "إدخال بيانات عميل جديد",
+
+    "form": {
+      "name": "اسم العميل",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "address": "عنوان المقر",
+      "notes": "ملاحظات"
+    },
+
+    "placeholders": {
+      "name": "مثال: شركة النور",
+      "email": "مثال: info@company.com",
+      "phone": "مثال: 01000000000",
+      "address": "مثال: القاهرة - مدينة نصر",
+      "notes": "أي ملاحظات إضافية..."
+    },
+
+    "buttons": {
+      "create": "إنشاء العميل",
+      "cancel": "إلغاء"
+    },
+
+    "toast": {
+      "created": "تم إنشاء العميل بنجاح"
+    },
+
+    "errors": {
+      "nameRequired": "اسم العميل مطلوب",
+      "createFailed": "فشل إنشاء العميل"
+    }
+  },
+
   "details": {
     "title": "تفاصيل العميل",
     "subtitle": "بيانات العميل ونشاطه",
@@ -821,7 +856,6 @@
     "actions": {
       "backToList": "الرجوع إلى قائمة العملاء"
     },
-    
 
     "filters": {
       "month": "الشهر",
@@ -879,7 +913,6 @@
     "payments": "التحصيلات"
   }
 },
-
   "financeDashboard": {
     "title": "لوحة المالية",
     "roleLabel": "الدور",
