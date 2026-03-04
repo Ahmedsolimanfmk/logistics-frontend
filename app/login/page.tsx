@@ -13,11 +13,10 @@ export default function LoginPage() {
   const hydrate = useAuth((s) => s.hydrate);
 
   const [mounted, setMounted] = useState(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-
-  // ✅ show/hide password
   const [showPassword, setShowPassword] = useState(false);
 
   const [err, setErr] = useState<string | null>(null);
@@ -36,7 +35,7 @@ export default function LoginPage() {
     if (token) router.replace("/dashboard");
   }, [token, router]);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (loading) return;
 
@@ -44,15 +43,23 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const emailNorm = email.trim().toLowerCase();
+      // ✅ read actual DOM values (works with Chrome autofill)
+      const fd = new FormData(e.currentTarget);
+      const emailRaw = String(fd.get("email") ?? "");
+      const passRaw = String(fd.get("password") ?? "");
+
+      const emailNorm = emailRaw.trim().toLowerCase();
+
+      console.log("LOGIN payload =>", {
+        email: emailNorm,
+        passwordLen: passRaw.length,
+      });
 
       const res = await api.post("/auth/login", {
         email: emailNorm,
-        password,
+        password: passRaw,
       });
 
-
-      // ✅ axios response data
       const data = (res as any)?.data ?? res;
       const { token: t, user } = data || {};
 
@@ -65,10 +72,8 @@ export default function LoginPage() {
       setAuth(String(t), user);
       router.replace("/dashboard");
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        "Login failed";
+      console.log("LOGIN ERROR FULL:", e?.response?.status, e?.response?.data, e);
+      const msg = e?.response?.data?.message || e?.message || "Login failed";
       setErr(String(msg));
     } finally {
       setLoading(false);
@@ -86,6 +91,7 @@ export default function LoginPage() {
         <h1 className="text-xl font-semibold">Login</h1>
 
         <input
+          name="email"
           className="w-full border rounded p-2"
           placeholder="email"
           autoComplete="email"
@@ -93,10 +99,10 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
-
         {/* ✅ Password with show/hide */}
         <div className="relative">
           <input
+            name="password"
             className="w-full border rounded p-2 pr-10"
             placeholder="password"
             type={showPassword ? "text" : "password"}
@@ -104,6 +110,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
