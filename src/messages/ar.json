@@ -69,7 +69,6 @@
   
 
   "financeAR": "حسابات العملاء (AR)",
-  "financeARClients": "عملاء AR",
   "financeARInvoices": "فواتير AR",
   "financeARPayments": "مدفوعات AR",
   "financeARLedger": "كشف حساب AR",
@@ -767,43 +766,119 @@
       "loadFailed": "فشل تحميل المواقع"
     }
   },
+"clients": {
+  "title": "العملاء",
+  "subtitle": "إدارة العملاء والانتقال مباشرة إلى حسابات العملاء (كشف/فواتير/تحصيلات).",
+  "subtitleList": "قائمة العملاء",
 
-  "clients": {
-    "title": "العملاء",
-    "subtitle": "إدارة العملاء",
-    "filters": {
-      "searchPlaceholder": "بحث عن عميل..."
-    },
+  "actions": {
+    "add": "إضافة",
+    "viewDetails": "عرض التفاصيل"
+  },
+
+  "filters": {
+    "searchPlaceholder": "ابحث عن عميل..."
+  },
+
+  "table": {
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "status": "الحالة",
+    "actions": "الإجراءات"
+  },
+
+  "empty": "لا يوجد عملاء",
+  "emptyHint": "قم بإضافة أول عميل للبدء.",
+
+  "modal": {
+    "addTitle": "إضافة عميل",
+    "editTitle": "تعديل عميل",
+    "namePlaceholder": "اسم العميل"
+  },
+
+  "confirm": {
+    "disableDesc": "هل تريد إيقاف هذا العميل؟",
+    "enableDesc": "هل تريد تفعيل هذا العميل؟"
+  },
+
+  "toast": {
+    "created": "تم إنشاء العميل",
+    "updated": "تم تحديث العميل",
+    "toggled": "تم تحديث حالة العميل"
+  },
+
+  "errors": {
+    "loadFailed": "فشل تحميل العملاء",
+    "saveFailed": "فشل حفظ العميل",
+    "toggleFailed": "فشل تحديث الحالة",
+    "nameRequired": "اسم العميل مطلوب"
+  },
+
+  "details": {
+    "title": "تفاصيل العميل",
+    "subtitle": "بيانات العميل ونشاطه",
+
     "actions": {
-      "add": "+ إضافة عميل"
+      "backToList": "الرجوع إلى قائمة العملاء"
     },
-    "table": {
+    
+
+    "filters": {
+      "month": "الشهر",
+      "monthHint": "الصيغة: YYYY-MM",
+      "thisMonth": "هذا الشهر"
+    },
+
+    "profile": {
+      "title": "الملف التعريفي",
       "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "hqAddress": "عنوان المقر",
+      "contactName": "اسم جهة الاتصال",
+      "contactPhone": "هاتف جهة الاتصال",
+      "contactEmail": "بريد جهة الاتصال",
+      "taxNo": "الرقم الضريبي",
+      "notes": "ملاحظات",
       "status": "الحالة",
-      "actions": "إجراءات"
+      "createdAt": "تاريخ الإنشاء"
     },
-    "status": {
-      "active": "نشط",
-      "inactive": "غير نشط"
+
+    "kpi": {
+      "totalInvoiced": "إجمالي الفواتير",
+      "totalPaid": "إجمالي المدفوع",
+      "balance": "الرصيد",
+      "hintInvoices": "مجموع الفواتير (باستثناء الملغاة)",
+      "hintPayments": "مجموع التحصيلات (باستثناء الملغاة)",
+      "hintBalance": "إجمالي الفواتير ناقص التحصيلات"
     },
-    "modal": {
-      "addTitle": "إضافة عميل",
-      "editTitle": "تعديل عميل",
-      "namePlaceholder": "اسم العميل",
-      "cancel": "إلغاء",
-      "save": "حفظ"
+
+    "sites": {
+      "title": "المواقع",
+      "subtitle": "المواقع وعدد الرحلات خلال الشهر ({month})",
+
+      "empty": "لا توجد مواقع",
+      "emptyHint": "هذا العميل لا يحتوي على مواقع حالياً.",
+
+      "table": {
+        "name": "الموقع",
+        "address": "العنوان",
+        "tripsThisMonth": "عدد الرحلات هذا الشهر",
+        "status": "الحالة"
+      }
     },
-    "empty": "لا يوجد عملاء",
-    "toast": {
-      "created": "تم إنشاء العميل",
-      "updated": "تم تحديث العميل",
-      "saveFailed": "فشل الحفظ",
-      "toggleFailed": "فشل تغيير الحالة"
-    },
+
     "errors": {
-      "loadFailed": "فشل تحميل العملاء"
+      "loadFailed": "فشل تحميل تفاصيل العميل"
     }
   },
+
+  "ar": {
+    "ledger": "كشف حساب",
+    "invoices": "الفواتير",
+    "payments": "التحصيلات"
+  }
+},
 
   "financeDashboard": {
     "title": "لوحة المالية",

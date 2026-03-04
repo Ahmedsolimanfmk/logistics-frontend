@@ -678,41 +678,117 @@
     }
   },
   "clients": {
-    "title": "Clients",
-    "subtitle": "Manage customers",
-    "filters": {
-      "searchPlaceholder": "Search client..."
-    },
+  "title": "Clients",
+  "subtitle": "Manage clients and access their financial accounts directly (ledger / invoices / payments).",
+  "subtitleList": "Clients list",
+
+  "actions": {
+    "add": "Add",
+    "viewDetails": "View details"
+  },
+
+  "filters": {
+    "searchPlaceholder": "Search clients..."
+  },
+
+  "table": {
+    "name": "Name",
+    "email": "Email",
+    "status": "Status",
+    "actions": "Actions"
+  },
+
+  "empty": "No clients",
+  "emptyHint": "Add your first client to get started.",
+
+  "modal": {
+    "addTitle": "Add client",
+    "editTitle": "Edit client",
+    "namePlaceholder": "Client name"
+  },
+
+  "confirm": {
+    "disableDesc": "Do you want to disable this client?",
+    "enableDesc": "Do you want to enable this client?"
+  },
+
+  "toast": {
+    "created": "Client created",
+    "updated": "Client updated",
+    "toggled": "Client status updated"
+  },
+
+  "errors": {
+    "loadFailed": "Failed to load clients",
+    "saveFailed": "Failed to save client",
+    "toggleFailed": "Failed to update status",
+    "nameRequired": "Client name is required"
+  },
+
+  "details": {
+    "title": "Client details",
+    "subtitle": "Client profile and activity",
+
     "actions": {
-      "add": "+ Add Client"
+      "backToList": "Back to clients"
     },
-    "table": {
+
+    "filters": {
+      "month": "Month",
+      "monthHint": "Format: YYYY-MM",
+      "thisMonth": "This month"
+    },
+
+    "profile": {
+      "title": "Profile",
       "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "hqAddress": "HQ address",
+      "contactName": "Contact name",
+      "contactPhone": "Contact phone",
+      "contactEmail": "Contact email",
+      "taxNo": "Tax number",
+      "notes": "Notes",
       "status": "Status",
-      "actions": "Actions"
+      "createdAt": "Created at"
     },
-    "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+
+    "kpi": {
+      "totalInvoiced": "Total invoiced",
+      "totalPaid": "Total paid",
+      "balance": "Balance",
+      "hintInvoices": "Sum of invoices (excluding cancelled)",
+      "hintPayments": "Sum of payments (excluding cancelled)",
+      "hintBalance": "Total invoiced minus total paid"
     },
-    "modal": {
-      "addTitle": "Add Client",
-      "editTitle": "Edit Client",
-      "namePlaceholder": "Client name",
-      "cancel": "Cancel",
-      "save": "Save"
+
+    "sites": {
+      "title": "Sites",
+      "subtitle": "Sites and monthly trips ({month})",
+
+      "empty": "No sites",
+      "emptyHint": "This client currently has no sites.",
+
+      "table": {
+        "name": "Site",
+        "address": "Address",
+        "tripsThisMonth": "Trips this month",
+        "status": "Status"
+      }
     },
-    "empty": "No clients found",
-    "toast": {
-      "created": "Client created",
-      "updated": "Client updated",
-      "saveFailed": "Save failed",
-      "toggleFailed": "Toggle failed"
-    },
+
     "errors": {
-      "loadFailed": "Failed to load clients"
+      "loadFailed": "Failed to load client details"
     }
   },
+
+  "ar": {
+    "ledger": "Ledger",
+    "invoices": "Invoices",
+    "payments": "Payments"
+  }
+},
   "financeDashboard": {
     "title": "Finance Dashboard",
     "roleLabel": "Role",
