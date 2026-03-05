@@ -61,6 +61,15 @@ function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
+function daysLeft(d: any) {
+  if (!d) return null;
+  const dt = new Date(String(d));
+  if (Number.isNaN(dt.getTime())) return null;
+  const now = new Date();
+  const diff = dt.getTime() - now.getTime();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
 // =====================
 // Types
 // =====================
@@ -80,6 +89,8 @@ function getAllowedTabs(role?: string): TabKey[] {
   if (r === "ADMIN") return ["operations", "finance", "maintenance", "dev"];
   if (r === "FIELD_SUPERVISOR") return ["operations", "maintenance"];
   if (r === "FINANCE" || r === "ACCOUNTANT") return ["operations", "finance"];
+  // HR default: operations only
+  if (r === "HR") return ["operations"];
   return ["operations"];
 }
 
@@ -90,6 +101,11 @@ function canSeeDev(role?: string) {
 function isAdminOrAccountant(role?: string) {
   const r = roleUpper(role);
   return r === "ADMIN" || r === "ACCOUNTANT";
+}
+
+function isAdminOrHR(role?: string) {
+  const r = roleUpper(role);
+  return r === "ADMIN" || r === "HR";
 }
 
 // =====================
@@ -448,6 +464,7 @@ export default function DashboardPage() {
 
   const allowedTabs = useMemo(() => getAllowedTabs(user?.role), [user?.role]);
   const isAdminAcc = useMemo(() => isAdminOrAccountant(user?.role), [user?.role]);
+  const canSeeCompliance = useMemo(() => isAdminOrHR(user?.role), [user?.role]);
 
   const [tab, setTab] = useState<TabKey>("operations");
   const [summary, setSummary] = useState<any>(null);
@@ -456,6 +473,11 @@ export default function DashboardPage() {
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [loadingCharts, setLoadingCharts] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // ✅ Compliance alerts state
+  const [compliance, setCompliance] = useState<any>(null);
+  const [loadingCompliance, setLoadingCompliance] = useState(false);
+  const [complianceErr, setComplianceErr] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -508,8 +530,30 @@ export default function DashboardPage() {
     }
   };
 
+  // ✅ compliance fetch (Admin/HR only)
+  const fetchComplianceIfNeeded = async (activeTab: TabKey) => {
+    if (activeTab !== "operations" || !canSeeCompliance) {
+      setCompliance(null);
+      setComplianceErr(null);
+      setLoadingCompliance(false);
+      return;
+    }
+
+    setLoadingCompliance(true);
+    setComplianceErr(null);
+    try {
+      const data = await apiAuthGet(`/dashboard/compliance-alerts`, { days: 30, limit: 100 });
+      setCompliance(data?.data ?? data);
+    } catch (e: any) {
+      setCompliance(null);
+      setComplianceErr(e?.response?.data?.message || e?.message || t("common.failed"));
+    } finally {
+      setLoadingCompliance(false);
+    }
+  };
+
   const reloadAll = async () => {
-    await Promise.all([fetchSummary(tab), fetchBundleIfNeeded(tab)]);
+    await Promise.all([fetchSummary(tab), fetchBundleIfNeeded(tab), fetchComplianceIfNeeded(tab)]);
   };
 
   useEffect(() => {
@@ -520,13 +564,15 @@ export default function DashboardPage() {
       await fetchSummary(tab);
       if (cancel) return;
       await fetchBundleIfNeeded(tab);
+      if (cancel) return;
+      await fetchComplianceIfNeeded(tab);
     })();
 
     return () => {
       cancel = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, tab]);
+  }, [token, tab, canSeeCompliance]);
 
   const cards = summary?.cards || {};
   const tables = summary?.tables || {};
@@ -629,6 +675,22 @@ export default function DashboardPage() {
     return "/maintenance/requests";
   }, [isAdminAcc]);
 
+  // ✅ Compliance derived
+  const complianceCounts = useMemo(() => {
+    const c = compliance || {};
+    const vehicles = c?.counts?.vehicles || {};
+    const drivers = c?.counts?.drivers || {};
+    return {
+      vehExpiring: Number(vehicles.expiring ?? 0),
+      vehExpired: Number(vehicles.expired ?? 0),
+      drvExpiring: Number(drivers.expiring ?? 0),
+      drvExpired: Number(drivers.expired ?? 0),
+      vehiclesExpiringList: Array.isArray(c?.items?.vehicles_expiring) ? c.items.vehicles_expiring : [],
+      driversExpiringList: Array.isArray(c?.items?.drivers_expiring) ? c.items.drivers_expiring : [],
+      days: Number(c?.range?.days ?? 30),
+    };
+  }, [compliance]);
+
   return (
     // ✅ لايت + RTL — بدون خلفية دارك (AppShell already wraps)
     <div className="min-h-screen text-gray-900" dir="rtl">
@@ -724,6 +786,196 @@ export default function DashboardPage() {
                     />
                   </div>
                 </Section>
+
+                {/* ✅ Compliance Alerts (Admin/HR only) */}
+                {canSeeCompliance ? (
+                  <Section
+                    title={t("dashboard.compliance.title") || "تنبيهات الالتزام (الرخص)"}
+                    right={
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600">
+                          {t("dashboard.compliance.range") || "خلال"} {fmtInt(complianceCounts.days)}{" "}
+                          {t("common.days") || "يوم"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => fetchComplianceIfNeeded("operations")}
+                          className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
+                          disabled={loadingCompliance}
+                        >
+                          {loadingCompliance ? (t("common.loading") || "تحميل...") : (t("common.refresh") || "تحديث")}
+                        </button>
+                      </div>
+                    }
+                  >
+                    {complianceErr ? (
+                      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {complianceErr}
+                      </div>
+                    ) : null}
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <ActionTile
+                        title={t("dashboard.compliance.vehiclesExpiring") || "مركبات قرب انتهاء الرخصة"}
+                        value={fmtInt(complianceCounts.vehExpiring)}
+                        hint={t("dashboard.compliance.openVehicles") || "افتح صفحة المركبات"}
+                        tone={complianceCounts.vehExpiring > 0 ? "warn" : "good"}
+                        href="/vehicles"
+                        openLabel={t("common.open") || "فتح"}
+                      />
+                      <ActionTile
+                        title={t("dashboard.compliance.vehiclesExpired") || "مركبات انتهت الرخصة"}
+                        value={fmtInt(complianceCounts.vehExpired)}
+                        hint={t("dashboard.compliance.reviewVehicles") || "راجع المركبات غير المطابقة"}
+                        tone={complianceCounts.vehExpired > 0 ? "danger" : "good"}
+                        href="/vehicles"
+                        openLabel={t("common.open") || "فتح"}
+                      />
+                      <ActionTile
+                        title={t("dashboard.compliance.driversExpiring") || "سائقين قرب انتهاء الرخصة"}
+                        value={fmtInt(complianceCounts.drvExpiring)}
+                        hint={t("dashboard.compliance.openDrivers") || "افتح صفحة السائقين"}
+                        tone={complianceCounts.drvExpiring > 0 ? "warn" : "good"}
+                        href="/drivers"
+                        openLabel={t("common.open") || "فتح"}
+                      />
+                      <ActionTile
+                        title={t("dashboard.compliance.driversExpired") || "سائقين انتهت الرخصة"}
+                        value={fmtInt(complianceCounts.drvExpired)}
+                        hint={t("dashboard.compliance.reviewDrivers") || "راجع السائقين غير المطابقين"}
+                        tone={complianceCounts.drvExpired > 0 ? "danger" : "good"}
+                        href="/drivers"
+                        openLabel={t("common.open") || "فتح"}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      <DataTable
+                        title={t("dashboard.compliance.vehiclesTable") || "المركبات الأقرب لانتهاء الرخصة"}
+                        rows={complianceCounts.vehiclesExpiringList || []}
+                        searchable
+                        empty={
+                          <EmptyNice
+                            title={t("dashboard.compliance.vehiclesEmptyTitle") || "لا توجد مركبات قرب انتهاء الرخصة"}
+                            hint={t("dashboard.compliance.vehiclesEmptyHint") || "لا توجد عناصر ضمن نطاق التنبيه الحالي"}
+                          />
+                        }
+                        onRowClick={(r) => {
+                          if (r?.id) router.push(`/vehicles/${r.id}`);
+                        }}
+                        right={
+                          <Link href="/vehicles" className="text-xs text-orange-700 underline">
+                            {t("common.open") || "فتح"} ←
+                          </Link>
+                        }
+                        columns={[
+                          {
+                            key: "id",
+                            label: t("dashboard.columns.vehicle") || "المركبة",
+                            render: (r) => {
+                              const fleet = String(r?.fleet_no || "").trim();
+                              const plate = String(r?.plate_no || "").trim();
+                              const name = fleet && plate ? `${fleet} - ${plate}` : fleet || plate || r?.display_name || shortId(r?.id);
+                              return <span className="font-medium text-gray-900">{name}</span>;
+                            },
+                          },
+                          {
+                            key: "license_no",
+                            label: t("dashboard.compliance.licenseNo") || "رقم الرخصة",
+                            render: (r) => (r?.license_no ? String(r.license_no) : "—"),
+                          },
+                          {
+                            key: "license_expiry_date",
+                            label: t("dashboard.compliance.expiry") || "الانتهاء",
+                            render: (r) => {
+                              const dl = daysLeft(r?.license_expiry_date);
+                              const tone =
+                                dl == null ? "bg-gray-50 text-gray-700 border-gray-200"
+                                  : dl <= 0 ? "bg-rose-50 text-rose-700 border-rose-200"
+                                  : dl <= 7 ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                              return (
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className={cn("text-xs rounded-full border px-2 py-0.5", tone)}>
+                                    {dl == null ? "—" : dl <= 0 ? "منتهية" : `${dl} يوم`}
+                                  </span>
+                                  <span className="text-gray-700">{fmtDate(r?.license_expiry_date)}</span>
+                                </div>
+                              );
+                            },
+                          },
+                          {
+                            key: "supervisor_id",
+                            label: t("dashboard.compliance.supervisor") || "مشرف",
+                            render: (r) => (r?.supervisor_id ? shortId(r.supervisor_id) : "—"),
+                          },
+                        ]}
+                      />
+
+                      <DataTable
+                        title={t("dashboard.compliance.driversTable") || "السائقين الأقرب لانتهاء الرخصة"}
+                        rows={complianceCounts.driversExpiringList || []}
+                        searchable
+                        empty={
+                          <EmptyNice
+                            title={t("dashboard.compliance.driversEmptyTitle") || "لا يوجد سائقين قرب انتهاء الرخصة"}
+                            hint={t("dashboard.compliance.driversEmptyHint") || "لا توجد عناصر ضمن نطاق التنبيه الحالي"}
+                          />
+                        }
+                        onRowClick={(r) => {
+                          if (r?.id) router.push(`/drivers/${r.id}`);
+                        }}
+                        right={
+                          <Link href="/drivers" className="text-xs text-orange-700 underline">
+                            {t("common.open") || "فتح"} ←
+                          </Link>
+                        }
+                        columns={[
+                          {
+                            key: "full_name",
+                            label: t("dashboard.columns.driver") || "السائق",
+                            render: (r) => (
+                              <div className="flex flex-col items-end">
+                                <span className="font-medium text-gray-900">{r?.full_name || "—"}</span>
+                                <span className="text-xs text-gray-600">{r?.phone || r?.phone2 || "—"}</span>
+                              </div>
+                            ),
+                          },
+                          {
+                            key: "license_no",
+                            label: t("dashboard.compliance.licenseNo") || "رقم الرخصة",
+                            render: (r) => (r?.license_no ? String(r.license_no) : "—"),
+                          },
+                          {
+                            key: "license_expiry_date",
+                            label: t("dashboard.compliance.expiry") || "الانتهاء",
+                            render: (r) => {
+                              const dl = daysLeft(r?.license_expiry_date);
+                              const tone =
+                                dl == null ? "bg-gray-50 text-gray-700 border-gray-200"
+                                  : dl <= 0 ? "bg-rose-50 text-rose-700 border-rose-200"
+                                  : dl <= 7 ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                              return (
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className={cn("text-xs rounded-full border px-2 py-0.5", tone)}>
+                                    {dl == null ? "—" : dl <= 0 ? "منتهية" : `${dl} يوم`}
+                                  </span>
+                                  <span className="text-gray-700">{fmtDate(r?.license_expiry_date)}</span>
+                                </div>
+                              );
+                            },
+                          },
+                          {
+                            key: "national_id",
+                            label: t("dashboard.compliance.nationalId") || "الرقم القومي",
+                            render: (r) => (r?.national_id ? String(r.national_id) : "—"),
+                          },
+                        ]}
+                      />
+                    </div>
+                  </Section>
+                ) : null}
 
                 <Section title={t("dashboard.ops.quickKpis")}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
