@@ -47,16 +47,25 @@ export default function TripDetailsPage() {
 
   const id = params?.id;
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [trip, setTrip] = useState<any>(null);
 
   useEffect(() => {
-    if (!token || !id) return;
+    if (!id) {
+      setLoading(false);
+      setTrip(null);
+      return;
+    }
+
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     let cancel = false;
 
-    (async () => {
+    const loadTrip = async () => {
       setLoading(true);
       setErr(null);
 
@@ -71,18 +80,23 @@ export default function TripDetailsPage() {
         const msg =
           e?.response?.data?.message ||
           e?.message ||
-          t("tripDetails.errors.loadFailed");
+          "فشل تحميل بيانات الرحلة";
 
-        if (!cancel) setErr(msg);
+        if (!cancel) {
+          setErr(msg);
+          setTrip(null);
+        }
       } finally {
         if (!cancel) setLoading(false);
       }
-    })();
+    };
+
+    loadTrip();
 
     return () => {
       cancel = true;
     };
-  }, [token, id, t]);
+  }, [token, id]);
 
   const lastAssign = useMemo(() => {
     const arr = trip?.trip_assignments;
