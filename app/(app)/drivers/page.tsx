@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "@/src/lib/api";
 
-// ✅ UI system (Light)
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { FiltersBar } from "@/src/components/ui/FiltersBar";
@@ -15,7 +14,14 @@ type Driver = {
   id: string;
   full_name: string;
   phone: string | null;
+  phone2?: string | null;
+  national_id?: string | null;
+  hire_date?: string | null;
   license_no: string | null;
+  license_issue_date?: string | null;
+  license_expiry_date?: string | null;
+  status?: string | null;
+  disable_reason?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -28,7 +34,38 @@ function fmtDate(d?: string | null) {
   return dt.toLocaleString("ar-EG");
 }
 
-// ✅ Light Card (local helper)
+function licenseMeta(expiryDate: any) {
+  if (!expiryDate) return { text: "—", tone: "neutral" as const, days: null as number | null };
+
+  const dt = new Date(String(expiryDate));
+  if (Number.isNaN(dt.getTime())) {
+    return { text: "—", tone: "neutral" as const, days: null as number | null };
+  }
+
+  const now = new Date();
+  const diff = dt.getTime() - now.getTime();
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+  if (days < 0) return { text: "منتهية", tone: "danger" as const, days };
+  if (days <= 7) return { text: `${days} يوم`, tone: "warn" as const, days };
+  return { text: `${days} يوم`, tone: "good" as const, days };
+}
+
+function LicenseBadge({ expiryDate }: { expiryDate: any }) {
+  const meta = licenseMeta(expiryDate);
+
+  const cls =
+    meta.tone === "danger"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : meta.tone === "warn"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : meta.tone === "good"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : "border-gray-200 bg-gray-50 text-gray-700";
+
+  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{meta.text}</span>;
+}
+
 function Card({
   title,
   right,
@@ -52,20 +89,15 @@ function Card({
 }
 
 export default function DriversPage() {
-  // Filters
   const [q, setQ] = useState("");
-  const [isActive, setIsActive] = useState<string>(""); // "", "true", "false"
-
-  // Paging
+  const [isActive, setIsActive] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
 
-  // Data
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<Driver[]>([]);
   const [total, setTotal] = useState(0);
 
-  // Toast
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -77,7 +109,6 @@ export default function DriversPage() {
     window.setTimeout(() => setToastOpen(false), 2600);
   }
 
-  // ConfirmDialog
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
@@ -95,10 +126,7 @@ export default function DriversPage() {
     setConfirmOpen(true);
   }
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(total / pageSize)),
-    [total, pageSize]
-  );
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
   async function fetchList() {
     setLoading(true);
@@ -122,7 +150,6 @@ export default function DriversPage() {
         setTotal(t);
       }
     } catch (e: any) {
-      console.log("GET /drivers error", e);
       showToast(e?.response?.data?.message || e?.message || "فشل تحميل السائقين", "error");
       setItems([]);
       setTotal(0);
@@ -140,19 +167,28 @@ export default function DriversPage() {
     setPage(1);
   }, [q, isActive]);
 
-  // modal
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Driver | null>(null);
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phone2, setPhone2] = useState("");
+  const [nationalId, setNationalId] = useState("");
   const [licenseNo, setLicenseNo] = useState("");
+  const [licenseIssueDate, setLicenseIssueDate] = useState("");
+  const [licenseExpiryDate, setLicenseExpiryDate] = useState("");
+  const [hireDate, setHireDate] = useState("");
 
   function openCreate() {
     setEditing(null);
     setFullName("");
     setPhone("");
+    setPhone2("");
+    setNationalId("");
     setLicenseNo("");
+    setLicenseIssueDate("");
+    setLicenseExpiryDate("");
+    setHireDate("");
     setOpen(true);
   }
 
@@ -160,7 +196,12 @@ export default function DriversPage() {
     setEditing(d);
     setFullName(d.full_name || "");
     setPhone(d.phone || "");
+    setPhone2(d.phone2 || "");
+    setNationalId(d.national_id || "");
     setLicenseNo(d.license_no || "");
+    setLicenseIssueDate(d.license_issue_date ? String(d.license_issue_date).slice(0, 10) : "");
+    setLicenseExpiryDate(d.license_expiry_date ? String(d.license_expiry_date).slice(0, 10) : "");
+    setHireDate(d.hire_date ? String(d.hire_date).slice(0, 10) : "");
     setOpen(true);
   }
 
@@ -168,7 +209,12 @@ export default function DriversPage() {
     const payload = {
       full_name: fullName.trim(),
       phone: phone.trim() ? phone.trim() : null,
+      phone2: phone2.trim() ? phone2.trim() : null,
+      national_id: nationalId.trim() ? nationalId.trim() : null,
       license_no: licenseNo.trim() ? licenseNo.trim() : null,
+      license_issue_date: licenseIssueDate || null,
+      license_expiry_date: licenseExpiryDate || null,
+      hire_date: hireDate || null,
     };
 
     if (!payload.full_name) {
@@ -224,14 +270,10 @@ export default function DriversPage() {
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
         <PageHeader
           title="السائقين"
-          subtitle="إدارة السائقين (إضافة/تعديل + تفعيل/تعطيل + بحث)"
-          actions={
-            // RTL: نخلي زر الإضافة في يسار الهيدر طبيعيًا
-            <Button onClick={openCreate}>+ إضافة سائق</Button>
-          }
+          subtitle="إدارة السائقين وبيانات الرخص والتعيين"
+          actions={<Button onClick={openCreate}>+ إضافة سائق</Button>}
         />
 
-        {/* Filters */}
         <Card
           title="الفلاتر"
           right={
@@ -255,7 +297,7 @@ export default function DriversPage() {
                   <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="بحث بالاسم / الهاتف / الرخصة..."
+                    placeholder="بحث بالاسم / الهاتف / الرخصة / الرقم القومي..."
                     className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
                   />
                 </div>
@@ -288,32 +330,66 @@ export default function DriversPage() {
           />
         </Card>
 
-        {/* Table */}
         <DataTable<Driver>
           title="قائمة السائقين"
           columns={[
             { key: "full_name", label: "الاسم" },
-            { key: "phone", label: "الهاتف", render: (d) => d.phone || "—" },
-            { key: "license_no", label: "الرخصة", render: (d) => d.license_no || "—" },
+            {
+              key: "phone",
+              label: "التواصل",
+              render: (d) => (
+                <div className="flex flex-col items-start gap-1">
+                  <span>{d.phone || "—"}</span>
+                  <span className="text-xs text-gray-500">{d.phone2 || "—"}</span>
+                </div>
+              ),
+            },
+            {
+              key: "national_id",
+              label: "الرقم القومي",
+              render: (d) => d.national_id || "—",
+            },
+            {
+              key: "license_no",
+              label: "الرخصة",
+              render: (d) => (
+                <div className="flex flex-col items-start gap-1">
+                  <span>{d.license_no || "—"}</span>
+                  <LicenseBadge expiryDate={d.license_expiry_date} />
+                </div>
+              ),
+            },
+            {
+              key: "license_expiry_date",
+              label: "انتهاء الرخصة",
+              render: (d) => fmtDate(d.license_expiry_date),
+            },
+            {
+              key: "hire_date",
+              label: "تاريخ التعيين",
+              render: (d) => fmtDate(d.hire_date),
+            },
             {
               key: "is_active",
               label: "الحالة",
               render: (d) => (
-                <span
-                  className={
-                    d.is_active
-                      ? "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-green-50 text-green-700 border-green-200"
-                      : "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-gray-50 text-gray-700 border-gray-200"
-                  }
-                >
-                  {d.is_active ? "ACTIVE" : "INACTIVE"}
-                </span>
+                <div className="flex flex-col items-start gap-1">
+                  <span
+                    className={
+                      d.is_active
+                        ? "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-green-50 text-green-700 border-green-200"
+                        : "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-gray-50 text-gray-700 border-gray-200"
+                    }
+                  >
+                    {d.status || (d.is_active ? "ACTIVE" : "INACTIVE")}
+                  </span>
+                  {d.disable_reason ? <span className="text-xs text-rose-600">{d.disable_reason}</span> : null}
+                </div>
               ),
             },
             {
               key: "actions",
               label: "إجراءات",
-              // RTL: عمود الإجراءات غالبًا آخر عمود (هيظهر على الشمال) فنحاذيه "يسار"
               className: "text-left",
               headerClassName: "text-left",
               render: (d) => (
@@ -342,10 +418,9 @@ export default function DriversPage() {
               الإجمالي: <span className="font-semibold text-gray-900">{total}</span>
             </div>
           }
-          minWidthClassName="min-w-[900px]"
+          minWidthClassName="min-w-[1300px]"
         />
 
-        {/* Create/Edit Modal (Light) */}
         {open ? (
           <div
             className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-center justify-center p-4"
@@ -353,7 +428,7 @@ export default function DriversPage() {
           >
             <div
               dir="rtl"
-              className="w-full max-w-xl rounded-2xl border border-gray-200 bg-white text-gray-900 overflow-hidden shadow-xl"
+              className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white text-gray-900 overflow-hidden shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
@@ -386,12 +461,59 @@ export default function DriversPage() {
                   </div>
 
                   <div>
+                    <div className="text-xs text-gray-600 mb-1">هاتف إضافي</div>
+                    <input
+                      value={phone2}
+                      onChange={(e) => setPhone2(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">الرقم القومي</div>
+                    <input
+                      value={nationalId}
+                      onChange={(e) => setNationalId(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    />
+                  </div>
+
+                  <div>
                     <div className="text-xs text-gray-600 mb-1">رقم الرخصة</div>
                     <input
                       value={licenseNo}
                       onChange={(e) => setLicenseNo(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
-                      placeholder="رقم رخصة القيادة"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">تاريخ إصدار الرخصة</div>
+                    <input
+                      value={licenseIssueDate}
+                      onChange={(e) => setLicenseIssueDate(e.target.value)}
+                      type="date"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">تاريخ انتهاء الرخصة</div>
+                    <input
+                      value={licenseExpiryDate}
+                      onChange={(e) => setLicenseExpiryDate(e.target.value)}
+                      type="date"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-gray-600 mb-1">تاريخ التعيين</div>
+                    <input
+                      value={hireDate}
+                      onChange={(e) => setHireDate(e.target.value)}
+                      type="date"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
                     />
                   </div>
                 </div>
@@ -422,31 +544,25 @@ export default function DriversPage() {
       </div>
 
       <ConfirmDialog
-  open={confirmOpen}
-  title={confirmTitle}
-  description={confirmDesc}
-  confirmText="تأكيد"
-  cancelText="إلغاء"
-  tone="danger"
-  isLoading={confirmBusy}
-  dir="rtl"
-  onClose={() => {
-    if (confirmBusy) return;
-    setConfirmOpen(false);
-  }}
-  onConfirm={async () => {
-    if (!confirmAction) return;
-    await confirmAction();
-  }}
-/>
-
-      <Toast
-        open={toastOpen}
-        message={toastMsg}
-        type={toastType}
+        open={confirmOpen}
+        title={confirmTitle}
+        description={confirmDesc}
+        confirmText="تأكيد"
+        cancelText="إلغاء"
+        tone="danger"
+        isLoading={confirmBusy}
         dir="rtl"
-        onClose={() => setToastOpen(false)}
+        onClose={() => {
+          if (confirmBusy) return;
+          setConfirmOpen(false);
+        }}
+        onConfirm={async () => {
+          if (!confirmAction) return;
+          await confirmAction();
+        }}
       />
+
+      <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
     </div>
   );
 }

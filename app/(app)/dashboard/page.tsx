@@ -89,7 +89,6 @@ function getAllowedTabs(role?: string): TabKey[] {
   if (r === "ADMIN") return ["operations", "finance", "maintenance", "dev"];
   if (r === "FIELD_SUPERVISOR") return ["operations", "maintenance"];
   if (r === "FINANCE" || r === "ACCOUNTANT") return ["operations", "finance"];
-  // HR default: operations only
   if (r === "HR") return ["operations"];
   return ["operations"];
 }
@@ -474,7 +473,6 @@ export default function DashboardPage() {
   const [loadingCharts, setLoadingCharts] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // ✅ Compliance alerts state
   const [compliance, setCompliance] = useState<any>(null);
   const [loadingCompliance, setLoadingCompliance] = useState(false);
   const [complianceErr, setComplianceErr] = useState<string | null>(null);
@@ -530,7 +528,6 @@ export default function DashboardPage() {
     }
   };
 
-  // ✅ compliance fetch (Admin/HR only)
   const fetchComplianceIfNeeded = async (activeTab: TabKey) => {
     if (activeTab !== "operations" || !canSeeCompliance) {
       setCompliance(null);
@@ -675,7 +672,6 @@ export default function DashboardPage() {
     return "/maintenance/requests";
   }, [isAdminAcc]);
 
-  // ✅ Compliance derived
   const complianceCounts = useMemo(() => {
     const c = compliance || {};
     const vehicles = c?.counts?.vehicles || {};
@@ -686,13 +682,14 @@ export default function DashboardPage() {
       drvExpiring: Number(drivers.expiring ?? 0),
       drvExpired: Number(drivers.expired ?? 0),
       vehiclesExpiringList: Array.isArray(c?.items?.vehicles_expiring) ? c.items.vehicles_expiring : [],
+      vehiclesExpiredList: Array.isArray(c?.items?.vehicles_expired) ? c.items.vehicles_expired : [],
       driversExpiringList: Array.isArray(c?.items?.drivers_expiring) ? c.items.drivers_expiring : [],
+      driversExpiredList: Array.isArray(c?.items?.drivers_expired) ? c.items.drivers_expired : [],
       days: Number(c?.range?.days ?? 30),
     };
   }, [compliance]);
 
   return (
-    // ✅ لايت + RTL — بدون خلفية دارك (AppShell already wraps)
     <div className="min-h-screen text-gray-900" dir="rtl">
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -787,7 +784,6 @@ export default function DashboardPage() {
                   </div>
                 </Section>
 
-                {/* ✅ Compliance Alerts (Admin/HR only) */}
                 {canSeeCompliance ? (
                   <Section
                     title={t("dashboard.compliance.title") || "تنبيهات الالتزام (الرخص)"}
@@ -970,6 +966,134 @@ export default function DashboardPage() {
                             key: "national_id",
                             label: t("dashboard.compliance.nationalId") || "الرقم القومي",
                             render: (r) => (r?.national_id ? String(r.national_id) : "—"),
+                          },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      <DataTable
+                        title={t("dashboard.compliance.vehiclesExpiredTable") || "المركبات المنتهية الرخصة"}
+                        rows={complianceCounts.vehiclesExpiredList || []}
+                        searchable
+                        empty={
+                          <EmptyNice
+                            title={t("dashboard.compliance.vehiclesExpiredEmptyTitle") || "لا توجد مركبات منتهية الرخصة"}
+                            hint={t("dashboard.compliance.vehiclesExpiredEmptyHint") || "جميع المركبات ضمن الحالة السليمة حاليًا"}
+                          />
+                        }
+                        onRowClick={(r) => {
+                          if (r?.id) router.push(`/vehicles/${r.id}`);
+                        }}
+                        right={
+                          <Link href="/vehicles" className="text-xs text-orange-700 underline">
+                            {t("common.open") || "فتح"} ←
+                          </Link>
+                        }
+                        columns={[
+                          {
+                            key: "id",
+                            label: t("dashboard.columns.vehicle") || "المركبة",
+                            render: (r) => {
+                              const fleet = String(r?.fleet_no || "").trim();
+                              const plate = String(r?.plate_no || "").trim();
+                              const name = fleet && plate ? `${fleet} - ${plate}` : fleet || plate || r?.display_name || shortId(r?.id);
+                              return <span className="font-medium text-gray-900">{name}</span>;
+                            },
+                          },
+                          {
+                            key: "license_no",
+                            label: t("dashboard.compliance.licenseNo") || "رقم الرخصة",
+                            render: (r) => (r?.license_no ? String(r.license_no) : "—"),
+                          },
+                          {
+                            key: "status",
+                            label: t("dashboard.columns.status") || "الحالة",
+                            render: (r) => (
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">
+                                  {r?.status || "DISABLED"}
+                                </span>
+                                <span className="text-xs text-gray-600">
+                                  {r?.disable_reason || "LICENSE_EXPIRED"}
+                                </span>
+                              </div>
+                            ),
+                          },
+                          {
+                            key: "license_expiry_date",
+                            label: t("dashboard.compliance.expiry") || "الانتهاء",
+                            render: (r) => (
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-xs rounded-full border px-2 py-0.5 bg-rose-50 text-rose-700 border-rose-200">
+                                  منتهية
+                                </span>
+                                <span className="text-gray-700">{fmtDate(r?.license_expiry_date)}</span>
+                              </div>
+                            ),
+                          },
+                        ]}
+                      />
+
+                      <DataTable
+                        title={t("dashboard.compliance.driversExpiredTable") || "السائقين المنتهية الرخصة"}
+                        rows={complianceCounts.driversExpiredList || []}
+                        searchable
+                        empty={
+                          <EmptyNice
+                            title={t("dashboard.compliance.driversExpiredEmptyTitle") || "لا يوجد سائقين منتهية الرخصة"}
+                            hint={t("dashboard.compliance.driversExpiredEmptyHint") || "جميع السائقين ضمن الحالة السليمة حاليًا"}
+                          />
+                        }
+                        onRowClick={(r) => {
+                          if (r?.id) router.push(`/drivers/${r.id}`);
+                        }}
+                        right={
+                          <Link href="/drivers" className="text-xs text-orange-700 underline">
+                            {t("common.open") || "فتح"} ←
+                          </Link>
+                        }
+                        columns={[
+                          {
+                            key: "full_name",
+                            label: t("dashboard.columns.driver") || "السائق",
+                            render: (r) => (
+                              <div className="flex flex-col items-end">
+                                <span className="font-medium text-gray-900">{r?.full_name || "—"}</span>
+                                <span className="text-xs text-gray-600">{r?.phone || r?.phone2 || "—"}</span>
+                              </div>
+                            ),
+                          },
+                          {
+                            key: "license_no",
+                            label: t("dashboard.compliance.licenseNo") || "رقم الرخصة",
+                            render: (r) => (r?.license_no ? String(r.license_no) : "—"),
+                          },
+                          {
+                            key: "status",
+                            label: t("dashboard.columns.status") || "الحالة",
+                            render: (r) => (
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">
+                                  {r?.status || "DISABLED"}
+                                </span>
+                                <span className="text-xs text-gray-600">
+                                  {r?.disable_reason || "LICENSE_EXPIRED"}
+                                </span>
+                              </div>
+                            ),
+                          },
+                          {
+                            key: "license_expiry_date",
+                            label: t("dashboard.compliance.expiry") || "الانتهاء",
+                            render: (r) => (
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-xs rounded-full border px-2 py-0.5 bg-rose-50 text-rose-700 border-rose-200">
+                                  منتهية
+                                </span>
+                                <span className="text-gray-700">{fmtDate(r?.license_expiry_date)}</span>
+                              </div>
+                            ),
                           },
                         ]}
                       />

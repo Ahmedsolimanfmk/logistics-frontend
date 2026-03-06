@@ -7,14 +7,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { useLang } from "@/src/i18n/lang";
 
-// ✅ Theme Components
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { FiltersBar } from "@/src/components/ui/FiltersBar";
 import { Card } from "@/src/components/ui/Card";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
-import { Toast } from "@/src/components/Toast"; // ✅ استعمل النسخة الموحدة
+import { Toast } from "@/src/components/Toast";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -37,6 +36,38 @@ function vehicleLabel(v: any) {
   return dn || shortId(v.id);
 }
 
+function licenseMeta(expiryDate: any) {
+  if (!expiryDate) return { text: "—", tone: "neutral" as const, days: null as number | null };
+
+  const dt = new Date(String(expiryDate));
+  if (Number.isNaN(dt.getTime())) {
+    return { text: "—", tone: "neutral" as const, days: null as number | null };
+  }
+
+  const now = new Date();
+  const diff = dt.getTime() - now.getTime();
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+  if (days < 0) return { text: "منتهية", tone: "danger" as const, days };
+  if (days <= 7) return { text: `${days} يوم`, tone: "warn" as const, days };
+  return { text: `${days} يوم`, tone: "good" as const, days };
+}
+
+function LicenseBadge({ expiryDate }: { expiryDate: any }) {
+  const meta = licenseMeta(expiryDate);
+
+  const cls =
+    meta.tone === "danger"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : meta.tone === "warn"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : meta.tone === "good"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : "border-gray-200 bg-gray-50 text-gray-700";
+
+  return <span className={cn("inline-flex rounded-full border px-2 py-1 text-xs", cls)}>{meta.text}</span>;
+}
+
 const inputCls =
   "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none " +
   "placeholder:text-gray-400 focus:ring-2 focus:ring-black/10";
@@ -44,7 +75,6 @@ const inputCls =
 const selectCls =
   "rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-black/10";
 
-/* ---------------- Modal Shell (Unified) ---------------- */
 function Modal({
   open,
   title,
@@ -52,7 +82,7 @@ function Modal({
   children,
   footer,
   onClose,
-  maxWidthClassName = "max-w-2xl",
+  maxWidthClassName = "max-w-3xl",
 }: {
   open: boolean;
   title: React.ReactNode;
@@ -87,16 +117,13 @@ function Modal({
           }
         >
           <div className="space-y-4">{children}</div>
-          {footer ? (
-            <div className="mt-4 flex items-center justify-start gap-2">{footer}</div>
-          ) : null}
+          {footer ? <div className="mt-4 flex items-center justify-start gap-2">{footer}</div> : null}
         </Card>
       </div>
     </div>
   );
 }
 
-/* ---------------- Vehicle Modal ---------------- */
 function VehicleModal({
   open,
   mode,
@@ -125,6 +152,10 @@ function VehicleModal({
   const [odometer, setOdometer] = useState<string>("");
   const [gps, setGps] = useState("");
 
+  const [licenseNo, setLicenseNo] = useState("");
+  const [licenseIssueDate, setLicenseIssueDate] = useState("");
+  const [licenseExpiryDate, setLicenseExpiryDate] = useState("");
+
   useEffect(() => {
     if (!open) return;
 
@@ -136,6 +167,14 @@ function VehicleModal({
     setYear(initial?.year ? String(initial.year) : "");
     setOdometer(initial?.current_odometer ? String(initial.current_odometer) : "");
     setGps(String(initial?.gps_device_id || ""));
+
+    setLicenseNo(String(initial?.license_no || ""));
+    setLicenseIssueDate(
+      initial?.license_issue_date ? String(initial.license_issue_date).slice(0, 10) : ""
+    );
+    setLicenseExpiryDate(
+      initial?.license_expiry_date ? String(initial.license_expiry_date).slice(0, 10) : ""
+    );
   }, [open, initial]);
 
   const canSubmit = !!fleetNo.trim() && !!plateNo.trim();
@@ -154,6 +193,10 @@ function VehicleModal({
         year: year ? Number(year) : null,
         current_odometer: odometer ? Number(odometer) : null,
         gps_device_id: gps.trim() || null,
+
+        license_no: licenseNo.trim() || null,
+        license_issue_date: licenseIssueDate || null,
+        license_expiry_date: licenseExpiryDate || null,
       };
 
       if (mode === "create") {
@@ -167,7 +210,7 @@ function VehicleModal({
       onSaved();
       onClose();
     } catch (e: any) {
-      showToast("error", e?.message || t("vehicles.toast.saveFailed"));
+      showToast("error", e?.response?.data?.message || e?.message || t("vehicles.toast.saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -200,7 +243,6 @@ function VehicleModal({
             onChange={(e) => setFleetNo(e.target.value)}
             disabled={loading}
             className={inputCls}
-            placeholder={t("vehicles.placeholders.fleetNo")}
           />
         </label>
 
@@ -211,7 +253,6 @@ function VehicleModal({
             onChange={(e) => setPlateNo(e.target.value)}
             disabled={loading}
             className={inputCls}
-            placeholder={t("vehicles.placeholders.plateNo")}
           />
         </label>
 
@@ -222,21 +263,16 @@ function VehicleModal({
             onChange={(e) => setDisplayName(e.target.value)}
             disabled={loading}
             className={inputCls}
-            placeholder={t("vehicles.placeholders.displayName")}
           />
         </label>
 
         <label className="grid gap-2 text-sm">
           <span className="text-xs text-gray-500">{t("vehicles.fields.status")}</span>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            disabled={loading}
-            className={selectCls}
-          >
+          <select value={status} onChange={(e) => setStatus(e.target.value)} disabled={loading} className={selectCls}>
             <option value="AVAILABLE">{t("vehicles.status.AVAILABLE")}</option>
             <option value="IN_USE">{t("vehicles.status.IN_USE")}</option>
             <option value="MAINTENANCE">{t("vehicles.status.MAINTENANCE")}</option>
+            <option value="DISABLED">DISABLED</option>
           </select>
         </label>
 
@@ -247,13 +283,7 @@ function VehicleModal({
 
         <label className="grid gap-2 text-sm">
           <span className="text-xs text-gray-500">{t("vehicles.fields.year")}</span>
-          <input
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            disabled={loading}
-            type="number"
-            className={inputCls}
-          />
+          <input value={year} onChange={(e) => setYear(e.target.value)} disabled={loading} type="number" className={inputCls} />
         </label>
 
         <label className="grid gap-2 text-sm">
@@ -271,12 +301,43 @@ function VehicleModal({
           <span className="text-xs text-gray-500">{t("vehicles.fields.gps")}</span>
           <input value={gps} onChange={(e) => setGps(e.target.value)} disabled={loading} className={inputCls} />
         </label>
+
+        <label className="grid gap-2 text-sm">
+          <span className="text-xs text-gray-500">رقم الرخصة</span>
+          <input
+            value={licenseNo}
+            onChange={(e) => setLicenseNo(e.target.value)}
+            disabled={loading}
+            className={inputCls}
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm">
+          <span className="text-xs text-gray-500">تاريخ إصدار الرخصة</span>
+          <input
+            value={licenseIssueDate}
+            onChange={(e) => setLicenseIssueDate(e.target.value)}
+            disabled={loading}
+            type="date"
+            className={inputCls}
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm md:col-span-2">
+          <span className="text-xs text-gray-500">تاريخ انتهاء الرخصة</span>
+          <input
+            value={licenseExpiryDate}
+            onChange={(e) => setLicenseExpiryDate(e.target.value)}
+            disabled={loading}
+            type="date"
+            className={inputCls}
+          />
+        </label>
       </div>
     </Modal>
   );
 }
 
-/* ---------------- Page ---------------- */
 export default function VehiclesClientPage() {
   const t = useT();
   const lang = useLang();
@@ -358,7 +419,7 @@ export default function VehiclesClientPage() {
       const body = res?.data ?? res;
       setData(body);
     } catch (e: any) {
-      setErr(e?.message || t("vehicles.errors.loadFailed"));
+      setErr(e?.response?.data?.message || e?.message || t("vehicles.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -393,7 +454,7 @@ export default function VehiclesClientPage() {
       showToast("success", t("vehicles.toast.toggled"));
       load();
     } catch (e: any) {
-      showToast("error", e?.message || t("vehicles.toast.toggleFailed"));
+      showToast("error", e?.response?.data?.message || e?.message || t("vehicles.toast.toggleFailed"));
     }
   }
 
@@ -416,22 +477,28 @@ export default function VehiclesClientPage() {
       render: (v) => <span className="font-medium text-gray-900">{vehicleLabel(v)}</span>,
     },
     {
-      key: "fleet_no",
-      label: t("vehicles.table.fleet"),
-      render: (v) => <span className="font-mono text-gray-700">{v.fleet_no || "—"}</span>,
+      key: "license_no",
+      label: "الرخصة",
+      render: (v) => <span className="font-mono text-gray-700">{v.license_no || "—"}</span>,
     },
     {
-      key: "plate_no",
-      label: t("vehicles.table.plate"),
-      render: (v) => <span className="font-mono text-gray-700">{v.plate_no || "—"}</span>,
+      key: "license_expiry_date",
+      label: "انتهاء الرخصة",
+      render: (v) => (
+        <div className="flex flex-col items-start gap-1">
+          <span className="text-gray-700">{fmtDate(v.license_expiry_date)}</span>
+          <LicenseBadge expiryDate={v.license_expiry_date} />
+        </div>
+      ),
     },
     {
       key: "status",
       label: t("vehicles.table.status"),
       render: (v) => (
-        <span className="text-gray-700">
-          {t(`vehicles.status.${String(v.status || "").toUpperCase()}`) || (v.status || "—")}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className="text-gray-700">{t(`vehicles.status.${String(v.status || "").toUpperCase()}`) || v.status || "—"}</span>
+          {v?.disable_reason ? <span className="text-xs text-rose-600">{String(v.disable_reason)}</span> : null}
+        </div>
       ),
     },
     {
@@ -472,8 +539,7 @@ export default function VehiclesClientPage() {
               actions={
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-gray-600">
-                    {t("common.role")}:{" "}
-                    <span className="font-medium text-gray-900">{role || "—"}</span>
+                    {t("common.role")}: <span className="font-medium text-gray-900">{role || "—"}</span>
                   </div>
 
                   <Button variant="primary" onClick={openCreate}>
@@ -497,23 +563,16 @@ export default function VehiclesClientPage() {
                     className={cn(inputCls, "w-64")}
                   />
 
-                  <select
-                    value={status}
-                    onChange={(e) => setParam("status", e.target.value)}
-                    className={selectCls}
-                  >
+                  <select value={status} onChange={(e) => setParam("status", e.target.value)} className={selectCls}>
                     <option value="">{t("vehicles.filters.allStatus")}</option>
                     <option value="AVAILABLE">{t("vehicles.status.AVAILABLE")}</option>
                     <option value="IN_USE">{t("vehicles.status.IN_USE")}</option>
                     <option value="MAINTENANCE">{t("vehicles.status.MAINTENANCE")}</option>
+                    <option value="DISABLED">DISABLED</option>
                     <option value="AVAILABLE,IN_USE">{t("vehicles.filters.activeStatus")}</option>
                   </select>
 
-                  <select
-                    value={active}
-                    onChange={(e) => setParam("active", e.target.value)}
-                    className={selectCls}
-                  >
+                  <select value={active} onChange={(e) => setParam("active", e.target.value)} className={selectCls}>
                     <option value="">{t("vehicles.filters.allActiveFlag")}</option>
                     <option value="1">{t("vehicles.filters.activeOnly")}</option>
                     <option value="0">{t("vehicles.filters.inactiveOnly")}</option>
@@ -522,20 +581,14 @@ export default function VehiclesClientPage() {
               }
               right={
                 <div className="text-xs text-gray-600">
-                  {t("vehicles.meta.total")}:{" "}
-                  <span className="font-semibold text-gray-900">{total}</span> —{" "}
-                  {t("vehicles.meta.page")}{" "}
-                  <span className="font-semibold text-gray-900">
-                    {page}/{totalPages}
-                  </span>
+                  {t("vehicles.meta.total")}: <span className="font-semibold text-gray-900">{total}</span> —{" "}
+                  {t("vehicles.meta.page")} <span className="font-semibold text-gray-900">{page}/{totalPages}</span>
                 </div>
               }
             />
 
             {err ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {err}
-              </div>
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>
             ) : null}
 
             <DataTable
@@ -551,13 +604,11 @@ export default function VehiclesClientPage() {
               onNext={page < totalPages ? () => setParam("page", String(page + 1)) : undefined}
               footer={
                 <div className="text-xs text-gray-600">
-                  {t("vehicles.meta.showing")}{" "}
-                  <span className="font-semibold text-gray-900">{items.length}</span>{" "}
-                  {t("vehicles.meta.of")}{" "}
-                  <span className="font-semibold text-gray-900">{total}</span>
+                  {t("vehicles.meta.showing")} <span className="font-semibold text-gray-900">{items.length}</span>{" "}
+                  {t("vehicles.meta.of")} <span className="font-semibold text-gray-900">{total}</span>
                 </div>
               }
-              minWidthClassName="min-w-[1100px]"
+              minWidthClassName="min-w-[1300px]"
             />
           </div>
         </Card>
@@ -572,13 +623,7 @@ export default function VehiclesClientPage() {
         showToast={showToast}
       />
 
-      <Toast
-        open={toastOpen}
-        message={toastMsg}
-        type={toastType}
-        dir="rtl"
-        onClose={() => setToastOpen(false)}
-      />
+      <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
     </div>
   );
 }
