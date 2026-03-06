@@ -501,13 +501,36 @@ export default function VehiclesClientPage() {
     {
       key: "actions",
       label: t("vehicles.table.actions"),
-      headerClassName: "w-[220px]",
+      headerClassName: "w-[320px]",
       render: (v) => (
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => openEdit(v)}>
+          <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/vehicles/${v.id}`);
+            }}
+          >
+            تفاصيل
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEdit(v);
+            }}
+          >
             {t("common.edit")}
           </Button>
-          <Button variant="ghost" onClick={() => toggle(v)}>
+
+          <Button
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle(v);
+            }}
+          >
             {t("common.toggle")}
           </Button>
         </div>
@@ -589,13 +612,16 @@ export default function VehiclesClientPage() {
               total={total}
               onPrev={page > 1 ? () => setParam("page", String(page - 1)) : undefined}
               onNext={page < totalPages ? () => setParam("page", String(page + 1)) : undefined}
+              onRowClick={(row) => {
+                if (row?.id) router.push(`/vehicles/${row.id}`);
+              }}
               footer={
                 <div className="text-xs text-gray-600">
                   {t("vehicles.meta.showing")} <span className="font-semibold text-gray-900">{items.length}</span>{" "}
                   {t("vehicles.meta.of")} <span className="font-semibold text-gray-900">{total}</span>
                 </div>
               }
-              minWidthClassName="min-w-[1300px]"
+              minWidthClassName="min-w-[1400px]"
             />
           </div>
         </Card>
