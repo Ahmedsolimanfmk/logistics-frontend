@@ -1,4 +1,3 @@
-// app/(app)/dashboard/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -68,6 +67,18 @@ function daysLeft(d: any) {
   const now = new Date();
   const diff = dt.getTime() - now.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function vehicleLabel(v: any) {
+  if (!v) return "—";
+  const fleet = String(v?.fleet_no || "").trim();
+  const plate = String(v?.plate_no || "").trim();
+  const dn = String(v?.display_name || "").trim();
+
+  if (fleet && plate) return `${fleet} - ${plate}${dn ? ` (${dn})` : ""}`;
+  if (fleet) return `${fleet}${dn ? ` (${dn})` : ""}`;
+  if (plate) return `${plate}${dn ? ` (${dn})` : ""}`;
+  return dn || shortId(v?.id);
 }
 
 // =====================
@@ -577,7 +588,6 @@ export default function DashboardPage() {
 
   const tabItems = useMemo(() => {
     const opsCount = Number(alerts?.active_trips_now_count ?? tables?.active_trips_now?.length ?? 0);
-
     const finCount =
       Number(alerts?.advances_open ?? 0) + Number(alerts?.expenses_pending_too_long ?? 0);
 
@@ -586,17 +596,18 @@ export default function DashboardPage() {
 
     const items: { key: TabKey; label: string; count?: number }[] = [];
 
-    if (allowedTabs.includes("operations"))
+    if (allowedTabs.includes("operations")) {
       items.push({ key: "operations", label: t("tabs.operations"), count: opsCount });
-
-    if (allowedTabs.includes("finance"))
+    }
+    if (allowedTabs.includes("finance")) {
       items.push({ key: "finance", label: t("tabs.finance"), count: finCount });
-
-    if (allowedTabs.includes("maintenance"))
+    }
+    if (allowedTabs.includes("maintenance")) {
       items.push({ key: "maintenance", label: t("tabs.maintenance"), count: mntCount });
-
-    if (allowedTabs.includes("dev") && canSeeDev(user?.role))
+    }
+    if (allowedTabs.includes("dev") && canSeeDev(user?.role)) {
       items.push({ key: "dev", label: t("tabs.dev") });
+    }
 
     return items;
   }, [allowedTabs, alerts, tables, cards, user?.role, t]);
@@ -682,9 +693,7 @@ export default function DashboardPage() {
       drvExpiring: Number(drivers.expiring ?? 0),
       drvExpired: Number(drivers.expired ?? 0),
       vehiclesExpiringList: Array.isArray(c?.items?.vehicles_expiring) ? c.items.vehicles_expiring : [],
-      vehiclesExpiredList: Array.isArray(c?.items?.vehicles_expired) ? c.items.vehicles_expired : [],
       driversExpiringList: Array.isArray(c?.items?.drivers_expiring) ? c.items.drivers_expiring : [],
-      driversExpiredList: Array.isArray(c?.items?.drivers_expired) ? c.items.drivers_expired : [],
       days: Number(c?.range?.days ?? 30),
     };
   }, [compliance]);
@@ -871,8 +880,22 @@ export default function DashboardPage() {
                             render: (r) => {
                               const fleet = String(r?.fleet_no || "").trim();
                               const plate = String(r?.plate_no || "").trim();
-                              const name = fleet && plate ? `${fleet} - ${plate}` : fleet || plate || r?.display_name || shortId(r?.id);
-                              return <span className="font-medium text-gray-900">{name}</span>;
+                              const name =
+                                fleet && plate
+                                  ? `${fleet} - ${plate}`
+                                  : fleet || plate || r?.display_name || shortId(r?.id);
+                              return (
+                                <button
+                                  type="button"
+                                  className="font-medium text-orange-700 underline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/vehicles/${r?.id}`);
+                                  }}
+                                >
+                                  {name}
+                                </button>
+                              );
                             },
                           },
                           {
@@ -886,9 +909,12 @@ export default function DashboardPage() {
                             render: (r) => {
                               const dl = daysLeft(r?.license_expiry_date);
                               const tone =
-                                dl == null ? "bg-gray-50 text-gray-700 border-gray-200"
-                                  : dl <= 0 ? "bg-rose-50 text-rose-700 border-rose-200"
-                                  : dl <= 7 ? "bg-amber-50 text-amber-700 border-amber-200"
+                                dl == null
+                                  ? "bg-gray-50 text-gray-700 border-gray-200"
+                                  : dl <= 0
+                                  ? "bg-rose-50 text-rose-700 border-rose-200"
+                                  : dl <= 7
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
                                   : "bg-emerald-50 text-emerald-700 border-emerald-200";
                               return (
                                 <div className="flex items-center justify-end gap-2">
@@ -932,7 +958,16 @@ export default function DashboardPage() {
                             label: t("dashboard.columns.driver") || "السائق",
                             render: (r) => (
                               <div className="flex flex-col items-end">
-                                <span className="font-medium text-gray-900">{r?.full_name || "—"}</span>
+                                <button
+                                  type="button"
+                                  className="font-medium text-orange-700 underline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/drivers/${r?.id}`);
+                                  }}
+                                >
+                                  {r?.full_name || "—"}
+                                </button>
                                 <span className="text-xs text-gray-600">{r?.phone || r?.phone2 || "—"}</span>
                               </div>
                             ),
@@ -948,9 +983,12 @@ export default function DashboardPage() {
                             render: (r) => {
                               const dl = daysLeft(r?.license_expiry_date);
                               const tone =
-                                dl == null ? "bg-gray-50 text-gray-700 border-gray-200"
-                                  : dl <= 0 ? "bg-rose-50 text-rose-700 border-rose-200"
-                                  : dl <= 7 ? "bg-amber-50 text-amber-700 border-amber-200"
+                                dl == null
+                                  ? "bg-gray-50 text-gray-700 border-gray-200"
+                                  : dl <= 0
+                                  ? "bg-rose-50 text-rose-700 border-rose-200"
+                                  : dl <= 7
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
                                   : "bg-emerald-50 text-emerald-700 border-emerald-200";
                               return (
                                 <div className="flex items-center justify-end gap-2">
@@ -966,134 +1004,6 @@ export default function DashboardPage() {
                             key: "national_id",
                             label: t("dashboard.compliance.nationalId") || "الرقم القومي",
                             render: (r) => (r?.national_id ? String(r.national_id) : "—"),
-                          },
-                        ]}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                      <DataTable
-                        title={t("dashboard.compliance.vehiclesExpiredTable") || "المركبات المنتهية الرخصة"}
-                        rows={complianceCounts.vehiclesExpiredList || []}
-                        searchable
-                        empty={
-                          <EmptyNice
-                            title={t("dashboard.compliance.vehiclesExpiredEmptyTitle") || "لا توجد مركبات منتهية الرخصة"}
-                            hint={t("dashboard.compliance.vehiclesExpiredEmptyHint") || "جميع المركبات ضمن الحالة السليمة حاليًا"}
-                          />
-                        }
-                        onRowClick={(r) => {
-                          if (r?.id) router.push(`/vehicles/${r.id}`);
-                        }}
-                        right={
-                          <Link href="/vehicles" className="text-xs text-orange-700 underline">
-                            {t("common.open") || "فتح"} ←
-                          </Link>
-                        }
-                        columns={[
-                          {
-                            key: "id",
-                            label: t("dashboard.columns.vehicle") || "المركبة",
-                            render: (r) => {
-                              const fleet = String(r?.fleet_no || "").trim();
-                              const plate = String(r?.plate_no || "").trim();
-                              const name = fleet && plate ? `${fleet} - ${plate}` : fleet || plate || r?.display_name || shortId(r?.id);
-                              return <span className="font-medium text-gray-900">{name}</span>;
-                            },
-                          },
-                          {
-                            key: "license_no",
-                            label: t("dashboard.compliance.licenseNo") || "رقم الرخصة",
-                            render: (r) => (r?.license_no ? String(r.license_no) : "—"),
-                          },
-                          {
-                            key: "status",
-                            label: t("dashboard.columns.status") || "الحالة",
-                            render: (r) => (
-                              <div className="flex items-center justify-end gap-2">
-                                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">
-                                  {r?.status || "DISABLED"}
-                                </span>
-                                <span className="text-xs text-gray-600">
-                                  {r?.disable_reason || "LICENSE_EXPIRED"}
-                                </span>
-                              </div>
-                            ),
-                          },
-                          {
-                            key: "license_expiry_date",
-                            label: t("dashboard.compliance.expiry") || "الانتهاء",
-                            render: (r) => (
-                              <div className="flex items-center justify-end gap-2">
-                                <span className="text-xs rounded-full border px-2 py-0.5 bg-rose-50 text-rose-700 border-rose-200">
-                                  منتهية
-                                </span>
-                                <span className="text-gray-700">{fmtDate(r?.license_expiry_date)}</span>
-                              </div>
-                            ),
-                          },
-                        ]}
-                      />
-
-                      <DataTable
-                        title={t("dashboard.compliance.driversExpiredTable") || "السائقين المنتهية الرخصة"}
-                        rows={complianceCounts.driversExpiredList || []}
-                        searchable
-                        empty={
-                          <EmptyNice
-                            title={t("dashboard.compliance.driversExpiredEmptyTitle") || "لا يوجد سائقين منتهية الرخصة"}
-                            hint={t("dashboard.compliance.driversExpiredEmptyHint") || "جميع السائقين ضمن الحالة السليمة حاليًا"}
-                          />
-                        }
-                        onRowClick={(r) => {
-                          if (r?.id) router.push(`/drivers/${r.id}`);
-                        }}
-                        right={
-                          <Link href="/drivers" className="text-xs text-orange-700 underline">
-                            {t("common.open") || "فتح"} ←
-                          </Link>
-                        }
-                        columns={[
-                          {
-                            key: "full_name",
-                            label: t("dashboard.columns.driver") || "السائق",
-                            render: (r) => (
-                              <div className="flex flex-col items-end">
-                                <span className="font-medium text-gray-900">{r?.full_name || "—"}</span>
-                                <span className="text-xs text-gray-600">{r?.phone || r?.phone2 || "—"}</span>
-                              </div>
-                            ),
-                          },
-                          {
-                            key: "license_no",
-                            label: t("dashboard.compliance.licenseNo") || "رقم الرخصة",
-                            render: (r) => (r?.license_no ? String(r.license_no) : "—"),
-                          },
-                          {
-                            key: "status",
-                            label: t("dashboard.columns.status") || "الحالة",
-                            render: (r) => (
-                              <div className="flex items-center justify-end gap-2">
-                                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">
-                                  {r?.status || "DISABLED"}
-                                </span>
-                                <span className="text-xs text-gray-600">
-                                  {r?.disable_reason || "LICENSE_EXPIRED"}
-                                </span>
-                              </div>
-                            ),
-                          },
-                          {
-                            key: "license_expiry_date",
-                            label: t("dashboard.compliance.expiry") || "الانتهاء",
-                            render: (r) => (
-                              <div className="flex items-center justify-end gap-2">
-                                <span className="text-xs rounded-full border px-2 py-0.5 bg-rose-50 text-rose-700 border-rose-200">
-                                  منتهية
-                                </span>
-                                <span className="text-gray-700">{fmtDate(r?.license_expiry_date)}</span>
-                              </div>
-                            ),
                           },
                         ]}
                       />
@@ -1136,7 +1046,12 @@ export default function DashboardPage() {
                     title={t("dashboard.ops.tables.activeTripsNow")}
                     rows={tables?.active_trips_now || []}
                     searchable
-                    empty={<EmptyNice title={t("dashboard.ops.empty.activeTripsNow.title")} hint={t("dashboard.ops.empty.activeTripsNow.hint")} />}
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.ops.empty.activeTripsNow.title")}
+                        hint={t("dashboard.ops.empty.activeTripsNow.hint")}
+                      />
+                    }
                     onRowClick={(r) => {
                       if (r?.trip_id) router.push(`/trips/${r.trip_id}`);
                     }}
@@ -1163,9 +1078,49 @@ export default function DashboardPage() {
                       { key: "trip_status", label: t("dashboard.columns.status") },
                       { key: "client", label: t("dashboard.columns.client") },
                       { key: "site", label: t("dashboard.columns.site") },
-                      { key: "vehicle_plate_number", label: t("dashboard.columns.vehicle") },
-                      { key: "driver_name", label: t("dashboard.columns.driver") },
-                      { key: "trip_created_at", label: t("dashboard.columns.created"), render: (r) => fmtDate(r.trip_created_at) },
+                      {
+                        key: "vehicle_plate_number",
+                        label: t("dashboard.columns.vehicle"),
+                        render: (r) =>
+                          r?.vehicle_id ? (
+                            <button
+                              type="button"
+                              className="text-orange-700 underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/vehicles/${r.vehicle_id}`);
+                              }}
+                            >
+                              {r?.vehicle_plate_number || shortId(r?.vehicle_id)}
+                            </button>
+                          ) : (
+                            r?.vehicle_plate_number || "—"
+                          ),
+                      },
+                      {
+                        key: "driver_name",
+                        label: t("dashboard.columns.driver"),
+                        render: (r) =>
+                          r?.driver_id ? (
+                            <button
+                              type="button"
+                              className="text-orange-700 underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/drivers/${r.driver_id}`);
+                              }}
+                            >
+                              {r?.driver_name || shortId(r?.driver_id)}
+                            </button>
+                          ) : (
+                            r?.driver_name || "—"
+                          ),
+                      },
+                      {
+                        key: "trip_created_at",
+                        label: t("dashboard.columns.created"),
+                        render: (r) => fmtDate(r.trip_created_at),
+                      },
                     ]}
                   />
 
@@ -1173,17 +1128,30 @@ export default function DashboardPage() {
                     title={t("dashboard.ops.tables.tripsNeedingClose")}
                     rows={tables?.trips_needing_finance_close || []}
                     searchable
-                    empty={<EmptyNice title={t("dashboard.ops.empty.tripsNeedingClose.title")} hint={t("dashboard.ops.empty.tripsNeedingClose.hint")} />}
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.ops.empty.tripsNeedingClose.title")}
+                        hint={t("dashboard.ops.empty.tripsNeedingClose.hint")}
+                      />
+                    }
                     onRowClick={(r) => {
                       if (r?.id) router.push(`/trips/${r.id}`);
                     }}
                     columns={[
-                      { key: "id", label: t("dashboard.columns.trip"), render: (r) => <span className="font-mono">{shortId(r.id)}</span> },
+                      {
+                        key: "id",
+                        label: t("dashboard.columns.trip"),
+                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
+                      },
                       { key: "status", label: t("dashboard.columns.status") },
                       { key: "financial_status", label: t("dashboard.columns.financial") },
                       { key: "client", label: t("dashboard.columns.client") },
                       { key: "site", label: t("dashboard.columns.site") },
-                      { key: "created_at", label: t("dashboard.columns.created"), render: (r) => fmtDate(r.created_at) },
+                      {
+                        key: "created_at",
+                        label: t("dashboard.columns.created"),
+                        render: (r) => fmtDate(r.created_at),
+                      },
                     ]}
                   />
                 </div>
@@ -1213,8 +1181,16 @@ export default function DashboardPage() {
                     </div>
                   ) : chartData ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <MiniChart title={t("dashboard.ops.charts.tripsCreated")} points={chartData.trips_created} valueKey="value" />
-                      <MiniChart title={t("dashboard.ops.charts.tripsAssigned")} points={chartData.trips_assigned} valueKey="value" />
+                      <MiniChart
+                        title={t("dashboard.ops.charts.tripsCreated")}
+                        points={chartData.trips_created}
+                        valueKey="value"
+                      />
+                      <MiniChart
+                        title={t("dashboard.ops.charts.tripsAssigned")}
+                        points={chartData.trips_assigned}
+                        valueKey="value"
+                      />
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
@@ -1232,7 +1208,11 @@ export default function DashboardPage() {
                     <ActionTile
                       title={t("dashboard.finance.pendingTooLong.title")}
                       value={fmtInt(fin.pendingTooLong)}
-                      hint={fin.pendingTooLong ? t("dashboard.finance.pendingTooLong.hintOn") : t("dashboard.finance.pendingTooLong.hintOff")}
+                      hint={
+                        fin.pendingTooLong
+                          ? t("dashboard.finance.pendingTooLong.hintOn")
+                          : t("dashboard.finance.pendingTooLong.hintOff")
+                      }
                       tone={fin.tonePending as any}
                       href="/finance?tab=pending"
                       openLabel={t("common.open")}
@@ -1240,7 +1220,11 @@ export default function DashboardPage() {
                     <ActionTile
                       title={t("dashboard.finance.openAdvances.title")}
                       value={fmtInt(fin.advancesOpen)}
-                      hint={fin.advancesOpen ? t("dashboard.finance.openAdvances.hintOn") : t("dashboard.finance.openAdvances.hintOff")}
+                      hint={
+                        fin.advancesOpen
+                          ? t("dashboard.finance.openAdvances.hintOn")
+                          : t("dashboard.finance.openAdvances.hintOff")
+                      }
                       tone={fin.toneAdv as any}
                       href="/finance?tab=advances"
                       openLabel={t("common.open")}
@@ -1261,10 +1245,19 @@ export default function DashboardPage() {
                     title={t("dashboard.finance.topExpenseTypesToday.tableTitle")}
                     rows={tables?.top_expense_types_today || []}
                     searchable
-                    empty={<EmptyNice title={t("dashboard.finance.empty.noApprovedToday.title")} hint={t("dashboard.finance.empty.noApprovedToday.hint")} />}
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.finance.empty.noApprovedToday.title")}
+                        hint={t("dashboard.finance.empty.noApprovedToday.hint")}
+                      />
+                    }
                     columns={[
                       { key: "expense_type", label: t("dashboard.columns.type") },
-                      { key: "amount", label: t("dashboard.columns.amount"), render: (r) => fmtMoney(r.amount) },
+                      {
+                        key: "amount",
+                        label: t("dashboard.columns.amount"),
+                        render: (r) => fmtMoney(r.amount),
+                      },
                     ]}
                   />
                 </Section>
@@ -1275,10 +1268,54 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 <Section title={t("dashboard.maintenance.actionRequired")}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <ActionTile title={t("dashboard.maintenance.openWorkOrders.title")} value={fmtInt(mnt.openWos)} hint={mnt.openWos ? t("dashboard.maintenance.openWorkOrders.hintOn") : t("dashboard.maintenance.openWorkOrders.hintOff")} tone={mnt.toneOpen as any} href={maintenanceOpenHref} openLabel={t("common.open")} />
-                    <ActionTile title={t("dashboard.maintenance.qaNeeds.title")} value={fmtInt(mnt.qaNeeds)} hint={mnt.qaNeeds ? t("dashboard.maintenance.qaNeeds.hintOn") : t("dashboard.maintenance.qaNeeds.hintOff")} tone={mnt.toneQa as any} href={maintenanceQaNeedsHref} openLabel={t("common.open")} />
-                    <ActionTile title={t("dashboard.maintenance.qaFailed.title")} value={fmtInt(mnt.qaFailed)} hint={mnt.qaFailed ? t("dashboard.maintenance.qaFailed.hintOn") : t("dashboard.maintenance.qaFailed.hintOff")} tone={mnt.toneFail as any} href={maintenanceFailedHref} openLabel={t("common.open")} />
-                    <ActionTile title={t("dashboard.maintenance.partsMismatch.title")} value={fmtInt(mnt.mismatch)} hint={mnt.mismatch ? t("dashboard.maintenance.partsMismatch.hintOn") : t("dashboard.maintenance.partsMismatch.hintOff")} tone={mnt.toneMismatch as any} href={maintenanceMismatchHref} openLabel={t("common.open")} />
+                    <ActionTile
+                      title={t("dashboard.maintenance.openWorkOrders.title")}
+                      value={fmtInt(mnt.openWos)}
+                      hint={
+                        mnt.openWos
+                          ? t("dashboard.maintenance.openWorkOrders.hintOn")
+                          : t("dashboard.maintenance.openWorkOrders.hintOff")
+                      }
+                      tone={mnt.toneOpen as any}
+                      href={maintenanceOpenHref}
+                      openLabel={t("common.open")}
+                    />
+                    <ActionTile
+                      title={t("dashboard.maintenance.qaNeeds.title")}
+                      value={fmtInt(mnt.qaNeeds)}
+                      hint={
+                        mnt.qaNeeds
+                          ? t("dashboard.maintenance.qaNeeds.hintOn")
+                          : t("dashboard.maintenance.qaNeeds.hintOff")
+                      }
+                      tone={mnt.toneQa as any}
+                      href={maintenanceQaNeedsHref}
+                      openLabel={t("common.open")}
+                    />
+                    <ActionTile
+                      title={t("dashboard.maintenance.qaFailed.title")}
+                      value={fmtInt(mnt.qaFailed)}
+                      hint={
+                        mnt.qaFailed
+                          ? t("dashboard.maintenance.qaFailed.hintOn")
+                          : t("dashboard.maintenance.qaFailed.hintOff")
+                      }
+                      tone={mnt.toneFail as any}
+                      href={maintenanceFailedHref}
+                      openLabel={t("common.open")}
+                    />
+                    <ActionTile
+                      title={t("dashboard.maintenance.partsMismatch.title")}
+                      value={fmtInt(mnt.mismatch)}
+                      hint={
+                        mnt.mismatch
+                          ? t("dashboard.maintenance.partsMismatch.hintOn")
+                          : t("dashboard.maintenance.partsMismatch.hintOff")
+                      }
+                      tone={mnt.toneMismatch as any}
+                      href={maintenanceMismatchHref}
+                      openLabel={t("common.open")}
+                    />
                   </div>
 
                   {!isAdminAcc ? (
@@ -1288,10 +1325,26 @@ export default function DashboardPage() {
 
                 <Section title={t("dashboard.maintenance.kpisToday")}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <CompactKpi title={t("dashboard.maintenance.completedToday.title")} value={fmtInt(mnt.completedToday)} sub={t("dashboard.maintenance.completedToday.sub")} />
-                    <CompactKpi title={t("dashboard.maintenance.partsCostToday.title")} value={fmtMoney(cards?.maintenance?.maintenance_parts_cost_today ?? 0)} sub={t("dashboard.maintenance.partsCostToday.sub")} />
-                    <CompactKpi title={t("dashboard.maintenance.cashCostToday.title")} value={fmtMoney(cards?.maintenance?.maintenance_cash_cost_today ?? 0)} sub={t("dashboard.maintenance.cashCostToday.sub")} />
-                    <CompactKpi title={t("dashboard.maintenance.totalCostToday.title")} value={fmtMoney(cards?.maintenance?.maintenance_cost_today ?? 0)} sub={t("dashboard.maintenance.totalCostToday.sub")} />
+                    <CompactKpi
+                      title={t("dashboard.maintenance.completedToday.title")}
+                      value={fmtInt(mnt.completedToday)}
+                      sub={t("dashboard.maintenance.completedToday.sub")}
+                    />
+                    <CompactKpi
+                      title={t("dashboard.maintenance.partsCostToday.title")}
+                      value={fmtMoney(cards?.maintenance?.maintenance_parts_cost_today ?? 0)}
+                      sub={t("dashboard.maintenance.partsCostToday.sub")}
+                    />
+                    <CompactKpi
+                      title={t("dashboard.maintenance.cashCostToday.title")}
+                      value={fmtMoney(cards?.maintenance?.maintenance_cash_cost_today ?? 0)}
+                      sub={t("dashboard.maintenance.cashCostToday.sub")}
+                    />
+                    <CompactKpi
+                      title={t("dashboard.maintenance.totalCostToday.title")}
+                      value={fmtMoney(cards?.maintenance?.maintenance_cost_today ?? 0)}
+                      sub={t("dashboard.maintenance.totalCostToday.sub")}
+                    />
                   </div>
                 </Section>
 
@@ -1310,18 +1363,53 @@ export default function DashboardPage() {
                     title={t("dashboard.maintenance.recentWorkOrders.tableTitle")}
                     rows={tables?.maintenance_recent_work_orders || []}
                     searchable
-                    empty={<EmptyNice title={t("dashboard.maintenance.empty.noWorkOrders.title")} hint={t("dashboard.maintenance.empty.noWorkOrders.hint")} />}
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.maintenance.empty.noWorkOrders.title")}
+                        hint={t("dashboard.maintenance.empty.noWorkOrders.hint")}
+                      />
+                    }
                     onRowClick={(r) => {
                       if (isAdminAcc && r?.id) router.push(`/maintenance/work-orders/${r.id}`);
                       else router.push(`/maintenance/requests`);
                     }}
                     columns={[
-                      { key: "id", label: t("dashboard.columns.wo"), render: (r) => <span className="font-mono">{shortId(r.id)}</span> },
+                      {
+                        key: "id",
+                        label: t("dashboard.columns.wo"),
+                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
+                      },
                       { key: "status", label: t("dashboard.columns.status") },
                       { key: "type", label: t("dashboard.columns.type") },
-                      { key: "vehicle_id", label: t("dashboard.columns.vehicle"), render: (r) => <span className="font-mono">{shortId(r.vehicle_id)}</span> },
-                      { key: "opened_at", label: t("dashboard.columns.opened"), render: (r) => fmtDate(r.opened_at) },
-                      { key: "completed_at", label: t("dashboard.columns.completed"), render: (r) => fmtDate(r.completed_at) },
+                      {
+                        key: "vehicle_id",
+                        label: t("dashboard.columns.vehicle"),
+                        render: (r) =>
+                          r?.vehicle_id ? (
+                            <button
+                              type="button"
+                              className="text-orange-700 underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/vehicles/${r.vehicle_id}`);
+                              }}
+                            >
+                              {shortId(r.vehicle_id)}
+                            </button>
+                          ) : (
+                            "—"
+                          ),
+                      },
+                      {
+                        key: "opened_at",
+                        label: t("dashboard.columns.opened"),
+                        render: (r) => fmtDate(r.opened_at),
+                      },
+                      {
+                        key: "completed_at",
+                        label: t("dashboard.columns.completed"),
+                        render: (r) => fmtDate(r.completed_at),
+                      },
                     ]}
                   />
                 </Section>

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { FiltersBar } from "@/src/components/ui/FiltersBar";
-import { DataTable } from "@/src/components/ui/DataTable";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 
@@ -36,7 +36,9 @@ function fmtDate(d?: string | null) {
 }
 
 function licenseMeta(expiryDate: any) {
-  if (!expiryDate) return { text: "—", tone: "neutral" as const, days: null as number | null };
+  if (!expiryDate) {
+    return { text: "—", tone: "neutral" as const, days: null as number | null };
+  }
 
   const dt = new Date(String(expiryDate));
   if (Number.isNaN(dt.getTime())) {
@@ -64,7 +66,11 @@ function LicenseBadge({ expiryDate }: { expiryDate: any }) {
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : "border-gray-200 bg-gray-50 text-gray-700";
 
-  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{meta.text}</span>;
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      {meta.text}
+    </span>
+  );
 }
 
 function Card({
@@ -105,18 +111,32 @@ export default function DriversPage() {
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
+  const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
+  const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
+
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Driver | null>(null);
+
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phone2, setPhone2] = useState("");
+  const [nationalId, setNationalId] = useState("");
+  const [licenseNo, setLicenseNo] = useState("");
+  const [licenseIssueDate, setLicenseIssueDate] = useState("");
+  const [licenseExpiryDate, setLicenseExpiryDate] = useState("");
+  const [hireDate, setHireDate] = useState("");
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
+
   function showToast(message: string, type: "success" | "error" = "success") {
     setToastMsg(message);
     setToastType(type);
     setToastOpen(true);
     window.setTimeout(() => setToastOpen(false), 2600);
   }
-
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmBusy, setConfirmBusy] = useState(false);
-  const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
-  const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
-  const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
 
   function openConfirm(opts: {
     title?: React.ReactNode;
@@ -128,8 +148,6 @@ export default function DriversPage() {
     setConfirmAction(() => opts.action);
     setConfirmOpen(true);
   }
-
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
   async function fetchList() {
     setLoading(true);
@@ -149,8 +167,8 @@ export default function DriversPage() {
       } else {
         const list: Driver[] = data?.items || [];
         setItems(list);
-        const t = typeof data?.total === "number" ? data.total : list.length;
-        setTotal(t);
+        const nextTotal = typeof data?.total === "number" ? data.total : list.length;
+        setTotal(nextTotal);
       }
     } catch (e: any) {
       showToast(e?.response?.data?.message || e?.message || "فشل تحميل السائقين", "error");
@@ -170,20 +188,7 @@ export default function DriversPage() {
     setPage(1);
   }, [q, isActive]);
 
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Driver | null>(null);
-
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [phone2, setPhone2] = useState("");
-  const [nationalId, setNationalId] = useState("");
-  const [licenseNo, setLicenseNo] = useState("");
-  const [licenseIssueDate, setLicenseIssueDate] = useState("");
-  const [licenseExpiryDate, setLicenseExpiryDate] = useState("");
-  const [hireDate, setHireDate] = useState("");
-
-  function openCreate() {
-    setEditing(null);
+  function resetForm() {
     setFullName("");
     setPhone("");
     setPhone2("");
@@ -192,6 +197,11 @@ export default function DriversPage() {
     setLicenseIssueDate("");
     setLicenseExpiryDate("");
     setHireDate("");
+  }
+
+  function openCreate() {
+    setEditing(null);
+    resetForm();
     setOpen(true);
   }
 
@@ -227,8 +237,11 @@ export default function DriversPage() {
 
     setLoading(true);
     try {
-      if (editing) await api.patch(`/drivers/${editing.id}`, payload);
-      else await api.post(`/drivers`, payload);
+      if (editing) {
+        await api.patch(`/drivers/${editing.id}`, payload);
+      } else {
+        await api.post(`/drivers`, payload);
+      }
 
       setOpen(false);
       showToast(editing ? "تم التعديل بنجاح" : "تمت الإضافة بنجاح", "success");
@@ -267,6 +280,102 @@ export default function DriversPage() {
       },
     });
   }
+
+  const columns: DataTableColumn<Driver>[] = [
+    { key: "full_name", label: "الاسم" },
+    {
+      key: "phone",
+      label: "التواصل",
+      render: (d) => (
+        <div className="flex flex-col items-start gap-1">
+          <span>{d.phone || "—"}</span>
+          <span className="text-xs text-gray-500">{d.phone2 || "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "national_id",
+      label: "الرقم القومي",
+      render: (d) => d.national_id || "—",
+    },
+    {
+      key: "license_no",
+      label: "الرخصة",
+      render: (d) => (
+        <div className="flex flex-col items-start gap-1">
+          <span>{d.license_no || "—"}</span>
+          <LicenseBadge expiryDate={d.license_expiry_date} />
+        </div>
+      ),
+    },
+    {
+      key: "license_expiry_date",
+      label: "انتهاء الرخصة",
+      render: (d) => fmtDate(d.license_expiry_date),
+    },
+    {
+      key: "hire_date",
+      label: "تاريخ التعيين",
+      render: (d) => fmtDate(d.hire_date),
+    },
+    {
+      key: "is_active",
+      label: "الحالة",
+      render: (d) => (
+        <div className="flex flex-col items-start gap-1">
+          <span
+            className={
+              d.is_active
+                ? "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-green-50 text-green-700 border-green-200"
+                : "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-gray-50 text-gray-700 border-gray-200"
+            }
+          >
+            {d.status || (d.is_active ? "ACTIVE" : "INACTIVE")}
+          </span>
+          {d.disable_reason ? <span className="text-xs text-rose-600">{d.disable_reason}</span> : null}
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      label: "إجراءات",
+      className: "text-left",
+      headerClassName: "text-left",
+      render: (d) => (
+        <div className="flex gap-2 justify-end">
+          <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/drivers/${d.id}`);
+            }}
+          >
+            تفاصيل
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEdit(d);
+            }}
+          >
+            تعديل
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleActive(d);
+            }}
+          >
+            {d.is_active ? "تعطيل" : "تفعيل"}
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
@@ -319,7 +428,7 @@ export default function DriversPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button variant="secondary" onClick={() => fetchList()} isLoading={loading}>
+                  <Button variant="secondary" onClick={fetchList} isLoading={loading}>
                     تحديث
                   </Button>
 
@@ -335,101 +444,7 @@ export default function DriversPage() {
 
         <DataTable<Driver>
           title="قائمة السائقين"
-          columns={[
-            { key: "full_name", label: "الاسم" },
-            {
-              key: "phone",
-              label: "التواصل",
-              render: (d) => (
-                <div className="flex flex-col items-start gap-1">
-                  <span>{d.phone || "—"}</span>
-                  <span className="text-xs text-gray-500">{d.phone2 || "—"}</span>
-                </div>
-              ),
-            },
-            {
-              key: "national_id",
-              label: "الرقم القومي",
-              render: (d) => d.national_id || "—",
-            },
-            {
-              key: "license_no",
-              label: "الرخصة",
-              render: (d) => (
-                <div className="flex flex-col items-start gap-1">
-                  <span>{d.license_no || "—"}</span>
-                  <LicenseBadge expiryDate={d.license_expiry_date} />
-                </div>
-              ),
-            },
-            {
-              key: "license_expiry_date",
-              label: "انتهاء الرخصة",
-              render: (d) => fmtDate(d.license_expiry_date),
-            },
-            {
-              key: "hire_date",
-              label: "تاريخ التعيين",
-              render: (d) => fmtDate(d.hire_date),
-            },
-            {
-              key: "is_active",
-              label: "الحالة",
-              render: (d) => (
-                <div className="flex flex-col items-start gap-1">
-                  <span
-                    className={
-                      d.is_active
-                        ? "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-green-50 text-green-700 border-green-200"
-                        : "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-gray-50 text-gray-700 border-gray-200"
-                    }
-                  >
-                    {d.status || (d.is_active ? "ACTIVE" : "INACTIVE")}
-                  </span>
-                  {d.disable_reason ? <span className="text-xs text-rose-600">{d.disable_reason}</span> : null}
-                </div>
-              ),
-            },
-            {
-              key: "actions",
-              label: "إجراءات",
-              className: "text-left",
-              headerClassName: "text-left",
-              render: (d) => (
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="secondary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/drivers/${d.id}`);
-                    }}
-                  >
-                    تفاصيل
-                  </Button>
-
-                  <Button
-                    variant="secondary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEdit(d);
-                    }}
-                  >
-                    تعديل
-                  </Button>
-
-                  <Button
-                    variant="secondary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleActive(d);
-                    }}
-                  >
-                    {d.is_active ? "تعطيل" : "تفعيل"}
-                  </Button>
-                </div>
-              ),
-            },
-          ]}
+          columns={columns}
           rows={items}
           loading={loading}
           emptyTitle="لا يوجد بيانات"
@@ -591,7 +606,13 @@ export default function DriversPage() {
         }}
       />
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        dir="rtl"
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }
