@@ -96,7 +96,7 @@ function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] bg-black/20 flex items-center justify-center p-4"
       dir="rtl"
       onMouseDown={onClose}
       role="dialog"
@@ -151,7 +151,6 @@ function VehicleModal({
   const [year, setYear] = useState<string>("");
   const [odometer, setOdometer] = useState<string>("");
   const [gps, setGps] = useState("");
-
   const [licenseNo, setLicenseNo] = useState("");
   const [licenseIssueDate, setLicenseIssueDate] = useState("");
   const [licenseExpiryDate, setLicenseExpiryDate] = useState("");
@@ -167,14 +166,9 @@ function VehicleModal({
     setYear(initial?.year ? String(initial.year) : "");
     setOdometer(initial?.current_odometer ? String(initial.current_odometer) : "");
     setGps(String(initial?.gps_device_id || ""));
-
     setLicenseNo(String(initial?.license_no || ""));
-    setLicenseIssueDate(
-      initial?.license_issue_date ? String(initial.license_issue_date).slice(0, 10) : ""
-    );
-    setLicenseExpiryDate(
-      initial?.license_expiry_date ? String(initial.license_expiry_date).slice(0, 10) : ""
-    );
+    setLicenseIssueDate(initial?.license_issue_date ? String(initial.license_issue_date).slice(0, 10) : "");
+    setLicenseExpiryDate(initial?.license_expiry_date ? String(initial.license_expiry_date).slice(0, 10) : "");
   }, [open, initial]);
 
   const canSubmit = !!fleetNo.trim() && !!plateNo.trim();
@@ -193,7 +187,6 @@ function VehicleModal({
         year: year ? Number(year) : null,
         current_odometer: odometer ? Number(odometer) : null,
         gps_device_id: gps.trim() || null,
-
         license_no: licenseNo.trim() || null,
         license_issue_date: licenseIssueDate || null,
         license_expiry_date: licenseExpiryDate || null,
@@ -203,7 +196,7 @@ function VehicleModal({
         await api.post("/vehicles", payload);
         showToast("success", t("vehicles.toast.created"));
       } else {
-        await api.put(`/vehicles/${initial.id}`, payload);
+        await api.patch(`/vehicles/${initial.id}`, payload);
         showToast("success", t("vehicles.toast.updated"));
       }
 
@@ -238,22 +231,12 @@ function VehicleModal({
       <div className="grid gap-3 md:grid-cols-2">
         <label className="grid gap-2 text-sm">
           <span className="text-xs text-gray-500">{t("vehicles.fields.fleetNo")} *</span>
-          <input
-            value={fleetNo}
-            onChange={(e) => setFleetNo(e.target.value)}
-            disabled={loading}
-            className={inputCls}
-          />
+          <input value={fleetNo} onChange={(e) => setFleetNo(e.target.value)} disabled={loading} className={inputCls} />
         </label>
 
         <label className="grid gap-2 text-sm">
           <span className="text-xs text-gray-500">{t("vehicles.fields.plateNo")} *</span>
-          <input
-            value={plateNo}
-            onChange={(e) => setPlateNo(e.target.value)}
-            disabled={loading}
-            className={inputCls}
-          />
+          <input value={plateNo} onChange={(e) => setPlateNo(e.target.value)} disabled={loading} className={inputCls} />
         </label>
 
         <label className="grid gap-2 text-sm md:col-span-2">
@@ -396,9 +379,11 @@ export default function VehiclesClientPage() {
     const p = new URLSearchParams();
     p.set("page", String(page));
     p.set("pageSize", String(pageSize));
+    p.set("limit", String(pageSize));
     if (q) p.set("q", q);
     if (status) p.set("status", status);
-    if (active) p.set("active", active);
+    if (active === "1") p.set("is_active", "true");
+    else if (active === "0") p.set("is_active", "false");
     return p.toString();
   }, [page, pageSize, q, status, active]);
 
@@ -432,9 +417,9 @@ export default function VehiclesClientPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, qs]);
 
-  const items = data?.items || [];
-  const total = Number(data?.total || 0);
-  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const total = Number(data?.meta?.total || 0);
+  const totalPages = Math.max(Number(data?.meta?.pages || 1), 1);
 
   function openCreate() {
     setEditing(null);
@@ -496,7 +481,9 @@ export default function VehiclesClientPage() {
       label: t("vehicles.table.status"),
       render: (v) => (
         <div className="flex flex-col gap-1">
-          <span className="text-gray-700">{t(`vehicles.status.${String(v.status || "").toUpperCase()}`) || v.status || "—"}</span>
+          <span className="text-gray-700">
+            {t(`vehicles.status.${String(v.status || "").toUpperCase()}`) || v.status || "—"}
+          </span>
           {v?.disable_reason ? <span className="text-xs text-rose-600">{String(v.disable_reason)}</span> : null}
         </div>
       ),
