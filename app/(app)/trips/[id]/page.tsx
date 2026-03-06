@@ -18,6 +18,22 @@ function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
 
+function unwrap(res: any) {
+  return res?.data ?? res;
+}
+
+function vehicleLabel(v: any) {
+  const fleet = String(v?.fleet_no || "").trim();
+  const plate = String(v?.plate_no || v?.plate_number || "").trim();
+  const disp = String(v?.display_name || "").trim();
+
+  if (fleet && plate) return `${fleet} - ${plate}`;
+  if (fleet) return fleet;
+  if (plate) return plate;
+  if (disp) return disp;
+  return "—";
+}
+
 export default function TripDetailsPage() {
   const t = useT();
   const router = useRouter();
@@ -43,11 +59,20 @@ export default function TripDetailsPage() {
     (async () => {
       setLoading(true);
       setErr(null);
+
       try {
-        const data = await api.get(`/trips/${id}`);
-        if (!cancel) setTrip(data?.data ?? data);
+        const res = await api.get(`/trips/${id}`);
+        const body = unwrap(res);
+
+        if (!cancel) {
+          setTrip(body || null);
+        }
       } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.message || t("tripDetails.errors.loadFailed");
+        const msg =
+          e?.response?.data?.message ||
+          e?.message ||
+          t("tripDetails.errors.loadFailed");
+
         if (!cancel) setErr(msg);
       } finally {
         if (!cancel) setLoading(false);
@@ -59,7 +84,10 @@ export default function TripDetailsPage() {
     };
   }, [token, id, t]);
 
-  const lastAssign = useMemo(() => trip?.trip_assignments?.[0], [trip]);
+  const lastAssign = useMemo(() => {
+    const arr = trip?.trip_assignments;
+    return Array.isArray(arr) && arr.length ? arr[0] : null;
+  }, [trip]);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
@@ -90,7 +118,9 @@ export default function TripDetailsPage() {
         </div>
 
         {err ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {err}
+          </div>
         ) : null}
 
         {loading ? (
@@ -104,58 +134,120 @@ export default function TripDetailsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-sm font-semibold">{t("tripDetails.sections.trip")}</div>
+              <div className="text-sm font-semibold">
+                {t("tripDetails.sections.trip")}
+              </div>
+
               <div className="mt-2 text-sm text-slate-700 space-y-1">
                 <div>
-                  {t("tripDetails.fields.status")}: <span className="text-slate-900 font-semibold">{trip.status}</span>
+                  {t("tripDetails.fields.status")}:{" "}
+                  <span className="text-slate-900 font-semibold">
+                    {trip.status || "—"}
+                  </span>
                 </div>
+
                 <div>
                   {t("tripDetails.fields.financial")}:{" "}
-                  <span className="text-slate-900 font-semibold">{trip.financial_status}</span>
+                  <span className="text-slate-900 font-semibold">
+                    {trip.financial_status || "—"}
+                  </span>
                 </div>
+
+                <div>
+                  {t("tripDetails.fields.client")}:{" "}
+                  <span className="text-slate-900 font-semibold">
+                    {trip.clients?.name || "—"}
+                  </span>
+                </div>
+
+                <div>
+                  {t("tripDetails.fields.site")}:{" "}
+                  <span className="text-slate-900 font-semibold">
+                    {trip.sites?.name || "—"}
+                  </span>
+                </div>
+
                 <div>
                   {t("tripDetails.fields.scheduled")}:{" "}
-                  <span className="text-slate-900 font-semibold">{fmtDate(trip.scheduled_at)}</span>
+                  <span className="text-slate-900 font-semibold">
+                    {fmtDate(trip.scheduled_at)}
+                  </span>
                 </div>
+
                 <div>
                   {t("tripDetails.fields.created")}:{" "}
-                  <span className="text-slate-900 font-semibold">{fmtDate(trip.created_at)}</span>
+                  <span className="text-slate-900 font-semibold">
+                    {fmtDate(trip.created_at)}
+                  </span>
                 </div>
+
                 <div>
                   {t("tripDetails.fields.notes")}:{" "}
                   <span className="text-slate-900">{trip.notes || "—"}</span>
                 </div>
               </div>
 
-              {canSeeFinance ? <div className="mt-3 text-xs text-slate-500">{t("tripDetails.hints.financeTip")}</div> : null}
+              {canSeeFinance ? (
+                <div className="mt-3 text-xs text-slate-500">
+                  {t("tripDetails.hints.financeTip")}
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-sm font-semibold">{t("tripDetails.sections.assignmentLatest")}</div>
+              <div className="text-sm font-semibold">
+                {t("tripDetails.sections.assignmentLatest")}
+              </div>
 
               {lastAssign ? (
                 <div className="mt-2 text-sm text-slate-700 space-y-1">
                   <div>
                     {t("tripDetails.fields.vehicle")}:{" "}
                     <span className="text-slate-900 font-semibold">
-                      {lastAssign.vehicles?.plate_no || lastAssign.vehicles?.plate_number || "—"}
+                      {vehicleLabel(lastAssign.vehicles)}
                     </span>
                   </div>
+
                   <div>
                     {t("tripDetails.fields.driver")}:{" "}
-                    <span className="text-slate-900 font-semibold">{lastAssign.drivers?.full_name || "—"}</span>
+                    <span className="text-slate-900 font-semibold">
+                      {lastAssign.drivers?.full_name || "—"}
+                    </span>
                   </div>
+
                   <div>
                     {t("tripDetails.fields.supervisor")}:{" "}
-                    <span className="text-slate-900 font-semibold">{lastAssign.users?.full_name || "—"}</span>
+                    <span className="text-slate-900 font-semibold">
+                      {lastAssign.users_trip_assignments_supervisor?.full_name || "—"}
+                    </span>
                   </div>
+
                   <div>
                     {t("tripDetails.fields.assigned")}:{" "}
-                    <span className="text-slate-900 font-semibold">{fmtDate(lastAssign.assigned_at)}</span>
+                    <span className="text-slate-900 font-semibold">
+                      {fmtDate(lastAssign.assigned_at)}
+                    </span>
                   </div>
+
                   <div>
                     {t("tripDetails.fields.active")}:{" "}
-                    <span className="text-slate-900 font-semibold">{String(lastAssign.is_active)}</span>
+                    <span className="text-slate-900 font-semibold">
+                      {String(lastAssign.is_active)}
+                    </span>
+                  </div>
+
+                  <div>
+                    {t("tripDetails.fields.driverPhone")}:{" "}
+                    <span className="text-slate-900 font-semibold">
+                      {lastAssign.drivers?.phone || "—"}
+                    </span>
+                  </div>
+
+                  <div>
+                    {t("tripDetails.fields.vehicleStatus")}:{" "}
+                    <span className="text-slate-900 font-semibold">
+                      {lastAssign.vehicles?.status || "—"}
+                    </span>
                   </div>
                 </div>
               ) : (
