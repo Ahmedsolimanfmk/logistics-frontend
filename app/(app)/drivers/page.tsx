@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "@/src/lib/api";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
@@ -89,6 +90,8 @@ function Card({
 }
 
 export default function DriversPage() {
+  const router = useRouter();
+
   const [q, setQ] = useState("");
   const [isActive, setIsActive] = useState<string>("");
   const [page, setPage] = useState(1);
@@ -394,10 +397,33 @@ export default function DriversPage() {
               headerClassName: "text-left",
               render: (d) => (
                 <div className="flex gap-2 justify-end">
-                  <Button variant="secondary" onClick={() => openEdit(d)}>
+                  <Button
+                    variant="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/drivers/${d.id}`);
+                    }}
+                  >
+                    تفاصيل
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEdit(d);
+                    }}
+                  >
                     تعديل
                   </Button>
-                  <Button variant="secondary" onClick={() => toggleActive(d)}>
+
+                  <Button
+                    variant="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleActive(d);
+                    }}
+                  >
                     {d.is_active ? "تعطيل" : "تفعيل"}
                   </Button>
                 </div>
@@ -413,17 +439,20 @@ export default function DriversPage() {
           pages={totalPages}
           onPrev={page <= 1 ? undefined : () => setPage((p) => Math.max(1, p - 1))}
           onNext={page >= totalPages ? undefined : () => setPage((p) => Math.min(totalPages, p + 1))}
+          onRowClick={(row) => {
+            if (row?.id) router.push(`/drivers/${row.id}`);
+          }}
           footer={
             <div className="text-sm text-gray-600">
               الإجمالي: <span className="font-semibold text-gray-900">{total}</span>
             </div>
           }
-          minWidthClassName="min-w-[1300px]"
+          minWidthClassName="min-w-[1400px]"
         />
 
         {open ? (
           <div
-            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/20 flex items-center justify-center p-4"
             onClick={() => setOpen(false)}
           >
             <div
