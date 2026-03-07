@@ -69,16 +69,25 @@ function daysLeft(d: any) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-function vehicleLabel(v: any) {
-  if (!v) return "—";
-  const fleet = String(v?.fleet_no || "").trim();
-  const plate = String(v?.plate_no || "").trim();
-  const dn = String(v?.display_name || "").trim();
+function severityTone(sev?: string): "good" | "warn" | "danger" | "neutral" {
+  if (sev === "danger") return "danger";
+  if (sev === "warn") return "warn";
+  return "neutral";
+}
 
-  if (fleet && plate) return `${fleet} - ${plate}${dn ? ` (${dn})` : ""}`;
-  if (fleet) return `${fleet}${dn ? ` (${dn})` : ""}`;
-  if (plate) return `${plate}${dn ? ` (${dn})` : ""}`;
-  return dn || shortId(v?.id);
+function areaLabel(area: string, t: any) {
+  switch (String(area || "").toLowerCase()) {
+    case "operations":
+      return t("tabs.operations");
+    case "finance":
+      return t("tabs.finance");
+    case "maintenance":
+      return t("tabs.maintenance");
+    case "compliance":
+      return t("dashboard.compliance.title") || "Compliance";
+    default:
+      return area || "—";
+  }
 }
 
 // =====================
@@ -488,6 +497,11 @@ export default function DashboardPage() {
   const [loadingCompliance, setLoadingCompliance] = useState(false);
   const [complianceErr, setComplianceErr] = useState<string | null>(null);
 
+  const [alertsList, setAlertsList] = useState<any[]>([]);
+  const [alertsSummary, setAlertsSummary] = useState<any>(null);
+  const [loadingAlerts, setLoadingAlerts] = useState(false);
+  const [alertsErr, setAlertsErr] = useState<string | null>(null);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(TAB_STORAGE_KEY) as TabKey | null;
@@ -560,8 +574,41 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchCentralAlertsIfNeeded = async (activeTab: TabKey) => {
+    if (activeTab !== "operations") {
+      setAlertsList([]);
+      setAlertsSummary(null);
+      setAlertsErr(null);
+      setLoadingAlerts(false);
+      return;
+    }
+
+    setLoadingAlerts(true);
+    setAlertsErr(null);
+    try {
+      const [listData, summaryData] = await Promise.all([
+        apiAuthGet(`/dashboard/alerts`, { limit: 10 }),
+        apiAuthGet(`/dashboard/alerts/summary`),
+      ]);
+
+      setAlertsList(listData?.items || listData?.data?.items || []);
+      setAlertsSummary(listData?.summary || summaryData?.data || summaryData || null);
+    } catch (e: any) {
+      setAlertsList([]);
+      setAlertsSummary(null);
+      setAlertsErr(e?.response?.data?.message || e?.message || t("common.failed"));
+    } finally {
+      setLoadingAlerts(false);
+    }
+  };
+
   const reloadAll = async () => {
-    await Promise.all([fetchSummary(tab), fetchBundleIfNeeded(tab), fetchComplianceIfNeeded(tab)]);
+    await Promise.all([
+      fetchSummary(tab),
+      fetchBundleIfNeeded(tab),
+      fetchComplianceIfNeeded(tab),
+      fetchCentralAlertsIfNeeded(tab),
+    ]);
   };
 
   useEffect(() => {
@@ -574,6 +621,8 @@ export default function DashboardPage() {
       await fetchBundleIfNeeded(tab);
       if (cancel) return;
       await fetchComplianceIfNeeded(tab);
+      if (cancel) return;
+      await fetchCentralAlertsIfNeeded(tab);
     })();
 
     return () => {
@@ -587,12 +636,22 @@ export default function DashboardPage() {
   const alerts = summary?.alerts || {};
 
   const tabItems = useMemo(() => {
-    const opsCount = Number(alerts?.active_trips_now_count ?? tables?.active_trips_now?.length ?? 0);
+    const opsCount =
+      Number(alerts?.active_trips_now_count ?? tables?.active_trips_now?.length ?? 0) +
+      Number(alertsSummary?.by_area?.operations ?? 0) +
+      Number(alertsSummary?.by_area?.compliance ?? 0);
+
     const finCount =
-      Number(alerts?.advances_open ?? 0) + Number(alerts?.expenses_pending_too_long ?? 0);
+      Number(alerts?.advances_open ?? 0) +
+      Number(alerts?.expenses_pending_too_long ?? 0) +
+      Number(alerts?.ar_overdue_count ?? 0) +
+      Number(alertsSummary?.by_area?.finance ?? 0);
 
     const m = cards?.maintenance || {};
-    const mntCount = Number(m?.open_work_orders ?? 0) + Number(m?.qa_needs ?? 0);
+    const mntCount =
+      Number(m?.open_work_orders ?? 0) +
+      Number(m?.qa_needs ?? 0) +
+      Number(alertsSummary?.by_area?.maintenance ?? 0);
 
     const items: { key: TabKey; label: string; count?: number }[] = [];
 
@@ -610,7 +669,7 @@ export default function DashboardPage() {
     }
 
     return items;
-  }, [allowedTabs, alerts, tables, cards, user?.role, t]);
+  }, [allowedTabs, alerts, tables, cards, user?.role, t, alertsSummary]);
 
   const chartData = useMemo(() => {
     if (!bundle) return null;
@@ -642,10 +701,43 @@ export default function DashboardPage() {
   const fin = useMemo(() => {
     const pendingTooLong = Number(alerts?.expenses_pending_too_long ?? 0);
     const advancesOpen = Number(alerts?.advances_open ?? 0);
+
+    const arDueSoonCount = Number(alerts?.ar_due_soon_count ?? cards?.ar_due_soon?.count ?? 0);
+    const arOverdueCount = Number(alerts?.ar_overdue_count ?? cards?.ar_overdue?.count ?? 0);
+    const arDueSoonTotal = Number(alerts?.ar_due_soon_total ?? cards?.ar_due_soon?.total ?? 0);
+    const arOverdueTotal = Number(alerts?.ar_overdue_total ?? cards?.ar_overdue?.total ?? 0);
+
+    const apEnabled = Boolean(alerts?.ap_enabled ?? cards?.ap_due_soon?.enabled ?? false);
+    const apDueSoonCount = Number(alerts?.ap_due_soon_count ?? cards?.ap_due_soon?.count ?? 0);
+    const apOverdueCount = Number(alerts?.ap_overdue_count ?? cards?.ap_overdue?.count ?? 0);
+    const apDueSoonTotal = Number(alerts?.ap_due_soon_total ?? cards?.ap_due_soon?.total ?? 0);
+    const apOverdueTotal = Number(alerts?.ap_overdue_total ?? cards?.ap_overdue?.total ?? 0);
+
     const tonePending = pendingTooLong > 0 ? "warn" : "good";
     const toneAdv = advancesOpen > 0 ? "neutral" : "good";
-    return { pendingTooLong, advancesOpen, tonePending, toneAdv } as const;
-  }, [alerts]);
+    const toneArDueSoon = arDueSoonCount > 0 ? "warn" : "good";
+    const toneArOverdue = arOverdueCount > 0 ? "danger" : "good";
+    const toneAp = "neutral";
+
+    return {
+      pendingTooLong,
+      advancesOpen,
+      tonePending,
+      toneAdv,
+      arDueSoonCount,
+      arOverdueCount,
+      arDueSoonTotal,
+      arOverdueTotal,
+      toneArDueSoon,
+      toneArOverdue,
+      apEnabled,
+      apDueSoonCount,
+      apOverdueCount,
+      apDueSoonTotal,
+      apOverdueTotal,
+      toneAp,
+    } as const;
+  }, [alerts, cards]);
 
   const mnt = useMemo(() => {
     const m = cards?.maintenance || {};
@@ -697,6 +789,16 @@ export default function DashboardPage() {
       days: Number(c?.range?.days ?? 30),
     };
   }, [compliance]);
+
+  const alertsKpi = useMemo(() => {
+    const s = alertsSummary || {};
+    return {
+      total: Number(s?.total ?? 0),
+      danger: Number(s?.by_severity?.danger ?? 0),
+      warn: Number(s?.by_severity?.warn ?? 0),
+      info: Number(s?.by_severity?.info ?? 0),
+    };
+  }, [alertsSummary]);
 
   return (
     <div className="min-h-screen text-gray-900" dir="rtl">
@@ -791,6 +893,121 @@ export default function DashboardPage() {
                       openLabel={t("common.open")}
                     />
                   </div>
+                </Section>
+
+                <Section
+                  title={"التنبيهات المركزية"}
+                  right={
+                    <button
+                      type="button"
+                      onClick={() => fetchCentralAlertsIfNeeded("operations")}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
+                      disabled={loadingAlerts}
+                    >
+                      {loadingAlerts ? t("common.loading") : t("common.refresh")}
+                    </button>
+                  }
+                >
+                  {alertsErr ? (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      {alertsErr}
+                    </div>
+                  ) : null}
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <ActionTile
+                      title={"إجمالي التنبيهات"}
+                      value={fmtInt(alertsKpi.total)}
+                      hint={"كل التنبيهات الحالية"}
+                      tone={alertsKpi.total > 0 ? "neutral" : "good"}
+                    />
+                    <ActionTile
+                      title={"تنبيهات حرجة"}
+                      value={fmtInt(alertsKpi.danger)}
+                      hint={"عناصر تحتاج تدخل سريع"}
+                      tone={alertsKpi.danger > 0 ? "danger" : "good"}
+                    />
+                    <ActionTile
+                      title={"تنبيهات تحذيرية"}
+                      value={fmtInt(alertsKpi.warn)}
+                      hint={"عناصر قريبة أو تحتاج متابعة"}
+                      tone={alertsKpi.warn > 0 ? "warn" : "good"}
+                    />
+                    <ActionTile
+                      title={"تنبيهات معلوماتية"}
+                      value={fmtInt(alertsKpi.info)}
+                      hint={"معلومات فقط"}
+                      tone="neutral"
+                    />
+                  </div>
+
+                  <DataTable
+                    title={"آخر التنبيهات"}
+                    rows={alertsList || []}
+                    searchable
+                    empty={
+                      <EmptyNice
+                        title={"لا توجد تنبيهات حالية"}
+                        hint={"النظام لا يحتوي على تنبيهات مفتوحة الآن"}
+                      />
+                    }
+                    onRowClick={(r) => {
+                      if (r?.href) router.push(r.href);
+                    }}
+                    columns={[
+                      {
+                        key: "severity",
+                        label: "الأولوية",
+                        render: (r) => {
+                          const sev = String(r?.severity || "");
+                          const cls =
+                            sev === "danger"
+                              ? "border-rose-200 bg-rose-50 text-rose-700"
+                              : sev === "warn"
+                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              : "border-gray-200 bg-gray-50 text-gray-700";
+
+                          const text =
+                            sev === "danger" ? "حرج" : sev === "warn" ? "تحذير" : "معلومة";
+
+                          return (
+                            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-xs", cls)}>
+                              {text}
+                            </span>
+                          );
+                        },
+                      },
+                      {
+                        key: "area",
+                        label: "القسم",
+                        render: (r) => areaLabel(r?.area, t),
+                      },
+                      {
+                        key: "title",
+                        label: "العنوان",
+                        render: (r) => (
+                          <div className="flex flex-col items-end">
+                            <span className="font-medium">{r?.title || "—"}</span>
+                            <span className="text-xs text-gray-600">{r?.message || "—"}</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: "entity_id",
+                        label: "المرجع",
+                        render: (r) => (
+                          <span className="font-mono">
+                            {r?.entity_id ? shortId(r.entity_id) : "—"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "created_at",
+                        label: "التاريخ",
+                        render: (r) => fmtDate(r?.created_at),
+                      },
+                    ]}
+                  />
                 </Section>
 
                 {canSeeCompliance ? (
@@ -1238,6 +1455,202 @@ export default function DashboardPage() {
                       openLabel={t("common.open")}
                     />
                   </div>
+                </Section>
+
+                <Section title={"تنبيهات مستحقات العملاء والموردين"}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <ActionTile
+                      title={"فواتير عملاء مستحقة قريبًا"}
+                      value={fmtInt(fin.arDueSoonCount)}
+                      hint={
+                        fin.arDueSoonCount > 0
+                          ? `الإجمالي ${fmtMoney(fin.arDueSoonTotal)}`
+                          : "لا توجد فواتير ضمن 7 أيام"
+                      }
+                      tone={fin.toneArDueSoon as any}
+                      href="/finance/ar/invoices"
+                      openLabel={t("common.open")}
+                    />
+
+                    <ActionTile
+                      title={"فواتير عملاء متأخرة"}
+                      value={fmtInt(fin.arOverdueCount)}
+                      hint={
+                        fin.arOverdueCount > 0
+                          ? `الإجمالي ${fmtMoney(fin.arOverdueTotal)}`
+                          : "لا توجد فواتير متأخرة"
+                      }
+                      tone={fin.toneArOverdue as any}
+                      href="/finance/ar/invoices"
+                      openLabel={t("common.open")}
+                    />
+
+                    <ActionTile
+                      title={"مستحقات موردين قريبًا"}
+                      value={fmtInt(fin.apDueSoonCount)}
+                      hint={
+                        fin.apEnabled
+                          ? `الإجمالي ${fmtMoney(fin.apDueSoonTotal)}`
+                          : "قريبًا بعد تفعيل AP"
+                      }
+                      tone={fin.toneAp as any}
+                    />
+
+                    <ActionTile
+                      title={"مستحقات موردين متأخرة"}
+                      value={fmtInt(fin.apOverdueCount)}
+                      hint={
+                        fin.apEnabled
+                          ? `الإجمالي ${fmtMoney(fin.apOverdueTotal)}`
+                          : "قريبًا بعد تفعيل AP"
+                      }
+                      tone={fin.toneAp as any}
+                    />
+                  </div>
+                </Section>
+
+                <Section title={"أهم فواتير العملاء المتأخرة"}>
+                  <DataTable
+                    title={"Top overdue client invoices"}
+                    rows={tables?.top_ar_overdue_invoices || []}
+                    searchable
+                    empty={
+                      <EmptyNice
+                        title={"لا توجد فواتير عملاء متأخرة"}
+                        hint={"كل الفواتير الحالية ضمن المدة أو مسددة بالكامل"}
+                      />
+                    }
+                    onRowClick={() => {
+                      router.push(`/finance/ar/invoices`);
+                    }}
+                    right={
+                      <Link href="/finance/ar/invoices" className="text-xs text-orange-700 underline">
+                        {t("common.open")} ←
+                      </Link>
+                    }
+                    columns={[
+                      {
+                        key: "invoice_no",
+                        label: "رقم الفاتورة",
+                        render: (r) => (
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              className="text-xs text-orange-700 underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                safeCopy(String(r?.invoice_no || ""));
+                              }}
+                              type="button"
+                            >
+                              {t("common.copy")}
+                            </button>
+                            <span className="font-medium">{r?.invoice_no || shortId(r?.id)}</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: "client_name",
+                        label: "العميل",
+                        render: (r) => r?.client_name || "—",
+                      },
+                      {
+                        key: "due_date",
+                        label: "تاريخ الاستحقاق",
+                        render: (r) => fmtDate(r?.due_date),
+                      },
+                      {
+                        key: "days_overdue",
+                        label: "أيام التأخير",
+                        render: (r) => (
+                          <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">
+                            {fmtInt(r?.days_overdue ?? 0)}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "outstanding_amount",
+                        label: "الرصيد المستحق",
+                        render: (r) => fmtMoney(r?.outstanding_amount ?? 0),
+                      },
+                      {
+                        key: "status",
+                        label: "الحالة",
+                        render: (r) => r?.status || "—",
+                      },
+                    ]}
+                  />
+                </Section>
+
+                <Section title={"أهم فواتير العملاء المستحقة قريبًا"}>
+                  <DataTable
+                    title={"Top due soon client invoices"}
+                    rows={tables?.top_ar_due_soon_invoices || []}
+                    searchable
+                    empty={
+                      <EmptyNice
+                        title={"لا توجد فواتير مستحقة قريبًا"}
+                        hint={"لا توجد فواتير خلال نافذة 7 أيام القادمة"}
+                      />
+                    }
+                    onRowClick={() => {
+                      router.push(`/finance/ar/invoices`);
+                    }}
+                    right={
+                      <Link href="/finance/ar/invoices" className="text-xs text-orange-700 underline">
+                        {t("common.open")} ←
+                      </Link>
+                    }
+                    columns={[
+                      {
+                        key: "invoice_no",
+                        label: "رقم الفاتورة",
+                        render: (r) => (
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              className="text-xs text-orange-700 underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                safeCopy(String(r?.invoice_no || ""));
+                              }}
+                              type="button"
+                            >
+                              {t("common.copy")}
+                            </button>
+                            <span className="font-medium">{r?.invoice_no || shortId(r?.id)}</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: "client_name",
+                        label: "العميل",
+                        render: (r) => r?.client_name || "—",
+                      },
+                      {
+                        key: "due_date",
+                        label: "تاريخ الاستحقاق",
+                        render: (r) => fmtDate(r?.due_date),
+                      },
+                      {
+                        key: "days_to_due",
+                        label: "الأيام المتبقية",
+                        render: (r) => (
+                          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+                            {fmtInt(r?.days_to_due ?? 0)}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "outstanding_amount",
+                        label: "الرصيد المستحق",
+                        render: (r) => fmtMoney(r?.outstanding_amount ?? 0),
+                      },
+                      {
+                        key: "status",
+                        label: "الحالة",
+                        render: (r) => r?.status || "—",
+                      },
+                    ]}
+                  />
                 </Section>
 
                 <Section title={t("dashboard.finance.topExpenseTypesToday.sectionTitle")}>
