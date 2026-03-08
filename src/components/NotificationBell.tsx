@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiAuthGet } from "@/src/lib/api";
+import { api, apiAuthGet } from "@/src/lib/api";
 import { useT } from "@/src/i18n/useT";
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -36,6 +36,7 @@ function shortId(id: unknown) {
 
 type AlertRow = {
   id: string;
+  alert_key?: string;
   type: string;
   severity: "danger" | "warn" | "info";
   area: string;
@@ -44,10 +45,14 @@ type AlertRow = {
   entity_id?: string | null;
   href?: string | null;
   created_at: string;
+  is_read?: boolean;
+  read_at?: string | null;
 };
 
 type AlertsSummaryResponse = {
   total: number;
+  unread: number;
+  read: number;
   by_severity: {
     danger: number;
     warn: number;
@@ -84,6 +89,7 @@ export default function NotificationBell() {
   const [rows, setRows] = useState<AlertRow[]>([]);
   const [summary, setSummary] = useState<AlertsSummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -144,7 +150,7 @@ export default function NotificationBell() {
   }, []);
 
   const badgeCount = useMemo(() => {
-    return Number(summary?.total ?? 0);
+    return Number(summary?.unread ?? 0);
   }, [summary]);
 
   const badgeClass = useMemo(() => {
@@ -155,6 +161,74 @@ export default function NotificationBell() {
     if (warn > 0) return "bg-amber-500";
     return "bg-slate-500";
   }, [summary]);
+
+  async function handleMarkRead(row: AlertRow) {
+    const alertKey = String(row?.alert_key || row?.id || "").trim();
+    if (!alertKey || row?.is_read) return;
+
+    try {
+      await api.patch("/dashboard/alerts/read", {
+        alert_key: alertKey,
+      });
+
+      setRows((prev) =>
+        prev.map((item) =>
+          String(item.alert_key || item.id) === alertKey
+            ? {
+                ...item,
+                is_read: true,
+                read_at: new Date().toISOString(),
+              }
+            : item
+        )
+      );
+
+      setSummary((prev) => {
+        if (!prev) return prev;
+        const nextUnread = Math.max(0, Number(prev.unread || 0) - 1);
+        const nextRead = Number(prev.read || 0) + 1;
+        return {
+          ...prev,
+          unread: nextUnread,
+          read: nextRead,
+        };
+      });
+    } catch {
+      // no-op
+    }
+  }
+
+  async function handleOpenAlert(row: AlertRow) {
+    await handleMarkRead(row);
+    setOpen(false);
+
+    if (row?.href) {
+      router.push(row.href);
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (row?.severity) params.set("severity", row.severity);
+    if (row?.area) params.set("area", String(row.area).toLowerCase());
+    if (!row?.is_read) params.set("read_status", "unread");
+
+    const query = params.toString();
+    router.push(query ? `/alerts?${query}` : "/alerts");
+  }
+
+  async function handleMarkAllRead() {
+    try {
+      setMarkingAll(true);
+
+      await api.patch("/dashboard/alerts/read-all", {});
+
+      await load();
+    } catch {
+      // no-op
+    } finally {
+      setMarkingAll(false);
+    }
+  }
 
   return (
     <div className="relative" ref={rootRef}>
@@ -198,8 +272,18 @@ export default function NotificationBell() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={handleMarkAllRead}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                disabled={loading || markingAll || badgeCount === 0}
+              >
+                {markingAll ? t("common.loading") : t("alertsPage.markAllRead")}
+              </button>
+
+              <button
+                type="button"
                 onClick={load}
                 className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50"
+                disabled={loading}
               >
                 {loading ? t("common.loading") : t("common.refresh")}
               </button>
@@ -241,22 +325,11 @@ export default function NotificationBell() {
                     <button
                       key={r.id}
                       type="button"
-                      onClick={() => {
-                        setOpen(false);
-
-                        if (r?.href) {
-                          router.push(r.href);
-                          return;
-                        }
-
-                        const params = new URLSearchParams();
-                        if (r?.severity) params.set("severity", r.severity);
-                        if (r?.area) params.set("area", String(r.area).toLowerCase());
-
-                        const query = params.toString();
-                        router.push(query ? `/alerts?${query}` : "/alerts");
-                      }}
-                      className="block w-full px-4 py-3 text-right transition hover:bg-gray-50"
+                      onClick={() => handleOpenAlert(r)}
+                      className={cn(
+                        "block w-full px-4 py-3 text-right transition hover:bg-gray-50",
+                        !r?.is_read && "bg-blue-50/40"
+                      )}
                     >
                       <div className="min-w-0">
                         <div className="mb-1 flex items-center justify-end gap-2">
@@ -268,12 +341,35 @@ export default function NotificationBell() {
                           >
                             {sevText}
                           </span>
+
                           <span className="text-[11px] text-gray-500">
                             {areaLabel(r.area, t)}
                           </span>
+
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]",
+                              r?.is_read
+                                ? "border-gray-200 bg-gray-50 text-gray-600"
+                                : "border-blue-200 bg-blue-50 text-blue-700 font-medium"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "inline-block h-2 w-2 rounded-full",
+                                r?.is_read ? "bg-gray-400" : "bg-blue-600"
+                              )}
+                            />
+                            {r?.is_read ? t("alertsPage.read") : t("alertsPage.unread")}
+                          </span>
                         </div>
 
-                        <div className="truncate text-sm font-medium text-gray-900">
+                        <div
+                          className={cn(
+                            "truncate text-sm text-gray-900",
+                            r?.is_read ? "font-medium" : "font-semibold"
+                          )}
+                        >
                           {r.title || "—"}
                         </div>
 

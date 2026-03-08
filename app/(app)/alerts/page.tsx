@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
-import { apiAuthGet } from "@/src/lib/api";
+import { api, apiAuthGet } from "@/src/lib/api";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -39,9 +39,11 @@ type AlertArea = "operations" | "finance" | "maintenance" | "compliance";
 type SeverityFilter = "all" | AlertSeverity;
 type AreaFilter = "all" | AlertArea;
 type TypeFilter = "all" | string;
+type ReadStatusFilter = "all" | "read" | "unread";
 
 type AlertRow = {
   id: string;
+  alert_key?: string;
   type: string;
   severity: AlertSeverity;
   area: AlertArea | string;
@@ -52,6 +54,8 @@ type AlertRow = {
   href?: string | null;
   created_at: string;
   meta?: Record<string, any>;
+  is_read?: boolean;
+  read_at?: string | null;
 };
 
 type AlertsResponse = {
@@ -70,6 +74,10 @@ function isValidArea(v: string | null): v is AlertArea {
     v === "maintenance" ||
     v === "compliance"
   );
+}
+
+function isValidReadStatus(v: string | null): v is ReadStatusFilter {
+  return v === "all" || v === "read" || v === "unread";
 }
 
 function areaLabel(area: string, t: any) {
@@ -245,6 +253,7 @@ function DataTable({
                   key={idx}
                   className={cn(
                     "border-t border-gray-200 hover:bg-gray-50",
+                    !r?.is_read && "bg-blue-50/40",
                     clickable && "cursor-pointer"
                   )}
                   onClick={() => {
@@ -280,20 +289,26 @@ function AlertsPageContent() {
 
   const [rows, setRows] = useState<AlertRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [areaFilter, setAreaFilter] = useState<AreaFilter>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [readStatusFilter, setReadStatusFilter] = useState<ReadStatusFilter>("all");
 
   useEffect(() => {
     const severityFromUrl = searchParams.get("severity");
     const areaFromUrl = searchParams.get("area");
     const typeFromUrl = searchParams.get("type");
+    const readStatusFromUrl = searchParams.get("read_status");
 
     setSeverityFilter(isValidSeverity(severityFromUrl) ? severityFromUrl : "all");
     setAreaFilter(isValidArea(areaFromUrl) ? areaFromUrl : "all");
     setTypeFilter(typeFromUrl && typeFromUrl.trim() ? typeFromUrl : "all");
+    setReadStatusFilter(
+      isValidReadStatus(readStatusFromUrl) ? readStatusFromUrl : "all"
+    );
   }, [searchParams]);
 
   async function load() {
@@ -301,10 +316,14 @@ function AlertsPageContent() {
       setLoading(true);
       setErr(null);
 
-      const alertsRes = (await apiAuthGet("/dashboard/alerts", {
+      const params: Record<string, any> = {
         limit: 200,
-      })) as AlertsResponse;
+      };
 
+      if (areaFilter !== "all") params.area = areaFilter;
+      if (readStatusFilter !== "all") params.read_status = readStatusFilter;
+
+      const alertsRes = (await apiAuthGet("/dashboard/alerts", params)) as AlertsResponse;
       setRows(Array.isArray(alertsRes?.items) ? alertsRes.items : []);
     } catch (e: any) {
       setRows([]);
@@ -317,12 +336,13 @@ function AlertsPageContent() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [areaFilter, readStatusFilter]);
 
   function updateUrl(
     nextSeverity: SeverityFilter,
     nextArea: AreaFilter,
-    nextType: TypeFilter
+    nextType: TypeFilter,
+    nextReadStatus: ReadStatusFilter
   ) {
     const params = new URLSearchParams(searchParams.toString());
 
@@ -334,6 +354,9 @@ function AlertsPageContent() {
 
     if (nextType === "all") params.delete("type");
     else params.set("type", nextType);
+
+    if (nextReadStatus === "all") params.delete("read_status");
+    else params.set("read_status", nextReadStatus);
 
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname);
@@ -357,14 +380,22 @@ function AlertsPageContent() {
       const areaOk =
         areaFilter === "all" ? true : String(r.area).toLowerCase() === areaFilter;
       const typeOk = typeFilter === "all" ? true : String(r.type) === typeFilter;
+      const readOk =
+        readStatusFilter === "all"
+          ? true
+          : readStatusFilter === "read"
+          ? Boolean(r.is_read)
+          : !Boolean(r.is_read);
 
-      return severityOk && areaOk && typeOk;
+      return severityOk && areaOk && typeOk && readOk;
     });
-  }, [rows, severityFilter, areaFilter, typeFilter]);
+  }, [rows, severityFilter, areaFilter, typeFilter, readStatusFilter]);
 
   const filteredSummary = useMemo(() => {
     return {
       total: filteredRows.length,
+      unread: filteredRows.filter((r) => !r.is_read).length,
+      read: filteredRows.filter((r) => !!r.is_read).length,
       danger: filteredRows.filter((r) => r.severity === "danger").length,
       warn: filteredRows.filter((r) => r.severity === "warn").length,
       info: filteredRows.filter((r) => r.severity === "info").length,
@@ -372,7 +403,57 @@ function AlertsPageContent() {
   }, [filteredRows]);
 
   const isFiltered =
-    severityFilter !== "all" || areaFilter !== "all" || typeFilter !== "all";
+    severityFilter !== "all" ||
+    areaFilter !== "all" ||
+    typeFilter !== "all" ||
+    readStatusFilter !== "all";
+
+  async function handleMarkRead(row: AlertRow) {
+    const alertKey = String(row?.alert_key || row?.id || "").trim();
+    if (!alertKey || row?.is_read) return;
+
+    try {
+      await api.patch("/dashboard/alerts/read", {
+        alert_key: alertKey,
+      });
+
+      setRows((prev) =>
+        prev.map((item) =>
+          String(item.alert_key || item.id) === alertKey
+            ? {
+                ...item,
+                is_read: true,
+                read_at: new Date().toISOString(),
+              }
+            : item
+        )
+      );
+    } catch (e) {
+      // no-op
+    }
+  }
+
+  async function handleOpen(row: AlertRow) {
+    await handleMarkRead(row);
+    if (row?.href) router.push(row.href);
+  }
+
+  async function handleMarkAllRead() {
+    try {
+      setMarkingAll(true);
+      setErr(null);
+
+      await api.patch("/dashboard/alerts/read-all", {
+        area: areaFilter === "all" ? null : areaFilter,
+      });
+
+      await load();
+    } catch (e: any) {
+      setErr(e?.response?.data?.message || e?.message || t("common.failed"));
+    } finally {
+      setMarkingAll(false);
+    }
+  }
 
   return (
     <div className="min-h-screen text-gray-900" dir="rtl">
@@ -393,6 +474,17 @@ function AlertsPageContent() {
 
             <button
               type="button"
+              onClick={handleMarkAllRead}
+              className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm disabled:opacity-60"
+              disabled={loading || markingAll || filteredSummary.unread === 0}
+            >
+              {markingAll
+                ? t("common.loading")
+                : t("alertsPage.markAllRead")}
+            </button>
+
+            <button
+              type="button"
               onClick={load}
               className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm"
               disabled={loading}
@@ -408,12 +500,18 @@ function AlertsPageContent() {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <StatCard
             title={t("dashboard.alerts.total")}
             value={fmtInt(filteredSummary.total)}
             hint={t("dashboard.alerts.totalHint")}
             tone={filteredSummary.total > 0 ? "neutral" : "good"}
+          />
+          <StatCard
+            title={t("alertsPage.unread")}
+            value={fmtInt(filteredSummary.unread)}
+            hint={t("alertsPage.unreadHint")}
+            tone={filteredSummary.unread > 0 ? "warn" : "good"}
           />
           <StatCard
             title={t("dashboard.alerts.danger")}
@@ -436,7 +534,26 @@ function AlertsPageContent() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("alertsPage.filters.readStatus")}
+              </label>
+              <select
+                value={readStatusFilter}
+                onChange={(e) => {
+                  const nextReadStatus = e.target.value as ReadStatusFilter;
+                  setReadStatusFilter(nextReadStatus);
+                  updateUrl(severityFilter, areaFilter, typeFilter, nextReadStatus);
+                }}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
+              >
+                <option value="all">{t("alertsPage.filters.all")}</option>
+                <option value="unread">{t("alertsPage.unread")}</option>
+                <option value="read">{t("alertsPage.read")}</option>
+              </select>
+            </div>
+
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 {t("alertsPage.filters.severity")}
@@ -446,7 +563,7 @@ function AlertsPageContent() {
                 onChange={(e) => {
                   const nextSeverity = e.target.value as SeverityFilter;
                   setSeverityFilter(nextSeverity);
-                  updateUrl(nextSeverity, areaFilter, typeFilter);
+                  updateUrl(nextSeverity, areaFilter, typeFilter, readStatusFilter);
                 }}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
               >
@@ -466,7 +583,7 @@ function AlertsPageContent() {
                 onChange={(e) => {
                   const nextArea = e.target.value as AreaFilter;
                   setAreaFilter(nextArea);
-                  updateUrl(severityFilter, nextArea, typeFilter);
+                  updateUrl(severityFilter, nextArea, typeFilter, readStatusFilter);
                 }}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
               >
@@ -487,7 +604,7 @@ function AlertsPageContent() {
                 onChange={(e) => {
                   const nextType = e.target.value as TypeFilter;
                   setTypeFilter(nextType);
-                  updateUrl(severityFilter, areaFilter, nextType);
+                  updateUrl(severityFilter, areaFilter, nextType, readStatusFilter);
                 }}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
               >
@@ -509,7 +626,8 @@ function AlertsPageContent() {
                   setSeverityFilter("all");
                   setAreaFilter("all");
                   setTypeFilter("all");
-                  updateUrl("all", "all", "all");
+                  setReadStatusFilter("all");
+                  updateUrl("all", "all", "all", "all");
                 }}
                 className="text-sm text-orange-700 underline"
               >
@@ -535,9 +653,31 @@ function AlertsPageContent() {
             />
           }
           onRowClick={(r) => {
-            if (r?.href) router.push(r.href);
+            handleOpen(r);
           }}
           columns={[
+            {
+              key: "status",
+              label: t("alertsPage.status"),
+              render: (r) => (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
+                    r?.is_read
+                      ? "border-gray-200 bg-gray-50 text-gray-700"
+                      : "border-blue-200 bg-blue-50 text-blue-700 font-medium"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-2 w-2 rounded-full",
+                      r?.is_read ? "bg-gray-400" : "bg-blue-600"
+                    )}
+                  />
+                  {r?.is_read ? t("alertsPage.read") : t("alertsPage.unread")}
+                </span>
+              ),
+            },
             {
               key: "severity",
               label: t("dashboard.alerts.columns.severity"),
@@ -584,7 +724,9 @@ function AlertsPageContent() {
               label: t("dashboard.alerts.columns.title"),
               render: (r) => (
                 <div className="flex flex-col items-end">
-                  <span className="font-medium">{r?.title || "—"}</span>
+                  <span className={cn("font-medium", !r?.is_read && "font-semibold")}>
+                    {r?.title || "—"}
+                  </span>
                   <span className="text-xs text-gray-600">{r?.message || "—"}</span>
                 </div>
               ),
@@ -614,7 +756,7 @@ function AlertsPageContent() {
                     className="text-orange-700 underline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(r.href);
+                      handleOpen(r);
                     }}
                   >
                     {t("common.open")}

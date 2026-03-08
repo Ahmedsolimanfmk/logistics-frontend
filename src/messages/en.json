@@ -284,7 +284,13 @@
     "all": "All",
     "severity": "Severity",
     "area": "Area",
-    "type": "Alert type"
+    "type": "Alert type",
+    "alertsPage.read": "Read",
+  "alertsPage.unread": "Unread",
+  "alertsPage.unreadHint": "Alerts that have not been opened yet",
+  "alertsPage.status": "Status",
+  "alertsPage.markAllRead": "Mark all as read",
+  "alertsPage.filters.readStatus": "Read status"
   },
   "types": {
     "tripFinanceClosePending": "Trip needs financial close",

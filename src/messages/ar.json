@@ -351,7 +351,13 @@
     "all": "الكل",
     "severity": "الأولوية",
     "area": "القسم",
-    "type": "نوع التنبيه"
+    "type": "نوع التنبيه",
+    "alertsPage.read": "تمت القراءة",
+  "alertsPage.unread": "غير مقروء",
+  "alertsPage.unreadHint": "التنبيهات التي لم يتم فتحها بعد",
+  "alertsPage.status": "الحالة",
+  "alertsPage.markAllRead": "تحديد الكل كمقروء",
+  "alertsPage.filters.readStatus": "حالة القراءة"
   },
   "types": {
     "tripFinanceClosePending": "رحلة تحتاج إغلاق مالي",
