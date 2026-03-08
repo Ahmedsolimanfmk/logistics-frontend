@@ -111,6 +111,18 @@ export default function NotificationBell() {
   }, []);
 
   useEffect(() => {
+    const intervalMs = open ? 30000 : 60000;
+
+    const timer = window.setInterval(() => {
+      load();
+    }, intervalMs);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [open]);
+
+  useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!rootRef.current) return;
       if (!rootRef.current.contains(e.target as Node)) {
@@ -135,6 +147,15 @@ export default function NotificationBell() {
     return Number(summary?.total ?? 0);
   }, [summary]);
 
+  const badgeClass = useMemo(() => {
+    const danger = Number(summary?.by_severity?.danger ?? 0);
+    const warn = Number(summary?.by_severity?.warn ?? 0);
+
+    if (danger > 0) return "bg-rose-600";
+    if (warn > 0) return "bg-amber-500";
+    return "bg-slate-500";
+  }, [summary]);
+
   return (
     <div className="relative" ref={rootRef}>
       <button
@@ -151,7 +172,12 @@ export default function NotificationBell() {
         <span className="text-lg">🔔</span>
 
         {badgeCount > 0 ? (
-          <span className="absolute -right-1 -top-1 min-w-[20px] rounded-full bg-rose-600 px-1.5 py-0.5 text-center text-[11px] font-bold text-white">
+          <span
+            className={cn(
+              "absolute -right-1 -top-1 min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold text-white",
+              badgeClass
+            )}
+          >
             {badgeCount > 99 ? "99+" : badgeCount}
           </span>
         ) : null}
@@ -217,7 +243,18 @@ export default function NotificationBell() {
                       type="button"
                       onClick={() => {
                         setOpen(false);
-                        if (r?.href) router.push(r.href);
+
+                        if (r?.href) {
+                          router.push(r.href);
+                          return;
+                        }
+
+                        const params = new URLSearchParams();
+                        if (r?.severity) params.set("severity", r.severity);
+                        if (r?.area) params.set("area", String(r.area).toLowerCase());
+
+                        const query = params.toString();
+                        router.push(query ? `/alerts?${query}` : "/alerts");
                       }}
                       className="block w-full px-4 py-3 text-right transition hover:bg-gray-50"
                     >

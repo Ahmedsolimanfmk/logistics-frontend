@@ -342,16 +342,33 @@
 },
 
   "alertsPage": {
-    "title": "مركز التنبيهات",
-    "subtitle": "عرض مركزي لكل التنبيهات في النظام",
-    "tableTitle": "كل التنبيهات",
-    "filteredCount": "عدد النتائج:",
-    "filters": {
-      "severity": "الخطورة",
-      "area": "القسم",
-      "all": "الكل"
-    }
+  "title": "مركز التنبيهات",
+  "subtitle": "متابعة كل تنبيهات النظام من مكان واحد",
+  "tableTitle": "كل التنبيهات",
+  "filteredCount": "عدد النتائج:",
+  "clearFilters": "مسح الفلاتر",
+  "filters": {
+    "all": "الكل",
+    "severity": "الأولوية",
+    "area": "القسم",
+    "type": "نوع التنبيه"
   },
+  "types": {
+    "tripFinanceClosePending": "رحلة تحتاج إغلاق مالي",
+    "arOverdue": "فاتورة عميل متأخرة",
+    "arDueSoon": "فاتورة عميل مستحقة قريبًا",
+    "expensePendingTooLong": "مصروف معلق لفترة طويلة",
+    "advanceOpenTooLong": "سلفة مفتوحة لفترة طويلة",
+    "maintenanceOpenWorkOrder": "أمر عمل مفتوح",
+    "maintenanceQaNeeds": "أمر عمل يحتاج QA",
+    "maintenanceQaFailed": "QA فشل",
+    "maintenancePartsMismatch": "عدم تطابق قطع",
+    "vehicleLicenseExpired": "رخصة مركبة منتهية",
+    "vehicleLicenseExpiring": "رخصة مركبة تقترب من الانتهاء",
+    "driverLicenseExpired": "رخصة سائق منتهية",
+    "driverLicenseExpiring": "رخصة سائق تقترب من الانتهاء"
+  }
+},
  "users": {
     "title": "المستخدمون",
     "subtitle": "إدارة المستخدمين (للأدمن فقط)",

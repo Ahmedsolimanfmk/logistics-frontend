@@ -274,20 +274,34 @@
       "hint": "Reserved for development diagnostics."
     }
   },
-  
   "alertsPage": {
-    "title": "Alerts Center",
-    "subtitle": "Central view for all system alerts",
-    "tableTitle": "All alerts",
-    "filteredCount": "Results:",
-    "filters": {
-      "severity": "Severity",
-      "area": "Area",
-      "all": "All"
-    }
-  
+  "title": "Alerts Center",
+  "subtitle": "Monitor all system alerts from one place",
+  "tableTitle": "All Alerts",
+  "filteredCount": "Filtered results:",
+  "clearFilters": "Clear filters",
+  "filters": {
+    "all": "All",
+    "severity": "Severity",
+    "area": "Area",
+    "type": "Alert type"
+  },
+  "types": {
+    "tripFinanceClosePending": "Trip needs financial close",
+    "arOverdue": "Overdue client invoice",
+    "arDueSoon": "Client invoice due soon",
+    "expensePendingTooLong": "Expense pending too long",
+    "advanceOpenTooLong": "Advance open too long",
+    "maintenanceOpenWorkOrder": "Open work order",
+    "maintenanceQaNeeds": "Work order needs QA",
+    "maintenanceQaFailed": "QA failed",
+    "maintenancePartsMismatch": "Parts mismatch",
+    "vehicleLicenseExpired": "Vehicle license expired",
+    "vehicleLicenseExpiring": "Vehicle license expiring soon",
+    "driverLicenseExpired": "Driver license expired",
+    "driverLicenseExpiring": "Driver license expiring soon"
+  }
 },
-
   "users": {
     "title": "Users",
     "subtitle": "Admin-only user management",
@@ -297,7 +311,8 @@
       "searchPlaceholder": "name / email / phone",
       "role": "Role",
       "rolePlaceholder": "ADMIN / ACCOUNTANT / ...",
-      "status": "Status"
+      "status": "Status",
+      "clearFilters": "Clear filters"
     },
     "table": {
       "name": "Name",

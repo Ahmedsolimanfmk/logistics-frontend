@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { apiAuthGet } from "@/src/lib/api";
 
@@ -34,11 +34,17 @@ const shortId = (id: unknown) => {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 };
 
+type AlertSeverity = "danger" | "warn" | "info";
+type AlertArea = "operations" | "finance" | "maintenance" | "compliance";
+type SeverityFilter = "all" | AlertSeverity;
+type AreaFilter = "all" | AlertArea;
+type TypeFilter = "all" | string;
+
 type AlertRow = {
   id: string;
   type: string;
-  severity: "danger" | "warn" | "info";
-  area: "operations" | "finance" | "maintenance" | "compliance" | string;
+  severity: AlertSeverity;
+  area: AlertArea | string;
   title: string;
   message: string;
   entity_type?: string | null;
@@ -68,6 +74,19 @@ type AlertsSummaryResponse = {
   };
 };
 
+function isValidSeverity(v: string | null): v is AlertSeverity {
+  return v === "danger" || v === "warn" || v === "info";
+}
+
+function isValidArea(v: string | null): v is AlertArea {
+  return (
+    v === "operations" ||
+    v === "finance" ||
+    v === "maintenance" ||
+    v === "compliance"
+  );
+}
+
 function areaLabel(area: string, t: any) {
   switch (String(area || "").toLowerCase()) {
     case "operations":
@@ -80,6 +99,39 @@ function areaLabel(area: string, t: any) {
       return t("dashboard.compliance.title");
     default:
       return area || "—";
+  }
+}
+
+function typeLabel(type: string, t: any) {
+  switch (String(type || "").toUpperCase()) {
+    case "TRIP_FINANCE_CLOSE_PENDING":
+      return t("alertsPage.types.tripFinanceClosePending");
+    case "AR_OVERDUE":
+      return t("alertsPage.types.arOverdue");
+    case "AR_DUE_SOON":
+      return t("alertsPage.types.arDueSoon");
+    case "EXPENSE_PENDING_TOO_LONG":
+      return t("alertsPage.types.expensePendingTooLong");
+    case "ADVANCE_OPEN_TOO_LONG":
+      return t("alertsPage.types.advanceOpenTooLong");
+    case "MAINTENANCE_OPEN_WORK_ORDER":
+      return t("alertsPage.types.maintenanceOpenWorkOrder");
+    case "MAINTENANCE_QA_NEEDS":
+      return t("alertsPage.types.maintenanceQaNeeds");
+    case "MAINTENANCE_QA_FAILED":
+      return t("alertsPage.types.maintenanceQaFailed");
+    case "MAINTENANCE_PARTS_MISMATCH":
+      return t("alertsPage.types.maintenancePartsMismatch");
+    case "VEHICLE_LICENSE_EXPIRED":
+      return t("alertsPage.types.vehicleLicenseExpired");
+    case "VEHICLE_LICENSE_EXPIRING":
+      return t("alertsPage.types.vehicleLicenseExpiring");
+    case "DRIVER_LICENSE_EXPIRED":
+      return t("alertsPage.types.driverLicenseExpired");
+    case "DRIVER_LICENSE_EXPIRING":
+      return t("alertsPage.types.driverLicenseExpiring");
+    default:
+      return type || "—";
   }
 }
 
@@ -238,16 +290,27 @@ function DataTable({
 export default function AlertsPage() {
   const t = useT();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [rows, setRows] = useState<AlertRow[]>([]);
   const [summary, setSummary] = useState<AlertsSummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const [severityFilter, setSeverityFilter] = useState<"all" | "danger" | "warn" | "info">("all");
-  const [areaFilter, setAreaFilter] = useState<
-    "all" | "operations" | "finance" | "maintenance" | "compliance"
-  >("all");
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
+  const [areaFilter, setAreaFilter] = useState<AreaFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+
+  useEffect(() => {
+    const severityFromUrl = searchParams.get("severity");
+    const areaFromUrl = searchParams.get("area");
+    const typeFromUrl = searchParams.get("type");
+
+    setSeverityFilter(isValidSeverity(severityFromUrl) ? severityFromUrl : "all");
+    setAreaFilter(isValidArea(areaFromUrl) ? areaFromUrl : "all");
+    setTypeFilter(typeFromUrl && typeFromUrl.trim() ? typeFromUrl : "all");
+  }, [searchParams]);
 
   async function load() {
     try {
@@ -277,29 +340,60 @@ export default function AlertsPage() {
     load();
   }, []);
 
+  function updateUrl(
+    nextSeverity: SeverityFilter,
+    nextArea: AreaFilter,
+    nextType: TypeFilter
+  ) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (nextSeverity === "all") params.delete("severity");
+    else params.set("severity", nextSeverity);
+
+    if (nextArea === "all") params.delete("area");
+    else params.set("area", nextArea);
+
+    if (nextType === "all") params.delete("type");
+    else params.set("type", nextType);
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  }
+
+  const availableTypes = useMemo(() => {
+    const unique = Array.from(
+      new Set(
+        rows
+          .map((r) => String(r.type || "").trim())
+          .filter(Boolean)
+      )
+    );
+    unique.sort((a, b) => a.localeCompare(b));
+    return unique;
+  }, [rows]);
+
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
       const severityOk = severityFilter === "all" ? true : r.severity === severityFilter;
       const areaOk =
         areaFilter === "all" ? true : String(r.area).toLowerCase() === areaFilter;
-      return severityOk && areaOk;
+      const typeOk = typeFilter === "all" ? true : String(r.type) === typeFilter;
+
+      return severityOk && areaOk && typeOk;
     });
-  }, [rows, severityFilter, areaFilter]);
+  }, [rows, severityFilter, areaFilter, typeFilter]);
 
-  const kpi = useMemo(() => {
-    const s = summary || {
-      total: rows.length,
-      by_severity: { danger: 0, warn: 0, info: 0 },
-      by_area: { operations: 0, finance: 0, maintenance: 0, compliance: 0 },
-    };
-
+  const filteredSummary = useMemo(() => {
     return {
-      total: Number(s?.total ?? rows.length ?? 0),
-      danger: Number(s?.by_severity?.danger ?? 0),
-      warn: Number(s?.by_severity?.warn ?? 0),
-      info: Number(s?.by_severity?.info ?? 0),
+      total: filteredRows.length,
+      danger: filteredRows.filter((r) => r.severity === "danger").length,
+      warn: filteredRows.filter((r) => r.severity === "warn").length,
+      info: filteredRows.filter((r) => r.severity === "info").length,
     };
-  }, [summary, rows]);
+  }, [filteredRows]);
+
+  const isFiltered =
+    severityFilter !== "all" || areaFilter !== "all" || typeFilter !== "all";
 
   return (
     <div className="min-h-screen text-gray-900" dir="rtl">
@@ -338,41 +432,43 @@ export default function AlertsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard
             title={t("dashboard.alerts.total")}
-            value={fmtInt(kpi.total)}
+            value={fmtInt(filteredSummary.total)}
             hint={t("dashboard.alerts.totalHint")}
-            tone={kpi.total > 0 ? "neutral" : "good"}
+            tone={filteredSummary.total > 0 ? "neutral" : "good"}
           />
           <StatCard
             title={t("dashboard.alerts.danger")}
-            value={fmtInt(kpi.danger)}
+            value={fmtInt(filteredSummary.danger)}
             hint={t("dashboard.alerts.dangerHint")}
-            tone={kpi.danger > 0 ? "danger" : "good"}
+            tone={filteredSummary.danger > 0 ? "danger" : "good"}
           />
           <StatCard
             title={t("dashboard.alerts.warn")}
-            value={fmtInt(kpi.warn)}
+            value={fmtInt(filteredSummary.warn)}
             hint={t("dashboard.alerts.warnHint")}
-            tone={kpi.warn > 0 ? "warn" : "good"}
+            tone={filteredSummary.warn > 0 ? "warn" : "good"}
           />
           <StatCard
             title={t("dashboard.alerts.info")}
-            value={fmtInt(kpi.info)}
+            value={fmtInt(filteredSummary.info)}
             hint={t("dashboard.alerts.infoHint")}
             tone="neutral"
           />
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 {t("alertsPage.filters.severity")}
               </label>
               <select
                 value={severityFilter}
-                onChange={(e) =>
-                  setSeverityFilter(e.target.value as "all" | "danger" | "warn" | "info")
-                }
+                onChange={(e) => {
+                  const nextSeverity = e.target.value as SeverityFilter;
+                  setSeverityFilter(nextSeverity);
+                  updateUrl(nextSeverity, areaFilter, typeFilter);
+                }}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
               >
                 <option value="all">{t("alertsPage.filters.all")}</option>
@@ -388,16 +484,11 @@ export default function AlertsPage() {
               </label>
               <select
                 value={areaFilter}
-                onChange={(e) =>
-                  setAreaFilter(
-                    e.target.value as
-                      | "all"
-                      | "operations"
-                      | "finance"
-                      | "maintenance"
-                      | "compliance"
-                  )
-                }
+                onChange={(e) => {
+                  const nextArea = e.target.value as AreaFilter;
+                  setAreaFilter(nextArea);
+                  updateUrl(severityFilter, nextArea, typeFilter);
+                }}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
               >
                 <option value="all">{t("alertsPage.filters.all")}</option>
@@ -407,7 +498,46 @@ export default function AlertsPage() {
                 <option value="compliance">{t("dashboard.compliance.title")}</option>
               </select>
             </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("alertsPage.filters.type")}
+              </label>
+              <select
+                value={typeFilter}
+                onChange={(e) => {
+                  const nextType = e.target.value as TypeFilter;
+                  setTypeFilter(nextType);
+                  updateUrl(severityFilter, areaFilter, nextType);
+                }}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
+              >
+                <option value="all">{t("alertsPage.filters.all")}</option>
+                {availableTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {typeLabel(type, t)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {isFiltered ? (
+            <div className="mt-3 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setSeverityFilter("all");
+                  setAreaFilter("all");
+                  setTypeFilter("all");
+                  updateUrl("all", "all", "all");
+                }}
+                className="text-sm text-orange-700 underline"
+              >
+                {t("alertsPage.clearFilters")}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <DataTable
@@ -464,6 +594,11 @@ export default function AlertsPage() {
               key: "area",
               label: t("dashboard.alerts.columns.area"),
               render: (r) => areaLabel(r?.area, t),
+            },
+            {
+              key: "type",
+              label: t("alertsPage.filters.type"),
+              render: (r) => typeLabel(r?.type, t),
             },
             {
               key: "title",

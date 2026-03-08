@@ -69,12 +69,6 @@ function daysLeft(d: any) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-function severityTone(sev?: string): "good" | "warn" | "danger" | "neutral" {
-  if (sev === "danger") return "danger";
-  if (sev === "warn") return "warn";
-  return "neutral";
-}
-
 function areaLabel(area: string, t: any) {
   switch (String(area || "").toLowerCase()) {
     case "operations":
@@ -166,7 +160,7 @@ function DeltaBadge({ points }: { points: TrendPoint[] | null | undefined }) {
 }
 
 // =====================
-// UI atoms (LIGHT)
+// UI atoms
 // =====================
 function EmptyNice({ title, hint }: { title: string; hint: string }) {
   return (
@@ -575,40 +569,42 @@ export default function DashboardPage() {
   };
 
   const fetchCentralAlertsIfNeeded = async (activeTab: TabKey) => {
-  if (activeTab !== "operations") {
-    setAlertsList([]);
-    setAlertsSummary(null);
+    if (activeTab !== "operations") {
+      setAlertsList([]);
+      setAlertsSummary(null);
+      setAlertsErr(null);
+      setLoadingAlerts(false);
+      return;
+    }
+
+    setLoadingAlerts(true);
     setAlertsErr(null);
-    setLoadingAlerts(false);
-    return;
-  }
+    try {
+      const [listData, summaryData] = await Promise.all([
+        apiAuthGet(`/dashboard/alerts`, { limit: 10 }),
+        apiAuthGet(`/dashboard/alerts/summary`),
+      ]);
 
-  setLoadingAlerts(true);
-  setAlertsErr(null);
-  try {
-    const [listData, summaryData] = await Promise.all([
-      apiAuthGet(`/dashboard/alerts`, { limit: 10 }),
-      apiAuthGet(`/dashboard/alerts/summary`),
+      setAlertsList(listData?.items || []);
+      setAlertsSummary(summaryData || null);
+    } catch (e: any) {
+      setAlertsList([]);
+      setAlertsSummary(null);
+      setAlertsErr(e?.response?.data?.message || e?.message || t("common.failed"));
+    } finally {
+      setLoadingAlerts(false);
+    }
+  };
+
+  const reloadAll = async () => {
+    await Promise.all([
+      fetchSummary(tab),
+      fetchBundleIfNeeded(tab),
+      fetchComplianceIfNeeded(tab),
+      fetchCentralAlertsIfNeeded(tab),
     ]);
+  };
 
-    setAlertsList(listData?.items || []);
-    setAlertsSummary(summaryData || null);
-  } catch (e: any) {
-    setAlertsList([]);
-    setAlertsSummary(null);
-    setAlertsErr(e?.response?.data?.message || e?.message || t("common.failed"));
-  } finally {
-    setLoadingAlerts(false);
-  }
-};
-const reloadAll = async () => {
-  await Promise.all([
-    fetchSummary(tab),
-    fetchBundleIfNeeded(tab),
-    fetchComplianceIfNeeded(tab),
-    fetchCentralAlertsIfNeeded(tab),
-  ]);
-};
   useEffect(() => {
     if (!token) return;
     let cancel = false;
@@ -745,33 +741,13 @@ const reloadAll = async () => {
     const qaFailed = Number(m.qa_failed ?? 0);
     const mismatch = Number(m.parts_mismatch ?? 0);
 
-    const toneOpen = openWos > 0 ? "neutral" : "good";
+    const toneOpen = openWos > 0 ? "warn" : "good";
     const toneQa = qaNeeds > 0 ? "warn" : "good";
     const toneFail = qaFailed > 0 ? "danger" : "good";
-    const toneMismatch = mismatch > 0 ? "warn" : "good";
+    const toneMismatch = mismatch > 0 ? "danger" : "good";
 
     return { openWos, completedToday, qaNeeds, qaFailed, mismatch, toneOpen, toneQa, toneFail, toneMismatch } as const;
   }, [cards]);
-
-  const maintenanceOpenHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/work-orders?status=OPEN";
-    return "/maintenance/requests?status=APPROVED";
-  }, [isAdminAcc]);
-
-  const maintenanceQaNeedsHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
-    return "/maintenance/requests?status=APPROVED";
-  }, [isAdminAcc]);
-
-  const maintenanceFailedHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
-    return "/maintenance/requests";
-  }, [isAdminAcc]);
-
-  const maintenanceMismatchHref = useMemo(() => {
-    if (isAdminAcc) return "/maintenance/work-orders?status=COMPLETED";
-    return "/maintenance/requests";
-  }, [isAdminAcc]);
 
   const complianceCounts = useMemo(() => {
     const c = compliance || {};
@@ -894,152 +870,173 @@ const reloadAll = async () => {
                 </Section>
 
                 <Section
-  title={t("dashboard.alerts.title")}
-  right={
-    <div className="flex items-center gap-2">
-      <Link
-        href="/alerts"
-        className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
-      >
-        {t("common.viewAll")}
-      </Link>
+                  title={t("dashboard.alerts.title")}
+                  right={
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href="/alerts"
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
+                      >
+                        {t("common.viewAll")}
+                      </Link>
 
-      <button
-        type="button"
-        onClick={() => fetchCentralAlertsIfNeeded("operations")}
-        className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
-        disabled={loadingAlerts}
-      >
-        {loadingAlerts ? t("common.loading") : t("common.refresh")}
-      </button>
-    </div>
-  }
->
-  {alertsErr ? (
-    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-      {alertsErr}
-    </div>
-  ) : null}
+                      <button
+                        type="button"
+                        onClick={() => fetchCentralAlertsIfNeeded("operations")}
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
+                        disabled={loadingAlerts}
+                      >
+                        {loadingAlerts ? t("common.loading") : t("common.refresh")}
+                      </button>
+                    </div>
+                  }
+                >
+                  {alertsErr ? (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      {alertsErr}
+                    </div>
+                  ) : null}
 
-  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <ActionTile
-      title={t("dashboard.alerts.total")}
-      value={fmtInt(alertsKpi.total)}
-      hint={t("dashboard.alerts.totalHint")}
-      tone={alertsKpi.total > 0 ? "neutral" : "good"}
-    />
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <ActionTile
+                      title={t("dashboard.alerts.total")}
+                      value={fmtInt(alertsKpi.total)}
+                      hint={t("dashboard.alerts.totalHint")}
+                      tone={alertsKpi.total > 0 ? "neutral" : "good"}
+                      href="/alerts"
+                      openLabel={t("common.open")}
+                    />
 
-    <ActionTile
-      title={t("dashboard.alerts.danger")}
-      value={fmtInt(alertsKpi.danger)}
-      hint={t("dashboard.alerts.dangerHint")}
-      tone={alertsKpi.danger > 0 ? "danger" : "good"}
-    />
+                    <ActionTile
+                      title={t("dashboard.alerts.danger")}
+                      value={fmtInt(alertsKpi.danger)}
+                      hint={t("dashboard.alerts.dangerHint")}
+                      tone={alertsKpi.danger > 0 ? "danger" : "good"}
+                      href="/alerts?severity=danger"
+                      openLabel={t("common.open")}
+                    />
 
-    <ActionTile
-      title={t("dashboard.alerts.warn")}
-      value={fmtInt(alertsKpi.warn)}
-      hint={t("dashboard.alerts.warnHint")}
-      tone={alertsKpi.warn > 0 ? "warn" : "good"}
-    />
+                    <ActionTile
+                      title={t("dashboard.alerts.warn")}
+                      value={fmtInt(alertsKpi.warn)}
+                      hint={t("dashboard.alerts.warnHint")}
+                      tone={alertsKpi.warn > 0 ? "warn" : "good"}
+                      href="/alerts?severity=warn"
+                      openLabel={t("common.open")}
+                    />
 
-    <ActionTile
-      title={t("dashboard.alerts.info")}
-      value={fmtInt(alertsKpi.info)}
-      hint={t("dashboard.alerts.infoHint")}
-      tone="neutral"
-    />
-  </div>
+                    <ActionTile
+                      title={t("dashboard.alerts.info")}
+                      value={fmtInt(alertsKpi.info)}
+                      hint={t("dashboard.alerts.infoHint")}
+                      tone="neutral"
+                      href="/alerts?severity=info"
+                      openLabel={t("common.open")}
+                    />
+                  </div>
 
-  <DataTable
-    title={t("dashboard.alerts.latestTableTitle")}
-    rows={alertsList || []}
-    searchable
-    empty={
-      <EmptyNice
-        title={t("dashboard.alerts.emptyTitle")}
-        hint={t("dashboard.alerts.emptyHint")}
-      />
-    }
-    right={
-      <Link href="/alerts" className="text-xs text-orange-700 underline">
-        {t("common.viewAll")} ←
-      </Link>
-    }
-    onRowClick={(r) => {
-      if (r?.href) router.push(r.href);
-    }}
-    columns={[
-      {
-        key: "severity",
-        label: t("dashboard.alerts.columns.severity"),
-        render: (r) => {
-          const sev = String(r?.severity || "");
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Link href="/alerts?area=operations" className="text-xs text-orange-700 underline">
+                      {t("tabs.operations")}
+                    </Link>
+                    <Link href="/alerts?area=finance" className="text-xs text-orange-700 underline">
+                      {t("tabs.finance")}
+                    </Link>
+                    <Link href="/alerts?area=maintenance" className="text-xs text-orange-700 underline">
+                      {t("tabs.maintenance")}
+                    </Link>
+                    {canSeeCompliance ? (
+                      <Link href="/alerts?area=compliance" className="text-xs text-orange-700 underline">
+                        {t("dashboard.compliance.title")}
+                      </Link>
+                    ) : null}
+                  </div>
 
-          const cls =
-            sev === "danger"
-              ? "border-rose-200 bg-rose-50 text-rose-700"
-              : sev === "warn"
-              ? "border-amber-200 bg-amber-50 text-amber-700"
-              : "border-gray-200 bg-gray-50 text-gray-700";
+                  <DataTable
+                    title={t("dashboard.alerts.latestTableTitle")}
+                    rows={alertsList || []}
+                    searchable
+                    empty={
+                      <EmptyNice
+                        title={t("dashboard.alerts.emptyTitle")}
+                        hint={t("dashboard.alerts.emptyHint")}
+                      />
+                    }
+                    right={
+                      <Link href="/alerts" className="text-xs text-orange-700 underline">
+                        {t("common.viewAll")} ←
+                      </Link>
+                    }
+                    onRowClick={(r) => {
+                      if (r?.href) {
+                        router.push(r.href);
+                      } else {
+                        const params = new URLSearchParams();
+                        if (r?.severity) params.set("severity", r.severity);
+                        if (r?.area) params.set("area", String(r.area).toLowerCase());
+                        router.push(`/alerts?${params.toString()}`);
+                      }
+                    }}
+                    columns={[
+                      {
+                        key: "severity",
+                        label: t("dashboard.alerts.columns.severity"),
+                        render: (r) => {
+                          const sev = String(r?.severity || "");
+                          const cls =
+                            sev === "danger"
+                              ? "border-rose-200 bg-rose-50 text-rose-700"
+                              : sev === "warn"
+                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              : "border-gray-200 bg-gray-50 text-gray-700";
 
-          const text =
-            sev === "danger"
-              ? t("dashboard.alerts.severity.danger")
-              : sev === "warn"
-              ? t("dashboard.alerts.severity.warn")
-              : t("dashboard.alerts.severity.info");
+                          const text =
+                            sev === "danger"
+                              ? t("dashboard.alerts.severity.danger")
+                              : sev === "warn"
+                              ? t("dashboard.alerts.severity.warn")
+                              : t("dashboard.alerts.severity.info");
 
-          return (
-            <span
-              className={cn(
-                "inline-flex rounded-full border px-2 py-0.5 text-xs",
-                cls
-              )}
-            >
-              {text}
-            </span>
-          );
-        },
-      },
+                          return (
+                            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-xs", cls)}>
+                              {text}
+                            </span>
+                          );
+                        },
+                      },
+                      {
+                        key: "area",
+                        label: t("dashboard.alerts.columns.area"),
+                        render: (r) => areaLabel(r?.area, t),
+                      },
+                      {
+                        key: "title",
+                        label: t("dashboard.alerts.columns.title"),
+                        render: (r) => (
+                          <div className="flex flex-col items-end">
+                            <span className="font-medium">{r?.title || "—"}</span>
+                            <span className="text-xs text-gray-600">{r?.message || "—"}</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: "entity_id",
+                        label: t("dashboard.alerts.columns.reference"),
+                        render: (r) => (
+                          <span className="font-mono">
+                            {r?.entity_id ? shortId(r.entity_id) : "—"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "created_at",
+                        label: t("dashboard.alerts.columns.createdAt"),
+                        render: (r) => fmtDate(r?.created_at),
+                      },
+                    ]}
+                  />
+                </Section>
 
-      {
-        key: "area",
-        label: t("dashboard.alerts.columns.area"),
-        render: (r) => areaLabel(r?.area, t),
-      },
-
-      {
-        key: "title",
-        label: t("dashboard.alerts.columns.title"),
-        render: (r) => (
-          <div className="flex flex-col items-end">
-            <span className="font-medium">{r?.title || "—"}</span>
-            <span className="text-xs text-gray-600">
-              {r?.message || "—"}
-            </span>
-          </div>
-        ),
-      },
-
-      {
-        key: "entity_id",
-        label: t("dashboard.alerts.columns.reference"),
-        render: (r) => (
-          <span className="font-mono">
-            {r?.entity_id ? shortId(r.entity_id) : "—"}
-          </span>
-        ),
-      },
-
-      {
-        key: "created_at",
-        label: t("dashboard.alerts.columns.createdAt"),
-        render: (r) => fmtDate(r?.created_at),
-      },
-    ]}
-  />
-</Section>
                 {canSeeCompliance ? (
                   <Section
                     title={t("dashboard.compliance.title") || "تنبيهات الالتزام (الرخص)"}
@@ -1067,39 +1064,39 @@ const reloadAll = async () => {
                     ) : null}
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                     <ActionTile
+                      title={t("dashboard.compliance.vehiclesExpiring") || "مركبات قرب انتهاء الرخصة"}
+                      value={fmtInt(complianceCounts.vehExpiring)}
+                      hint={t("dashboard.compliance.openVehicles") || "افتح صفحة التنبيهات"}
+                      tone={complianceCounts.vehExpiring > 0 ? "warn" : "good"}
+                      href="/alerts?area=compliance&type=VEHICLE_LICENSE_EXPIRING"
+                      openLabel={t("common.open") || "فتح"}
+                     />
+                     <ActionTile
+                      title={t("dashboard.compliance.vehiclesExpired") || "مركبات انتهت الرخصة"}
+                      value={fmtInt(complianceCounts.vehExpired)}
+                      hint={t("dashboard.compliance.reviewVehicles") || "راجع العناصر الحرجة"}
+                      tone={complianceCounts.vehExpired > 0 ? "danger" : "good"}
+                      href="/alerts?area=compliance&severity=danger"
+                       openLabel={t("common.open") || "فتح"}
+                    />
+                    <ActionTile
+                      title={t("dashboard.compliance.driversExpiring") || "سائقين قرب انتهاء الرخصة"}
+                      value={fmtInt(complianceCounts.drvExpiring)}
+                      hint={t("dashboard.compliance.openDrivers") || "افتح صفحة التنبيهات"}
+                      tone={complianceCounts.drvExpiring > 0 ? "warn" : "good"}
+                      href="//alerts?area=compliance&type=VEHICLE_LICENSE_EXPIRING"
+                      openLabel={t("common.open") || "فتح"}
+                        />
                       <ActionTile
-                        title={t("dashboard.compliance.vehiclesExpiring") || "مركبات قرب انتهاء الرخصة"}
-                        value={fmtInt(complianceCounts.vehExpiring)}
-                        hint={t("dashboard.compliance.openVehicles") || "افتح صفحة المركبات"}
-                        tone={complianceCounts.vehExpiring > 0 ? "warn" : "good"}
-                        href="/vehicles"
-                        openLabel={t("common.open") || "فتح"}
+                       title={t("dashboard.compliance.driversExpired") || "سائقين انتهت الرخصة"}
+                      value={fmtInt(complianceCounts.drvExpired)}
+                      hint={t("dashboard.compliance.reviewDrivers") || "راجع العناصر الحرجة"}
+                      tone={complianceCounts.drvExpired > 0 ? "danger" : "good"}
+                      href="/alerts?area=compliance&severity=danger"
+                      openLabel={t("common.open") || "فتح"}
                       />
-                      <ActionTile
-                        title={t("dashboard.compliance.vehiclesExpired") || "مركبات انتهت الرخصة"}
-                        value={fmtInt(complianceCounts.vehExpired)}
-                        hint={t("dashboard.compliance.reviewVehicles") || "راجع المركبات غير المطابقة"}
-                        tone={complianceCounts.vehExpired > 0 ? "danger" : "good"}
-                        href="/vehicles"
-                        openLabel={t("common.open") || "فتح"}
-                      />
-                      <ActionTile
-                        title={t("dashboard.compliance.driversExpiring") || "سائقين قرب انتهاء الرخصة"}
-                        value={fmtInt(complianceCounts.drvExpiring)}
-                        hint={t("dashboard.compliance.openDrivers") || "افتح صفحة السائقين"}
-                        tone={complianceCounts.drvExpiring > 0 ? "warn" : "good"}
-                        href="/drivers"
-                        openLabel={t("common.open") || "فتح"}
-                      />
-                      <ActionTile
-                        title={t("dashboard.compliance.driversExpired") || "سائقين انتهت الرخصة"}
-                        value={fmtInt(complianceCounts.drvExpired)}
-                        hint={t("dashboard.compliance.reviewDrivers") || "راجع السائقين غير المطابقين"}
-                        tone={complianceCounts.drvExpired > 0 ? "danger" : "good"}
-                        href="/drivers"
-                        openLabel={t("common.open") || "فتح"}
-                      />
-                    </div>
+                </div>
 
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                       <DataTable
@@ -1461,7 +1458,7 @@ const reloadAll = async () => {
                           : t("dashboard.finance.pendingTooLong.hintOff")
                       }
                       tone={fin.tonePending as any}
-                      href="/finance?tab=pending"
+                      href="/alerts?area=finance&severity=warn"
                       openLabel={t("common.open")}
                     />
                     <ActionTile
@@ -1473,7 +1470,7 @@ const reloadAll = async () => {
                           : t("dashboard.finance.openAdvances.hintOff")
                       }
                       tone={fin.toneAdv as any}
-                      href="/finance?tab=advances"
+                      href="/alerts?area=finance&severity=warn"
                       openLabel={t("common.open")}
                     />
                     <ActionTile
@@ -1487,67 +1484,75 @@ const reloadAll = async () => {
                   </div>
                 </Section>
 
-                <Section title={"تنبيهات مستحقات العملاء والموردين"}>
+                <Section title={t("dashboard.finance.arAlertsSection")}>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     <ActionTile
-                      title={"فواتير عملاء مستحقة قريبًا"}
+                      title={t("dashboard.finance.arDueSoon.title")}
                       value={fmtInt(fin.arDueSoonCount)}
                       hint={
                         fin.arDueSoonCount > 0
-                          ? `الإجمالي ${fmtMoney(fin.arDueSoonTotal)}`
-                          : "لا توجد فواتير ضمن 7 أيام"
+                          ? t("dashboard.finance.arDueSoon.hintOn", {
+                              total: fmtMoney(fin.arDueSoonTotal),
+                            })
+                          : t("dashboard.finance.arDueSoon.hintOff")
                       }
                       tone={fin.toneArDueSoon as any}
-                      href="/finance/ar/invoices"
+                      href="/alerts?area=finance&severity=warn"
                       openLabel={t("common.open")}
                     />
 
                     <ActionTile
-                      title={"فواتير عملاء متأخرة"}
+                      title={t("dashboard.finance.arOverdue.title")}
                       value={fmtInt(fin.arOverdueCount)}
                       hint={
                         fin.arOverdueCount > 0
-                          ? `الإجمالي ${fmtMoney(fin.arOverdueTotal)}`
-                          : "لا توجد فواتير متأخرة"
+                          ? t("dashboard.finance.arOverdue.hintOn", {
+                              total: fmtMoney(fin.arOverdueTotal),
+                            })
+                          : t("dashboard.finance.arOverdue.hintOff")
                       }
                       tone={fin.toneArOverdue as any}
-                      href="/finance/ar/invoices"
+                      href="/alerts?area=finance&severity=danger"
                       openLabel={t("common.open")}
                     />
 
                     <ActionTile
-                      title={"مستحقات موردين قريبًا"}
+                      title={t("dashboard.finance.apDueSoon.title")}
                       value={fmtInt(fin.apDueSoonCount)}
                       hint={
                         fin.apEnabled
-                          ? `الإجمالي ${fmtMoney(fin.apDueSoonTotal)}`
-                          : "قريبًا بعد تفعيل AP"
+                          ? t("dashboard.finance.apDueSoon.hintOn", {
+                              total: fmtMoney(fin.apDueSoonTotal),
+                            })
+                          : t("dashboard.finance.apDueSoon.hintOff")
                       }
                       tone={fin.toneAp as any}
                     />
 
                     <ActionTile
-                      title={"مستحقات موردين متأخرة"}
+                      title={t("dashboard.finance.apOverdue.title")}
                       value={fmtInt(fin.apOverdueCount)}
                       hint={
                         fin.apEnabled
-                          ? `الإجمالي ${fmtMoney(fin.apOverdueTotal)}`
-                          : "قريبًا بعد تفعيل AP"
+                          ? t("dashboard.finance.apOverdue.hintOn", {
+                              total: fmtMoney(fin.apOverdueTotal),
+                            })
+                          : t("dashboard.finance.apOverdue.hintOff")
                       }
                       tone={fin.toneAp as any}
                     />
                   </div>
                 </Section>
 
-                <Section title={"أهم فواتير العملاء المتأخرة"}>
+                <Section title={t("dashboard.finance.topArOverdue.sectionTitle")}>
                   <DataTable
-                    title={"Top overdue client invoices"}
+                    title={t("dashboard.finance.topArOverdue.tableTitle")}
                     rows={tables?.top_ar_overdue_invoices || []}
                     searchable
                     empty={
                       <EmptyNice
-                        title={"لا توجد فواتير عملاء متأخرة"}
-                        hint={"كل الفواتير الحالية ضمن المدة أو مسددة بالكامل"}
+                        title={t("dashboard.finance.topArOverdue.emptyTitle")}
+                        hint={t("dashboard.finance.topArOverdue.emptyHint")}
                       />
                     }
                     onRowClick={() => {
@@ -1561,7 +1566,7 @@ const reloadAll = async () => {
                     columns={[
                       {
                         key: "invoice_no",
-                        label: "رقم الفاتورة",
+                        label: t("dashboard.columns.invoice"),
                         render: (r) => (
                           <div className="flex items-center gap-2 justify-end">
                             <button
@@ -1580,17 +1585,17 @@ const reloadAll = async () => {
                       },
                       {
                         key: "client_name",
-                        label: "العميل",
+                        label: t("dashboard.columns.client"),
                         render: (r) => r?.client_name || "—",
                       },
                       {
                         key: "due_date",
-                        label: "تاريخ الاستحقاق",
+                        label: t("dashboard.columns.dueDate"),
                         render: (r) => fmtDate(r?.due_date),
                       },
                       {
                         key: "days_overdue",
-                        label: "أيام التأخير",
+                        label: t("dashboard.columns.daysOverdue"),
                         render: (r) => (
                           <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">
                             {fmtInt(r?.days_overdue ?? 0)}
@@ -1599,27 +1604,27 @@ const reloadAll = async () => {
                       },
                       {
                         key: "outstanding_amount",
-                        label: "الرصيد المستحق",
+                        label: t("dashboard.columns.outstanding"),
                         render: (r) => fmtMoney(r?.outstanding_amount ?? 0),
                       },
                       {
                         key: "status",
-                        label: "الحالة",
+                        label: t("dashboard.columns.status"),
                         render: (r) => r?.status || "—",
                       },
                     ]}
                   />
                 </Section>
 
-                <Section title={"أهم فواتير العملاء المستحقة قريبًا"}>
+                <Section title={t("dashboard.finance.topArDueSoon.sectionTitle")}>
                   <DataTable
-                    title={"Top due soon client invoices"}
+                    title={t("dashboard.finance.topArDueSoon.tableTitle")}
                     rows={tables?.top_ar_due_soon_invoices || []}
                     searchable
                     empty={
                       <EmptyNice
-                        title={"لا توجد فواتير مستحقة قريبًا"}
-                        hint={"لا توجد فواتير خلال نافذة 7 أيام القادمة"}
+                        title={t("dashboard.finance.topArDueSoon.emptyTitle")}
+                        hint={t("dashboard.finance.topArDueSoon.emptyHint")}
                       />
                     }
                     onRowClick={() => {
@@ -1633,7 +1638,7 @@ const reloadAll = async () => {
                     columns={[
                       {
                         key: "invoice_no",
-                        label: "رقم الفاتورة",
+                        label: t("dashboard.columns.invoice"),
                         render: (r) => (
                           <div className="flex items-center gap-2 justify-end">
                             <button
@@ -1652,17 +1657,17 @@ const reloadAll = async () => {
                       },
                       {
                         key: "client_name",
-                        label: "العميل",
+                        label: t("dashboard.columns.client"),
                         render: (r) => r?.client_name || "—",
                       },
                       {
                         key: "due_date",
-                        label: "تاريخ الاستحقاق",
+                        label: t("dashboard.columns.dueDate"),
                         render: (r) => fmtDate(r?.due_date),
                       },
                       {
                         key: "days_to_due",
-                        label: "الأيام المتبقية",
+                        label: t("dashboard.columns.daysToDue"),
                         render: (r) => (
                           <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
                             {fmtInt(r?.days_to_due ?? 0)}
@@ -1671,12 +1676,12 @@ const reloadAll = async () => {
                       },
                       {
                         key: "outstanding_amount",
-                        label: "الرصيد المستحق",
+                        label: t("dashboard.columns.outstanding"),
                         render: (r) => fmtMoney(r?.outstanding_amount ?? 0),
                       },
                       {
                         key: "status",
-                        label: "الحالة",
+                        label: t("dashboard.columns.status"),
                         render: (r) => r?.status || "—",
                       },
                     ]}
@@ -1720,7 +1725,7 @@ const reloadAll = async () => {
                           : t("dashboard.maintenance.openWorkOrders.hintOff")
                       }
                       tone={mnt.toneOpen as any}
-                      href={maintenanceOpenHref}
+                      href="/alerts?area=maintenance&severity=warn"
                       openLabel={t("common.open")}
                     />
                     <ActionTile
@@ -1732,7 +1737,7 @@ const reloadAll = async () => {
                           : t("dashboard.maintenance.qaNeeds.hintOff")
                       }
                       tone={mnt.toneQa as any}
-                      href={maintenanceQaNeedsHref}
+                      href="/alerts?area=maintenance&severity=warn"
                       openLabel={t("common.open")}
                     />
                     <ActionTile
@@ -1744,7 +1749,7 @@ const reloadAll = async () => {
                           : t("dashboard.maintenance.qaFailed.hintOff")
                       }
                       tone={mnt.toneFail as any}
-                      href={maintenanceFailedHref}
+                      href="/alerts?area=maintenance&severity=danger"
                       openLabel={t("common.open")}
                     />
                     <ActionTile
@@ -1756,7 +1761,7 @@ const reloadAll = async () => {
                           : t("dashboard.maintenance.partsMismatch.hintOff")
                       }
                       tone={mnt.toneMismatch as any}
-                      href={maintenanceMismatchHref}
+                      href="/alerts?area=maintenance&severity=danger"
                       openLabel={t("common.open")}
                     />
                   </div>
