@@ -43,7 +43,8 @@
     "actions": "Actions",
     "status": "Status",
     "selected": "Selected",
-    "view": "View"
+    "view": "View",
+    "viewAll": "View all"
   },
   "tabs": {
     "operations": "Operations",
@@ -280,17 +281,17 @@
   "tableTitle": "All Alerts",
   "filteredCount": "Filtered results:",
   "clearFilters": "Clear filters",
+  "read": "Read",
+  "unread": "Unread",
+  "unreadHint": "Alerts that have not been opened yet",
+  "status": "Status",
+  "markAllRead": "Mark all as read",
   "filters": {
     "all": "All",
     "severity": "Severity",
     "area": "Area",
     "type": "Alert type",
-    "alertsPage.read": "Read",
-  "alertsPage.unread": "Unread",
-  "alertsPage.unreadHint": "Alerts that have not been opened yet",
-  "alertsPage.status": "Status",
-  "alertsPage.markAllRead": "Mark all as read",
-  "alertsPage.filters.readStatus": "Read status"
+    "readStatus": "Read status"
   },
   "types": {
     "tripFinanceClosePending": "Trip needs financial close",

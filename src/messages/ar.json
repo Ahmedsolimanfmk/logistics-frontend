@@ -341,23 +341,23 @@
   }
 },
 
-  "alertsPage": {
+ "alertsPage": {
   "title": "مركز التنبيهات",
   "subtitle": "متابعة كل تنبيهات النظام من مكان واحد",
   "tableTitle": "كل التنبيهات",
   "filteredCount": "عدد النتائج:",
   "clearFilters": "مسح الفلاتر",
+  "read": "تمت القراءة",
+  "unread": "غير مقروء",
+  "unreadHint": "التنبيهات التي لم يتم فتحها بعد",
+  "status": "الحالة",
+  "markAllRead": "تحديد الكل كمقروء",
   "filters": {
     "all": "الكل",
     "severity": "الأولوية",
     "area": "القسم",
     "type": "نوع التنبيه",
-    "alertsPage.read": "تمت القراءة",
-  "alertsPage.unread": "غير مقروء",
-  "alertsPage.unreadHint": "التنبيهات التي لم يتم فتحها بعد",
-  "alertsPage.status": "الحالة",
-  "alertsPage.markAllRead": "تحديد الكل كمقروء",
-  "alertsPage.filters.readStatus": "حالة القراءة"
+    "readStatus": "حالة القراءة"
   },
   "types": {
     "tripFinanceClosePending": "رحلة تحتاج إغلاق مالي",

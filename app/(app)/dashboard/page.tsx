@@ -16,7 +16,7 @@ import {
 import { useAuth } from "@/src/store/auth";
 import LanguageSwitcher from "@/src/components/LanguageSwitcher";
 import { useT } from "@/src/i18n/useT";
-import { apiAuthGet } from "@/src/lib/api";
+import { api, apiAuthGet } from "@/src/lib/api";
 
 // =====================
 // Helpers
@@ -90,6 +90,21 @@ function areaLabel(area: string, t: any) {
 type TabKey = "operations" | "finance" | "maintenance" | "dev";
 const TAB_STORAGE_KEY = "dash_active_tab_v1";
 type TrendPoint = { label: string; value: number };
+
+type DashboardAlertRow = {
+  id: string;
+  alert_key?: string;
+  type: string;
+  severity: "danger" | "warn" | "info";
+  area: string;
+  title: string;
+  message: string;
+  entity_id?: string | null;
+  href?: string | null;
+  created_at: string;
+  is_read?: boolean;
+  read_at?: string | null;
+};
 
 // =====================
 // Role-based tabs
@@ -312,6 +327,7 @@ function DataTable({
                   key={idx}
                   className={cn(
                     "border-t border-gray-200 hover:bg-gray-50",
+                    !r?.is_read && "bg-blue-50/30",
                     clickable && "cursor-pointer"
                   )}
                   onClick={() => {
@@ -491,7 +507,7 @@ export default function DashboardPage() {
   const [loadingCompliance, setLoadingCompliance] = useState(false);
   const [complianceErr, setComplianceErr] = useState<string | null>(null);
 
-  const [alertsList, setAlertsList] = useState<any[]>([]);
+  const [alertsList, setAlertsList] = useState<DashboardAlertRow[]>([]);
   const [alertsSummary, setAlertsSummary] = useState<any>(null);
   const [loadingAlerts, setLoadingAlerts] = useState(false);
   const [alertsErr, setAlertsErr] = useState<string | null>(null);
@@ -585,7 +601,7 @@ export default function DashboardPage() {
         apiAuthGet(`/dashboard/alerts/summary`),
       ]);
 
-      setAlertsList(listData?.items || []);
+      setAlertsList(Array.isArray(listData?.items) ? listData.items : []);
       setAlertsSummary(summaryData || null);
     } catch (e: any) {
       setAlertsList([]);
@@ -605,6 +621,55 @@ export default function DashboardPage() {
     ]);
   };
 
+  async function markDashboardAlertRead(row: DashboardAlertRow) {
+    const alertKey = String(row?.alert_key || row?.id || "").trim();
+    if (!alertKey || row?.is_read) return;
+
+    try {
+      await api.patch("/dashboard/alerts/read", {
+        alert_key: alertKey,
+      });
+
+      setAlertsList((prev) =>
+        prev.map((item) =>
+          String(item.alert_key || item.id) === alertKey
+            ? {
+                ...item,
+                is_read: true,
+                read_at: new Date().toISOString(),
+              }
+            : item
+        )
+      );
+
+      setAlertsSummary((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          unread: Math.max(0, Number(prev?.unread ?? 0) - 1),
+          read: Number(prev?.read ?? 0) + 1,
+        };
+      });
+    } catch {}
+  }
+
+  async function openDashboardAlert(row: DashboardAlertRow) {
+    await markDashboardAlertRead(row);
+
+    if (row?.href) {
+      router.push(row.href);
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (row?.severity) params.set("severity", row.severity);
+    if (row?.area) params.set("area", String(row.area).toLowerCase());
+    if (!row?.is_read) params.set("read_status", "unread");
+
+    const query = params.toString();
+    router.push(query ? `/alerts?${query}` : "/alerts");
+  }
+
   useEffect(() => {
     if (!token) return;
     let cancel = false;
@@ -622,7 +687,6 @@ export default function DashboardPage() {
     return () => {
       cancel = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, tab, canSeeCompliance]);
 
   const cards = summary?.cards || {};
@@ -768,6 +832,7 @@ export default function DashboardPage() {
     const s = alertsSummary || {};
     return {
       total: Number(s?.total ?? 0),
+      unread: Number(s?.unread ?? 0),
       danger: Number(s?.by_severity?.danger ?? 0),
       warn: Number(s?.by_severity?.warn ?? 0),
       info: Number(s?.by_severity?.info ?? 0),
@@ -897,13 +962,22 @@ export default function DashboardPage() {
                     </div>
                   ) : null}
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <ActionTile
                       title={t("dashboard.alerts.total")}
                       value={fmtInt(alertsKpi.total)}
                       hint={t("dashboard.alerts.totalHint")}
                       tone={alertsKpi.total > 0 ? "neutral" : "good"}
                       href="/alerts"
+                      openLabel={t("common.open")}
+                    />
+
+                    <ActionTile
+                      title={t("alertsPage.unread") || "غير مقروء"}
+                      value={fmtInt(alertsKpi.unread)}
+                      hint={t("alertsPage.unreadHint") || "التنبيهات التي لم يتم فتحها بعد"}
+                      tone={alertsKpi.unread > 0 ? "warn" : "good"}
+                      href="/alerts?read_status=unread"
                       openLabel={t("common.open")}
                     />
 
@@ -968,16 +1042,33 @@ export default function DashboardPage() {
                       </Link>
                     }
                     onRowClick={(r) => {
-                      if (r?.href) {
-                        router.push(r.href);
-                      } else {
-                        const params = new URLSearchParams();
-                        if (r?.severity) params.set("severity", r.severity);
-                        if (r?.area) params.set("area", String(r.area).toLowerCase());
-                        router.push(`/alerts?${params.toString()}`);
-                      }
+                      openDashboardAlert(r);
                     }}
                     columns={[
+                      {
+                        key: "status",
+                        label: t("alertsPage.status") || "الحالة",
+                        render: (r) => (
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
+                              r?.is_read
+                                ? "border-gray-200 bg-gray-50 text-gray-700"
+                                : "border-blue-200 bg-blue-50 text-blue-700 font-medium"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "inline-block h-2 w-2 rounded-full",
+                                r?.is_read ? "bg-gray-400" : "bg-blue-600"
+                              )}
+                            />
+                            {r?.is_read
+                              ? t("alertsPage.read") || "تمت القراءة"
+                              : t("alertsPage.unread") || "غير مقروء"}
+                          </span>
+                        ),
+                      },
                       {
                         key: "severity",
                         label: t("dashboard.alerts.columns.severity"),
@@ -1014,7 +1105,9 @@ export default function DashboardPage() {
                         label: t("dashboard.alerts.columns.title"),
                         render: (r) => (
                           <div className="flex flex-col items-end">
-                            <span className="font-medium">{r?.title || "—"}</span>
+                            <span className={cn(r?.is_read ? "font-medium" : "font-semibold")}>
+                              {r?.title || "—"}
+                            </span>
                             <span className="text-xs text-gray-600">{r?.message || "—"}</span>
                           </div>
                         ),
@@ -1064,39 +1157,39 @@ export default function DashboardPage() {
                     ) : null}
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                     <ActionTile
-                      title={t("dashboard.compliance.vehiclesExpiring") || "مركبات قرب انتهاء الرخصة"}
-                      value={fmtInt(complianceCounts.vehExpiring)}
-                      hint={t("dashboard.compliance.openVehicles") || "افتح صفحة التنبيهات"}
-                      tone={complianceCounts.vehExpiring > 0 ? "warn" : "good"}
-                      href="/alerts?area=compliance&type=VEHICLE_LICENSE_EXPIRING"
-                      openLabel={t("common.open") || "فتح"}
-                     />
-                     <ActionTile
-                      title={t("dashboard.compliance.vehiclesExpired") || "مركبات انتهت الرخصة"}
-                      value={fmtInt(complianceCounts.vehExpired)}
-                      hint={t("dashboard.compliance.reviewVehicles") || "راجع العناصر الحرجة"}
-                      tone={complianceCounts.vehExpired > 0 ? "danger" : "good"}
-                      href="/alerts?area=compliance&severity=danger"
-                       openLabel={t("common.open") || "فتح"}
-                    />
-                    <ActionTile
-                      title={t("dashboard.compliance.driversExpiring") || "سائقين قرب انتهاء الرخصة"}
-                      value={fmtInt(complianceCounts.drvExpiring)}
-                      hint={t("dashboard.compliance.openDrivers") || "افتح صفحة التنبيهات"}
-                      tone={complianceCounts.drvExpiring > 0 ? "warn" : "good"}
-                      href="//alerts?area=compliance&type=VEHICLE_LICENSE_EXPIRING"
-                      openLabel={t("common.open") || "فتح"}
-                        />
                       <ActionTile
-                       title={t("dashboard.compliance.driversExpired") || "سائقين انتهت الرخصة"}
-                      value={fmtInt(complianceCounts.drvExpired)}
-                      hint={t("dashboard.compliance.reviewDrivers") || "راجع العناصر الحرجة"}
-                      tone={complianceCounts.drvExpired > 0 ? "danger" : "good"}
-                      href="/alerts?area=compliance&severity=danger"
-                      openLabel={t("common.open") || "فتح"}
+                        title={t("dashboard.compliance.vehiclesExpiring") || "مركبات قرب انتهاء الرخصة"}
+                        value={fmtInt(complianceCounts.vehExpiring)}
+                        hint={t("dashboard.compliance.openVehicles") || "افتح صفحة التنبيهات"}
+                        tone={complianceCounts.vehExpiring > 0 ? "warn" : "good"}
+                        href="/alerts?area=compliance&type=VEHICLE_LICENSE_EXPIRING"
+                        openLabel={t("common.open") || "فتح"}
                       />
-                </div>
+                      <ActionTile
+                        title={t("dashboard.compliance.vehiclesExpired") || "مركبات انتهت الرخصة"}
+                        value={fmtInt(complianceCounts.vehExpired)}
+                        hint={t("dashboard.compliance.reviewVehicles") || "راجع العناصر الحرجة"}
+                        tone={complianceCounts.vehExpired > 0 ? "danger" : "good"}
+                        href="/alerts?area=compliance&type=VEHICLE_LICENSE_EXPIRED"
+                        openLabel={t("common.open") || "فتح"}
+                      />
+                      <ActionTile
+                        title={t("dashboard.compliance.driversExpiring") || "سائقين قرب انتهاء الرخصة"}
+                        value={fmtInt(complianceCounts.drvExpiring)}
+                        hint={t("dashboard.compliance.openDrivers") || "افتح صفحة التنبيهات"}
+                        tone={complianceCounts.drvExpiring > 0 ? "warn" : "good"}
+                        href="/alerts?area=compliance&type=DRIVER_LICENSE_EXPIRING"
+                        openLabel={t("common.open") || "فتح"}
+                      />
+                      <ActionTile
+                        title={t("dashboard.compliance.driversExpired") || "سائقين انتهت الرخصة"}
+                        value={fmtInt(complianceCounts.drvExpired)}
+                        hint={t("dashboard.compliance.reviewDrivers") || "راجع العناصر الحرجة"}
+                        tone={complianceCounts.drvExpired > 0 ? "danger" : "good"}
+                        href="/alerts?area=compliance&type=DRIVER_LICENSE_EXPIRED"
+                        openLabel={t("common.open") || "فتح"}
+                      />
+                    </div>
 
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                       <DataTable
