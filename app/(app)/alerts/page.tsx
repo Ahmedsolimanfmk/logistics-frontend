@@ -1,8 +1,6 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
@@ -59,21 +57,6 @@ type AlertRow = {
 type AlertsResponse = {
   total: number;
   items: AlertRow[];
-};
-
-type AlertsSummaryResponse = {
-  total: number;
-  by_severity: {
-    danger: number;
-    warn: number;
-    info: number;
-  };
-  by_area: {
-    operations: number;
-    finance: number;
-    maintenance: number;
-    compliance: number;
-  };
 };
 
 function isValidSeverity(v: string | null): v is AlertSeverity {
@@ -289,7 +272,7 @@ function DataTable({
   );
 }
 
-export default function AlertsPage() {
+function AlertsPageContent() {
   const t = useT();
   const router = useRouter();
   const pathname = usePathname();
@@ -644,5 +627,25 @@ export default function AlertsPage() {
         />
       </div>
     </div>
+  );
+}
+
+function AlertsPageFallback() {
+  return (
+    <div className="min-h-screen text-gray-900" dir="rtl">
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
+          جاري تحميل التنبيهات...
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AlertsPage() {
+  return (
+    <Suspense fallback={<AlertsPageFallback />}>
+      <AlertsPageContent />
+    </Suspense>
   );
 }
