@@ -3,6 +3,7 @@
 import React from "react";
 import { Sidebar } from "@/src/components/Sidebar";
 import LanguageSwitcher from "@/src/components/LanguageSwitcher";
+import NotificationBell from "@/src/components/NotificationBell";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -12,8 +13,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1 min-w-0 min-h-screen overflow-hidden">
         <div className="h-full overflow-auto">
           <div className="p-6">
-            <div className="mb-4 flex items-center justify-end">
-              <LanguageSwitcher />
+            <div className="mb-4 flex items-center justify-end gap-2">
+              <NotificationBell />
+              
             </div>
 
             {children}

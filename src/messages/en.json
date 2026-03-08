@@ -87,6 +87,12 @@
   "users": "Users",
   "supervisors": "Supervisors"
 },
+"notifications": {
+  "open": "Open notifications",
+  "title": "Notifications",
+  "subtitle": "Latest important alerts",
+  "empty": "No current alerts"
+},
   "dashboard": {
     "title": "Dashboard",
     "columns": {
