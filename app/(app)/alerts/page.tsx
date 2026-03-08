@@ -1,4 +1,5 @@
 "use client";
+
 export const dynamic = "force-dynamic";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -295,7 +296,6 @@ export default function AlertsPage() {
   const searchParams = useSearchParams();
 
   const [rows, setRows] = useState<AlertRow[]>([]);
-  const [summary, setSummary] = useState<AlertsSummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -318,19 +318,13 @@ export default function AlertsPage() {
       setLoading(true);
       setErr(null);
 
-      const [alertsRes, summaryRes] = await Promise.all([
-        apiAuthGet("/dashboard/alerts", { limit: 200 }),
-        apiAuthGet("/dashboard/alerts/summary"),
-      ]);
+      const alertsRes = (await apiAuthGet("/dashboard/alerts", {
+        limit: 200,
+      })) as AlertsResponse;
 
-      const alertsData = alertsRes as AlertsResponse;
-      const summaryData = summaryRes as AlertsSummaryResponse;
-
-      setRows(Array.isArray(alertsData?.items) ? alertsData.items : []);
-      setSummary(summaryData || null);
+      setRows(Array.isArray(alertsRes?.items) ? alertsRes.items : []);
     } catch (e: any) {
       setRows([]);
-      setSummary(null);
       setErr(e?.response?.data?.message || e?.message || t("common.failed"));
     } finally {
       setLoading(false);
@@ -339,6 +333,7 @@ export default function AlertsPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function updateUrl(
