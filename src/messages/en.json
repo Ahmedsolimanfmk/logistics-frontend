@@ -185,6 +185,32 @@
         }
       }
     },
+    "alerts": {
+  "title": "Central Alerts",
+  "total": "Total alerts",
+  "totalHint": "All current alerts",
+  "danger": "Critical alerts",
+  "dangerHint": "Items requiring urgent action",
+  "warn": "Warning alerts",
+  "warnHint": "Items that need follow-up",
+  "info": "Info alerts",
+  "infoHint": "Informational items only",
+  "latestTableTitle": "Latest alerts",
+  "emptyTitle": "No current alerts",
+  "emptyHint": "The system currently has no open alerts",
+  "columns": {
+    "severity": "Priority",
+    "area": "Area",
+    "title": "Title",
+    "reference": "Reference",
+    "createdAt": "Date"
+  },
+  "severity": {
+    "danger": "Critical",
+    "warn": "Warning",
+    "info": "Info"
+  }
+},
     "maintenance": {
       "actionRequired": "Maintenance – Action Required",
       "openWorkOrders": {
@@ -242,6 +268,20 @@
       "hint": "Reserved for development diagnostics."
     }
   },
+  
+  "alertsPage": {
+    "title": "Alerts Center",
+    "subtitle": "Central view for all system alerts",
+    "tableTitle": "All alerts",
+    "filteredCount": "Results:",
+    "filters": {
+      "severity": "Severity",
+      "area": "Area",
+      "all": "All"
+    }
+  
+},
+
   "users": {
     "title": "Users",
     "subtitle": "Admin-only user management",

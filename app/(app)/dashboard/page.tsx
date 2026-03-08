@@ -575,42 +575,40 @@ export default function DashboardPage() {
   };
 
   const fetchCentralAlertsIfNeeded = async (activeTab: TabKey) => {
-    if (activeTab !== "operations") {
-      setAlertsList([]);
-      setAlertsSummary(null);
-      setAlertsErr(null);
-      setLoadingAlerts(false);
-      return;
-    }
-
-    setLoadingAlerts(true);
+  if (activeTab !== "operations") {
+    setAlertsList([]);
+    setAlertsSummary(null);
     setAlertsErr(null);
-    try {
-      const [listData, summaryData] = await Promise.all([
-        apiAuthGet(`/dashboard/alerts`, { limit: 10 }),
-        apiAuthGet(`/dashboard/alerts/summary`),
-      ]);
+    setLoadingAlerts(false);
+    return;
+  }
 
-      setAlertsList(listData?.items || listData?.data?.items || []);
-      setAlertsSummary(listData?.summary || summaryData?.data || summaryData || null);
-    } catch (e: any) {
-      setAlertsList([]);
-      setAlertsSummary(null);
-      setAlertsErr(e?.response?.data?.message || e?.message || t("common.failed"));
-    } finally {
-      setLoadingAlerts(false);
-    }
-  };
-
-  const reloadAll = async () => {
-    await Promise.all([
-      fetchSummary(tab),
-      fetchBundleIfNeeded(tab),
-      fetchComplianceIfNeeded(tab),
-      fetchCentralAlertsIfNeeded(tab),
+  setLoadingAlerts(true);
+  setAlertsErr(null);
+  try {
+    const [listData, summaryData] = await Promise.all([
+      apiAuthGet(`/dashboard/alerts`, { limit: 10 }),
+      apiAuthGet(`/dashboard/alerts/summary`),
     ]);
-  };
 
+    setAlertsList(listData?.items || []);
+    setAlertsSummary(summaryData || null);
+  } catch (e: any) {
+    setAlertsList([]);
+    setAlertsSummary(null);
+    setAlertsErr(e?.response?.data?.message || e?.message || t("common.failed"));
+  } finally {
+    setLoadingAlerts(false);
+  }
+};
+const reloadAll = async () => {
+  await Promise.all([
+    fetchSummary(tab),
+    fetchBundleIfNeeded(tab),
+    fetchComplianceIfNeeded(tab),
+    fetchCentralAlertsIfNeeded(tab),
+  ]);
+};
   useEffect(() => {
     if (!token) return;
     let cancel = false;
@@ -896,120 +894,152 @@ export default function DashboardPage() {
                 </Section>
 
                 <Section
-                  title={"التنبيهات المركزية"}
-                  right={
-                    <button
-                      type="button"
-                      onClick={() => fetchCentralAlertsIfNeeded("operations")}
-                      className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
-                      disabled={loadingAlerts}
-                    >
-                      {loadingAlerts ? t("common.loading") : t("common.refresh")}
-                    </button>
-                  }
-                >
-                  {alertsErr ? (
-                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                      {alertsErr}
-                    </div>
-                  ) : null}
+  title={t("dashboard.alerts.title")}
+  right={
+    <div className="flex items-center gap-2">
+      <Link
+        href="/alerts"
+        className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
+      >
+        {t("common.viewAll")}
+      </Link>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <ActionTile
-                      title={"إجمالي التنبيهات"}
-                      value={fmtInt(alertsKpi.total)}
-                      hint={"كل التنبيهات الحالية"}
-                      tone={alertsKpi.total > 0 ? "neutral" : "good"}
-                    />
-                    <ActionTile
-                      title={"تنبيهات حرجة"}
-                      value={fmtInt(alertsKpi.danger)}
-                      hint={"عناصر تحتاج تدخل سريع"}
-                      tone={alertsKpi.danger > 0 ? "danger" : "good"}
-                    />
-                    <ActionTile
-                      title={"تنبيهات تحذيرية"}
-                      value={fmtInt(alertsKpi.warn)}
-                      hint={"عناصر قريبة أو تحتاج متابعة"}
-                      tone={alertsKpi.warn > 0 ? "warn" : "good"}
-                    />
-                    <ActionTile
-                      title={"تنبيهات معلوماتية"}
-                      value={fmtInt(alertsKpi.info)}
-                      hint={"معلومات فقط"}
-                      tone="neutral"
-                    />
-                  </div>
+      <button
+        type="button"
+        onClick={() => fetchCentralAlertsIfNeeded("operations")}
+        className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
+        disabled={loadingAlerts}
+      >
+        {loadingAlerts ? t("common.loading") : t("common.refresh")}
+      </button>
+    </div>
+  }
+>
+  {alertsErr ? (
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {alertsErr}
+    </div>
+  ) : null}
 
-                  <DataTable
-                    title={"آخر التنبيهات"}
-                    rows={alertsList || []}
-                    searchable
-                    empty={
-                      <EmptyNice
-                        title={"لا توجد تنبيهات حالية"}
-                        hint={"النظام لا يحتوي على تنبيهات مفتوحة الآن"}
-                      />
-                    }
-                    onRowClick={(r) => {
-                      if (r?.href) router.push(r.href);
-                    }}
-                    columns={[
-                      {
-                        key: "severity",
-                        label: "الأولوية",
-                        render: (r) => {
-                          const sev = String(r?.severity || "");
-                          const cls =
-                            sev === "danger"
-                              ? "border-rose-200 bg-rose-50 text-rose-700"
-                              : sev === "warn"
-                              ? "border-amber-200 bg-amber-50 text-amber-700"
-                              : "border-gray-200 bg-gray-50 text-gray-700";
+  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <ActionTile
+      title={t("dashboard.alerts.total")}
+      value={fmtInt(alertsKpi.total)}
+      hint={t("dashboard.alerts.totalHint")}
+      tone={alertsKpi.total > 0 ? "neutral" : "good"}
+    />
 
-                          const text =
-                            sev === "danger" ? "حرج" : sev === "warn" ? "تحذير" : "معلومة";
+    <ActionTile
+      title={t("dashboard.alerts.danger")}
+      value={fmtInt(alertsKpi.danger)}
+      hint={t("dashboard.alerts.dangerHint")}
+      tone={alertsKpi.danger > 0 ? "danger" : "good"}
+    />
 
-                          return (
-                            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-xs", cls)}>
-                              {text}
-                            </span>
-                          );
-                        },
-                      },
-                      {
-                        key: "area",
-                        label: "القسم",
-                        render: (r) => areaLabel(r?.area, t),
-                      },
-                      {
-                        key: "title",
-                        label: "العنوان",
-                        render: (r) => (
-                          <div className="flex flex-col items-end">
-                            <span className="font-medium">{r?.title || "—"}</span>
-                            <span className="text-xs text-gray-600">{r?.message || "—"}</span>
-                          </div>
-                        ),
-                      },
-                      {
-                        key: "entity_id",
-                        label: "المرجع",
-                        render: (r) => (
-                          <span className="font-mono">
-                            {r?.entity_id ? shortId(r.entity_id) : "—"}
-                          </span>
-                        ),
-                      },
-                      {
-                        key: "created_at",
-                        label: "التاريخ",
-                        render: (r) => fmtDate(r?.created_at),
-                      },
-                    ]}
-                  />
-                </Section>
+    <ActionTile
+      title={t("dashboard.alerts.warn")}
+      value={fmtInt(alertsKpi.warn)}
+      hint={t("dashboard.alerts.warnHint")}
+      tone={alertsKpi.warn > 0 ? "warn" : "good"}
+    />
 
+    <ActionTile
+      title={t("dashboard.alerts.info")}
+      value={fmtInt(alertsKpi.info)}
+      hint={t("dashboard.alerts.infoHint")}
+      tone="neutral"
+    />
+  </div>
+
+  <DataTable
+    title={t("dashboard.alerts.latestTableTitle")}
+    rows={alertsList || []}
+    searchable
+    empty={
+      <EmptyNice
+        title={t("dashboard.alerts.emptyTitle")}
+        hint={t("dashboard.alerts.emptyHint")}
+      />
+    }
+    right={
+      <Link href="/alerts" className="text-xs text-orange-700 underline">
+        {t("common.viewAll")} ←
+      </Link>
+    }
+    onRowClick={(r) => {
+      if (r?.href) router.push(r.href);
+    }}
+    columns={[
+      {
+        key: "severity",
+        label: t("dashboard.alerts.columns.severity"),
+        render: (r) => {
+          const sev = String(r?.severity || "");
+
+          const cls =
+            sev === "danger"
+              ? "border-rose-200 bg-rose-50 text-rose-700"
+              : sev === "warn"
+              ? "border-amber-200 bg-amber-50 text-amber-700"
+              : "border-gray-200 bg-gray-50 text-gray-700";
+
+          const text =
+            sev === "danger"
+              ? t("dashboard.alerts.severity.danger")
+              : sev === "warn"
+              ? t("dashboard.alerts.severity.warn")
+              : t("dashboard.alerts.severity.info");
+
+          return (
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-xs",
+                cls
+              )}
+            >
+              {text}
+            </span>
+          );
+        },
+      },
+
+      {
+        key: "area",
+        label: t("dashboard.alerts.columns.area"),
+        render: (r) => areaLabel(r?.area, t),
+      },
+
+      {
+        key: "title",
+        label: t("dashboard.alerts.columns.title"),
+        render: (r) => (
+          <div className="flex flex-col items-end">
+            <span className="font-medium">{r?.title || "—"}</span>
+            <span className="text-xs text-gray-600">
+              {r?.message || "—"}
+            </span>
+          </div>
+        ),
+      },
+
+      {
+        key: "entity_id",
+        label: t("dashboard.alerts.columns.reference"),
+        render: (r) => (
+          <span className="font-mono">
+            {r?.entity_id ? shortId(r.entity_id) : "—"}
+          </span>
+        ),
+      },
+
+      {
+        key: "created_at",
+        label: t("dashboard.alerts.columns.createdAt"),
+        render: (r) => fmtDate(r?.created_at),
+      },
+    ]}
+  />
+</Section>
                 {canSeeCompliance ? (
                   <Section
                     title={t("dashboard.compliance.title") || "تنبيهات الالتزام (الرخص)"}

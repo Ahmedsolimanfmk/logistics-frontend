@@ -56,6 +56,9 @@
   "ar": "العربية",
   "en": "English"
 },
+"sections": {
+  "opsAction": "إجراءات التشغيل"
+},
   "sidebar": {
   "appName": "النظام اللوجستي",
   "dashboard": "لوحة التحكم",
@@ -117,7 +120,28 @@
   "errors": {
     "trendsUnavailable": "خدمة الاتجاهات غير متاحة."
   },
-
+"compliance": {
+  "title": "تنبيهات الالتزام (الرخص)",
+  "range": "خلال",
+  "vehiclesExpiring": "مركبات قرب انتهاء الرخصة",
+  "vehiclesExpired": "مركبات انتهت الرخصة",
+  "driversExpiring": "سائقين قرب انتهاء الرخصة",
+  "driversExpired": "سائقين انتهت الرخصة",
+  "openVehicles": "افتح صفحة المركبات",
+  "reviewVehicles": "راجع المركبات غير المطابقة",
+  "openDrivers": "افتح صفحة السائقين",
+  "reviewDrivers": "راجع السائقين غير المطابقين",
+  "vehiclesTable": "المركبات الأقرب لانتهاء الرخصة",
+  "driversTable": "السائقين الأقرب لانتهاء الرخصة",
+  "vehiclesEmptyTitle": "لا توجد مركبات قرب انتهاء الرخصة",
+  "vehiclesEmptyHint": "لا توجد عناصر ضمن نطاق التنبيه الحالي",
+  "driversEmptyTitle": "لا يوجد سائقين قرب انتهاء الرخصة",
+  "driversEmptyHint": "لا توجد عناصر ضمن نطاق التنبيه الحالي",
+  "licenseNo": "رقم الرخصة",
+  "expiry": "الانتهاء",
+  "supervisor": "مشرف",
+  "nationalId": "الرقم القومي"
+},
   "ops": {
     "tripsNeedingFinanceClose": {
       "title": "رحلات تحتاج إغلاق مالي",
@@ -225,7 +249,32 @@
       }
     }
   },
-
+"alerts": {
+  "title": "التنبيهات المركزية",
+  "total": "إجمالي التنبيهات",
+  "totalHint": "كل التنبيهات الحالية",
+  "danger": "تنبيهات حرجة",
+  "dangerHint": "عناصر تحتاج تدخل سريع",
+  "warn": "تنبيهات تحذيرية",
+  "warnHint": "عناصر قريبة أو تحتاج متابعة",
+  "info": "تنبيهات معلوماتية",
+  "infoHint": "معلومات فقط",
+  "latestTableTitle": "آخر التنبيهات",
+  "emptyTitle": "لا توجد تنبيهات حالية",
+  "emptyHint": "النظام لا يحتوي على تنبيهات مفتوحة الآن",
+  "columns": {
+    "severity": "الأولوية",
+    "area": "القسم",
+    "title": "العنوان",
+    "reference": "المرجع",
+    "createdAt": "التاريخ"
+  },
+  "severity": {
+    "danger": "حرج",
+    "warn": "تحذير",
+    "info": "معلومة"
+  }
+},
   "maintenance": {
     "actionRequired": "الصيانة – إجراءات مطلوبة",
     "openWorkOrders": {
@@ -284,7 +333,19 @@
     "hint": "مخصص لتشخيصات التطوير."
   }
 },
-  "users": {
+
+  "alertsPage": {
+    "title": "مركز التنبيهات",
+    "subtitle": "عرض مركزي لكل التنبيهات في النظام",
+    "tableTitle": "كل التنبيهات",
+    "filteredCount": "عدد النتائج:",
+    "filters": {
+      "severity": "الخطورة",
+      "area": "القسم",
+      "all": "الكل"
+    }
+  },
+ "users": {
     "title": "المستخدمون",
     "subtitle": "إدارة المستخدمين (للأدمن فقط)",
     "mustLogin": "يجب تسجيل الدخول أولاً.",
