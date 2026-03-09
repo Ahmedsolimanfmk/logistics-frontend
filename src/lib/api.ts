@@ -1,4 +1,3 @@
-// src/lib/api.ts
 import axios from "axios";
 
 // =====================
@@ -65,14 +64,44 @@ api.interceptors.request.use((config) => {
 });
 
 // =====================
-// Auth helper (explicit)
+// Auth helper internals
+// =====================
+function getAuthHeaders(): Record<string, string> | undefined {
+  const t = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  return t ? { Authorization: `Bearer ${t}` } : undefined;
+}
+
+// =====================
+// Auth helpers (explicit)
 // =====================
 export async function apiAuthGet<T = any>(path: string, params?: any): Promise<T> {
-  const t = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
   const res = await api.get(path, {
     params,
-    headers: t ? { Authorization: `Bearer ${t}` } : undefined,
+    headers: getAuthHeaders(),
+  });
+
+  return res.data as T;
+}
+
+export async function apiAuthPost<T = any>(path: string, body?: any): Promise<T> {
+  const res = await api.post(path, body, {
+    headers: getAuthHeaders(),
+  });
+
+  return res.data as T;
+}
+
+export async function apiAuthPatch<T = any>(path: string, body?: any): Promise<T> {
+  const res = await api.patch(path, body, {
+    headers: getAuthHeaders(),
+  });
+
+  return res.data as T;
+}
+
+export async function apiAuthDelete<T = any>(path: string): Promise<T> {
+  const res = await api.delete(path, {
+    headers: getAuthHeaders(),
   });
 
   return res.data as T;
@@ -96,7 +125,7 @@ export async function apiPatch<T = any>(path: string, body?: any): Promise<T> {
   return res.data as T;
 }
 
-// ✅ NEW: DELETE wrapper (same interceptors + base + token)
+// ✅ DELETE wrapper (same interceptors + base + token)
 export async function apiDelete<T = any>(path: string): Promise<T> {
   const res = await api.delete(path);
   return res.data as T;
