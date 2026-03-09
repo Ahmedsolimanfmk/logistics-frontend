@@ -98,6 +98,11 @@ export function Sidebar() {
           { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
         ],
       },
+      {
+  labelKey: "sidebar.aiAssistant",
+  href: "/ai-assistant",
+  roles: ["ADMIN","ACCOUNTANT","STOREKEEPER","FIELD_SUPERVISOR","HR"]
+},
 
       { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN"] },
       {
