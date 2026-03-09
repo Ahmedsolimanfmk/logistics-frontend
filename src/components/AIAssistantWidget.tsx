@@ -49,10 +49,44 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 };
 
 const SECTION_DESCRIPTIONS: Record<SectionKey, string> = {
-  finance: "تحليل المصروفات والتكاليف المالية",
-  ar: "تحليل مستحقات العملاء والمديونيات",
+  finance: "تحليل المصروفات والأنواع والتكاليف",
+  ar: "تحليل مديونيات العملاء والمستحقات",
   maintenance: "تحليل أوامر العمل وتكاليف الصيانة",
   inventory: "تحليل حركة الأصناف والمخزون",
+};
+
+const SECTION_SUPPORTED_QUESTIONS: Record<SectionKey, string[]> = {
+  finance: [
+    "كم إجمالي المصروفات هذا الشهر؟",
+    "صرفنا كام هذا الشهر؟",
+    "ما أعلى نوع مصروف هذا الشهر؟",
+    "أكبر بند مصروف إيه هذا الشهر؟",
+    "اعرض أعلى 5 أنواع مصروف هذا الشهر",
+    "قارن مصروفات هذا الشهر بالشهر الماضي",
+    "ما إجمالي المصروفات الشهر الماضي؟",
+  ],
+  ar: [
+    "ما إجمالي مستحقات العملاء؟",
+    "فلوسنا عند العملاء كام؟",
+    "قيمة متأخرات العملاء كام؟",
+    "من أعلى عميل مديونية؟",
+    "اعرض أعلى 5 عملاء مديونية",
+  ],
+  maintenance: [
+    "كم عدد أوامر العمل المفتوحة؟",
+    "كام أمر عمل مفتوح؟",
+    "ما أعلى مركبة تكلفة صيانة؟",
+    "أنهي عربية صيانتها أعلى؟",
+    "اعرض أعلى 5 مركبات تكلفة صيانة",
+  ],
+  inventory: [
+    "ما أكثر قطع الغيار صرفاً؟",
+    "أكثر صنف بيتصرف إيه؟",
+    "اعرض أعلى 5 أصناف صرفًا",
+    "ما الأصناف القريبة من النفاد؟",
+    "إيه الأصناف اللي قربت تخلص؟",
+    "كام عدد الأصناف منخفضة المخزون؟",
+  ],
 };
 
 const SECTIONS_BY_ROLE: Record<string, SectionKey[]> = {
@@ -62,6 +96,35 @@ const SECTIONS_BY_ROLE: Record<string, SectionKey[]> = {
   FIELD_SUPERVISOR: ["finance", "maintenance"],
   HR: ["maintenance"],
 };
+
+const QUESTION_SECTION_HINTS: Array<{ section: SectionKey; terms: string[] }> = [
+  {
+    section: "finance",
+    terms: [
+      "مصروف",
+      "المصروفات",
+      "نوع مصروف",
+      "بند مصروف",
+      "الصرف",
+      "تكلفه",
+      "تكلفة",
+      "قارن",
+      "مقارنة",
+    ],
+  },
+  {
+    section: "ar",
+    terms: ["مستحقات", "مديونيه", "مديونية", "مديونيات", "العملاء", "عميل", "متاخرات", "متأخرات"],
+  },
+  {
+    section: "maintenance",
+    terms: ["صيانه", "صيانة", "اوامر العمل", "أوامر العمل", "امر عمل", "مركبه", "مركبة", "عربيه", "عربية"],
+  },
+  {
+    section: "inventory",
+    terms: ["مخزون", "اصناف", "أصناف", "قطع", "صرف", "نفاد", "الصنف"],
+  },
+];
 
 function uid() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -76,6 +139,15 @@ function money(n: any) {
   return new Intl.NumberFormat("ar-EG", {
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function normalizeArabic(text: string) {
+  return String(text || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي");
 }
 
 function detectContextFromPath(pathname: string | null): SectionKey | null {
@@ -150,10 +222,10 @@ function getErrorMessage(err: any): string {
 
 function getInitialAssistantMessage(section: SectionKey | null) {
   if (section) {
-    return `مرحبًا بك في TREX AI Copilot. أنت الآن داخل قسم ${SECTION_LABELS[section]}. يمكنك اختيار سؤال مقترح أو كتابة سؤالك مباشرة.`;
+    return `مرحبًا بك في TREX AI Copilot. أنت الآن داخل قسم ${SECTION_LABELS[section]}. يمكنك اختيار سؤال من الأسئلة التي أفهمها الآن أو كتابة سؤالك مباشرة.`;
   }
 
-  return "مرحبًا بك في TREX AI Copilot. اسألني عن المصروفات أو العملاء أو الصيانة أو المخزون.";
+  return "مرحبًا بك في TREX AI Copilot. اختر القسم أولًا أو اسألني عن المصروفات أو العملاء أو الصيانة أو المخزون.";
 }
 
 function pickItems(result: any): any[] {
@@ -176,6 +248,9 @@ function extractSummaryRows(result: any): Array<{ label: string; value: string }
     ["total_open_work_orders", "أوامر العمل المفتوحة"],
     ["count", "العدد"],
     ["total", "الإجمالي"],
+    ["this_month_total", "هذا الشهر"],
+    ["last_month_total", "الشهر الماضي"],
+    ["difference", "الفرق"],
   ];
 
   for (const [key, label] of mapping) {
@@ -196,6 +271,33 @@ function formatCellValue(v: any) {
   if (v == null || v === "") return "—";
   if (typeof v === "number") return money(v);
   return String(v);
+}
+
+function detectQuestionSection(question: string): SectionKey | null {
+  const q = normalizeArabic(question);
+
+  for (const item of QUESTION_SECTION_HINTS) {
+    if (item.terms.some((term) => q.includes(normalizeArabic(term)))) {
+      return item.section;
+    }
+  }
+
+  return null;
+}
+
+function filterFollowUpsForSection(
+  items: string[],
+  section: SectionKey | null
+): string[] {
+  const list = Array.isArray(items) ? items : [];
+  if (!section) return list.slice(0, 4);
+
+  return list
+    .filter((q) => {
+      const detected = detectQuestionSection(q);
+      return !detected || detected === section;
+    })
+    .slice(0, 4);
 }
 
 export default function AIAssistantWidget() {
@@ -237,6 +339,11 @@ export default function AIAssistantWidget() {
     () => getSubtitleByContext(effectiveSection),
     [effectiveSection]
   );
+
+  const supportedQuestions = useMemo(() => {
+    if (!effectiveSection) return [];
+    return SECTION_SUPPORTED_QUESTIONS[effectiveSection] || [];
+  }, [effectiveSection]);
 
   useEffect(() => {
     if (!selectedSection && smartContext && allowedSections.includes(smartContext)) {
@@ -302,6 +409,27 @@ export default function AIAssistantWidget() {
     const q = String(question || "").trim();
     if (!q || loading) return;
 
+    const detectedSection = detectQuestionSection(q);
+
+    if (
+      effectiveSection &&
+      detectedSection &&
+      detectedSection !== effectiveSection
+    ) {
+      setMessages((m) => [
+        ...m,
+        { id: uid(), role: "user", text: q },
+        {
+          id: uid(),
+          role: "assistant",
+          text: `هذا السؤال يبدو أقرب إلى قسم ${SECTION_LABELS[detectedSection]} وليس ${SECTION_LABELS[effectiveSection]}. يمكنك التبديل إلى هذا القسم أو اختيار سؤال من الأسئلة المدعومة الحالية.`,
+        },
+      ]);
+      setInput("");
+      setFollowUps(SECTION_SUPPORTED_QUESTIONS[effectiveSection].slice(0, 4));
+      return;
+    }
+
     setMessages((m) => [...m, { id: uid(), role: "user", text: q }]);
     setInput("");
     setLoading(true);
@@ -321,7 +449,12 @@ export default function AIAssistantWidget() {
         },
       ]);
 
-      setFollowUps(Array.isArray(data?.followUps) ? data.followUps : []);
+      setFollowUps(
+        filterFollowUpsForSection(
+          Array.isArray(data?.followUps) ? data.followUps : [],
+          effectiveSection
+        )
+      );
     } catch (err) {
       setMessages((m) => [
         ...m,
@@ -466,10 +599,10 @@ export default function AIAssistantWidget() {
           {!!allowedSections.length && (
             <div className="border-b border-black/10 px-3 py-3">
               <div className="mb-2 flex items-center justify-between">
-                <div className="text-xs font-semibold opacity-70">اختر القسم</div>
+                <div className="text-xs font-semibold opacity-70">الأقسام المتاحة</div>
                 {effectiveSection ? (
                   <div className="text-[11px] opacity-60">
-                    {SECTION_DESCRIPTIONS[effectiveSection]}
+                    القسم الحالي: {SECTION_LABELS[effectiveSection]}
                   </div>
                 ) : null}
               </div>
@@ -491,6 +624,12 @@ export default function AIAssistantWidget() {
                   </button>
                 ))}
               </div>
+
+              {effectiveSection ? (
+                <div className="mt-3 text-[11px] opacity-70">
+                  {SECTION_DESCRIPTIONS[effectiveSection]}
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -498,6 +637,24 @@ export default function AIAssistantWidget() {
             {loadingInitial && (
               <div className="rounded-xl border border-black/10 bg-white/60 px-3 py-2 text-sm">
                 جاري تحميل الاقتراحات والتحليلات الذكية...
+              </div>
+            )}
+
+            {!!effectiveSection && (
+              <div className="space-y-2">
+                <div className="text-sm font-semibold">الأسئلة التي أفهمها الآن</div>
+                <div className="flex flex-wrap gap-2">
+                  {supportedQuestions.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => ask(q)}
+                      className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -525,9 +682,9 @@ export default function AIAssistantWidget() {
 
             {!loadingInitial && !!suggestedQuestions.length && (
               <div className="space-y-2">
-                <div className="text-sm font-semibold">أسئلة مقترحة</div>
+                <div className="text-sm font-semibold">أسئلة مقترحة لهذا القسم</div>
                 <div className="flex flex-wrap gap-2">
-                  {suggestedQuestions.slice(0, 6).map((q) => (
+                  {suggestedQuestions.slice(0, 8).map((q) => (
                     <button
                       key={q}
                       type="button"
@@ -588,7 +745,7 @@ export default function AIAssistantWidget() {
               <div className="space-y-2">
                 <div className="text-sm font-semibold">متابعة مقترحة</div>
                 <div className="flex flex-wrap gap-2">
-                  {followUps.slice(0, 4).map((q) => (
+                  {followUps.map((q) => (
                     <button
                       key={q}
                       type="button"
@@ -607,17 +764,25 @@ export default function AIAssistantWidget() {
               !suggestedQuestions.length &&
               messages.length <= 1 && (
                 <div className="rounded-xl border border-dashed border-black/10 bg-white/60 px-3 py-4 text-center text-sm opacity-70">
-                  لا توجد اقتراحات جاهزة حاليًا لهذا القسم، لكن يمكنك كتابة سؤالك مباشرة.
+                  لا توجد اقتراحات جاهزة حاليًا لهذا القسم، لكن يمكنك اختيار سؤال من الأسئلة المدعومة أو كتابة سؤالك مباشرة.
                 </div>
               )}
           </div>
 
           <div className="border-t border-black/10 bg-[rgb(var(--trex-card))] p-3">
+            <div className="mb-2 text-[11px] opacity-60">
+              النسخة الحالية أصبحت أوسع في الفهم داخل كل قسم، ويظل الأفضل الاختيار من الأسئلة المدعومة أو المقترحة للحصول على أدق نتيجة.
+            </div>
+
             <div className="flex items-end gap-2">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="اكتب سؤالك..."
+                placeholder={
+                  effectiveSection
+                    ? `اكتب سؤالك في قسم ${SECTION_LABELS[effectiveSection]}...`
+                    : "اكتب سؤالك..."
+                }
                 className="min-h-[52px] max-h-[120px] flex-1 resize-none rounded-xl border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500"
               />
               <button
