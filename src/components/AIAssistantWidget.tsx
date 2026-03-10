@@ -8,6 +8,7 @@ import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
 type ChatRole = "assistant" | "user";
 type SectionKey = "finance" | "ar" | "maintenance" | "inventory";
 type ChatMode = "query" | "action" | "unknown";
+type AssistantViewMode = "menu" | "query" | "action";
 
 type ExecutionStatus =
   | "needs_more_info"
@@ -233,7 +234,8 @@ function detectContextFromPath(pathname: string | null): SectionKey | null {
   if (
     path.startsWith("/finance") ||
     path.startsWith("/cash") ||
-    path.startsWith("/analytics")
+    path.startsWith("/analytics") ||
+    path.startsWith("/dashboard")
   ) {
     return "finance";
   }
@@ -254,7 +256,7 @@ function getSubtitleByContext(context: SectionKey | null) {
   if (context === "ar") return "مساعد حسابات العملاء";
   if (context === "maintenance") return "مساعد تحليلات وأوامر الصيانة";
   if (context === "inventory") return "مساعد تحليلات المخازن";
-  return "مساعد تحليل البيانات";
+  return "مساعد تحليل ذكي للنظام";
 }
 
 function normalizeSection(
@@ -283,10 +285,10 @@ function getErrorMessage(err: any): string {
 
 function getInitialAssistantMessage(section: SectionKey | null) {
   if (section) {
-    return `مرحبًا بك في TREX AI Copilot. أنت الآن داخل قسم ${SECTION_LABELS[section]}. يمكنك اختيار سؤال تحليلي أو أمر تنفيذي من الأمثلة المتاحة أو كتابة سؤالك مباشرة.`;
+    return `مرحبًا بك في TREX AI Copilot. اختر هل تريد تحليل بيانات أم تنفيذ أمر داخل قسم ${SECTION_LABELS[section]}.`;
   }
 
-  return "مرحبًا بك في TREX AI Copilot. اختر القسم أولًا أو اسألني عن المصروفات أو العملاء أو الصيانة أو المخزون.";
+  return "مرحبًا بك في TREX AI Copilot. اختر القسم الذي تريد العمل داخله.";
 }
 
 function pickItems(result: any): any[] {
@@ -395,6 +397,7 @@ export default function AIAssistantWidget() {
 
   const [open, setOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<SectionKey | null>(null);
+  const [viewMode, setViewMode] = useState<AssistantViewMode>("menu");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(false);
@@ -460,6 +463,7 @@ export default function AIAssistantWidget() {
       },
     ]);
     setFollowUps([]);
+    setViewMode("menu");
   }
 
   async function loadInitialData(section: SectionKey | null) {
@@ -529,7 +533,7 @@ export default function AIAssistantWidget() {
         {
           id: uid(),
           role: "assistant",
-          text: `هذا السؤال يبدو أقرب إلى قسم ${SECTION_LABELS[detectedSection]} وليس ${SECTION_LABELS[effectiveSection]}. يمكنك التبديل إلى هذا القسم أو اختيار سؤال من الأسئلة المدعومة الحالية.`,
+          text: `هذا السؤال يبدو أقرب إلى قسم ${SECTION_LABELS[detectedSection]} وليس ${SECTION_LABELS[effectiveSection]}. يمكنك التبديل إلى هذا القسم أو اختيار عنصر مناسب من القائمة الحالية.`,
           mode: "unknown",
         },
       ]);
@@ -592,6 +596,7 @@ export default function AIAssistantWidget() {
     setInsights([]);
     setFollowUps([]);
     setLoadingInitial(true);
+    setViewMode("menu");
   }
 
   function handleNewChat() {
@@ -744,7 +749,7 @@ export default function AIAssistantWidget() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 left-5 z-[1000] flex h-[760px] w-[460px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-2xl border border-black/10 bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] shadow-2xl">
+        <div className="fixed bottom-5 left-5 z-[1000] flex h-[780px] w-[470px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-2xl border border-black/10 bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] shadow-2xl">
           <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/5 text-lg">
@@ -808,6 +813,51 @@ export default function AIAssistantWidget() {
                   {SECTION_DESCRIPTIONS[effectiveSection]}
                 </div>
               ) : null}
+
+              {effectiveSection ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("menu")}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs",
+                      viewMode === "menu"
+                        ? "border-slate-500 bg-slate-100 text-slate-700"
+                        : "border-black/10 hover:bg-black/5"
+                    )}
+                  >
+                    اختيار النوع
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("query")}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs",
+                      viewMode === "query"
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-black/10 hover:bg-black/5"
+                    )}
+                  >
+                    تحليل بيانات
+                  </button>
+
+                  {!!actionCommands.length && (
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("action")}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-xs",
+                        viewMode === "action"
+                          ? "border-purple-500 bg-purple-50 text-purple-700"
+                          : "border-black/10 hover:bg-black/5"
+                      )}
+                    >
+                      تنفيذ أمر
+                    </button>
+                  )}
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -818,7 +868,34 @@ export default function AIAssistantWidget() {
               </div>
             )}
 
-            {!!effectiveSection && (
+            {!!effectiveSection && viewMode === "menu" && (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-black/10 bg-white p-4">
+                  <div className="mb-2 text-sm font-semibold">ماذا تريد أن تفعل داخل قسم {SECTION_LABELS[effectiveSection]}؟</div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("query")}
+                      className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 hover:bg-blue-100"
+                    >
+                      تحليل بيانات
+                    </button>
+
+                    {!!actionCommands.length && (
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("action")}
+                        className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-sm text-purple-700 hover:bg-purple-100"
+                      >
+                        تنفيذ أمر
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!!effectiveSection && viewMode === "query" && (
               <>
                 <div className="space-y-2">
                   <div className="text-sm font-semibold">الأسئلة التي أفهمها الآن</div>
@@ -836,18 +913,40 @@ export default function AIAssistantWidget() {
                   </div>
                 </div>
 
-                {!!actionCommands.length && (
+                {!loadingInitial && !!insights.length && (
                   <div className="space-y-2">
-                    <div className="text-sm font-semibold">أوامر تنفيذ مدعومة</div>
+                    <div className="text-sm font-semibold">Insights</div>
+
+                    {insights.map((item, idx) => (
+                      <div
+                        key={`${item.type}-${idx}`}
+                        className={cn(
+                          "rounded-xl border px-3 py-2 text-sm",
+                          item.level === "warning" && "border-amber-400/60 bg-amber-50/40",
+                          item.level === "error" && "border-red-400/60 bg-red-50/40",
+                          item.level !== "warning" &&
+                            item.level !== "error" &&
+                            "border-black/10 bg-white"
+                        )}
+                      >
+                        {item.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!loadingInitial && !!suggestedQuestions.length && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold">أسئلة مقترحة لهذا القسم</div>
                     <div className="flex flex-wrap gap-2">
-                      {actionCommands.map((cmd) => (
+                      {suggestedQuestions.slice(0, 8).map((q) => (
                         <button
-                          key={cmd}
+                          key={q}
                           type="button"
-                          onClick={() => ask(cmd)}
-                          className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs text-purple-700 hover:bg-purple-100"
+                          onClick={() => ask(q)}
+                          className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs hover:bg-black/5"
                         >
-                          {cmd}
+                          {q}
                         </button>
                       ))}
                     </div>
@@ -856,42 +955,26 @@ export default function AIAssistantWidget() {
               </>
             )}
 
-            {!loadingInitial && !!insights.length && (
+            {!!effectiveSection && viewMode === "action" && (
               <div className="space-y-2">
-                <div className="text-sm font-semibold">Insights</div>
-
-                {insights.map((item, idx) => (
-                  <div
-                    key={`${item.type}-${idx}`}
-                    className={cn(
-                      "rounded-xl border px-3 py-2 text-sm",
-                      item.level === "warning" && "border-amber-400/60 bg-amber-50/40",
-                      item.level === "error" && "border-red-400/60 bg-red-50/40",
-                      item.level !== "warning" &&
-                        item.level !== "error" &&
-                        "border-black/10 bg-white"
-                    )}
-                  >
-                    {item.text}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!loadingInitial && !!suggestedQuestions.length && (
-              <div className="space-y-2">
-                <div className="text-sm font-semibold">أسئلة مقترحة لهذا القسم</div>
+                <div className="text-sm font-semibold">أوامر التنفيذ المدعومة</div>
                 <div className="flex flex-wrap gap-2">
-                  {suggestedQuestions.slice(0, 8).map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => ask(q)}
-                      className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs hover:bg-black/5"
-                    >
-                      {q}
-                    </button>
-                  ))}
+                  {actionCommands.length ? (
+                    actionCommands.map((cmd) => (
+                      <button
+                        key={cmd}
+                        type="button"
+                        onClick={() => ask(cmd)}
+                        className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs text-purple-700 hover:bg-purple-100"
+                      >
+                        {cmd}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-black/10 bg-white/70 px-3 py-3 text-sm opacity-70">
+                      لا توجد أوامر تنفيذ جاهزة لهذا القسم حاليًا.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -968,20 +1051,32 @@ export default function AIAssistantWidget() {
                 </div>
               </div>
             )}
-
-            {!loadingInitial &&
-              !insights.length &&
-              !suggestedQuestions.length &&
-              messages.length <= 1 && (
-                <div className="rounded-xl border border-dashed border-black/10 bg-white/60 px-3 py-4 text-center text-sm opacity-70">
-                  لا توجد اقتراحات جاهزة حاليًا لهذا القسم، لكن يمكنك اختيار سؤال من الأسئلة المدعومة أو كتابة سؤالك مباشرة.
-                </div>
-              )}
           </div>
 
           <div className="border-t border-black/10 bg-[rgb(var(--trex-card))] p-3">
+            <div className="mb-2 flex flex-wrap gap-2 text-[11px] opacity-60">
+              <button
+                type="button"
+                onClick={() => setViewMode("menu")}
+                className="rounded-full border border-black/10 px-3 py-1 hover:bg-black/5"
+              >
+                العودة لاختيار النوع
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSection(null);
+                  setViewMode("menu");
+                  setFollowUps([]);
+                }}
+                className="rounded-full border border-black/10 px-3 py-1 hover:bg-black/5"
+              >
+                العودة للأقسام
+              </button>
+            </div>
+
             <div className="mb-2 text-[11px] opacity-60">
-              يمكنك كتابة سؤال تحليلي أو أمر تنفيذي مباشرة. لو كان الأمر جاهزًا للتنفيذ سيظهر لك زر تنفيذ الآن.
+              يمكنك كتابة سؤال تحليلي أو أمر تنفيذي مباشرة. ولو كان الأمر جاهزًا للتنفيذ سيظهر لك زر تنفيذ الآن.
             </div>
 
             <div className="flex items-end gap-2">
@@ -991,7 +1086,7 @@ export default function AIAssistantWidget() {
                 placeholder={
                   effectiveSection
                     ? `اكتب سؤالك في قسم ${SECTION_LABELS[effectiveSection]}...`
-                    : "اكتب سؤالك..."
+                    : "اختر القسم ثم اكتب سؤالك..."
                 }
                 className="min-h-[52px] max-h-[120px] flex-1 resize-none rounded-xl border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500"
               />
