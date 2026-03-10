@@ -343,6 +343,7 @@ export default function AIAssistantWidget() {
   const [insights, setInsights] = useState<InsightItem[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const loadSeqRef = useRef(0);
 
   const effectiveSection = useMemo(
     () => normalizeSection(smartContext, selectedSection, allowedSections),
@@ -394,6 +395,8 @@ export default function AIAssistantWidget() {
   }
 
   async function loadInitialData(section: SectionKey | null) {
+    const seq = ++loadSeqRef.current;
+
     try {
       setLoadingInitial(true);
       setSuggestedQuestions([]);
@@ -413,16 +416,29 @@ export default function AIAssistantWidget() {
         apiAuthGet<InsightsResponse>(insightsUrl),
       ]);
 
-      setSuggestedQuestions(
-        Array.isArray(suggestedRes?.questions) ? suggestedRes.questions : []
-      );
+      // Ignore stale responses
+      if (seq !== loadSeqRef.current) return;
+
+      const responseContext = (suggestedRes?.context || section || "").toString().toLowerCase();
+      if (section && responseContext && responseContext !== section) {
+        setSuggestedQuestions(SECTION_SUPPORTED_QUESTIONS[section] || []);
+      } else {
+        setSuggestedQuestions(
+          Array.isArray(suggestedRes?.questions) ? suggestedRes.questions : []
+        );
+      }
+
       setInsights(Array.isArray(insightsRes?.insights) ? insightsRes.insights : []);
     } catch (err) {
+      if (seq !== loadSeqRef.current) return;
+
       console.error("AI initial load error:", err);
-      setSuggestedQuestions([]);
+      setSuggestedQuestions(section ? SECTION_SUPPORTED_QUESTIONS[section] || [] : []);
       setInsights([]);
     } finally {
-      setLoadingInitial(false);
+      if (seq === loadSeqRef.current) {
+        setLoadingInitial(false);
+      }
     }
   }
 
