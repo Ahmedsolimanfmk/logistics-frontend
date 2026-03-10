@@ -114,11 +114,30 @@ const QUESTION_SECTION_HINTS: Array<{ section: SectionKey; terms: string[] }> = 
   },
   {
     section: "ar",
-    terms: ["مستحقات", "مديونيه", "مديونية", "مديونيات", "العملاء", "عميل", "متاخرات", "متأخرات"],
+    terms: [
+      "مستحقات",
+      "مديونيه",
+      "مديونية",
+      "مديونيات",
+      "العملاء",
+      "عميل",
+      "متاخرات",
+      "متأخرات",
+    ],
   },
   {
     section: "maintenance",
-    terms: ["صيانه", "صيانة", "اوامر العمل", "أوامر العمل", "امر عمل", "مركبه", "مركبة", "عربيه", "عربية"],
+    terms: [
+      "صيانه",
+      "صيانة",
+      "اوامر العمل",
+      "أوامر العمل",
+      "امر عمل",
+      "مركبه",
+      "مركبة",
+      "عربيه",
+      "عربية",
+    ],
   },
   {
     section: "inventory",
@@ -357,9 +376,11 @@ export default function AIAssistantWidget() {
 
   useEffect(() => {
     if (!open) return;
+    if (!effectiveSection && allowedSections.length === 0) return;
+
     resetConversation(effectiveSection);
-    loadInitialData(effectiveSection);
-  }, [open, effectiveSection]);
+    void loadInitialData(effectiveSection);
+  }, [open, effectiveSection, allowedSections.length]);
 
   function resetConversation(section: SectionKey | null) {
     setMessages([
@@ -470,16 +491,19 @@ export default function AIAssistantWidget() {
   }
 
   function handleSectionChange(sec: SectionKey) {
+    if (sec === effectiveSection) return;
+
     setSelectedSection(sec);
     setInput("");
     setSuggestedQuestions([]);
     setInsights([]);
     setFollowUps([]);
+    setLoadingInitial(true);
   }
 
   function handleNewChat() {
     resetConversation(effectiveSection);
-    loadInitialData(effectiveSection);
+    void loadInitialData(effectiveSection);
     setInput("");
   }
 
@@ -614,7 +638,7 @@ export default function AIAssistantWidget() {
                     type="button"
                     onClick={() => handleSectionChange(sec)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs",
+                      "rounded-full border px-3 py-1.5 text-xs transition",
                       effectiveSection === sec
                         ? "border-blue-500 bg-blue-50 text-blue-700"
                         : "border-black/10 bg-transparent hover:bg-black/5"
