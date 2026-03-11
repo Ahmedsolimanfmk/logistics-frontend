@@ -803,7 +803,7 @@ export default function AIAssistantWidget() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 left-5 z-[1000] flex h-[780px] w-[470px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-2xl border border-black/10 bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] shadow-2xl">
+        <div className="fixed bottom-3 left-3 z-[1000] flex h-[calc(100vh-24px)] max-h-[780px] w-[470px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-2xl border border-black/10 bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] shadow-2xl">
           <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/5 text-lg">
