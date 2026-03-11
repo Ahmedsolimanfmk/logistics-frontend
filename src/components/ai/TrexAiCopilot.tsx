@@ -7,6 +7,14 @@ type AiMessage = {
   id: string;
   role: "assistant" | "user";
   text: string;
+  ui?: {
+    mode?: string;
+    title?: string;
+    summary?: string;
+    badges?: string[];
+    result_type?: string;
+    has_items?: boolean;
+  } | null;
 };
 
 type SuggestedResponse = {
@@ -31,6 +39,16 @@ type QueryResponse = {
   ok: boolean;
   answer?: string;
   followUps?: string[];
+  insights?: InsightItem[];
+  parsed?: any;
+  ui?: {
+    mode?: string;
+    title?: string;
+    summary?: string;
+    badges?: string[];
+    result_type?: string;
+    has_items?: boolean;
+  };
 };
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -134,6 +152,7 @@ export default function TrexAiCopilot({
     try {
       const res = await apiAuthPost<QueryResponse>("/ai-analytics/query", {
         question: q,
+        context,
       });
 
       const answer =
@@ -146,10 +165,12 @@ export default function TrexAiCopilot({
           id: uid(),
           role: "assistant",
           text: answer,
+          ui: res?.ui || null,
         },
       ]);
 
       setFollowUps(Array.isArray(res?.followUps) ? res.followUps : []);
+      setInsights(Array.isArray(res?.insights) ? res.insights : []);
     } catch (err) {
       const msg = getErrorMessage(err);
 
@@ -218,8 +239,11 @@ export default function TrexAiCopilot({
                     key={`${item.type}-${idx}`}
                     className={cn(
                       "rounded-xl border px-3 py-2 text-sm",
-                      item.level === "warning" && "border-amber-400/60",
-                      item.level === "error" && "border-red-400/60"
+                      item.level === "warning" && "border-amber-400/60 bg-amber-50/40",
+                      item.level === "error" && "border-red-400/60 bg-red-50/40",
+                      item.level !== "warning" &&
+                        item.level !== "error" &&
+                        "border-black/10 bg-white"
                     )}
                   >
                     {item.text}
@@ -254,10 +278,27 @@ export default function TrexAiCopilot({
                     "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-6 whitespace-pre-wrap",
                     msg.role === "user"
                       ? "ms-auto border bg-black/5"
-                      : "me-auto border"
+                      : "me-auto border bg-white"
                   )}
                 >
+                  {msg.ui?.title ? (
+                    <div className="mb-2 font-semibold">{msg.ui.title}</div>
+                  ) : null}
+
                   {msg.text}
+
+                  {Array.isArray(msg.ui?.badges) && msg.ui.badges.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {msg.ui.badges.map((badge) => (
+                        <span
+                          key={badge}
+                          className="rounded-full bg-slate-100 px-2 py-1 text-[11px]"
+                        >
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ))}
               <div ref={messagesEndRef} />

@@ -26,6 +26,15 @@ type ChatMessage = {
   action?: string | null;
   executionStatus?: ExecutionStatus | null;
   originalQuestion?: string | null;
+  parsed?: any;
+  ui?: {
+    mode?: string;
+    title?: string;
+    summary?: string;
+    badges?: string[];
+    result_type?: string;
+    has_items?: boolean;
+  } | null;
 };
 
 type InsightItem = {
@@ -52,8 +61,17 @@ type QueryResponse = {
   result?: any;
   followUps?: string[];
   message?: string;
-  mode?: ChatMode;
+  mode?: string;
   action?: string;
+  parsed?: any;
+  ui?: {
+    mode?: string;
+    title?: string;
+    summary?: string;
+    badges?: string[];
+    result_type?: string;
+    has_items?: boolean;
+  };
   execution?: {
     status?: ExecutionStatus;
     ready_to_execute?: boolean;
@@ -61,6 +79,8 @@ type QueryResponse = {
     payload?: any;
     missing_fields?: string[];
   };
+  insights?: InsightItem[];
+  session_snapshot?: any;
 };
 
 const SECTION_LABELS: Record<SectionKey, string> = {
@@ -210,6 +230,12 @@ function normalizeArabic(text: string) {
     .replace(/[أإآ]/g, "ا")
     .replace(/ة/g, "ه")
     .replace(/ى/g, "ي");
+}
+
+function toChatMode(value: unknown): ChatMode {
+  if (value === "query") return "query";
+  if (value === "action") return "action";
+  return "unknown";
 }
 
 function detectContextFromPath(pathname: string | null): SectionKey | null {
@@ -406,6 +432,8 @@ export default function AIAssistantWidget() {
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [insights, setInsights] = useState<InsightItem[]>([]);
+  const [sessionSnapshot, setSessionSnapshot] = useState<any>(null);
+  const [lastActionQuestion, setLastActionQuestion] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const loadSeqRef = useRef(0);
@@ -415,15 +443,8 @@ export default function AIAssistantWidget() {
     [smartContext, selectedSection, allowedSections]
   );
 
-  const title = useMemo(
-    () => getTitleByContext(effectiveSection),
-    [effectiveSection]
-  );
-
-  const subtitle = useMemo(
-    () => getSubtitleByContext(effectiveSection),
-    [effectiveSection]
-  );
+  const title = useMemo(() => getTitleByContext(effectiveSection), [effectiveSection]);
+  const subtitle = useMemo(() => getSubtitleByContext(effectiveSection), [effectiveSection]);
 
   const supportedQuestions = useMemo(() => {
     if (!effectiveSection) return [];
@@ -464,6 +485,8 @@ export default function AIAssistantWidget() {
     ]);
     setFollowUps([]);
     setViewMode("menu");
+    setSessionSnapshot(null);
+    setLastActionQuestion(null);
   }
 
   async function loadInitialData(section: SectionKey | null) {
@@ -520,16 +543,13 @@ export default function AIAssistantWidget() {
     const q = String(question || "").trim();
     if (!q || loading) return;
 
-    const detectedSection = detectQuestionSection(q);
+    const actualQuestion = q === "نفذ الآن" && lastActionQuestion ? lastActionQuestion : q;
+    const detectedSection = detectQuestionSection(actualQuestion);
 
-    if (
-      effectiveSection &&
-      detectedSection &&
-      detectedSection !== effectiveSection
-    ) {
+    if (effectiveSection && detectedSection && detectedSection !== effectiveSection) {
       setMessages((m) => [
         ...m,
-        { id: uid(), role: "user", text: q, originalQuestion: q },
+        { id: uid(), role: "user", text: q, originalQuestion: actualQuestion },
         {
           id: uid(),
           role: "assistant",
@@ -542,15 +562,34 @@ export default function AIAssistantWidget() {
       return;
     }
 
-    setMessages((m) => [...m, { id: uid(), role: "user", text: q, originalQuestion: q }]);
+    setMessages((m) => [
+      ...m,
+      { id: uid(), role: "user", text: q, originalQuestion: actualQuestion },
+    ]);
     setInput("");
     setLoading(true);
 
     try {
       const data = await apiAuthPost<QueryResponse>("/ai-analytics/query", {
-        question: q,
+        question: actualQuestion,
+        context: effectiveSection,
         auto_execute: autoExecute,
+        session_snapshot: sessionSnapshot,
       });
+
+      const resolvedMode = toChatMode(data?.mode ?? data?.ui?.mode);
+
+      if (resolvedMode === "action") {
+        setLastActionQuestion(actualQuestion);
+      }
+
+      if (data?.session_snapshot) {
+        setSessionSnapshot(data.session_snapshot);
+      }
+
+      if (Array.isArray(data?.insights)) {
+        setInsights(data.insights);
+      }
 
       setMessages((m) => [
         ...m,
@@ -559,10 +598,12 @@ export default function AIAssistantWidget() {
           role: "assistant",
           text: data?.answer || data?.message || "تعذر الحصول على إجابة.",
           result: data?.result || null,
-          mode: data?.mode || "unknown",
+          mode: resolvedMode,
           action: data?.action || null,
           executionStatus: data?.execution?.status || null,
-          originalQuestion: q,
+          originalQuestion: actualQuestion,
+          parsed: data?.parsed || null,
+          ui: data?.ui || null,
         },
       ]);
 
@@ -597,6 +638,8 @@ export default function AIAssistantWidget() {
     setFollowUps([]);
     setLoadingInitial(true);
     setViewMode("menu");
+    setSessionSnapshot(null);
+    setLastActionQuestion(null);
   }
 
   function handleNewChat() {
@@ -705,11 +748,11 @@ export default function AIAssistantWidget() {
             ) : null}
           </div>
 
-          {shouldShowExecuteButton(message) && message.originalQuestion ? (
+          {shouldShowExecuteButton(message) ? (
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => ask(message.originalQuestion || "", true)}
+                onClick={() => ask("نفذ الآن", true)}
                 className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
               >
                 تنفيذ الآن
@@ -722,10 +765,21 @@ export default function AIAssistantWidget() {
 
     if (message.mode === "query") {
       return (
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-2">
           <span className="rounded-full bg-blue-100 px-2 py-1 text-[11px] font-medium text-blue-700">
             تحليل بيانات
           </span>
+
+          {Array.isArray(message.ui?.badges)
+            ? message.ui.badges.map((badge: string) => (
+                <span
+                  key={badge}
+                  className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700"
+                >
+                  {badge}
+                </span>
+              ))
+            : null}
         </div>
       );
     }
@@ -871,7 +925,9 @@ export default function AIAssistantWidget() {
             {!!effectiveSection && viewMode === "menu" && (
               <div className="space-y-3">
                 <div className="rounded-2xl border border-black/10 bg-white p-4">
-                  <div className="mb-2 text-sm font-semibold">ماذا تريد أن تفعل داخل قسم {SECTION_LABELS[effectiveSection]}؟</div>
+                  <div className="mb-2 text-sm font-semibold">
+                    ماذا تريد أن تفعل داخل قسم {SECTION_LABELS[effectiveSection]}؟
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -934,24 +990,6 @@ export default function AIAssistantWidget() {
                     ))}
                   </div>
                 )}
-
-                {!loadingInitial && !!suggestedQuestions.length && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-semibold">أسئلة مقترحة لهذا القسم</div>
-                    <div className="flex flex-wrap gap-2">
-                      {suggestedQuestions.slice(0, 8).map((q) => (
-                        <button
-                          key={q}
-                          type="button"
-                          onClick={() => ask(q)}
-                          className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs hover:bg-black/5"
-                        >
-                          {q}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
             )}
 
@@ -982,6 +1020,7 @@ export default function AIAssistantWidget() {
             <div className="space-y-3">
               {messages.map((m) => {
                 const items = pickItems(m.result);
+
                 return (
                   <div
                     key={m.id}
@@ -1001,6 +1040,10 @@ export default function AIAssistantWidget() {
                       <div className="mb-1 text-[11px] opacity-70">
                         {m.role === "assistant" ? "المساعد الذكي" : "أنت"}
                       </div>
+
+                      {m.ui?.title ? (
+                        <div className="mb-2 text-sm font-semibold">{m.ui.title}</div>
+                      ) : null}
 
                       <div className="whitespace-pre-wrap">{m.text}</div>
 
@@ -1031,18 +1074,7 @@ export default function AIAssistantWidget() {
                     <button
                       key={q}
                       type="button"
-                      onClick={() => {
-                        const isExecuteNow = q.includes("نفذ");
-                        if (
-                          isExecuteNow &&
-                          messages.length > 0 &&
-                          messages[messages.length - 1]?.originalQuestion
-                        ) {
-                          ask(messages[messages.length - 1].originalQuestion || "", true);
-                        } else {
-                          ask(q);
-                        }
-                      }}
+                      onClick={() => ask(q, q === "نفذ الآن")}
                       className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs hover:bg-black/5"
                     >
                       {q}
@@ -1068,6 +1100,8 @@ export default function AIAssistantWidget() {
                   setSelectedSection(null);
                   setViewMode("menu");
                   setFollowUps([]);
+                  setSessionSnapshot(null);
+                  setLastActionQuestion(null);
                 }}
                 className="rounded-full border border-black/10 px-3 py-1 hover:bg-black/5"
               >
@@ -1076,7 +1110,7 @@ export default function AIAssistantWidget() {
             </div>
 
             <div className="mb-2 text-[11px] opacity-60">
-              يمكنك كتابة سؤال تحليلي أو أمر تنفيذي مباشرة. ولو كان الأمر جاهزًا للتنفيذ سيظهر لك زر تنفيذ الآن.
+              يمكنك كتابة سؤال تحليلي أو أمر تنفيذي مباشرة.
             </div>
 
             <div className="flex items-end gap-2">
