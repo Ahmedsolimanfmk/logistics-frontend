@@ -332,6 +332,9 @@ function extractSummaryRows(result: any): Array<{ label: string; value: string }
 
   const mapping: Array<[string, string]> = [
     ["total_expense", "إجمالي المصروفات"],
+    ["approved_expense", "المعتمد"],
+    ["pending_expense", "المعلق"],
+    ["rejected_expense", "المرفوض"],
     ["total_outstanding", "إجمالي المستحقات"],
     ["overdue_amount", "المتأخرات"],
     ["total_open_work_orders", "أوامر العمل المفتوحة"],
@@ -361,6 +364,39 @@ function formatCellValue(v: any) {
   if (v == null || v === "") return "—";
   if (typeof v === "number") return money(v);
   return String(v);
+}
+
+function translateColumnLabel(key: string) {
+  const labels: Record<string, string> = {
+    count: "العدد",
+    total_amount: "الإجمالي",
+    total_expense: "إجمالي المصروفات",
+    expense_type: "نوع المصروف",
+    client_name: "العميل",
+    total_outstanding: "المديونية",
+    overdue_amount: "المتأخرات",
+    current_amount: "الحالي",
+    display_name: "اسم المركبة",
+    fleet_no: "رقم الأسطول",
+    plate_no: "اللوحة",
+    payment_source: "مصدر الدفع",
+    vendor_name: "المورد",
+    approval_status: "حالة الاعتماد",
+    total_cost: "إجمالي التكلفة",
+    issue_lines_count: "عدد الحركات",
+    total_issued_qty: "إجمالي المنصرف",
+    part_name: "الصنف",
+    warehouse_name: "المخزن",
+    qty_on_hand: "الرصيد الحالي",
+    min_stock: "الحد الأدنى",
+    shortage: "العجز",
+    status: "الحالة",
+    type: "النوع",
+    opened_at: "تاريخ الفتح",
+    created_at: "تاريخ الإنشاء",
+  };
+
+  return labels[key] || key;
 }
 
 function detectQuestionSection(question: string): SectionKey | null {
@@ -416,10 +452,7 @@ export default function AIAssistantWidget() {
   const role = String(user?.role || "").toUpperCase();
   const allowedSections = SECTIONS_BY_ROLE[role] || [];
 
-  const smartContext = useMemo(
-    () => detectContextFromPath(pathname),
-    [pathname]
-  );
+  const smartContext = useMemo(() => detectContextFromPath(pathname), [pathname]);
 
   const [open, setOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<SectionKey | null>(null);
@@ -444,7 +477,10 @@ export default function AIAssistantWidget() {
   );
 
   const title = useMemo(() => getTitleByContext(effectiveSection), [effectiveSection]);
-  const subtitle = useMemo(() => getSubtitleByContext(effectiveSection), [effectiveSection]);
+  const subtitle = useMemo(
+    () => getSubtitleByContext(effectiveSection),
+    [effectiveSection]
+  );
 
   const supportedQuestions = useMemo(() => {
     if (!effectiveSection) return [];
@@ -672,7 +708,7 @@ export default function AIAssistantWidget() {
             <tr>
               {cols.map((c) => (
                 <th key={c} className="px-2 py-2 font-semibold whitespace-nowrap">
-                  {c}
+                  {translateColumnLabel(c)}
                 </th>
               ))}
             </tr>
@@ -739,8 +775,10 @@ export default function AIAssistantWidget() {
                   "rounded-full px-2 py-1 text-[11px] font-medium",
                   message.executionStatus === "executed" && "bg-green-100 text-green-700",
                   message.executionStatus === "ready_to_execute" && "bg-blue-100 text-blue-700",
-                  message.executionStatus === "needs_more_info" && "bg-amber-100 text-amber-700",
-                  message.executionStatus === "execution_failed" && "bg-red-100 text-red-700"
+                  message.executionStatus === "needs_more_info" &&
+                    "bg-amber-100 text-amber-700",
+                  message.executionStatus === "execution_failed" &&
+                    "bg-red-100 text-red-700"
                 )}
               >
                 {statusLabel}
@@ -796,46 +834,48 @@ export default function AIAssistantWidget() {
           className="fixed bottom-5 left-5 z-[1000] flex items-center gap-2 rounded-full border border-black/10 bg-[rgb(var(--trex-card))] px-4 py-3 text-sm font-medium text-[rgb(var(--trex-fg))] shadow-lg hover:opacity-95"
         >
           <span>🤖</span>
-          <span>
-            {effectiveSection ? `${SECTION_LABELS[effectiveSection]} AI` : "المساعد الذكي"}
-          </span>
+          <span>{effectiveSection ? `${SECTION_LABELS[effectiveSection]} AI` : "المساعد الذكي"}</span>
         </button>
       )}
 
       {open && (
-        <div className="fixed bottom-3 left-3 z-[1000] flex h-[calc(100vh-24px)] max-h-[780px] w-[470px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-2xl border border-black/10 bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] shadow-2xl">
-          <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/5 text-lg">
-                🤖
+        <div className="fixed bottom-3 left-3 z-[1000] w-[440px] max-w-[calc(100vw-24px)] h-[85vh] max-h-[760px] min-h-[560px] overflow-hidden rounded-2xl border border-black/10 bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] shadow-2xl flex flex-col">
+          <div className="shrink-0 border-b border-black/10 bg-[rgb(var(--trex-card))] px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/5 text-lg">
+                  🤖
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-semibold">{title}</div>
+                  <div className="truncate text-xs opacity-70">{subtitle}</div>
+                </div>
               </div>
-              <div>
-                <div className="font-semibold">{title}</div>
-                <div className="text-xs opacity-70">{subtitle}</div>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleNewChat}
-                className="rounded-lg border border-black/10 px-2.5 py-1 text-xs hover:bg-black/5"
-              >
-                محادثة جديدة
-              </button>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-1 text-sm opacity-70 hover:bg-black/5"
-              >
-                ✕
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="rounded-lg border border-black/10 px-2.5 py-1 text-xs hover:bg-black/5"
+                >
+                  محادثة جديدة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 text-base opacity-80 hover:bg-black/5"
+                  aria-label="إغلاق"
+                  title="إغلاق"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           </div>
 
           {!!allowedSections.length && (
-            <div className="border-b border-black/10 px-3 py-3">
-              <div className="mb-2 flex items-center justify-between">
+            <div className="shrink-0 border-b border-black/10 px-3 py-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="text-xs font-semibold opacity-70">الأقسام المتاحة</div>
                 {effectiveSection ? (
                   <div className="text-[11px] opacity-60">
@@ -915,7 +955,7 @@ export default function AIAssistantWidget() {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-black/[0.02]">
+          <div className="min-h-0 flex-1 overflow-y-auto bg-black/[0.02] px-3 py-3 space-y-3">
             {loadingInitial && (
               <div className="rounded-xl border border-black/10 bg-white/60 px-3 py-2 text-sm">
                 جاري تحميل الاقتراحات والتحليلات الذكية...
@@ -956,7 +996,7 @@ export default function AIAssistantWidget() {
                 <div className="space-y-2">
                   <div className="text-sm font-semibold">الأسئلة التي أفهمها الآن</div>
                   <div className="flex flex-wrap gap-2">
-                    {supportedQuestions.map((q) => (
+                    {(suggestedQuestions.length ? suggestedQuestions : supportedQuestions).map((q) => (
                       <button
                         key={q}
                         type="button"
@@ -1024,10 +1064,7 @@ export default function AIAssistantWidget() {
                 return (
                   <div
                     key={m.id}
-                    className={cn(
-                      "flex",
-                      m.role === "assistant" ? "justify-start" : "justify-end"
-                    )}
+                    className={cn("flex", m.role === "assistant" ? "justify-start" : "justify-end")}
                   >
                     <div
                       className={cn(
@@ -1085,7 +1122,7 @@ export default function AIAssistantWidget() {
             )}
           </div>
 
-          <div className="border-t border-black/10 bg-[rgb(var(--trex-card))] p-3">
+          <div className="shrink-0 border-t border-black/10 bg-[rgb(var(--trex-card))] p-3">
             <div className="mb-2 flex flex-wrap gap-2 text-[11px] opacity-60">
               <button
                 type="button"
