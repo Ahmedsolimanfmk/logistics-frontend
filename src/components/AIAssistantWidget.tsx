@@ -335,8 +335,11 @@ function extractSummaryRows(result: any): Array<{ label: string; value: string }
     ["approved_expense", "المعتمد"],
     ["pending_expense", "المعلق"],
     ["rejected_expense", "المرفوض"],
+    ["advance_expense", "من العهدة"],
+    ["company_expense", "من الشركة"],
     ["total_outstanding", "إجمالي المستحقات"],
     ["overdue_amount", "المتأخرات"],
+    ["current_amount", "الحالي"],
     ["total_open_work_orders", "أوامر العمل المفتوحة"],
     ["count", "العدد"],
     ["total", "الإجمالي"],
@@ -385,6 +388,8 @@ function translateColumnLabel(key: string) {
     total_cost: "إجمالي التكلفة",
     issue_lines_count: "عدد الحركات",
     total_issued_qty: "إجمالي المنصرف",
+    issued_qty: "المنصرف",
+    qty: "الكمية",
     part_name: "الصنف",
     warehouse_name: "المخزن",
     qty_on_hand: "الرصيد الحالي",
@@ -443,6 +448,117 @@ function renderExecutionStatus(status?: ExecutionStatus | null) {
 
 function shouldShowExecuteButton(message: ChatMessage) {
   return message.mode === "action" && message.executionStatus === "ready_to_execute";
+}
+
+function getPrimaryCardTitle(item: any) {
+  return (
+    item?.client_name ||
+    item?.display_name ||
+    item?.vehicle_name ||
+    item?.part_name ||
+    item?.vendor_name ||
+    item?.expense_type ||
+    item?.payment_source ||
+    item?.approval_status ||
+    item?.name ||
+    item?.fleet_no ||
+    item?.plate_no ||
+    "عنصر"
+  );
+}
+
+function getSecondaryCardTitle(item: any) {
+  return (
+    item?.fleet_no ||
+    item?.plate_no ||
+    item?.part_number ||
+    item?.warehouse_name ||
+    item?.category ||
+    null
+  );
+}
+
+function getPrimaryMetric(item: any): { label: string; value: string } | null {
+  const checks: Array<[string, string]> = [
+    ["total_amount", "الإجمالي"],
+    ["total_outstanding", "المديونية"],
+    ["total_cost", "إجمالي التكلفة"],
+    ["total_issued_qty", "إجمالي المنصرف"],
+    ["issued_qty", "المنصرف"],
+    ["qty", "الكمية"],
+    ["qty_on_hand", "الرصيد الحالي"],
+    ["shortage", "العجز"],
+    ["count", "العدد"],
+  ];
+
+  for (const [key, label] of checks) {
+    if (item?.[key] != null) {
+      const raw = item[key];
+      const num = Number(raw);
+      return {
+        label,
+        value: Number.isFinite(num) ? money(num) : String(raw),
+      };
+    }
+  }
+
+  return null;
+}
+
+function getExtraMetrics(item: any): Array<{ label: string; value: string }> {
+  const metrics: Array<{ key: string; label: string }> = [
+    { key: "count", label: "العدد" },
+    { key: "invoice_count", label: "عدد الفواتير" },
+    { key: "expense_count", label: "عدد المصروفات" },
+    { key: "issue_lines_count", label: "عدد الحركات" },
+    { key: "qty_on_hand", label: "الرصيد" },
+    { key: "min_stock", label: "الحد الأدنى" },
+    { key: "shortage", label: "العجز" },
+    { key: "total_cost", label: "التكلفة" },
+    { key: "total_amount", label: "الإجمالي" },
+  ];
+
+  return metrics
+    .filter((m) => item?.[m.key] != null)
+    .slice(0, 3)
+    .map((m) => {
+      const raw = item[m.key];
+      const num = Number(raw);
+      return {
+        label: m.label,
+        value: Number.isFinite(num) ? money(num) : String(raw),
+      };
+    });
+}
+
+function renderMetricBadge(label: string, value: string) {
+  return (
+    <div
+      key={`${label}-${value}`}
+      className="rounded-lg bg-black/[0.04] px-2.5 py-2 text-xs"
+    >
+      <div className="opacity-60">{label}</div>
+      <div className="mt-0.5 font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function canRenderAsCards(items: any[]) {
+  if (!Array.isArray(items) || !items.length) return false;
+  const sample = items[0] || {};
+
+  return Boolean(
+    sample.client_name ||
+      sample.display_name ||
+      sample.vehicle_name ||
+      sample.part_name ||
+      sample.vendor_name ||
+      sample.expense_type ||
+      sample.payment_source ||
+      sample.approval_status ||
+      sample.fleet_no ||
+      sample.plate_no
+  );
 }
 
 export default function AIAssistantWidget() {
@@ -725,6 +841,55 @@ export default function AIAssistantWidget() {
             ))}
           </tbody>
         </table>
+      </div>
+    );
+  }
+
+  function renderCards(items: any[]) {
+    if (!Array.isArray(items) || !items.length) return null;
+    if (!canRenderAsCards(items)) return null;
+
+    return (
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        {items.slice(0, 8).map((item, idx) => {
+          const title = getPrimaryCardTitle(item);
+          const subtitle = getSecondaryCardTitle(item);
+          const primaryMetric = getPrimaryMetric(item);
+          const extraMetrics = getExtraMetrics(item);
+
+          return (
+            <div
+              key={`${title}-${idx}`}
+              className="rounded-xl border border-black/10 bg-white p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{title}</div>
+                  {subtitle ? (
+                    <div className="mt-0.5 text-xs opacity-60">{subtitle}</div>
+                  ) : null}
+                </div>
+
+                {primaryMetric ? (
+                  <div className="shrink-0 rounded-lg bg-blue-50 px-2.5 py-1.5 text-left">
+                    <div className="text-[10px] text-blue-700 opacity-80">
+                      {primaryMetric.label}
+                    </div>
+                    <div className="text-sm font-semibold text-blue-800">
+                      {primaryMetric.value}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {extraMetrics.length ? (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {extraMetrics.map((m) => renderMetricBadge(m.label, m.value))}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -1085,7 +1250,12 @@ export default function AIAssistantWidget() {
                       <div className="whitespace-pre-wrap">{m.text}</div>
 
                       {m.role === "assistant" && renderSummary(m.result)}
-                      {m.role === "assistant" && items.length > 0 && renderItemsTable(items)}
+                      {m.role === "assistant" && renderCards(items)}
+                      {m.role === "assistant" &&
+                        !canRenderAsCards(items) &&
+                        items.length > 0 &&
+                        renderItemsTable(items)}
+
                       {renderAssistantFooter(m)}
                     </div>
                   </div>
