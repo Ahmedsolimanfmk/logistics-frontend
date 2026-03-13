@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
 
+type AiSection = "finance" | "ar" | "maintenance" | "inventory" | "trips" | null;
+
 type AiMessage = {
   id: string;
   role: "assistant" | "user";
@@ -67,11 +69,20 @@ function getErrorMessage(err: any) {
   );
 }
 
+function contextLabel(context: AiSection) {
+  if (context === "finance") return "المالية";
+  if (context === "ar") return "حسابات العملاء";
+  if (context === "maintenance") return "الصيانة";
+  if (context === "inventory") return "المخازن";
+  if (context === "trips") return "الرحلات";
+  return "عام";
+}
+
 export default function TrexAiCopilot({
   context = null,
   title = "TREX AI Copilot",
 }: {
-  context?: "finance" | "ar" | "maintenance" | "inventory" | null;
+  context?: AiSection;
   title?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -82,7 +93,7 @@ export default function TrexAiCopilot({
     {
       id: uid(),
       role: "assistant",
-      text: "مرحبًا، أنا TREX AI Copilot. اسألني عن المصروفات أو العملاء أو الصيانة أو المخزون.",
+      text: "مرحبًا، أنا TREX AI Copilot. اسألني عن المصروفات أو العملاء أو الصيانة أو المخزون أو الرحلات.",
     },
   ]);
 
@@ -211,7 +222,7 @@ export default function TrexAiCopilot({
             <div>
               <div className="font-semibold">{title}</div>
               <div className="text-xs opacity-70">
-                {context ? `السياق الحالي: ${context}` : "مساعد تحليلي ذكي للنظام"}
+                {context ? `السياق الحالي: ${contextLabel(context)}` : "مساعد تحليلي ذكي للنظام"}
               </div>
             </div>
 

@@ -6,7 +6,7 @@ import { useAuth } from "@/src/store/auth";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
 
 type ChatRole = "assistant" | "user";
-type SectionKey = "finance" | "ar" | "maintenance" | "inventory";
+type SectionKey = "finance" | "ar" | "maintenance" | "inventory" | "trips";
 type ChatMode = "query" | "action" | "unknown";
 type AssistantViewMode = "menu" | "query" | "action";
 
@@ -88,6 +88,7 @@ const SECTION_LABELS: Record<SectionKey, string> = {
   ar: "حسابات العملاء",
   maintenance: "الصيانة",
   inventory: "المخازن",
+  trips: "الرحلات",
 };
 
 const SECTION_DESCRIPTIONS: Record<SectionKey, string> = {
@@ -95,6 +96,7 @@ const SECTION_DESCRIPTIONS: Record<SectionKey, string> = {
   ar: "تحليل مديونيات العملاء والمستحقات",
   maintenance: "تحليل أوامر العمل وتكاليف الصيانة وتنفيذ أوامر الصيانة",
   inventory: "تحليل حركة الأصناف والمخزون",
+  trips: "تحليل الرحلات والحالة والإغلاق المالي",
 };
 
 const SECTION_SUPPORTED_QUESTIONS: Record<SectionKey, string[]> = {
@@ -129,6 +131,19 @@ const SECTION_SUPPORTED_QUESTIONS: Record<SectionKey, string[]> = {
     "إيه الأصناف اللي قربت تخلص؟",
     "كام عدد الأصناف منخفضة المخزون؟",
   ],
+  trips: [
+    "كم عدد الرحلات هذا الشهر؟",
+    "كم عدد الرحلات النشطة؟",
+    "اعرض الرحلات النشطة",
+    "كم عدد الرحلات التي تحتاج إغلاق مالي؟",
+    "اعرض الرحلات التي تحتاج إغلاق مالي",
+    "من أعلى عميل في عدد الرحلات؟",
+    "اعرض أعلى 5 عملاء في عدد الرحلات",
+    "ما أكثر موقع في عدد الرحلات؟",
+    "اعرض أعلى 5 مواقع في عدد الرحلات",
+    "ما أكثر مركبة في عدد الرحلات؟",
+    "اعرض أعلى 5 مركبات في عدد الرحلات",
+  ],
 };
 
 const SECTION_ACTION_COMMANDS: Partial<Record<SectionKey, string[]>> = {
@@ -142,13 +157,14 @@ const SECTION_ACTION_COMMANDS: Partial<Record<SectionKey, string[]>> = {
     "أنشئ أمر عمل للمركبة Truck 8 صيانة فرامل",
     "أنشئ أمر عمل للمركبة TR-22 تغيير زيت",
   ],
+  trips: [],
 };
 
 const SECTIONS_BY_ROLE: Record<string, SectionKey[]> = {
-  ADMIN: ["finance", "ar", "maintenance", "inventory"],
-  ACCOUNTANT: ["finance", "ar"],
+  ADMIN: ["finance", "ar", "maintenance", "inventory", "trips"],
+  ACCOUNTANT: ["finance", "ar", "trips"],
   STOREKEEPER: ["inventory"],
-  FIELD_SUPERVISOR: ["finance", "maintenance"],
+  FIELD_SUPERVISOR: ["finance", "maintenance", "trips"],
   HR: ["maintenance"],
 };
 
@@ -206,6 +222,27 @@ const QUESTION_SECTION_HINTS: Array<{ section: SectionKey; terms: string[] }> = 
     section: "inventory",
     terms: ["مخزون", "اصناف", "أصناف", "قطع", "صرف", "نفاد", "الصنف"],
   },
+  {
+    section: "trips",
+    terms: [
+      "رحله",
+      "رحلة",
+      "رحلات",
+      "trip",
+      "trips",
+      "نشطة",
+      "نشطه",
+      "الرحلات النشطة",
+      "الإغلاق المالي",
+      "اغلاق مالي",
+      "تحتاج اغلاق مالي",
+      "تحتاج إغلاق مالي",
+      "عميل",
+      "موقع",
+      "مركبة",
+      "مركبه",
+    ],
+  },
 ];
 
 function uid() {
@@ -241,6 +278,10 @@ function toChatMode(value: unknown): ChatMode {
 function detectContextFromPath(pathname: string | null): SectionKey | null {
   const path = String(pathname || "").toLowerCase();
 
+  if (path.startsWith("/trips")) {
+    return "trips";
+  }
+
   if (
     path.startsWith("/finance/ar") ||
     path.startsWith("/clients") ||
@@ -274,6 +315,7 @@ function getTitleByContext(context: SectionKey | null) {
   if (context === "ar") return "TREX AI Copilot - AR";
   if (context === "maintenance") return "TREX AI Copilot - Maintenance";
   if (context === "inventory") return "TREX AI Copilot - Inventory";
+  if (context === "trips") return "TREX AI Copilot - Trips";
   return "TREX AI Copilot";
 }
 
@@ -282,6 +324,7 @@ function getSubtitleByContext(context: SectionKey | null) {
   if (context === "ar") return "مساعد حسابات العملاء";
   if (context === "maintenance") return "مساعد تحليلات وأوامر الصيانة";
   if (context === "inventory") return "مساعد تحليلات المخازن";
+  if (context === "trips") return "مساعد تحليلات الرحلات";
   return "مساعد تحليل ذكي للنظام";
 }
 
@@ -341,6 +384,14 @@ function extractSummaryRows(result: any): Array<{ label: string; value: string }
     ["overdue_amount", "المتأخرات"],
     ["current_amount", "الحالي"],
     ["total_open_work_orders", "أوامر العمل المفتوحة"],
+    ["total_trips", "إجمالي الرحلات"],
+    ["active_count", "الرحلات النشطة"],
+    ["draft_count", "المسودات"],
+    ["completed_count", "المكتملة"],
+    ["cancelled_count", "الملغاة"],
+    ["need_financial_closure_count", "تحتاج إغلاق مالي"],
+    ["total_need_financial_closure", "تحتاج إغلاق مالي"],
+    ["trips_count", "عدد الرحلات"],
     ["count", "العدد"],
     ["total", "الإجمالي"],
     ["this_month_total", "هذا الشهر"],
@@ -399,6 +450,17 @@ function translateColumnLabel(key: string) {
     type: "النوع",
     opened_at: "تاريخ الفتح",
     created_at: "تاريخ الإنشاء",
+    trips_count: "عدد الرحلات",
+    total_trips: "إجمالي الرحلات",
+    active_count: "الرحلات النشطة",
+    draft_count: "المسودات",
+    completed_count: "المكتملة",
+    cancelled_count: "الملغاة",
+    need_financial_closure_count: "تحتاج إغلاق مالي",
+    total_need_financial_closure: "تحتاج إغلاق مالي",
+    financial_status: "الحالة المالية",
+    site_name: "الموقع",
+    scheduled_at: "التاريخ المجدول",
   };
 
   return labels[key] || key;
@@ -453,6 +515,7 @@ function shouldShowExecuteButton(message: ChatMessage) {
 function getPrimaryCardTitle(item: any) {
   return (
     item?.client_name ||
+    item?.site_name ||
     item?.display_name ||
     item?.vehicle_name ||
     item?.part_name ||
@@ -463,6 +526,7 @@ function getPrimaryCardTitle(item: any) {
     item?.name ||
     item?.fleet_no ||
     item?.plate_no ||
+    item?.id ||
     "عنصر"
   );
 }
@@ -474,6 +538,8 @@ function getSecondaryCardTitle(item: any) {
     item?.part_number ||
     item?.warehouse_name ||
     item?.category ||
+    item?.status ||
+    item?.financial_status ||
     null
   );
 }
@@ -488,6 +554,7 @@ function getPrimaryMetric(item: any): { label: string; value: string } | null {
     ["qty", "الكمية"],
     ["qty_on_hand", "الرصيد الحالي"],
     ["shortage", "العجز"],
+    ["trips_count", "عدد الرحلات"],
     ["count", "العدد"],
   ];
 
@@ -516,6 +583,7 @@ function getExtraMetrics(item: any): Array<{ label: string; value: string }> {
     { key: "shortage", label: "العجز" },
     { key: "total_cost", label: "التكلفة" },
     { key: "total_amount", label: "الإجمالي" },
+    { key: "trips_count", label: "عدد الرحلات" },
   ];
 
   return metrics
@@ -549,6 +617,7 @@ function canRenderAsCards(items: any[]) {
 
   return Boolean(
     sample.client_name ||
+      sample.site_name ||
       sample.display_name ||
       sample.vehicle_name ||
       sample.part_name ||
@@ -557,7 +626,9 @@ function canRenderAsCards(items: any[]) {
       sample.payment_source ||
       sample.approval_status ||
       sample.fleet_no ||
-      sample.plate_no
+      sample.plate_no ||
+      sample.status ||
+      sample.financial_status
   );
 }
 
