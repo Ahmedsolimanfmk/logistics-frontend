@@ -203,26 +203,6 @@ const QUESTION_SECTION_HINTS: Array<{ section: SectionKey; terms: string[] }> = 
     ],
   },
   {
-    section: "maintenance",
-    terms: [
-      "صيانه",
-      "صيانة",
-      "اوامر العمل",
-      "أوامر العمل",
-      "امر عمل",
-      "طلب صيانة",
-      "طلب صيانه",
-      "مركبه",
-      "مركبة",
-      "عربيه",
-      "عربية",
-    ],
-  },
-  {
-    section: "inventory",
-    terms: ["مخزون", "اصناف", "أصناف", "قطع", "صرف", "نفاد", "الصنف"],
-  },
-  {
     section: "trips",
     terms: [
       "رحله",
@@ -237,14 +217,38 @@ const QUESTION_SECTION_HINTS: Array<{ section: SectionKey; terms: string[] }> = 
       "اغلاق مالي",
       "تحتاج اغلاق مالي",
       "تحتاج إغلاق مالي",
-      "عميل",
+      "عدد الرحلات",
+      "اعلى مركبة في عدد الرحلات",
+      "اعلى مركبه في عدد الرحلات",
+      "اكثر مركبة في عدد الرحلات",
+      "اكثر مركبه في عدد الرحلات",
+      "اعلى عميل في عدد الرحلات",
+      "اعلى موقع في عدد الرحلات",
       "موقع",
-      "مركبة",
-      "مركبه",
     ],
   },
+  {
+    section: "maintenance",
+    terms: [
+      "صيانه",
+      "صيانة",
+      "اوامر العمل",
+      "أوامر العمل",
+      "امر عمل",
+      "أمر عمل",
+      "طلب صيانة",
+      "طلب صيانه",
+      "تكلفة صيانة",
+      "تكلفه صيانه",
+      "صيانة المركبة",
+      "صيانه المركبه",
+    ],
+  },
+  {
+    section: "inventory",
+    terms: ["مخزون", "اصناف", "أصناف", "قطع", "صرف", "نفاد", "الصنف"],
+  },
 ];
-
 function uid() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 }
@@ -469,6 +473,41 @@ function translateColumnLabel(key: string) {
 function detectQuestionSection(question: string): SectionKey | null {
   const q = normalizeArabic(question);
 
+  // قواعد صريحة للرحلات أولاً
+  if (
+    q.includes("رحله") ||
+    q.includes("رحلة") ||
+    q.includes("رحلات") ||
+    q.includes("trip") ||
+    q.includes("trips") ||
+    q.includes("عدد الرحلات") ||
+    q.includes("الرحلات النشطه") ||
+    q.includes("الرحلات النشطة") ||
+    q.includes("اغلاق مالي") ||
+    q.includes("إغلاق مالي") ||
+    q.includes("عدد الرحلات") ||
+    q.includes("في عدد الرحلات") ||
+    q.includes("من حيث الرحلات")
+  ) {
+    return "trips";
+  }
+
+  // قواعد صريحة للصيانة
+  if (
+    q.includes("صيانه") ||
+    q.includes("صيانة") ||
+    q.includes("امر عمل") ||
+    q.includes("أمر عمل") ||
+    q.includes("اوامر العمل") ||
+    q.includes("أوامر العمل") ||
+    q.includes("طلب صيانة") ||
+    q.includes("طلب صيانه") ||
+    q.includes("تكلفة صيانة") ||
+    q.includes("تكلفه صيانه")
+  ) {
+    return "maintenance";
+  }
+
   for (const item of QUESTION_SECTION_HINTS) {
     if (item.terms.some((term) => q.includes(normalizeArabic(term)))) {
       return item.section;
@@ -477,7 +516,6 @@ function detectQuestionSection(question: string): SectionKey | null {
 
   return null;
 }
-
 function filterFollowUpsForSection(
   items: string[],
   section: SectionKey | null
