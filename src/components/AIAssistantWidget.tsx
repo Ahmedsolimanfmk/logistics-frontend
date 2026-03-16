@@ -108,6 +108,7 @@ const SECTION_SUPPORTED_QUESTIONS: Record<SectionKey, string[]> = {
     "اعرض أعلى 5 أنواع مصروف هذا الشهر",
     "قارن مصروفات هذا الشهر بالشهر الماضي",
     "ما إجمالي المصروفات الشهر الماضي؟",
+    "كم مصروفات المركبة TR-10 هذا الشهر؟",
   ],
   ar: [
     "ما إجمالي مستحقات العملاء؟",
@@ -122,6 +123,7 @@ const SECTION_SUPPORTED_QUESTIONS: Record<SectionKey, string[]> = {
     "ما أعلى مركبة تكلفة صيانة؟",
     "أنهي عربية صيانتها أعلى؟",
     "اعرض أعلى 5 مركبات تكلفة صيانة",
+    "صيانة المركبة TR-20",
   ],
   inventory: [
     "ما أكثر قطع الغيار صرفاً؟",
@@ -143,6 +145,8 @@ const SECTION_SUPPORTED_QUESTIONS: Record<SectionKey, string[]> = {
     "اعرض أعلى 5 مواقع في عدد الرحلات",
     "ما أكثر مركبة في عدد الرحلات؟",
     "اعرض أعلى 5 مركبات في عدد الرحلات",
+    "كم عدد رحلات العميل النور هذا الشهر؟",
+    "كم عدد رحلات موقع جدة؟",
   ],
 };
 
@@ -249,6 +253,7 @@ const QUESTION_SECTION_HINTS: Array<{ section: SectionKey; terms: string[] }> = 
     terms: ["مخزون", "اصناف", "أصناف", "قطع", "صرف", "نفاد", "الصنف"],
   },
 ];
+
 function uid() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 }
@@ -402,6 +407,7 @@ function extractSummaryRows(result: any): Array<{ label: string; value: string }
     ["last_month_total", "الشهر الماضي"],
     ["difference", "الفرق"],
     ["amount", "القيمة"],
+    ["invoice_count", "عدد الفواتير"],
   ];
 
   for (const [key, label] of mapping) {
@@ -465,6 +471,8 @@ function translateColumnLabel(key: string) {
     financial_status: "الحالة المالية",
     site_name: "الموقع",
     scheduled_at: "التاريخ المجدول",
+    invoice_count: "عدد الفواتير",
+    expense_count: "عدد المصروفات",
   };
 
   return labels[key] || key;
@@ -473,7 +481,6 @@ function translateColumnLabel(key: string) {
 function detectQuestionSection(question: string): SectionKey | null {
   const q = normalizeArabic(question);
 
-  // قواعد صريحة للرحلات أولاً
   if (
     q.includes("رحله") ||
     q.includes("رحلة") ||
@@ -485,14 +492,12 @@ function detectQuestionSection(question: string): SectionKey | null {
     q.includes("الرحلات النشطة") ||
     q.includes("اغلاق مالي") ||
     q.includes("إغلاق مالي") ||
-    q.includes("عدد الرحلات") ||
     q.includes("في عدد الرحلات") ||
     q.includes("من حيث الرحلات")
   ) {
     return "trips";
   }
 
-  // قواعد صريحة للصيانة
   if (
     q.includes("صيانه") ||
     q.includes("صيانة") ||
@@ -516,19 +521,20 @@ function detectQuestionSection(question: string): SectionKey | null {
 
   return null;
 }
+
 function filterFollowUpsForSection(
   items: string[],
   section: SectionKey | null
 ): string[] {
   const list = Array.isArray(items) ? items : [];
-  if (!section) return list.slice(0, 4);
+  if (!section) return list.slice(0, 6);
 
   return list
     .filter((q) => {
       const detected = detectQuestionSection(q);
       return !detected || detected === section;
     })
-    .slice(0, 4);
+    .slice(0, 6);
 }
 
 function renderActionLabel(action?: string | null) {
@@ -667,6 +673,35 @@ function canRenderAsCards(items: any[]) {
       sample.plate_no ||
       sample.status ||
       sample.financial_status
+  );
+}
+
+function renderParsedEntityBadges(parsed: any) {
+  const entities = parsed?.entities || {};
+  const badges: string[] = [];
+
+  if (entities?.vehicle_hint) badges.push(`المركبة: ${entities.vehicle_hint}`);
+  if (entities?.client_hint) badges.push(`العميل: ${entities.client_hint}`);
+  if (entities?.site_hint) badges.push(`الموقع: ${entities.site_hint}`);
+  if (entities?.trip_hint) badges.push(`الرحلة: ${entities.trip_hint}`);
+  if (entities?.work_order_hint) badges.push(`أمر العمل: ${entities.work_order_hint}`);
+  if (entities?.vendor_name) badges.push(`المورد: ${entities.vendor_name}`);
+  if (entities?.expense_type) badges.push(`نوع المصروف: ${entities.expense_type}`);
+  if (entities?.paid_method) badges.push(`طريقة الدفع: ${entities.paid_method}`);
+
+  if (!badges.length) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {badges.map((badge) => (
+        <span
+          key={badge}
+          className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-700"
+        >
+          {badge}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -810,17 +845,13 @@ export default function AIAssistantWidget() {
     if (effectiveSection && detectedSection && detectedSection !== effectiveSection) {
       setMessages((m) => [
         ...m,
-        { id: uid(), role: "user", text: q, originalQuestion: actualQuestion },
         {
           id: uid(),
           role: "assistant",
-          text: `هذا السؤال يبدو أقرب إلى قسم ${SECTION_LABELS[detectedSection]} وليس ${SECTION_LABELS[effectiveSection]}. يمكنك التبديل إلى هذا القسم أو اختيار عنصر مناسب من القائمة الحالية.`,
+          text: `ملاحظة: هذا السؤال يبدو أقرب إلى قسم ${SECTION_LABELS[detectedSection]}، لكن سأحاول تحليله هنا أيضًا.`,
           mode: "unknown",
         },
       ]);
-      setInput("");
-      setFollowUps(SECTION_SUPPORTED_QUESTIONS[effectiveSection].slice(0, 4));
-      return;
     }
 
     setMessages((m) => [
@@ -833,7 +864,7 @@ export default function AIAssistantWidget() {
     try {
       const data = await apiAuthPost<QueryResponse>("/ai-analytics/query", {
         question: actualQuestion,
-        context: effectiveSection,
+        context: detectedSection || effectiveSection,
         auto_execute: autoExecute,
         session_snapshot: sessionSnapshot,
       });
@@ -844,8 +875,8 @@ export default function AIAssistantWidget() {
         setLastActionQuestion(actualQuestion);
       }
 
-      if (data?.session_snapshot) {
-        setSessionSnapshot(data.session_snapshot);
+      if (Object.prototype.hasOwnProperty.call(data || {}, "session_snapshot")) {
+        setSessionSnapshot(data?.session_snapshot || null);
       }
 
       if (Array.isArray(data?.insights)) {
@@ -871,7 +902,7 @@ export default function AIAssistantWidget() {
       setFollowUps(
         filterFollowUpsForSection(
           Array.isArray(data?.followUps) ? data.followUps : [],
-          effectiveSection
+          detectedSection || effectiveSection
         )
       );
     } catch (err) {
@@ -1357,6 +1388,8 @@ export default function AIAssistantWidget() {
                       ) : null}
 
                       <div className="whitespace-pre-wrap">{m.text}</div>
+
+                      {m.role === "assistant" && renderParsedEntityBadges(m.parsed)}
 
                       {m.role === "assistant" && renderSummary(m.result)}
                       {m.role === "assistant" && renderCards(items)}
