@@ -29,8 +29,8 @@ function normalizeVendorsList(body: any): ApiListResponse<Vendor> {
   return {
     items,
     total: Number.isFinite(Number(totalRaw)) ? Number(totalRaw) : items.length,
-    page: Number(body?.meta?.page || body?.data?.meta?.page || 1),
-    pages: Number(body?.meta?.pages || body?.data?.meta?.pages || 1),
+    page: Number(body?.meta?.page || body?.page || body?.data?.meta?.page || 1),
+    pages: Number(body?.meta?.pages || body?.pages || body?.data?.meta?.pages || 1),
   };
 }
 
@@ -61,7 +61,7 @@ export const vendorsService = {
   },
 
   async listOptions(): Promise<VendorOption[]> {
-    const res = await api.get("/vendors/options");
+    const res = await api.get("/vendors/options/list");
     const body = res.data ?? res;
     return normalizeVendorOptions(body);
   },
@@ -69,7 +69,7 @@ export const vendorsService = {
   async getById(id: string): Promise<Vendor> {
     const res = await api.get(`/vendors/${id}`);
     const body = res.data ?? res;
-    return (body?.item || body?.vendor || body) as Vendor;
+    return (body?.data || body?.item || body?.vendor || body) as Vendor;
   },
 
   async create(payload: VendorPayload) {
@@ -78,7 +78,7 @@ export const vendorsService = {
   },
 
   async update(id: string, payload: VendorPayload) {
-    const res = await api.patch(`/vendors/${id}`, payload);
+    const res = await api.put(`/vendors/${id}`, payload);
     return res.data ?? res;
   },
 
