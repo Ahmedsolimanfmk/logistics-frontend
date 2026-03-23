@@ -47,68 +47,65 @@ export function Sidebar() {
   };
 
   const items = useMemo<(NavItem | NavGroup)[]>(
-    () => [
-      { labelKey: "sidebar.dashboard", href: "/dashboard" },
-      { labelKey: "sidebar.trips", href: "/trips" },
+  () => [
+    { labelKey: "sidebar.dashboard", href: "/dashboard" },
+    { labelKey: "sidebar.trips", href: "/trips" },
 
-      {
-  labelKey: "sidebar.finance",
-  key: "finance",
-  roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR"],
-  children: [
-    { labelKey: "sidebar.financeOverview", href: "/finance" },
-    { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
-    { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
-    { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
+    {
+      labelKey: "sidebar.finance",
+      key: "finance",
+      roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR"],
+      children: [
+        { labelKey: "sidebar.financeOverview", href: "/finance" },
+        { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
+        { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
+        { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
+        { labelKey: "sidebar.financeARClients", href: "/finance/ar/clients" },
+        { labelKey: "sidebar.financeARInvoices", href: "/finance/ar/invoices" },
+        { labelKey: "sidebar.financeARPayments", href: "/finance/ar/payments" },
+      ],
+    },
 
-    // ✅ NEW: AR (Group-like by ordering)
-    { labelKey: "sidebar.financeARClients", href: "/finance/ar/clients" },
-    { labelKey: "sidebar.financeARInvoices", href: "/finance/ar/invoices" },
-    { labelKey: "sidebar.financeARPayments", href: "/finance/ar/payments" }
-    // لو عندك Ledger عام للعميل: يفضل يفتح من صفحة العملاء
-    // { labelKey: "sidebar.financeARLedger", href: "/finance/ar/ledger" },
+    { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR"] },
+    { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR"] },
+    { labelKey: "sidebar.vehicles", href: "/vehicles", roles: ["ADMIN", "HR"] },
+    { labelKey: "sidebar.drivers", href: "/drivers", roles: ["ADMIN", "HR"] },
+
+    { labelKey: "sidebar.cash", href: "/cash", roles: ["FIELD_SUPERVISOR"] },
+
+    {
+      labelKey: "sidebar.maintenance",
+      key: "maintenance",
+      roles: ["ADMIN", "HR", "ACCOUNTANT", "FIELD_SUPERVISOR"],
+      children: [
+        { labelKey: "sidebar.maintenanceRequests", href: "/maintenance/requests" },
+        { labelKey: "sidebar.maintenanceWorkOrders", href: "/maintenance/work-orders" },
+      ],
+    },
+
+    { labelKey: "sidebar.vendors", href: "/vendors", roles: ["ADMIN", "ACCOUNTANT", "HR"] },
+
+    {
+      labelKey: "sidebar.inventory",
+      key: "inventory",
+      roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT"],
+      children: [
+        { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
+        { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
+        { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
+        { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
+      ],
+    },
+
+    { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN"] },
+    {
+      labelKey: "sidebar.supervisors",
+      href: "/supervisors",
+      roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR"],
+    },
   ],
-},
-
-      { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR"] },
-      { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR"] },
-      { labelKey: "sidebar.vehicles", href: "/vehicles", roles: ["ADMIN", "HR"] },
-      { labelKey: "sidebar.drivers", href: "/drivers", roles: ["ADMIN", "HR"] },
-
-      { labelKey: "sidebar.cash", href: "/cash", roles: ["FIELD_SUPERVISOR"] },
-
-      {
-        labelKey: "sidebar.maintenance",
-        key: "maintenance",
-        roles: ["ADMIN", "HR", "ACCOUNTANT", "FIELD_SUPERVISOR"],
-        children: [
-          { labelKey: "sidebar.maintenanceRequests", href: "/maintenance/requests" },
-          { labelKey: "sidebar.maintenanceWorkOrders", href: "/maintenance/work-orders" },
-        ],
-      },
-
-      {
-        labelKey: "sidebar.inventory",
-        key: "inventory",
-        roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT"],
-        children: [
-          { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
-          { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
-          { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
-          { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
-        ],
-      },
-    
-
-      { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN"] },
-      {
-        labelKey: "sidebar.supervisors",
-        href: "/supervisors",
-        roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR"],
-      },
-    ],
-    []
-  );
+  []
+);
 
   const canSee = (roles?: string[]) => {
     if (!roles || roles.length === 0) return true;
