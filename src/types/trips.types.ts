@@ -7,7 +7,7 @@ export type TripStatus =
 
 export type TripFinancialStatus =
   | "OPEN"
-  | "IN_REVIEW"
+  | "UNDER_REVIEW"
   | "CLOSED"
   | string;
 

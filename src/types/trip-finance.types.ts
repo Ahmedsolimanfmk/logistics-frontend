@@ -1,43 +1,48 @@
-export type TripFinanceStatus = "OPEN" | "IN_REVIEW" | "CLOSED" | string;
+export type TripFinanceStatus = "OPEN" | "UNDER_REVIEW" | "CLOSED" | string;
+export type TripProfitStatus = "PROFIT" | "LOSS" | "BREAK_EVEN" | string;
 
-export type TripFinanceSummary = {
-  finance_status?: TripFinanceStatus;
-  financial_status?: TripFinanceStatus;
+export interface TripRevenueRecord {
+  id: string;
+  amount: number | string;
+  currency?: string | null;
+  source?: string | null;
+  entered_at?: string | null;
+  approved_at?: string | null;
+  notes?: string | null;
+}
 
+export interface TripFinanceSummary {
+  trip_id: string;
+  financial_status: TripFinanceStatus;
+
+  revenue: number;
+  expenses: number;
+  pending_expenses: number;
+
+  company_expenses: number;
+  advance_expenses: number;
+
+  profit: number;
+  profit_status: TripProfitStatus;
+
+  currency?: string | null;
+  revenue_record?: TripRevenueRecord | null;
+
+  breakdown_by_type?: Record<string, number>;
+}
+
+export interface TripFinanceSummaryResponse {
+  success: boolean;
+  message?: string;
+  data: TripFinanceSummary;
+}
+
+export interface TripFinanceActionResponse {
+  success?: boolean;
+  message?: string;
   trip?: {
     id?: string;
-    code?: string | null;
-    trip_code?: string | null;
-    status?: string | null;
-    financial_status?: string | null;
-    finance_status?: string | null;
-    financial_closed_at?: string | null;
-    finance_closed_at?: string | null;
-  } | null;
-
-  totals?: {
-    expenses_total?: number;
-    advances_total?: number;
-    company_total?: number;
-    parts_cost?: number;
-    maintenance_total?: number;
-    balance?: number;
-  } | null;
-
-  expenses_total?: number;
-  total_expenses?: number;
-  advances_total?: number;
-  total_advances?: number;
-  company_total?: number;
-  total_company?: number;
-  parts_cost?: number;
-  total_parts_cost?: number;
-  maintenance_total?: number;
-  balance?: number;
-
-  expenses?: any[];
-  advances?: any[];
-  cash_advances?: any[];
-
-  note?: string | null;
-};
+    financial_status?: string;
+    status?: string;
+  };
+}

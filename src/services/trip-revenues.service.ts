@@ -1,6 +1,6 @@
 import { api } from "@/src/lib/api";
 
-export type TripRevenueSource = "MANUAL" | "CONTRACT" | "INVOICE";
+export type TripRevenueSource = "MANUAL" | "CONTRACT" | "INVOICE" | string;
 
 export interface TripRevenueUser {
   id: string;
@@ -38,7 +38,6 @@ export interface TripRevenueResponse {
 }
 
 export interface SaveTripRevenuePayload {
-  trip_id: string;
   amount: number;
   currency?: string;
   source?: TripRevenueSource;
@@ -52,9 +51,13 @@ export interface TripProfitability {
   financial_status: string;
   revenue: number;
   expenses: number;
-  advances: number;
+  pending_expenses?: number;
+  company_expenses?: number;
+  advance_expenses?: number;
   profit: number;
+  profit_status?: "PROFIT" | "LOSS" | "BREAK_EVEN" | string;
   currency?: string | null;
+  breakdown_by_type?: Record<string, number>;
   revenue_record: {
     id: string;
     amount: string | number;
@@ -74,17 +77,17 @@ export interface TripProfitabilityResponse {
 
 export const tripRevenuesService = {
   async getByTrip(tripId: string): Promise<TripRevenueResponse> {
-    const res = await api.get(`/trip-revenues/${tripId}`);
-    return res.data;
+    const res = await api.get(`/trips/${tripId}/revenue`);
+    return (res.data ?? res) as TripRevenueResponse;
   },
 
   async getProfitability(tripId: string): Promise<TripProfitabilityResponse> {
-    const res = await api.get(`/trip-revenues/${tripId}/profitability`);
-    return res.data;
+    const res = await api.get(`/trips/${tripId}/profitability`);
+    return (res.data ?? res) as TripProfitabilityResponse;
   },
 
-  async save(payload: SaveTripRevenuePayload): Promise<TripRevenueResponse> {
-    const res = await api.post("/trip-revenues", payload);
-    return res.data;
+  async save(tripId: string, payload: SaveTripRevenuePayload): Promise<TripRevenueResponse> {
+    const res = await api.put(`/trips/${tripId}/revenue`, payload);
+    return (res.data ?? res) as TripRevenueResponse;
   },
 };
