@@ -7,18 +7,46 @@ import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
 import { tripFinanceService } from "@/src/services/trip-finance.service";
+import {
+  tripRevenuesService,
+  type TripRevenue,
+  type TripRevenueSource,
+} from "@/src/services/trip-revenues.service";
+
 import type { TripFinanceSummary } from "@/src/types/trip-finance.types";
+
+type TripFinanceSummaryView = TripFinanceSummary & {
+  revenue?: number;
+  profit?: number;
+  currency?: string | null;
+};
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
+
 function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
-function fmtMoney(n: any) {
-  const v = Number(n || 0);
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
+
+function num(value: any) {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
+
+function fmtMoney(n: any, currency = "EGP") {
+  const v = num(n);
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(v);
+  } catch {
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
+  }
+}
+
 function fmtDate(d?: string | null) {
   if (!d) return "—";
   const dt = new Date(String(d));
@@ -26,20 +54,27 @@ function fmtDate(d?: string | null) {
   return dt.toLocaleString("ar-EG");
 }
 
-type TabKey = "summary" | "expenses" | "actions";
+type TabKey = "summary" | "revenue" | "expenses" | "actions";
 
 function StatusBadge({ s }: { s: string }) {
   const st = String(s || "").toUpperCase();
   const cls =
     st === "OPEN"
       ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : st === "IN_REVIEW"
+      : st === "IN_REVIEW" || st === "UNDER_REVIEW"
       ? "bg-amber-50 text-amber-800 border-amber-200"
       : st === "CLOSED"
       ? "bg-slate-100 text-slate-700 border-slate-200"
       : "bg-white text-slate-700 border-slate-200";
+
   return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
 }
+
+const inputCls =
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-300";
+
+const textareaCls =
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 min-h-[100px]";
 
 export default function TripFinancePage() {
   const t = useT();
@@ -51,24 +86,60 @@ export default function TripFinancePage() {
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
   const isPrivileged = role === "ADMIN" || role === "ACCOUNTANT";
+  const canEditRevenue =
+    role === "ADMIN" ||
+    role === "ACCOUNTANT" ||
+    role === "EXEC_MANAGER" ||
+    role === "EXECUTIVE_MANAGER";
 
   const [tab, setTab] = useState<TabKey>("summary");
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [savingRevenue, setSavingRevenue] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [summary, setSummary] = useState<TripFinanceSummary | null>(null);
+  const [summary, setSummary] = useState<TripFinanceSummaryView | null>(null);
+  const [revenueRecord, setRevenueRecord] = useState<TripRevenue | null>(null);
+
+  const [revenueAmount, setRevenueAmount] = useState("");
+  const [revenueCurrency, setRevenueCurrency] = useState("EGP");
+  const [revenueSource, setRevenueSource] = useState<TripRevenueSource>("MANUAL");
+  const [revenueNotes, setRevenueNotes] = useState("");
 
   async function load() {
     setLoading(true);
     setError(null);
+
     try {
-      const res = await tripFinanceService.getSummary(tripId);
-      setSummary(res);
+      const [financeRes, revenueRes, profitabilityRes] = await Promise.all([
+        tripFinanceService.getSummary(tripId),
+        tripRevenuesService.getByTrip(tripId),
+        tripRevenuesService.getProfitability(tripId),
+      ]);
+
+      const financeSummary = financeRes as TripFinanceSummary;
+      const revenue = revenueRes?.data || null;
+      const profitability = profitabilityRes?.data || null;
+
+      const mergedSummary: TripFinanceSummaryView = {
+        ...financeSummary,
+        revenue: profitability?.revenue ?? 0,
+        profit: profitability?.profit ?? 0,
+        currency: profitability?.currency || revenue?.currency || "EGP",
+      };
+
+      setSummary(mergedSummary);
+      setRevenueRecord(revenue);
+
+      setRevenueAmount(revenue?.amount != null ? String(num(revenue.amount)) : "");
+      setRevenueCurrency(String(revenue?.currency || profitability?.currency || "EGP"));
+      setRevenueSource((revenue?.source as TripRevenueSource) || "MANUAL");
+      setRevenueNotes(String(revenue?.notes || ""));
     } catch (e: any) {
       setError(e?.message || t("tripFinance.errors.loadFailed"));
       setSummary(null);
+      setRevenueRecord(null);
     } finally {
       setLoading(false);
     }
@@ -108,13 +179,25 @@ export default function TripFinancePage() {
     const balanceRaw = summary?.totals?.balance ?? summary?.balance;
     const balance = Number(balanceRaw ?? advanceTotal - totalExpenses) || 0;
 
-    return { totalExpenses, advanceTotal, companyTotal, partsTotal, maintenanceTotal, balance };
+    const revenue = Number(summary?.revenue ?? 0) || 0;
+    const profit = Number(summary?.profit ?? revenue - totalExpenses) || revenue - totalExpenses;
+
+    return {
+      totalExpenses,
+      advanceTotal,
+      companyTotal,
+      partsTotal,
+      maintenanceTotal,
+      balance,
+      revenue,
+      profit,
+    };
   }, [summary]);
 
   const expenses: any[] = useMemo(() => {
-  const arr = summary?.expenses || [];
-  return Array.isArray(arr) ? arr : [];
-}, [summary]);
+    const arr = summary?.expenses || [];
+    return Array.isArray(arr) ? arr : [];
+  }, [summary]);
 
   const advances: any[] = useMemo(() => {
     const arr = summary?.advances || summary?.cash_advances || [];
@@ -157,11 +240,46 @@ export default function TripFinancePage() {
     }
   }
 
+  async function saveRevenue() {
+    if (!canEditRevenue) return;
+
+    const amount = Number(revenueAmount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      setError("قيمة الإيراد غير صحيحة");
+      setTab("revenue");
+      return;
+    }
+
+    setSavingRevenue(true);
+    setError(null);
+
+    try {
+      await tripRevenuesService.save({
+        trip_id: tripId,
+        amount,
+        currency: revenueCurrency || "EGP",
+        source: revenueSource,
+        notes: revenueNotes.trim() || null,
+      });
+
+      await load();
+      setTab("summary");
+    } catch (e: any) {
+      setError(e?.message || "فشل حفظ إيراد الرحلة");
+      setTab("revenue");
+    } finally {
+      setSavingRevenue(false);
+    }
+  }
+
   const tabs = [
     { key: "summary" as const, label: t("tripFinance.tabs.summary") },
+    { key: "revenue" as const, label: "الإيراد والربحية" },
     { key: "expenses" as const, label: t("tripFinance.tabs.expenses") },
     { key: "actions" as const, label: t("tripFinance.tabs.actions") },
   ];
+
+  const currency = summary?.currency || revenueRecord?.currency || revenueCurrency || "EGP";
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-4 md:p-6" dir="rtl">
@@ -185,7 +303,10 @@ export default function TripFinancePage() {
               {t("common.back")}
             </button>
 
-            <Link href="/trips" className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">
+            <Link
+              href="/trips"
+              className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+            >
               {t("tripFinance.trips")}
             </Link>
           </div>
@@ -217,30 +338,42 @@ export default function TripFinancePage() {
             <div className="text-sm text-slate-600">{t("common.loading")}</div>
           ) : tab === "summary" ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">{t("tripFinance.kpis.totalExpenses")}</div>
-                  <div className="text-lg font-semibold">{fmtMoney(totals.totalExpenses)}</div>
+                  <div className="text-lg font-semibold">{fmtMoney(totals.totalExpenses, currency)}</div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">{t("tripFinance.kpis.advancesTotal")}</div>
-                  <div className="text-lg font-semibold">{fmtMoney(totals.advanceTotal)}</div>
+                  <div className="text-lg font-semibold">{fmtMoney(totals.advanceTotal, currency)}</div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">{t("tripFinance.kpis.companyTotal")}</div>
-                  <div className="text-lg font-semibold">{fmtMoney(totals.companyTotal)}</div>
+                  <div className="text-lg font-semibold">{fmtMoney(totals.companyTotal, currency)}</div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">{t("tripFinance.kpis.partsCost")}</div>
-                  <div className="text-lg font-semibold">{fmtMoney(totals.partsTotal)}</div>
+                  <div className="text-lg font-semibold">{fmtMoney(totals.partsTotal, currency)}</div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-600">الإيراد</div>
+                  <div className="text-lg font-semibold">{fmtMoney(totals.revenue, currency)}</div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-600">الربحية</div>
+                  <div className={cn("text-lg font-semibold", totals.profit >= 0 ? "text-emerald-700" : "text-red-700")}>
+                    {fmtMoney(totals.profit, currency)}
+                  </div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">{t("tripFinance.kpis.balance")}</div>
-                  <div className="text-lg font-semibold">{fmtMoney(totals.balance)}</div>
+                  <div className="text-lg font-semibold">{fmtMoney(totals.balance, currency)}</div>
                 </div>
               </div>
 
@@ -264,6 +397,10 @@ export default function TripFinancePage() {
                   <span className="text-slate-900 font-semibold">
                     {fmtDate(summary?.trip?.financial_closed_at || summary?.trip?.finance_closed_at || null)}
                   </span>
+                </div>
+
+                <div className="text-sm text-slate-800">
+                  العملة: <span className="text-slate-900 font-semibold">{currency}</span>
                 </div>
 
                 {summary?.note ? (
@@ -290,7 +427,7 @@ export default function TripFinancePage() {
                         <div className="text-slate-800">
                           {String(a.id).slice(0, 8)}… — {String(a.status || "").toUpperCase()}
                         </div>
-                        <div className="text-slate-700">{fmtMoney(a.amount)}</div>
+                        <div className="text-slate-700">{fmtMoney(a.amount, currency)}</div>
                       </div>
                     ))}
                     {advances.length > 6 ? (
@@ -298,6 +435,134 @@ export default function TripFinancePage() {
                     ) : null}
                   </div>
                 )}
+              </div>
+            </div>
+          ) : tab === "revenue" ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-600">الإيراد الحالي</div>
+                  <div className="text-lg font-semibold">{fmtMoney(totals.revenue, currency)}</div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-600">إجمالي المصروفات</div>
+                  <div className="text-lg font-semibold">{fmtMoney(totals.totalExpenses, currency)}</div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-600">صافي الربحية</div>
+                  <div className={cn("text-lg font-semibold", totals.profit >= 0 ? "text-emerald-700" : "text-red-700")}>
+                    {fmtMoney(totals.profit, currency)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-slate-900">بيانات الإيراد</div>
+                  {!canEditRevenue ? (
+                    <div className="text-xs text-amber-700">ليس لديك صلاحية تعديل الإيراد</div>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label className="space-y-1">
+                    <div className="text-xs text-slate-600">قيمة الإيراد</div>
+                    <input
+                      type="number"
+                      value={revenueAmount}
+                      onChange={(e) => setRevenueAmount(e.target.value)}
+                      className={inputCls}
+                      disabled={!canEditRevenue || savingRevenue}
+                    />
+                  </label>
+
+                  <label className="space-y-1">
+                    <div className="text-xs text-slate-600">العملة</div>
+                    <select
+                      value={revenueCurrency}
+                      onChange={(e) => setRevenueCurrency(e.target.value)}
+                      className={inputCls}
+                      disabled={!canEditRevenue || savingRevenue}
+                    >
+                      <option value="EGP">EGP</option>
+                      <option value="USD">USD</option>
+                      <option value="SAR">SAR</option>
+                    </select>
+                  </label>
+
+                  <label className="space-y-1">
+                    <div className="text-xs text-slate-600">المصدر</div>
+                    <select
+                      value={revenueSource}
+                      onChange={(e) => setRevenueSource(e.target.value as TripRevenueSource)}
+                      className={inputCls}
+                      disabled={!canEditRevenue || savingRevenue}
+                    >
+                      <option value="MANUAL">MANUAL</option>
+                      <option value="CONTRACT">CONTRACT</option>
+                      <option value="INVOICE">INVOICE</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label className="space-y-1 block">
+                  <div className="text-xs text-slate-600">ملاحظات</div>
+                  <textarea
+                    value={revenueNotes}
+                    onChange={(e) => setRevenueNotes(e.target.value)}
+                    className={textareaCls}
+                    disabled={!canEditRevenue || savingRevenue}
+                  />
+                </label>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
+                    <div>
+                      المصدر الحالي: <span className="font-semibold">{revenueRecord?.source || "—"}</span>
+                    </div>
+                    <div>
+                      المدخل: <span className="font-semibold">{revenueRecord?.users_entered?.full_name || "—"}</span>
+                    </div>
+                    <div>
+                      تاريخ الإدخال: <span className="font-semibold">{fmtDate(revenueRecord?.entered_at)}</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
+                    <div>
+                      الإيراد: <span className="font-semibold">{fmtMoney(totals.revenue, currency)}</span>
+                    </div>
+                    <div>
+                      المصروفات: <span className="font-semibold">{fmtMoney(totals.totalExpenses, currency)}</span>
+                    </div>
+                    <div>
+                      الربحية:{" "}
+                      <span className={cn("font-semibold", totals.profit >= 0 ? "text-emerald-700" : "text-red-700")}>
+                        {fmtMoney(totals.profit, currency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={!canEditRevenue || savingRevenue}
+                    onClick={saveRevenue}
+                    className="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-sm disabled:opacity-50 text-emerald-800"
+                  >
+                    {savingRevenue ? "جارٍ الحفظ..." : "حفظ الإيراد"}
+                  </button>
+
+                  <button
+                    disabled={savingRevenue}
+                    onClick={load}
+                    className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
+                  >
+                    تحديث
+                  </button>
+                </div>
               </div>
             </div>
           ) : tab === "expenses" ? (
@@ -323,14 +588,24 @@ export default function TripFinancePage() {
                   </div>
 
                   {expenses.map((x) => (
-                    <div key={x.id} className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-slate-200 hover:bg-slate-50">
-                      <div className="col-span-2 font-medium">{fmtMoney(x.amount)}</div>
+                    <div
+                      key={x.id}
+                      className="grid grid-cols-12 gap-2 px-3 py-3 text-sm border-b border-slate-200 hover:bg-slate-50"
+                    >
+                      <div className="col-span-2 font-medium">{fmtMoney(x.amount, currency)}</div>
                       <div className="col-span-3">{x.expense_type || "—"}</div>
-                      <div className="col-span-2 text-slate-800">{String(x.payment_source || "").toUpperCase() || "—"}</div>
-                      <div className="col-span-2 text-slate-800">{String(x.approval_status || "").toUpperCase() || "—"}</div>
+                      <div className="col-span-2 text-slate-800">
+                        {String(x.payment_source || "").toUpperCase() || "—"}
+                      </div>
+                      <div className="col-span-2 text-slate-800">
+                        {String(x.approval_status || "").toUpperCase() || "—"}
+                      </div>
                       <div className="col-span-2 text-slate-700">{fmtDate(x.created_at)}</div>
                       <div className="col-span-1 flex justify-end">
-                        <Link href={`/finance/expenses/${x.id}`} className="px-2 py-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-xs">
+                        <Link
+                          href={`/finance/expenses/${x.id}`}
+                          className="px-2 py-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-xs"
+                        >
                           →
                         </Link>
                       </div>
