@@ -86,7 +86,8 @@
   "inventoryPartItems": "Part Items",
 
   "users": "Users",
-  "supervisors": "Supervisors"
+  "supervisors": "Supervisors",
+   "vendors": "Vendors"
 },
 "notifications": {
   "open": "Open notifications",

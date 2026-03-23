@@ -94,7 +94,9 @@
   "inventoryPartItems": "السيريالات",
 
   "users": "المستخدمين",
-  "supervisors": "المشرفين"
+  "supervisors": "المشرفين",
+  
+  "vendors": "الموردون ومراكز الصيانة"
 },
 "notifications": {
   "open": "فتح التنبيهات",
