@@ -3,23 +3,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
-import { unwrapItems, unwrapTotal } from "@/src/lib/api";
-import {
-  listUsers,
-  createUser,
-  resetUserPassword,
-  setUserStatus,
-  type UserRow,
-} from "@/src/lib/users.api";
 import { useT } from "@/src/i18n/useT";
 
-// ✅ UI System (Light)
+import { usersService } from "@/src/services/users.service";
+import type { UserRow } from "@/src/types/users.types";
+
+// UI
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { FiltersBar } from "@/src/components/ui/FiltersBar";
 import { DataTable } from "@/src/components/ui/DataTable";
-
-// ✅ Toast + ConfirmDialog
 import { Toast } from "@/src/components/Toast";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 
@@ -34,7 +27,6 @@ function fmtDate(d?: string | null) {
   return dt.toLocaleString("ar-EG");
 }
 
-// ✅ Light Card (local helper)
 function Card({
   title,
   right,
@@ -61,15 +53,14 @@ export default function UsersPage() {
   const t = useT();
   const router = useRouter();
 
-  const token = useAuth((s) => s.token);
-  const user = useAuth((s) => s.user);
-  const hydrate = useAuth((s) => s.hydrate);
+  const token = useAuth((s: any) => s.token);
+  const user = useAuth((s: any) => s.user);
+  const hydrate = useAuth((s: any) => s.hydrate);
 
   const role = roleUpper(user?.role);
   const isAdmin = role === "ADMIN";
   const canRender = !!token && !!user && isAdmin;
 
-  // Toast
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -80,7 +71,6 @@ export default function UsersPage() {
     setToastOpen(true);
   }
 
-  // ConfirmDialog (toggle status)
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
@@ -98,20 +88,17 @@ export default function UsersPage() {
     setConfirmOpen(true);
   }
 
-  // Filters / Paging
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("");
   const [take, setTake] = useState(50);
   const [skip, setSkip] = useState(0);
 
-  // Data
   const [items, setItems] = useState<UserRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Create Modal
   const [openCreate, setOpenCreate] = useState(false);
   const [cFullName, setCFullName] = useState("");
   const [cEmail, setCEmail] = useState("");
@@ -120,7 +107,6 @@ export default function UsersPage() {
   const [cPassword, setCPassword] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
 
-  // Reset Password Modal
   const [openResetPw, setOpenResetPw] = useState(false);
   const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
   const [newPass, setNewPass] = useState("");
@@ -137,20 +123,23 @@ export default function UsersPage() {
   }, [token, user, isAdmin, router]);
 
   async function fetchUsers(next?: { resetSkip?: boolean }) {
+    const effectiveSkip = next?.resetSkip ? 0 : skip;
     if (next?.resetSkip) setSkip(0);
 
     setLoading(true);
     setErr(null);
+
     try {
-      const res = await listUsers({
+      const res = await usersService.list({
         q: q.trim() || undefined,
         role: roleFilter || undefined,
         is_active: activeFilter || undefined,
         take,
-        skip: next?.resetSkip ? 0 : skip,
+        skip: effectiveSkip,
       });
-      setItems(unwrapItems<UserRow>(res));
-      setTotal(unwrapTotal(res));
+
+      setItems(res.items);
+      setTotal(res.total);
     } catch (e: any) {
       setErr(String(e?.message || t("users.errors.loadFailed")));
       setItems([]);
@@ -187,7 +176,7 @@ export default function UsersPage() {
       action: async () => {
         setConfirmBusy(true);
         try {
-          await setUserStatus(u.id, !u.is_active);
+          await usersService.setStatus(u.id, !u.is_active);
           showToast(t("common.saved") || t("common.success"), "success");
           await fetchUsers();
         } catch (e: any) {
@@ -215,7 +204,7 @@ export default function UsersPage() {
 
     setResetBusy(true);
     try {
-      await resetUserPassword(resetTarget.id, newPass.trim());
+      await usersService.resetPassword(resetTarget.id, newPass.trim());
       setOpenResetPw(false);
       setResetTarget(null);
       setNewPass("");
@@ -239,7 +228,7 @@ export default function UsersPage() {
 
     setCreateBusy(true);
     try {
-      await createUser({
+      await usersService.create({
         full_name: cFullName.trim(),
         email: cEmail.trim() ? cEmail.trim() : null,
         phone: cPhone.trim() ? cPhone.trim() : null,
@@ -263,7 +252,6 @@ export default function UsersPage() {
     }
   }
 
-  // ===== Guards =====
   if (!token) {
     return (
       <div className="min-h-screen bg-gray-50" dir="rtl">
@@ -296,7 +284,6 @@ export default function UsersPage() {
     );
   }
 
-  // ===== Page =====
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
@@ -306,7 +293,6 @@ export default function UsersPage() {
           actions={<Button onClick={() => setOpenCreate(true)}>{t("users.actions.create")}</Button>}
         />
 
-        {/* Filters */}
         <Card
           title={t("users.filters.title")}
           right={
@@ -388,7 +374,6 @@ export default function UsersPage() {
           {err ? <div className="mt-3 text-sm text-red-600">⚠️ {err}</div> : null}
         </Card>
 
-        {/* Table */}
         <DataTable<UserRow>
           title={t("users.title")}
           columns={[
@@ -411,8 +396,8 @@ export default function UsersPage() {
                 </span>
               ),
             },
-            { key: "created_at", label: t("users.table.created"), render: (u) => fmtDate((u as any).created_at) },
-            { key: "updated_at", label: t("users.table.updated"), render: (u) => fmtDate((u as any).updated_at) },
+            { key: "created_at", label: t("users.table.created"), render: (u) => fmtDate(u.created_at) },
+            { key: "updated_at", label: t("users.table.updated"), render: (u) => fmtDate(u.updated_at) },
             {
               key: "actions",
               label: t("users.table.actions"),
@@ -441,7 +426,6 @@ export default function UsersPage() {
           onNext={skip + take >= total ? undefined : () => setSkip((s) => s + take)}
         />
 
-        {/* Create Modal (Light) */}
         {openCreate ? (
           <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-center justify-center p-4">
             <div dir="rtl" className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white text-gray-900 overflow-hidden shadow-xl">
@@ -525,7 +509,6 @@ export default function UsersPage() {
           </div>
         ) : null}
 
-        {/* Reset Password Modal (Light) */}
         {openResetPw ? (
           <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px] flex items-center justify-center p-4">
             <div dir="rtl" className="w-full max-w-md rounded-2xl border border-gray-200 bg-white text-gray-900 overflow-hidden shadow-xl">

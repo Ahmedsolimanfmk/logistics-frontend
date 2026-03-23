@@ -3,7 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { api } from "@/src/lib/api";
+
+import { vehiclesService } from "@/src/services/vehicles.service";
+import type { Vehicle, VehicleSummaryResponse } from "@/src/types/vehicles.types";
 
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
@@ -36,8 +38,9 @@ function shortId(id: any) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
-function vehicleLabel(v: any) {
+function vehicleLabel(v: Partial<Vehicle> | null | undefined) {
   if (!v) return "—";
+
   const fleet = String(v?.fleet_no || "").trim();
   const plate = String(v?.plate_no || "").trim();
   const dn = String(v?.display_name || "").trim();
@@ -116,7 +119,7 @@ export default function VehicleDetailsPage() {
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<VehicleSummaryResponse | null>(null);
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
@@ -133,12 +136,12 @@ export default function VehicleDetailsPage() {
 
     setLoading(true);
     setErr(null);
+
     try {
-      const res: any = await api.get(`/vehicles/${id}/summary`);
-      const body = res?.data ?? res;
+      const body = await vehiclesService.getSummary(id);
       setData(body);
     } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "فشل تحميل بيانات المركبة");
+      setErr(e?.message || "فشل تحميل بيانات المركبة");
       setData(null);
     } finally {
       setLoading(false);
@@ -152,8 +155,8 @@ export default function VehicleDetailsPage() {
 
   const vehicle = data?.vehicle || null;
   const summary = data?.summary || {};
-  const recentTrips = Array.isArray(data?.recent_trips) ? data.recent_trips : [];
-  const recentExpenses = Array.isArray(data?.recent_expenses) ? data.recent_expenses : [];
+  const recentTrips = Array.isArray(data?.recent_trips) ? data!.recent_trips : [];
+  const recentExpenses = Array.isArray(data?.recent_expenses) ? data!.recent_expenses : [];
 
   const licenseInfo = useMemo(() => licenseMeta(vehicle?.license_expiry_date), [vehicle?.license_expiry_date]);
 

@@ -1,13 +1,19 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
-import { api, unwrapItems, unwrapTotal } from "@/src/lib/api";
 import { useT } from "@/src/i18n/useT";
 
-// ✅ Design System (Trex UI)
+import { maintenanceRequestsService } from "@/src/services/maintenance-requests.service";
+import { vendorsService } from "@/src/services/vendors.service";
+import type {
+  MaintenanceRequest,
+  VehicleOption,
+} from "@/src/types/maintenance-requests.types";
+import type { VendorOption } from "@/src/types/vendors.types";
+
+// UI
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
 import { Button } from "@/src/components/ui/Button";
@@ -16,35 +22,6 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { Toast } from "@/src/components/Toast";
 
-// =====================
-// Types
-// =====================
-type MaintenanceRequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED";
-
-type MaintenanceRequest = {
-  id: string;
-  vehicle_id: string;
-  problem_title: string;
-  problem_description?: string | null;
-  status: MaintenanceRequestStatus | string;
-
-  requested_by?: string | null;
-  requested_at?: string | null;
-
-  reviewed_by?: string | null;
-  reviewed_at?: string | null;
-
-  rejection_reason?: string | null;
-
-  created_at?: string | null;
-  updated_at?: string | null;
-};
-
-type VehicleOption = { id: string; label: string; status?: string | null };
-
-// =====================
-// Helpers
-// =====================
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
@@ -67,14 +44,10 @@ function shortId(id: unknown) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
-// =====================
-// Main Page
-// =====================
 export default function MaintenanceRequestsPage() {
   const t = useT();
   const router = useRouter();
 
-  // ✅ تثبيت t لتجنب loops
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
@@ -85,33 +58,30 @@ export default function MaintenanceRequestsPage() {
   const role = user?.role;
   const canReview = isAdminOrAccountant(role);
 
-  // hydrate once
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
     } catch {}
   }, []);
 
-  // Filters
   const [status, setStatus] = useState<string>("");
   const [vehicleId, setVehicleId] = useState<string>("");
   const [q, setQ] = useState<string>("");
 
-  // server-side pagination
   const [page, setPage] = useState<number>(1);
   const [limit] = useState<number>(20);
   const [total, setTotal] = useState<number>(0);
 
-  // Data
   const [items, setItems] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // Vehicles
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(false);
 
-  // Toast
+  const [vendorOptions, setVendorOptions] = useState<VendorOption[]>([]);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
+
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -122,15 +92,15 @@ export default function MaintenanceRequestsPage() {
     setToastOpen(true);
   }, []);
 
-  // Create form
   const [createOpen, setCreateOpen] = useState(false);
   const [formVehicleId, setFormVehicleId] = useState("");
   const [formTitle, setFormTitle] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Approve / Reject dialogs
   const [approveTarget, setApproveTarget] = useState<MaintenanceRequest | null>(null);
+  const [approveVendorId, setApproveVendorId] = useState("");
+  const [approveNotes, setApproveNotes] = useState("");
   const [rejectTarget, setRejectTarget] = useState<MaintenanceRequest | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
@@ -149,13 +119,27 @@ export default function MaintenanceRequestsPage() {
     if (!token) return;
     setVehiclesLoading(true);
     try {
-      const res: any = await api.get("/maintenance/vehicles/options");
-      setVehicleOptions(unwrapItems<VehicleOption>(res));
+      const items = await maintenanceRequestsService.listVehicleOptions();
+      setVehicleOptions(items);
     } catch (e: any) {
       setVehicleOptions([]);
       showToast("error", e?.message || tRef.current("maintenanceRequests.toast.vehiclesFailed"));
     } finally {
       setVehiclesLoading(false);
+    }
+  }, [token, showToast]);
+
+  const loadVendorOptions = useCallback(async () => {
+    if (!token) return;
+    setVendorsLoading(true);
+    try {
+      const items = await vendorsService.listOptions();
+      setVendorOptions(Array.isArray(items) ? items : []);
+    } catch (e: any) {
+      setVendorOptions([]);
+      showToast("error", e?.message || "فشل تحميل الموردين");
+    } finally {
+      setVendorsLoading(false);
     }
   }, [token, showToast]);
 
@@ -167,26 +151,20 @@ export default function MaintenanceRequestsPage() {
       setErr(null);
 
       try {
-        const res: any = await api.get("/maintenance/requests", {
-          params: {
-            status: status || undefined,
-            vehicle_id: vehicleId || undefined,
-            q: q.trim() ? q.trim() : undefined, // ✅ لو الباك يدعم q خليها تتفلتر سيرفر
-            page: p,
-            limit,
-          },
+        const res = await maintenanceRequestsService.list({
+          status: status || undefined,
+          vehicle_id: vehicleId || undefined,
+          q: q.trim() ? q.trim() : undefined,
+          page: p,
+          limit,
         });
 
-        const list = unwrapItems<MaintenanceRequest>(res);
-        setItems(Array.isArray(list) ? list : []);
+        setItems(Array.isArray(res.items) ? res.items : []);
+        setTotal(typeof res.total === "number" ? res.total : 0);
 
-        const ttotal = unwrapTotal(res);
-        if (typeof ttotal === "number" && Number.isFinite(ttotal)) setTotal(ttotal);
-        else setTotal(Array.isArray(list) ? list.length : 0);
-
-        // لو meta فيها page
-        const mp = (res as any)?.meta?.page ?? (res as any)?.data?.meta?.page;
-        if (typeof mp === "number" && mp > 0) setPage(mp);
+        if (typeof res.page === "number" && res.page > 0) {
+          setPage(res.page);
+        }
       } catch (e: any) {
         setItems([]);
         setTotal(0);
@@ -202,16 +180,15 @@ export default function MaintenanceRequestsPage() {
   useEffect(() => {
     if (!token) return;
     loadVehicleOptions();
-  }, [token, loadVehicleOptions]);
+    loadVendorOptions();
+  }, [token, loadVehicleOptions, loadVendorOptions]);
 
-  // عند تغيير الفلاتر نرجع أول صفحة
   useEffect(() => {
     if (!token) return;
     setPage(1);
     loadRequests(1);
   }, [token, status, vehicleId, loadRequests]);
 
-  // تغيير الصفحة
   useEffect(() => {
     if (!token) return;
     loadRequests(page);
@@ -222,7 +199,6 @@ export default function MaintenanceRequestsPage() {
     return Math.max(1, Math.ceil(total / limit));
   }, [total, limit]);
 
-  // Local filter fallback (لو السيرفر مش بيفلتر بـ q)
   const rows = useMemo(() => {
     const qq = q.trim().toLowerCase();
     if (!qq) return items;
@@ -232,6 +208,10 @@ export default function MaintenanceRequestsPage() {
       return a.includes(qq) || b.includes(qq);
     });
   }, [items, q]);
+
+  const selectedApproveVendor = useMemo(() => {
+    return vendorOptions.find((v) => v.id === approveVendorId) || null;
+  }, [approveVendorId, vendorOptions]);
 
   async function onCreateSubmit() {
     if (!token) return;
@@ -247,7 +227,7 @@ export default function MaintenanceRequestsPage() {
 
     setSubmitting(true);
     try {
-      await api.post("/maintenance/requests", {
+      await maintenanceRequestsService.create({
         vehicle_id: formVehicleId,
         problem_title: formTitle.trim(),
         problem_description: formDesc.trim() || null,
@@ -273,24 +253,26 @@ export default function MaintenanceRequestsPage() {
     setActionBusy(true);
 
     try {
-      const res: any = await api.post(`/maintenance/requests/${id}/approve`, {
+      await loadVendorOptions();
+
+      const res = await maintenanceRequestsService.approve(id, {
         type: "CORRECTIVE",
-        vendor_name: null,
+        vendor_id: approveVendorId || null,
+        vendor_name: selectedApproveVendor?.name || null,
         odometer: null,
-        notes: null,
+        notes: approveNotes.trim() || null,
       });
 
-      // ✅ حاول نقرأ work_order_id من أي شكل response
       const woId =
         res?.work_order?.id ||
-        res?.data?.work_order?.id ||
         res?.work_order_id ||
-        res?.data?.work_order_id ||
         res?.id ||
-        res?.data?.id ||
         null;
 
       setApproveTarget(null);
+      setApproveVendorId("");
+      setApproveNotes("");
+
       showToast("success", t("maintenanceRequests.toast.approved"));
 
       setPage(1);
@@ -309,7 +291,7 @@ export default function MaintenanceRequestsPage() {
     setActionBusy(true);
 
     try {
-      await api.post(`/maintenance/requests/${id}/reject`, { reason });
+      await maintenanceRequestsService.reject(id, { reason });
       setRejectTarget(null);
       setRejectReason("");
       showToast("success", t("maintenanceRequests.toast.rejected"));
@@ -398,7 +380,14 @@ export default function MaintenanceRequestsPage() {
 
               {canApproveReject ? (
                 <>
-                  <Button variant="secondary" onClick={() => setApproveTarget(row)}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setApproveTarget(row);
+                      setApproveVendorId("");
+                      setApproveNotes("");
+                    }}
+                  >
                     {t("maintenanceRequests.actions.approve")}
                   </Button>
                   <Button
@@ -443,12 +432,11 @@ export default function MaintenanceRequestsPage() {
             <Button
               variant="secondary"
               onClick={async () => {
-                await loadVehicleOptions();
-                await loadRequests(1);
+                await Promise.all([loadVehicleOptions(), loadVendorOptions(), loadRequests(1)]);
                 showToast("success", t("common.refresh"));
               }}
-              disabled={loading || vehiclesLoading}
-              isLoading={loading || vehiclesLoading}
+              disabled={loading || vehiclesLoading || vendorsLoading}
+              isLoading={loading || vehiclesLoading || vendorsLoading}
             >
               {t("maintenanceRequests.actions.refresh")}
             </Button>
@@ -544,7 +532,6 @@ export default function MaintenanceRequestsPage() {
         minWidthClassName="min-w-[1050px]"
       />
 
-      {/* Create (ConfirmDialog as modal-like) */}
       <ConfirmDialog
         open={createOpen}
         title={t("maintenanceRequests.modals.createTitle")}
@@ -612,13 +599,12 @@ export default function MaintenanceRequestsPage() {
         }}
       />
 
-      {/* Approve */}
       <ConfirmDialog
         open={!!approveTarget}
         title={t("maintenanceRequests.modals.approveTitle")}
         description={
           approveTarget ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="rounded-xl border border-black/10 bg-black/[0.02] p-3">
                 <div className="font-semibold text-sm text-[rgb(var(--trex-fg))]">{approveTarget.problem_title}</div>
                 <div className="mt-1 text-xs text-slate-500">
@@ -626,6 +612,40 @@ export default function MaintenanceRequestsPage() {
                   <span className="font-mono">{approveTarget.vehicle_id}</span>
                 </div>
               </div>
+
+              <div>
+                <div className={labelCls}>مركز الصيانة / المورد</div>
+                <select
+                  value={approveVendorId}
+                  onChange={(e) => setApproveVendorId(e.target.value)}
+                  className={inputCls}
+                  disabled={actionBusy || vendorsLoading}
+                >
+                  <option value="">
+                    {vendorsLoading ? "جارٍ تحميل الموردين..." : "بدون مورد محدد"}
+                  </option>
+                  {vendorOptions.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}{v.code ? ` (${v.code})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-1 text-xs text-slate-500">
+                  يفضل اختيار مركز صيانة معتمد حتى يتم ربط أمر الشغل ماليًا وتشغيليًا.
+                </div>
+              </div>
+
+              <div>
+                <div className={labelCls}>ملاحظات أمر الشغل</div>
+                <textarea
+                  className={cn(inputCls, "min-h-[90px]")}
+                  value={approveNotes}
+                  onChange={(e) => setApproveNotes(e.target.value)}
+                  placeholder="ملاحظات اختيارية"
+                  disabled={actionBusy}
+                />
+              </div>
+
               <div className="text-xs text-slate-500">
                 {t("maintenanceRequests.modals.approveHint") || "سيتم إنشاء أمر شغل (Work Order) وربطه بالطلب."}
               </div>
@@ -640,6 +660,8 @@ export default function MaintenanceRequestsPage() {
         onClose={() => {
           if (actionBusy) return;
           setApproveTarget(null);
+          setApproveVendorId("");
+          setApproveNotes("");
         }}
         onConfirm={async () => {
           if (!approveTarget) return;
@@ -647,7 +669,6 @@ export default function MaintenanceRequestsPage() {
         }}
       />
 
-      {/* Reject */}
       <ConfirmDialog
         open={!!rejectTarget}
         title={t("maintenanceRequests.modals.rejectTitle")}

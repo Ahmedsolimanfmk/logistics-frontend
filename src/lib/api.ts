@@ -6,57 +6,79 @@ import axios from "axios";
 function cleanBase(v: any): string {
   const s = String(v || "").trim();
   if (!s) return "";
-  // safety for unresolved placeholder strings
   if (s.includes("__NEXT_PUBLIC_API_BASE__")) return "";
-  return s;
+  return s.replace(/\/+$/, "");
 }
 
 function getRuntimeApiBase(): string {
-  // ✅ runtime env.js (preferred)
+  // runtime env.js
   if (typeof window !== "undefined") {
     const rt = cleanBase((window as any).__ENV__?.NEXT_PUBLIC_API_BASE);
     if (rt) return rt;
   }
 
-  // ✅ build-time env (fallback)
-  const v2 = cleanBase(process.env.NEXT_PUBLIC_API_BASE);
-  if (v2) return v2;
+  // build-time env
+  const envBase = cleanBase(process.env.NEXT_PUBLIC_API_BASE);
+  if (envBase) return envBase;
 
-  // ✅ last resort (local dev)
+  // local fallback
   return "http://localhost:3000";
 }
 
 // =====================
-// Axios instance (NO baseURL here)
+// Auth helpers
+// =====================
+function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem("token");
+  } catch {
+    return null;
+  }
+}
+
+function clearStoredAuth() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  } catch {
+    // ignore
+  }
+}
+
+function shouldRedirectToLogin(): boolean {
+  if (typeof window === "undefined") return false;
+  const p = window.location.pathname || "";
+  return p !== "/login";
+}
+
+// =====================
+// Axios instance
 // =====================
 export const api = axios.create({
   withCredentials: true,
 });
 
 // =====================
-// Inject baseURL + token BEFORE every request
+// Request interceptor
 // =====================
 api.interceptors.request.use((config) => {
-  // ✅ baseURL lazily (env.js timing safe)
   const base = getRuntimeApiBase();
   if (base) config.baseURL = base;
 
-  // ✅ attach token (works with AxiosHeaders)
-  if (typeof window !== "undefined") {
-    const t = localStorage.getItem("token");
-    if (t) {
-      const h: any = config.headers || {};
+  const token = getStoredToken();
+  if (token) {
+    const h: any = config.headers || {};
 
-      // Axios v1 uses AxiosHeaders with .set()
-      if (typeof h.set === "function") {
-        h.set("Authorization", `Bearer ${t}`);
-        config.headers = h;
-      } else {
-        config.headers = {
-          ...(config.headers as any),
-          Authorization: `Bearer ${t}`,
-        };
-      }
+    if (typeof h.set === "function") {
+      h.set("Authorization", `Bearer ${token}`);
+      config.headers = h;
+    } else {
+      config.headers = {
+        ...(config.headers as any),
+        Authorization: `Bearer ${token}`,
+      };
     }
   }
 
@@ -64,51 +86,62 @@ api.interceptors.request.use((config) => {
 });
 
 // =====================
-// Auth helper internals
+// Response interceptor
 // =====================
-function getAuthHeaders(): Record<string, string> | undefined {
-  const t = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  return t ? { Authorization: `Bearer ${t}` } : undefined;
-}
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const message =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      "Unexpected error";
+
+    if (status === 401) {
+      clearStoredAuth();
+
+      if (typeof window !== "undefined" && shouldRedirectToLogin()) {
+        window.location.href = "/login";
+      }
+    }
+
+    return Promise.reject({
+      ...error,
+      message,
+      status,
+    });
+  }
+);
 
 // =====================
-// Auth helpers (explicit)
+// Legacy explicit auth wrappers
+// NOTE:
+// Kept temporarily for compatibility.
+// They now rely on the same api instance/interceptors.
 // =====================
 export async function apiAuthGet<T = any>(path: string, params?: any): Promise<T> {
-  const res = await api.get(path, {
-    params,
-    headers: getAuthHeaders(),
-  });
-
+  const res = await api.get(path, { params });
   return res.data as T;
 }
 
 export async function apiAuthPost<T = any>(path: string, body?: any): Promise<T> {
-  const res = await api.post(path, body, {
-    headers: getAuthHeaders(),
-  });
-
+  const res = await api.post(path, body);
   return res.data as T;
 }
 
 export async function apiAuthPatch<T = any>(path: string, body?: any): Promise<T> {
-  const res = await api.patch(path, body, {
-    headers: getAuthHeaders(),
-  });
-
+  const res = await api.patch(path, body);
   return res.data as T;
 }
 
 export async function apiAuthDelete<T = any>(path: string): Promise<T> {
-  const res = await api.delete(path, {
-    headers: getAuthHeaders(),
-  });
-
+  const res = await api.delete(path);
   return res.data as T;
 }
 
 // =====================
-// Thin wrappers (legacy)
+// Thin wrappers
 // =====================
 export async function apiGet<T = any>(path: string, params?: any): Promise<T> {
   const res = await api.get(path, { params });
@@ -125,26 +158,35 @@ export async function apiPatch<T = any>(path: string, body?: any): Promise<T> {
   return res.data as T;
 }
 
-// ✅ DELETE wrapper (same interceptors + base + token)
 export async function apiDelete<T = any>(path: string): Promise<T> {
   const res = await api.delete(path);
   return res.data as T;
 }
 
 // =====================
-// Helpers used by pages
+// Transitional helpers
+// NOTE:
+// Keep temporarily until all pages move to services.
 // =====================
 export function unwrapItems<T = any>(res: any): T[] {
   const d = res?.data ?? res;
   if (Array.isArray(d)) return d as T[];
   if (Array.isArray(d?.items)) return d.items as T[];
   if (Array.isArray(d?.data?.items)) return d.data.items as T[];
+  if (Array.isArray(d?.result)) return d.result as T[];
   return [];
 }
 
 export function unwrapTotal(res: any): number {
   const d = res?.data ?? res;
-  const t = d?.total ?? d?.count ?? d?.data?.total ?? d?.data?.count;
-  const n = Number(t);
+  const raw =
+    d?.total ??
+    d?.count ??
+    d?.meta?.total ??
+    d?.data?.total ??
+    d?.data?.count ??
+    d?.pagination?.total;
+
+  const n = Number(raw);
   return Number.isFinite(n) ? n : 0;
 }

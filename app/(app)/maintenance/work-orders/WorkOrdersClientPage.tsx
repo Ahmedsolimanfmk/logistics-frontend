@@ -4,9 +4,11 @@ import Link from "next/link";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
-import { apiGet, unwrapTotal } from "@/src/lib/api";
 
-// ✅ Design System (الموحد)
+import { workOrdersService } from "@/src/services/work-orders.service";
+import type { WorkOrderListItem } from "@/src/types/work-orders.types";
+
+// UI
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
@@ -27,36 +29,9 @@ function shortId(id: any) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
-type WorkOrderListItem = {
-  id: string;
-  status?: string | null;
-  type?: string | null;
-  vendor_name?: string | null;
-  opened_at?: string | null;
-  vehicle_id?: string | null;
-  vehicles?: {
-    fleet_no?: string | null;
-    plate_no?: string | null;
-    display_name?: string | null;
-  } | null;
-};
-
-function normalizeList(res: any): WorkOrderListItem[] {
-  const arr =
-    (Array.isArray(res) && res) ||
-    res?.items ||
-    res?.data ||
-    res?.work_orders ||
-    res?.workOrders ||
-    res?.result ||
-    [];
-  return Array.isArray(arr) ? arr : [];
-}
-
 export default function WorkOrdersClientPage() {
   const t = useT();
 
-  // ✅ تثبيت t لتجنب loop
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
@@ -64,7 +39,6 @@ export default function WorkOrdersClientPage() {
 
   const token = useAuth((s: any) => s.token);
 
-  // hydrate once
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
@@ -78,12 +52,10 @@ export default function WorkOrdersClientPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("");
 
-  // server-side pagination
   const [page, setPage] = useState(1);
   const limit = 20;
   const [total, setTotal] = useState<number>(0);
 
-  // toast
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -102,18 +74,15 @@ export default function WorkOrdersClientPage() {
     setErr(null);
 
     try {
-      const params: any = { page, limit };
-      if (q.trim()) params.q = q.trim();
-      if (status) params.status = String(status).toUpperCase();
+      const res = await workOrdersService.list({
+        page,
+        limit,
+        q: q.trim() || undefined,
+        status: status || undefined,
+      });
 
-      const res: any = await apiGet(`/maintenance/work-orders`, params);
-
-      const list = normalizeList(res);
-      setItems(list);
-
-      const ttotal = unwrapTotal(res);
-      if (typeof ttotal === "number" && Number.isFinite(ttotal)) setTotal(ttotal);
-      else setTotal(list.length);
+      setItems(res.items);
+      setTotal(res.total);
     } catch (e: any) {
       setItems([]);
       setTotal(0);
@@ -135,7 +104,6 @@ export default function WorkOrdersClientPage() {
     return Math.max(1, Math.ceil(total / limit));
   }, [total, limit]);
 
-  // Local filter (fallback) — لو السيرفر مش بيفلتر
   const filteredLocal = useMemo(() => {
     const qq = q.trim().toLowerCase();
     const st = String(status || "").toUpperCase();
@@ -160,12 +128,7 @@ export default function WorkOrdersClientPage() {
     });
   }, [items, q, status]);
 
-  // ✅ total shown should match what we display (avoid mismatch)
-  const totalShown = useMemo(() => {
-    // لو بتستخدم fallback local filter، اعرض عدد النتائج الظاهرة
-    // (لو انت متأكد السيرفر بيفلتر، ممكن تحط total هنا بدل filteredLocal.length)
-    return filteredLocal.length;
-  }, [filteredLocal.length]);
+  const totalShown = useMemo(() => filteredLocal.length, [filteredLocal.length]);
 
   const columns: DataTableColumn<WorkOrderListItem>[] = useMemo(
     () => [
@@ -280,7 +243,7 @@ export default function WorkOrdersClientPage() {
               <Button
                 variant="primary"
                 onClick={() => {
-                  setPage(1); // ✅ rely on useEffect to reload (avoid double request)
+                  setPage(1);
                 }}
                 isLoading={loading}
               >

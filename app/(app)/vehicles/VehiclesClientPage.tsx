@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { api } from "@/src/lib/api";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { useLang } from "@/src/i18n/lang";
+
+import { vehiclesService } from "@/src/services/vehicles.service";
+import type { Vehicle, VehiclePayload } from "@/src/types/vehicles.types";
 
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
@@ -25,7 +27,7 @@ function shortId(id: any) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
-function vehicleLabel(v: any) {
+function vehicleLabel(v: Partial<Vehicle>) {
   const a = String(v.fleet_no || "").trim();
   const b = String(v.plate_no || "").trim();
   const dn = String(v.display_name || "").trim();
@@ -134,7 +136,7 @@ function VehicleModal({
 }: {
   open: boolean;
   mode: "create" | "edit";
-  initial?: any;
+  initial?: Vehicle;
   onClose: () => void;
   onSaved: () => void;
   showToast: (type: "success" | "error", msg: string) => void;
@@ -178,7 +180,7 @@ function VehicleModal({
 
     setLoading(true);
     try {
-      const payload: any = {
+      const payload: VehiclePayload = {
         fleet_no: fleetNo.trim(),
         plate_no: plateNo.trim(),
         display_name: displayName.trim() || null,
@@ -193,17 +195,17 @@ function VehicleModal({
       };
 
       if (mode === "create") {
-        await api.post("/vehicles", payload);
+        await vehiclesService.create(payload);
         showToast("success", t("vehicles.toast.created"));
-      } else {
-        await api.patch(`/vehicles/${initial.id}`, payload);
+      } else if (initial?.id) {
+        await vehiclesService.update(initial.id, payload);
         showToast("success", t("vehicles.toast.updated"));
       }
 
       onSaved();
       onClose();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("vehicles.toast.saveFailed"));
+      showToast("error", e?.message || t("vehicles.toast.saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -342,7 +344,10 @@ export default function VehiclesClientPage() {
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+
+  const [rows, setRows] = useState<Vehicle[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
@@ -350,7 +355,7 @@ export default function VehiclesClientPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Vehicle | null>(null);
 
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
@@ -375,18 +380,6 @@ export default function VehiclesClientPage() {
   const status = sp.get("status") || "";
   const active = sp.get("active") || "";
 
-  const qs = useMemo(() => {
-    const p = new URLSearchParams();
-    p.set("page", String(page));
-    p.set("pageSize", String(pageSize));
-    p.set("limit", String(pageSize));
-    if (q) p.set("q", q);
-    if (status) p.set("status", status);
-    if (active === "1") p.set("is_active", "true");
-    else if (active === "0") p.set("is_active", "false");
-    return p.toString();
-  }, [page, pageSize, q, status, active]);
-
   const setParam = (k: string, v: string) => {
     const p = new URLSearchParams(sp.toString());
     if (v) p.set(k, v);
@@ -399,12 +392,24 @@ export default function VehiclesClientPage() {
     if (token === null || !token) return;
     setLoading(true);
     setErr(null);
+
     try {
-      const res: any = await api.get(`/vehicles?${qs}`);
-      const body = res?.data ?? res;
-      setData(body);
+      const res = await vehiclesService.list({
+        page,
+        pageSize,
+        q,
+        status,
+        active,
+      });
+
+      setRows(res.items);
+      setTotal(res.total);
+      setTotalPages(res.pages || 1);
     } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || t("vehicles.errors.loadFailed"));
+      setErr(e?.message || t("vehicles.errors.loadFailed"));
+      setRows([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -415,11 +420,7 @@ export default function VehiclesClientPage() {
     if (!token) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, qs]);
-
-  const items = Array.isArray(data?.items) ? data.items : [];
-  const total = Number(data?.meta?.total || 0);
-  const totalPages = Math.max(Number(data?.meta?.pages || 1), 1);
+  }, [token, page, pageSize, q, status, active]);
 
   function openCreate() {
     setEditing(null);
@@ -427,19 +428,19 @@ export default function VehiclesClientPage() {
     setModalOpen(true);
   }
 
-  function openEdit(v: any) {
+  function openEdit(v: Vehicle) {
     setEditing(v);
     setModalMode("edit");
     setModalOpen(true);
   }
 
-  async function toggle(v: any) {
+  async function toggle(v: Vehicle) {
     try {
-      await api.patch(`/vehicles/${v.id}/toggle`, {});
+      await vehiclesService.toggle(v.id);
       showToast("success", t("vehicles.toast.toggled"));
       load();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("vehicles.toast.toggleFailed"));
+      showToast("error", e?.message || t("vehicles.toast.toggleFailed"));
     }
   }
 
@@ -455,7 +456,7 @@ export default function VehiclesClientPage() {
     );
   }
 
-  const columns: DataTableColumn<any>[] = [
+  const columns: DataTableColumn<Vehicle>[] = [
     {
       key: "vehicle",
       label: t("vehicles.table.vehicle"),
@@ -601,9 +602,9 @@ export default function VehiclesClientPage() {
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>
             ) : null}
 
-            <DataTable
+            <DataTable<Vehicle>
               columns={columns}
-              rows={items}
+              rows={rows}
               loading={loading}
               emptyTitle={t("vehicles.empty")}
               emptyHint={t("vehicles.filters.searchPlaceholder")}
@@ -617,7 +618,7 @@ export default function VehiclesClientPage() {
               }}
               footer={
                 <div className="text-xs text-gray-600">
-                  {t("vehicles.meta.showing")} <span className="font-semibold text-gray-900">{items.length}</span>{" "}
+                  {t("vehicles.meta.showing")} <span className="font-semibold text-gray-900">{rows.length}</span>{" "}
                   {t("vehicles.meta.of")} <span className="font-semibold text-gray-900">{total}</span>
                 </div>
               }

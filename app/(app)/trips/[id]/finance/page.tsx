@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
+
+import { tripFinanceService } from "@/src/services/trip-finance.service";
+import type { TripFinanceSummary } from "@/src/types/trip-finance.types";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -56,17 +58,16 @@ export default function TripFinancePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Backend summary shape may vary; keep it loose
-  const [summary, setSummary] = useState<any | null>(null);
+  const [summary, setSummary] = useState<TripFinanceSummary | null>(null);
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get(`/cash/trips/${tripId}/finance/summary`);
-      setSummary(res?.data ?? res);
+      const res = await tripFinanceService.getSummary(tripId);
+      setSummary(res);
     } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || t("tripFinance.errors.loadFailed"));
+      setError(e?.message || t("tripFinance.errors.loadFailed"));
       setSummary(null);
     } finally {
       setLoading(false);
@@ -76,7 +77,6 @@ export default function TripFinancePage() {
   useEffect(() => {
     if (!tripId) return;
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId]);
 
   const financeStatus = useMemo(() => {
@@ -102,7 +102,8 @@ export default function TripFinancePage() {
     const partsTotal =
       Number(summary?.totals?.parts_cost ?? summary?.parts_cost ?? summary?.total_parts_cost ?? 0) || 0;
 
-    const maintenanceTotal = Number(summary?.totals?.maintenance_total ?? summary?.maintenance_total ?? 0) || 0;
+    const maintenanceTotal =
+      Number(summary?.totals?.maintenance_total ?? summary?.maintenance_total ?? 0) || 0;
 
     const balanceRaw = summary?.totals?.balance ?? summary?.balance;
     const balance = Number(balanceRaw ?? advanceTotal - totalExpenses) || 0;
@@ -111,12 +112,12 @@ export default function TripFinancePage() {
   }, [summary]);
 
   const expenses: any[] = useMemo(() => {
-    const arr = summary?.expenses || summary?.items || summary?.details?.expenses || [];
-    return Array.isArray(arr) ? arr : [];
-  }, [summary]);
+  const arr = summary?.expenses || [];
+  return Array.isArray(arr) ? arr : [];
+}, [summary]);
 
   const advances: any[] = useMemo(() => {
-    const arr = summary?.advances || summary?.cash_advances || summary?.details?.advances || [];
+    const arr = summary?.advances || summary?.cash_advances || [];
     return Array.isArray(arr) ? arr : [];
   }, [summary]);
 
@@ -125,11 +126,11 @@ export default function TripFinancePage() {
     setBusy(true);
     setError(null);
     try {
-      await api.post(`/cash/trips/${tripId}/finance/open-review`, {});
+      await tripFinanceService.openReview(tripId);
       await load();
       setTab("summary");
     } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || t("tripFinance.errors.openReviewFailed"));
+      setError(e?.message || t("tripFinance.errors.openReviewFailed"));
     } finally {
       setBusy(false);
     }
@@ -146,11 +147,11 @@ export default function TripFinancePage() {
     setBusy(true);
     setError(null);
     try {
-      await api.post(`/cash/trips/${tripId}/finance/close`, { notes: notes.trim() || undefined });
+      await tripFinanceService.close(tripId, notes);
       await load();
       setTab("summary");
     } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || t("tripFinance.errors.closeFailed"));
+      setError(e?.message || t("tripFinance.errors.closeFailed"));
     } finally {
       setBusy(false);
     }
@@ -169,7 +170,7 @@ export default function TripFinancePage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">{t("tripFinance.title")}</h1>
-              <StatusBadge s={financeStatus} />
+              <StatusBadge s={String(financeStatus)} />
             </div>
             <div className="text-xs text-slate-600">
               {t("tripFinance.tripId")}: <span className="text-slate-900 font-semibold">{tripId}</span>
@@ -194,7 +195,6 @@ export default function TripFinancePage() {
           <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>
         )}
 
-        {/* Tabs */}
         <div className="flex flex-wrap gap-2">
           {tabs.map((tt) => (
             <button
@@ -202,7 +202,9 @@ export default function TripFinancePage() {
               onClick={() => setTab(tt.key)}
               className={cn(
                 "px-3 py-2 rounded-lg text-sm border transition",
-                tab === tt.key ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                tab === tt.key
+                  ? "bg-slate-900 border-slate-900 text-white"
+                  : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
               )}
             >
               {tt.label}
@@ -215,7 +217,6 @@ export default function TripFinancePage() {
             <div className="text-sm text-slate-600">{t("common.loading")}</div>
           ) : tab === "summary" ? (
             <div className="space-y-4">
-              {/* KPI cards */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">{t("tripFinance.kpis.totalExpenses")}</div>
@@ -243,13 +244,14 @@ export default function TripFinancePage() {
                 </div>
               </div>
 
-              {/* meta */}
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
                 <div className="text-xs text-slate-600">{t("tripFinance.tripInfo.title")}</div>
 
                 <div className="text-sm text-slate-800">
                   {t("tripFinance.tripInfo.code")}:{" "}
-                  <span className="text-slate-900 font-semibold">{summary?.trip?.code || "—"}</span>
+                  <span className="text-slate-900 font-semibold">
+                    {summary?.trip?.trip_code || summary?.trip?.code || "—"}
+                  </span>
                 </div>
 
                 <div className="text-sm text-slate-800">
@@ -266,13 +268,11 @@ export default function TripFinancePage() {
 
                 {summary?.note ? (
                   <div className="mt-2 text-xs text-slate-600">
-                    {t("tripFinance.tripInfo.note")}:{" "}
-                    <span className="text-slate-900">{String(summary.note)}</span>
+                    {t("tripFinance.tripInfo.note")}: <span className="text-slate-900">{String(summary.note)}</span>
                   </div>
                 ) : null}
               </div>
 
-              {/* Advances */}
               <div className="rounded-lg border border-slate-200 bg-white p-3">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-slate-800">{t("tripFinance.linkedAdvances.title")}</div>

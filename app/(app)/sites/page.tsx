@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { api, unwrapItems } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter } from "next/navigation";
 import { Toast } from "@/src/components/Toast";
 import { useT } from "@/src/i18n/useT";
+
+import { sitesService } from "@/src/services/sites.service";
+import type { Site, SiteClientOption, SitePayload } from "@/src/types/sites.types";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -22,13 +24,13 @@ export default function SitesPage() {
   const t = useT();
 
   const router = useRouter();
-  const token = useAuth((s) => s.token);
+  const token = useAuth((s: any) => s.token);
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const [rawItems, setRawItems] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
+  const [rawItems, setRawItems] = useState<Site[]>([]);
+  const [clients, setClients] = useState<SiteClientOption[]>([]);
 
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("");
@@ -38,7 +40,7 @@ export default function SitesPage() {
   const [toastType, setToastType] = useState<"success" | "error">("success");
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
+  const [editing, setEditing] = useState<Site | null>(null);
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -64,11 +66,10 @@ export default function SitesPage() {
 
   async function loadClients() {
     try {
-      const res = await api.get<any>("/clients");
-      const items = unwrapItems(res);
+      const items = await sitesService.listClientsOptions();
       setClients(Array.isArray(items) ? items : []);
     } catch {
-      // ignore
+      setClients([]);
     }
   }
 
@@ -79,14 +80,15 @@ export default function SitesPage() {
     setErr(null);
 
     try {
-      const qs = new URLSearchParams();
-      if (search.trim()) qs.set("search", search.trim());
-      if (clientFilter) qs.set("client_id", clientFilter);
+      const res = await sitesService.list({
+        search,
+        client_id: clientFilter || undefined,
+      });
 
-      const res = await api.get<any>(`/sites?${qs.toString()}`);
-      setRawItems(unwrapItems(res));
+      setRawItems(res.items);
     } catch (e: any) {
       setErr(e?.message || t("sites.errors.loadFailed"));
+      setRawItems([]);
     } finally {
       setLoading(false);
     }
@@ -110,7 +112,7 @@ export default function SitesPage() {
     setModalOpen(true);
   }
 
-  function openEdit(s: any) {
+  function openEdit(s: Site) {
     setEditing(s);
     setName(String(s?.name || ""));
     setAddress(String(s?.address || ""));
@@ -120,24 +122,26 @@ export default function SitesPage() {
 
   async function submit() {
     const v = name.trim();
-    if (!v) return showToast("error", t("sites.toast.nameRequired"));
+    if (!v) {
+      showToast("error", t("sites.toast.nameRequired"));
+      return;
+    }
+
+    const payload: SitePayload = {
+      name: v,
+      address: address.trim() || null,
+      client_id: clientId || null,
+    };
 
     try {
       if (editing?.id) {
-        await api.put(`/sites/${editing.id}`, {
-          name: v,
-          address: address.trim() || null,
-          client_id: clientId || null,
-        });
+        await sitesService.update(editing.id, payload);
         showToast("success", t("sites.toast.updated"));
       } else {
-        await api.post(`/sites`, {
-          name: v,
-          address: address.trim() || null,
-          client_id: clientId || null,
-        });
+        await sitesService.create(payload);
         showToast("success", t("sites.toast.created"));
       }
+
       setModalOpen(false);
       await loadSites();
     } catch (e: any) {
@@ -147,7 +151,7 @@ export default function SitesPage() {
 
   async function toggleActive(id: string) {
     try {
-      await api.patch(`/sites/${id}/toggle`);
+      await sitesService.toggle(id);
       showToast("success", t("sites.toast.toggled"));
       await loadSites();
     } catch (e: any) {
@@ -238,7 +242,7 @@ export default function SitesPage() {
                 </thead>
 
                 <tbody>
-                  {items.map((s: any) => (
+                  {items.map((s) => (
                     <tr key={s.id} className={cn("border-t border-slate-200 hover:bg-slate-50")}>
                       <td className="px-4 py-2 font-medium">{s.name || "—"}</td>
                       <td className="px-4 py-2">{s.clients?.name || "—"}</td>
@@ -283,7 +287,6 @@ export default function SitesPage() {
           </div>
         )}
 
-        {/* Modal */}
         {modalOpen ? (
           <div
             className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-3"

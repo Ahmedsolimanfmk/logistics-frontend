@@ -1,4 +1,3 @@
-// app/(app)/maintenance/work-orders/[id]/WorkOrderDetailsPage.tsx (or page.tsx)
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -6,9 +5,16 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
-import { apiGet, apiPost, unwrapTotal } from "@/src/lib/api";
 
-// ✅ Design System (الموحد)
+import { workOrderDetailsService } from "@/src/services/work-order-details.service";
+import type {
+  WorkOrder,
+  ReportResponse,
+  TabKey,
+  Warehouse,
+} from "@/src/types/work-order-details.types";
+
+// UI
 import { Button } from "@/src/components/ui/Button";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { PageHeader } from "@/src/components/ui/PageHeader";
@@ -42,53 +48,9 @@ function isAdminOrAccountant(role: any) {
   return rr === "ADMIN" || rr === "ACCOUNTANT";
 }
 
-type WorkOrder = {
-  id: string;
-  status: string;
-  type: string;
-  vendor_name?: string | null;
-  opened_at?: string | null;
-  started_at?: string | null;
-  completed_at?: string | null;
-  odometer?: number | null;
-  notes?: string | null;
-  request_id?: string | null;
-  vehicle_id?: string | null;
-  vehicles?: {
-    id: string;
-    plate_no?: string | null;
-    fleet_no?: string | null;
-    display_name?: string | null;
-    status?: string | null;
-    current_odometer?: number | null;
-  } | null;
-};
-
-type WorkOrderByIdResponse = { work_order: WorkOrder };
-
-type ReportResponse = {
-  report_status: "OK" | "NEEDS_QA" | "QA_FAILED" | "NEEDS_PARTS_RECONCILIATION" | string;
-  work_order: any;
-  vehicle: any;
-  post_report_db: any;
-  work_order_expenses: any[];
-  report_runtime: any;
-};
-
-type InventoryIssue = { id: string };
-type TabKey = "issues" | "installations" | "qa";
-
-type Warehouse = {
-  id: string;
-  name?: string | null;
-  code?: string | null;
-  is_active?: boolean | null;
-};
-
 export default function WorkOrderDetailsPage() {
   const t = useT();
 
-  // ✅ تثبيت t لتفادي loops
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
@@ -100,7 +62,6 @@ export default function WorkOrderDetailsPage() {
   const token = useAuth((s: any) => s.token);
   const user = useAuth((s: any) => s.user);
 
-  // hydrate once
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
@@ -113,12 +74,10 @@ export default function WorkOrderDetailsPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
 
-  // --- tabs ---
   const tabQ = String(sp?.get("tab") || "").toLowerCase();
   const initialTab: TabKey = tabQ === "installations" ? "installations" : tabQ === "qa" ? "qa" : "issues";
   const [tab, setTab] = useState<TabKey>(initialTab);
 
-  // ✅ depend on tabQ only (not sp object)
   useEffect(() => {
     const v = String(tabQ || "").toLowerCase();
     const next: TabKey = v === "installations" ? "installations" : v === "qa" ? "qa" : "issues";
@@ -136,14 +95,12 @@ export default function WorkOrderDetailsPage() {
     [id, router, sp]
   );
 
-  // --- state ---
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   const [wo, setWo] = useState<WorkOrder | null>(null);
   const [report, setReport] = useState<ReportResponse | null>(null);
 
-  // Toast (auto-close)
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -154,16 +111,13 @@ export default function WorkOrderDetailsPage() {
     setTimeout(() => setToastOpen(false), 2500);
   }, []);
 
-  // ✅ WO Hub
   const [hubWarehouseId, setHubWarehouseId] = useState("");
   const [hubCounts, setHubCounts] = useState({ requests: 0, issues: 0, installations: 0 });
   const [hubCountsLoading, setHubCountsLoading] = useState(false);
 
-  // ✅ Warehouses dropdown
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [whLoading, setWhLoading] = useState(false);
 
-  // -------- Issues state --------
   const [issueCreating, setIssueCreating] = useState(false);
   const [issueId, setIssueId] = useState<string | null>(null);
   const [issueMsg, setIssueMsg] = useState<string | null>(null);
@@ -175,7 +129,6 @@ export default function WorkOrderDetailsPage() {
   const [lineSaving, setLineSaving] = useState(false);
   const [lineMsg, setLineMsg] = useState<string | null>(null);
 
-  // -------- Installations state --------
   const [instLoading, setInstLoading] = useState(false);
   const [instItems, setInstItems] = useState<any[]>([]);
   const [instMsg, setInstMsg] = useState<string | null>(null);
@@ -187,29 +140,23 @@ export default function WorkOrderDetailsPage() {
   const [instNotes, setInstNotes] = useState("");
   const [instSaving, setInstSaving] = useState(false);
 
-  // -------- QA state --------
   const [qaResult, setQaResult] = useState<"PASS" | "FAIL" | "">("");
   const [qaRemarks, setQaRemarks] = useState("");
   const [qaSaving, setQaSaving] = useState(false);
   const [qaMsg, setQaMsg] = useState<string | null>(null);
 
-  // -------- Complete state --------
   const [completing, setCompleting] = useState(false);
   const [completeMsg, setCompleteMsg] = useState<string | null>(null);
 
-  // ✅ load warehouses (no loop)
+  const inputCls = "trex-input w-full px-3 py-2 text-sm";
+  const labelCls = "text-xs text-slate-500 mb-1";
+
   const loadWarehouses = useCallback(async () => {
     if (!token) return;
     setWhLoading(true);
     try {
-      const res: any = await apiGet("/inventory/warehouses");
-      const arr: Warehouse[] =
-        Array.isArray(res) ? res :
-        Array.isArray(res?.items) ? res.items :
-        Array.isArray(res?.data) ? res.data : [];
-
+      const arr = await workOrderDetailsService.listWarehouses();
       setWarehouses(arr);
-      // ✅ functional setter avoids dep on hubWarehouseId
       setHubWarehouseId((prev) => prev || (arr?.[0]?.id ? arr[0].id : ""));
     } catch (e: any) {
       setWarehouses([]);
@@ -224,7 +171,6 @@ export default function WorkOrderDetailsPage() {
     loadWarehouses();
   }, [token, loadWarehouses]);
 
-  // ✅ WO Hub actions
   const hubOpenRequests = useCallback(() => {
     if (!id) return;
     router.push(`/inventory/requests?work_order_id=${encodeURIComponent(id)}`);
@@ -257,17 +203,7 @@ export default function WorkOrderDetailsPage() {
     setInstMsg(null);
 
     try {
-      const res: any = await apiGet(`/maintenance/work-orders/${id}/installations`);
-      const arr = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.items)
-        ? res.items
-        : Array.isArray(res?.installations)
-        ? res.installations
-        : Array.isArray(res?.data)
-        ? res.data
-        : [];
-
+      const arr = await workOrderDetailsService.listInstallations(id);
       setInstItems(arr);
     } catch (e: any) {
       setInstItems([]);
@@ -282,28 +218,8 @@ export default function WorkOrderDetailsPage() {
     setHubCountsLoading(true);
 
     try {
-      const reqRes: any = await apiGet(`/inventory/requests`, { work_order_id: id, page: 1, limit: 1 });
-      const requestsTotal = unwrapTotal(reqRes);
-
-      const issRes: any = await apiGet(`/inventory/issues`, { work_order_id: id, page: 1, limit: 1 });
-      const issuesTotal = unwrapTotal(issRes);
-
-      const instRes: any = await apiGet(`/maintenance/work-orders/${id}/installations`);
-      const instArr = Array.isArray(instRes)
-        ? instRes
-        : Array.isArray(instRes?.items)
-        ? instRes.items
-        : Array.isArray(instRes?.installations)
-        ? instRes.installations
-        : Array.isArray(instRes?.data)
-        ? instRes.data
-        : [];
-
-      setHubCounts({
-        requests: Number.isFinite(requestsTotal) ? requestsTotal : 0,
-        issues: Number.isFinite(issuesTotal) ? issuesTotal : 0,
-        installations: instArr.length,
-      });
+      const counts = await workOrderDetailsService.getHubCounts(id);
+      setHubCounts(counts);
     } catch {
       // ignore
     } finally {
@@ -318,21 +234,19 @@ export default function WorkOrderDetailsPage() {
     setErr(null);
 
     try {
-      const [woRes, repRes] = await Promise.all([
-        apiGet<WorkOrderByIdResponse>(`/maintenance/work-orders/${id}`),
-        apiGet<ReportResponse>(`/maintenance/work-orders/${id}/report`),
-      ]);
+      const bundle = await workOrderDetailsService.getBundle(id);
 
-      setWo(woRes.work_order || null);
-      setReport(repRes || null);
+      setWo(bundle.workOrder);
+      setReport(bundle.report);
 
-      const db = repRes?.post_report_db;
+      const db = bundle.report?.post_report_db;
       if (db?.road_test_result) {
         const r = String(db.road_test_result).toUpperCase();
         setQaResult(r === "FAIL" ? "FAIL" : "PASS");
       } else {
         setQaResult("");
       }
+
       if (typeof db?.remarks === "string") setQaRemarks(db.remarks);
       else setQaRemarks("");
 
@@ -355,7 +269,6 @@ export default function WorkOrderDetailsPage() {
     if (tab === "installations") loadInstallations();
   }, [tab, loadInstallations]);
 
-  // ---- derived ----
   const totals = report?.report_runtime?.totals;
   const rs = String(report?.report_status || "");
   const mismatchCounts = totals?.mismatch_counts;
@@ -385,9 +298,9 @@ export default function WorkOrderDetailsPage() {
     return null;
   }, [report, rs, t]);
 
-  // ✅ Build dropdown options from issued-only + remaining qty
   const installableParts = useMemo(() => {
     const issuedByPart = new Map<string, { part: any; qty: number }>();
+
     for (const l of issuedLines || []) {
       const pid = String(l?.part_id || "");
       if (!pid) continue;
@@ -445,7 +358,6 @@ export default function WorkOrderDetailsPage() {
 
   const isSerialSelected = Boolean(instPartItemId) || serialOptions.length > 0;
 
-  // ---- actions ----
   const createIssue = useCallback(async () => {
     if (!token || !id) return;
     setIssueMsg(null);
@@ -457,7 +369,7 @@ export default function WorkOrderDetailsPage() {
 
     setIssueCreating(true);
     try {
-      const res = await apiPost<{ issue: InventoryIssue }>(`/maintenance/work-orders/${id}/issues`, { notes: null });
+      const res = await workOrderDetailsService.createIssue(id, null);
       setIssueId(res?.issue?.id || null);
       setIssueMsg("✅ " + tRef.current("woDetails.issueCreated"));
       await Promise.all([loadHubCounts(), load()]);
@@ -495,8 +407,15 @@ export default function WorkOrderDetailsPage() {
 
     setLineSaving(true);
     try {
-      await apiPost(`/maintenance/issues/${issueId}/lines`, {
-        lines: [{ part_id: linePartId.trim(), qty: Number(lineQty), unit_cost: Number(lineUnitCost), notes: lineNotes || null }],
+      await workOrderDetailsService.addIssueLines(issueId, {
+        lines: [
+          {
+            part_id: linePartId.trim(),
+            qty: Number(lineQty),
+            unit_cost: Number(lineUnitCost),
+            notes: lineNotes || null,
+          },
+        ],
       });
 
       setLineMsg("✅ " + tRef.current("woDetails.lineAdded"));
@@ -548,7 +467,7 @@ export default function WorkOrderDetailsPage() {
 
     setInstSaving(true);
     try {
-      await apiPost(`/maintenance/work-orders/${id}/installations`, {
+      await workOrderDetailsService.addInstallations(id, {
         items: [
           {
             part_id: instPartId.trim(),
@@ -611,7 +530,7 @@ export default function WorkOrderDetailsPage() {
 
     setQaSaving(true);
     try {
-      await apiPost(`/maintenance/work-orders/${id}/post-report`, {
+      await workOrderDetailsService.saveQa(id, {
         road_test_result: qaResult,
         remarks: qaRemarks || null,
         checklist_json: null,
@@ -639,7 +558,7 @@ export default function WorkOrderDetailsPage() {
 
     setCompleting(true);
     try {
-      await apiPost(`/maintenance/work-orders/${id}/complete`, { notes: null });
+      await workOrderDetailsService.complete(id, { notes: null });
       setCompleteMsg("✅ " + tRef.current("woDetails.completed"));
       showToast("✅ " + tRef.current("woDetails.completed"), "success");
       await load();
@@ -669,9 +588,6 @@ export default function WorkOrderDetailsPage() {
     ],
     [t]
   );
-
-  const inputCls = "trex-input w-full px-3 py-2 text-sm";
-  const labelCls = "text-xs text-slate-500 mb-1";
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
@@ -791,7 +707,13 @@ export default function WorkOrderDetailsPage() {
           <Card title={t("woDetails.wo")}>
             <div className="grid grid-cols-1 gap-2 text-sm">
               <div><span className="text-slate-500">{t("woDetails.type")}:</span> {wo?.type || "—"}</div>
-              <div><span className="text-slate-500">{t("woDetails.vendor")}:</span> {wo?.vendor_name || "—"}</div>
+              <div>
+  <span className="text-slate-500">{t("woDetails.vendor")}:</span>{" "}
+  {wo?.vendors?.name || wo?.vendor_name || "—"}
+  {wo?.vendors?.code ? (
+    <span className="mr-2 text-xs text-slate-500">({wo.vendors.code})</span>
+  ) : null}
+</div>
               <div><span className="text-slate-500">{t("woDetails.opened")}:</span> {fmtDate(wo?.opened_at)}</div>
               <div><span className="text-slate-500">{t("woDetails.started")}:</span> {fmtDate(wo?.started_at)}</div>
               <div><span className="text-slate-500">{t("woDetails.completedAt")}:</span> {fmtDate(wo?.completed_at)}</div>
@@ -836,7 +758,6 @@ export default function WorkOrderDetailsPage() {
           </div>
         </Card>
 
-        {/* Reconciliation Table */}
         <Card title={t("woDetails.reconTitle")}>
           <div className="text-xs text-slate-500">
             {t("woDetails.reconMatched")}: {recon.matched?.length || 0} | {t("woDetails.reconIssuedNotInstalled")}:{" "}
@@ -905,7 +826,6 @@ export default function WorkOrderDetailsPage() {
           </div>
         </Card>
 
-        {/* Issues Tab */}
         {tab === "issues" ? (
           <Card
             title={t("woDetails.issuesTitle")}
@@ -1003,7 +923,6 @@ export default function WorkOrderDetailsPage() {
           </Card>
         ) : null}
 
-        {/* Installations Tab */}
         {tab === "installations" ? (
           <Card
             title={t("woDetails.installationsTitle")}
@@ -1179,7 +1098,6 @@ export default function WorkOrderDetailsPage() {
           </Card>
         ) : null}
 
-        {/* QA Tab */}
         {tab === "qa" ? (
           <Card title={t("woDetails.qaTitle")}>
             {!canManage ? (

@@ -2,10 +2,19 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
+
+import { tripsService } from "@/src/services/trips.service";
+import type {
+  Trip,
+  TripOptionClient,
+  TripOptionDriver,
+  TripOptionSite,
+  TripOptionSupervisor,
+  TripOptionVehicle,
+} from "@/src/types/trips.types";
 
 const fmtDate = (d: any) => {
   if (!d) return "—";
@@ -24,19 +33,6 @@ function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-/** ✅ helper: supports axios (res.data) + custom wrapper (res) */
-function unwrap(res: any) {
-  return res?.data ?? res;
-}
-/** ✅ helper: if body is {items,total} or array */
-function unwrapItems(res: any) {
-  const body = unwrap(res);
-  if (Array.isArray(body)) return body;
-  if (Array.isArray(body?.items)) return body.items;
-  return [];
-}
-
-/* ---------------- Toast ---------------- */
 function Toast({
   open,
   message,
@@ -66,7 +62,6 @@ function Toast({
   );
 }
 
-/* ---------------- Assign Modal ---------------- */
 function AssignTripModal({
   open,
   tripId,
@@ -83,16 +78,15 @@ function AssignTripModal({
   const t = useT();
 
   const [loading, setLoading] = useState(false);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [supervisors, setSupervisors] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<TripOptionVehicle[]>([]);
+  const [drivers, setDrivers] = useState<TripOptionDriver[]>([]);
+  const [supervisors, setSupervisors] = useState<TripOptionSupervisor[]>([]);
 
   const [vehicleId, setVehicleId] = useState("");
   const [driverId, setDriverId] = useState("");
   const [supervisorId, setSupervisorId] = useState("");
 
-  // ✅ vehicle label helper
-  const vehicleLabel = (v: any) => {
+  const vehicleLabel = (v: TripOptionVehicle) => {
     const fleet = String(v?.fleet_no || "").trim();
     const plate = String(v?.plate_no || v?.plate_number || "").trim();
     const disp = String(v?.display_name || "").trim();
@@ -115,18 +109,13 @@ function AssignTripModal({
     (async () => {
       setLoading(true);
       try {
-        const [vRes, dRes, uRes] = await Promise.all([
-          api.get("/vehicles"),
-          api.get("/drivers/active"),
-          api.get("/users"),
+        const [vItems, dItems, uItems] = await Promise.all([
+          tripsService.listVehiclesOptions(),
+          tripsService.listDriversOptions(),
+          tripsService.listSupervisorsOptions(),
         ]);
 
-        const vItems = unwrapItems(vRes);
-        const dItems = unwrapItems(dRes);
-        const uItems = unwrapItems(uRes);
-
-        // ✅ Vehicles UI filter:
-        const filteredVehicles = vItems.filter((v: any) => {
+        const filteredVehicles = vItems.filter((v) => {
           if (v?.is_active === false) return false;
           if (v?.status) return String(v.status).toUpperCase() === "AVAILABLE";
           return true;
@@ -134,41 +123,39 @@ function AssignTripModal({
 
         setVehicles(filteredVehicles);
         setDrivers(dItems);
-        setSupervisors(
-          uItems.filter((x: any) => String(x.role || "").toUpperCase() === "FIELD_SUPERVISOR")
-        );
+        setSupervisors(uItems);
       } catch (e: any) {
-        showToast("error", e?.response?.data?.message || e?.message || t("common.failed"));
+        showToast("error", e?.message || t("common.failed"));
       } finally {
         setLoading(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, t, showToast]);
 
   if (!open || !tripId) return null;
 
   const canSubmit = !!vehicleId && !!driverId;
 
   async function submit() {
-    if (!canSubmit) return;
-    setLoading(true);
-    try {
-      await api.post(`/trips/${tripId}/assign`, {
-        vehicle_id: vehicleId,
-        driver_id: driverId,
-        field_supervisor_id: supervisorId || null,
-      });
+  if (!canSubmit || !tripId) return;
 
-      showToast("success", t("trips.toast.assigned"));
-      onAssigned();
-      onClose();
-    } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("common.failed"));
-    } finally {
-      setLoading(false);
-    }
+  setLoading(true);
+  try {
+    await tripsService.assign(tripId, {
+      vehicle_id: vehicleId,
+      driver_id: driverId,
+      field_supervisor_id: supervisorId || null,
+    });
+
+    showToast("success", t("trips.toast.assigned"));
+    onAssigned();
+    onClose();
+  } catch (e: any) {
+    showToast("error", e?.message || t("common.failed"));
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
@@ -178,10 +165,7 @@ function AssignTripModal({
       >
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">{t("tripModals.assignTitle")}</h3>
-          <button
-            onClick={onClose}
-            className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
-          >
+          <button onClick={onClose} className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50">
             ✕
           </button>
         </div>
@@ -260,7 +244,6 @@ function AssignTripModal({
   );
 }
 
-/* ---------------- Create Modal ---------------- */
 function CreateTripModal({
   open,
   onClose,
@@ -275,8 +258,8 @@ function CreateTripModal({
   const t = useT();
 
   const [loading, setLoading] = useState(false);
-  const [clients, setClients] = useState<any[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
+  const [clients, setClients] = useState<TripOptionClient[]>([]);
+  const [sites, setSites] = useState<TripOptionSite[]>([]);
 
   const [clientId, setClientId] = useState("");
   const [siteId, setSiteId] = useState("");
@@ -294,17 +277,19 @@ function CreateTripModal({
     (async () => {
       setLoading(true);
       try {
-        const [cRes, sRes] = await Promise.all([api.get("/clients"), api.get("/sites")]);
-        setClients(unwrapItems(cRes));
-        setSites(unwrapItems(sRes));
+        const [cRes, sRes] = await Promise.all([
+          tripsService.listClientsOptions(),
+          tripsService.listSitesOptions(),
+        ]);
+        setClients(cRes);
+        setSites(sRes);
       } catch (e: any) {
-        showToast("error", e?.response?.data?.message || e?.message || t("common.failed"));
+        showToast("error", e?.message || t("common.failed"));
       } finally {
         setLoading(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, t, showToast]);
 
   if (!open) return null;
 
@@ -314,7 +299,7 @@ function CreateTripModal({
     if (!canSubmit) return;
     setLoading(true);
     try {
-      await api.post("/trips", {
+      await tripsService.create({
         client_id: clientId,
         site_id: siteId,
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
@@ -325,7 +310,7 @@ function CreateTripModal({
       onCreated();
       onClose();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("common.failed"));
+      showToast("error", e?.message || t("common.failed"));
     } finally {
       setLoading(false);
     }
@@ -356,7 +341,7 @@ function CreateTripModal({
               <option value="">{t("common.search")}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name || c.company_name || c.id}
+                  {c.name || c.id}
                 </option>
               ))}
             </select>
@@ -421,7 +406,6 @@ function CreateTripModal({
   );
 }
 
-/* ---------------- Page ---------------- */
 export default function TripsPage() {
   const t = useT();
 
@@ -437,7 +421,10 @@ export default function TripsPage() {
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+
+  const [items, setItems] = useState<Trip[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
@@ -455,14 +442,12 @@ export default function TripsPage() {
     setTimeout(() => setToastOpen(false), 2500);
   }
 
-  // hydrate
   useEffect(() => {
     try {
       (useAuth as any).getState?.().hydrate?.();
     } catch {}
   }, []);
 
-  // guard
   useEffect(() => {
     if (token === null) return;
     if (!token) router.push("/login");
@@ -471,14 +456,6 @@ export default function TripsPage() {
   const page = Math.max(parseInt(sp.get("page") || "1", 10), 1);
   const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10), 1), 100);
   const status = sp.get("status") || "";
-
-  const qs = useMemo(() => {
-    const q = new URLSearchParams();
-    q.set("page", String(page));
-    q.set("pageSize", String(pageSize));
-    if (status) q.set("status", status);
-    return q.toString();
-  }, [page, pageSize, status]);
 
   const setParam = (k: string, v: string) => {
     const p = new URLSearchParams(sp.toString());
@@ -494,10 +471,20 @@ export default function TripsPage() {
     setLoading(true);
     setErr(null);
     try {
-      const res = await api.get(`/trips?${qs}`);
-      setData(unwrap(res));
+      const res = await tripsService.list({
+        page,
+        pageSize,
+        status,
+      });
+
+      setItems(res.items);
+      setTotal(res.total);
+      setTotalPages(res.pages || Math.max(Math.ceil((res.total || 0) / pageSize), 1));
     } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || t("trips.errors.fetchFailed"));
+      setErr(e?.message || t("trips.errors.fetchFailed"));
+      setItems([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -507,20 +494,15 @@ export default function TripsPage() {
     if (token === null) return;
     if (!token) return;
     loadTrips();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, qs]);
-
-  const items = data?.items || [];
-  const total = Number(data?.total || 0);
-  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+  }, [token, page, pageSize, status]);
 
   async function startTrip(tripId: string) {
     try {
-      await api.post(`/trips/${tripId}/start`);
+      await tripsService.start(tripId);
       showToast("success", t("trips.toast.started"));
       loadTrips();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("trips.errors.startFailed"));
+      showToast("error", e?.message || t("trips.errors.startFailed"));
     }
   }
 
@@ -529,11 +511,11 @@ export default function TripsPage() {
     if (!ok) return;
 
     try {
-      await api.post(`/trips/${tripId}/finish`);
+      await tripsService.finish(tripId);
       showToast("success", t("trips.toast.finished"));
       loadTrips();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("trips.errors.finishFailed"));
+      showToast("error", e?.message || t("trips.errors.finishFailed"));
     }
   }
 
@@ -568,7 +550,6 @@ export default function TripsPage() {
           </div>
         </div>
 
-        {/* Filters + Actions */}
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={status}
@@ -628,7 +609,7 @@ export default function TripsPage() {
                 </thead>
 
                 <tbody>
-                  {items.map((r: any) => {
+                  {items.map((r) => {
                     const st = String(r.status || "").toUpperCase();
 
                     return (
@@ -646,7 +627,6 @@ export default function TripsPage() {
 
                         <td className="px-4 py-2">
                           <div className="flex gap-2 flex-wrap">
-                            {/* ✅ Finance link FIXED to /trips/:id/finance */}
                             {canSeeFinance ? (
                               <Link
                                 href={`/trips/${r.id}/finance`}
@@ -741,7 +721,12 @@ export default function TripsPage() {
         showToast={showToast}
       />
 
-      <CreateTripModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={() => loadTrips()} showToast={showToast} />
+      <CreateTripModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => loadTrips()}
+        showToast={showToast}
+      />
 
       <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} t={t} />
     </div>
