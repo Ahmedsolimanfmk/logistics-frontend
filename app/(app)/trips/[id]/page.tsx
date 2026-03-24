@@ -44,6 +44,7 @@ export default function TripDetailsPage() {
 
   const role = roleUpper(user?.role);
   const canSeeFinance = role === "ADMIN" || role === "ACCOUNTANT";
+  const canManageRevenue = role === "ADMIN" || role === "CONTRACT_MANAGER";
 
   const id = params?.id;
 
@@ -118,7 +119,16 @@ export default function TripDetailsPage() {
                 href={`/trips/${id}/finance`}
                 className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-sm text-emerald-800"
               >
-                {t("tripDetails.actions.financeClose")}
+                المالية
+              </Link>
+            ) : null}
+
+            {canManageRevenue && id ? (
+              <Link
+                href={`/trips/${id}/revenue`}
+                className="px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm text-blue-800"
+              >
+                الإيراد
               </Link>
             ) : null}
 
@@ -200,12 +210,6 @@ export default function TripDetailsPage() {
                   <span className="text-slate-900">{trip.notes || "—"}</span>
                 </div>
               </div>
-
-              {canSeeFinance ? (
-                <div className="mt-3 text-xs text-slate-500">
-                  {t("tripDetails.hints.financeTip")}
-                </div>
-              ) : null}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
