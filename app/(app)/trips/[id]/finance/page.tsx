@@ -97,12 +97,9 @@ export default function TripFinancePage() {
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
 
-  const isPrivileged = role === "ADMIN" || role === "ACCOUNTANT";
-  const canEditRevenue =
-    role === "ADMIN" ||
-    role === "ACCOUNTANT" ||
-    role === "EXEC_MANAGER" ||
-    role === "EXECUTIVE_MANAGER";
+  const canViewProfitability = role === "ADMIN" || role === "ACCOUNTANT";
+  const canManageFinanceState = role === "ADMIN" || role === "ACCOUNTANT";
+  const canEditRevenue = role === "ADMIN" || role === "CONTRACT_MANAGER";
 
   const [tab, setTab] = useState<TabKey>("summary");
 
@@ -119,15 +116,33 @@ export default function TripFinancePage() {
   const [revenueSource, setRevenueSource] = useState<TripRevenueSource>("MANUAL");
   const [revenueNotes, setRevenueNotes] = useState("");
 
+  useEffect(() => {
+    if (!user) return;
+    if (!canViewProfitability) {
+      router.replace("/trips");
+    }
+  }, [user, canViewProfitability, router]);
+
   async function load() {
+    if (!tripId || !canViewProfitability) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
+      const financePromise = tripFinanceService.getSummary(tripId);
+      const profitabilityPromise = tripRevenuesService.getProfitability(tripId);
+      const revenuePromise = canEditRevenue
+        ? tripRevenuesService.getByTrip(tripId)
+        : Promise.resolve({ success: true, data: null } as any);
+
       const [financeSummary, revenueRes, profitabilityRes] = await Promise.all([
-        tripFinanceService.getSummary(tripId),
-        tripRevenuesService.getByTrip(tripId),
-        tripRevenuesService.getProfitability(tripId),
+        financePromise,
+        revenuePromise,
+        profitabilityPromise,
       ]);
 
       const revenue = revenueRes?.data || null;
@@ -144,7 +159,8 @@ export default function TripFinancePage() {
         advance_expenses:
           profitability?.advance_expenses ?? financeSummary?.advance_expenses ?? 0,
         profit: profitability?.profit ?? financeSummary?.profit ?? 0,
-        profit_status: profitability?.profit_status ?? financeSummary?.profit_status ?? "BREAK_EVEN",
+        profit_status:
+          profitability?.profit_status ?? financeSummary?.profit_status ?? "BREAK_EVEN",
         currency:
           profitability?.currency ||
           financeSummary?.currency ||
@@ -175,9 +191,9 @@ export default function TripFinancePage() {
   }
 
   useEffect(() => {
-    if (!tripId) return;
+    if (!tripId || !canViewProfitability) return;
     load();
-  }, [tripId]);
+  }, [tripId, canViewProfitability]);
 
   const financeStatus = useMemo(() => {
     return summary?.financial_status || "UNKNOWN";
@@ -207,7 +223,7 @@ export default function TripFinancePage() {
   }, [summary]);
 
   async function openReview() {
-    if (!isPrivileged) return;
+    if (!canManageFinanceState) return;
 
     setBusy(true);
     setError(null);
@@ -223,7 +239,7 @@ export default function TripFinancePage() {
   }
 
   async function closeFinance() {
-    if (!isPrivileged) return;
+    if (!canManageFinanceState) return;
 
     const confirmText = t("tripFinance.confirm.closeText");
     if (!window.confirm(confirmText)) return;
@@ -274,14 +290,37 @@ export default function TripFinancePage() {
     }
   }
 
-  const tabs = [
-    { key: "summary" as const, label: t("tripFinance.tabs.summary") },
-    { key: "revenue" as const, label: "الإيراد والربحية" },
-    { key: "expenses" as const, label: t("tripFinance.tabs.expenses") },
-    { key: "actions" as const, label: t("tripFinance.tabs.actions") },
-  ];
+  const tabs = useMemo(() => {
+    const baseTabs: { key: TabKey; label: string }[] = [
+      { key: "summary", label: t("tripFinance.tabs.summary") },
+      { key: "expenses", label: t("tripFinance.tabs.expenses") },
+    ];
+
+    if (canEditRevenue) {
+      baseTabs.splice(1, 0, { key: "revenue", label: "الإيراد" });
+    }
+
+    if (canManageFinanceState) {
+      baseTabs.push({ key: "actions", label: t("tripFinance.tabs.actions") });
+    }
+
+    return baseTabs;
+  }, [t, canEditRevenue, canManageFinanceState]);
+
+  useEffect(() => {
+    if (tab === "revenue" && !canEditRevenue) {
+      setTab("summary");
+    }
+    if (tab === "actions" && !canManageFinanceState) {
+      setTab("summary");
+    }
+  }, [tab, canEditRevenue, canManageFinanceState]);
 
   const currency = summary?.currency || revenueRecord?.currency || revenueCurrency || "EGP";
+
+  if (user && !canViewProfitability) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-4 md:p-6" dir="rtl">
@@ -419,7 +458,9 @@ export default function TripFinancePage() {
                   <div className="text-sm text-slate-800">
                     آخر إيراد مسجل:{" "}
                     <span className="font-semibold text-slate-900">
-                      {summary?.revenue_record?.id ? fmtMoney(summary?.revenue_record?.amount, currency) : "—"}
+                      {summary?.revenue_record?.id
+                        ? fmtMoney(summary?.revenue_record?.amount, currency)
+                        : "—"}
                     </span>
                   </div>
 
@@ -456,37 +497,25 @@ export default function TripFinancePage() {
                 </div>
               </div>
             </div>
-          ) : tab === "revenue" ? (
+          ) : tab === "revenue" && canEditRevenue ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">الإيراد الحالي</div>
                   <div className="text-lg font-semibold">{fmtMoney(totals.revenue, currency)}</div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">المصروفات المعتمدة</div>
+                  <div className="text-xs text-slate-600">آخر قيمة محفوظة</div>
                   <div className="text-lg font-semibold">
-                    {fmtMoney(totals.totalExpenses, currency)}
+                    {revenueRecord?.amount != null ? fmtMoney(revenueRecord.amount, currency) : "—"}
                   </div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">المصروفات المعلقة</div>
+                  <div className="text-xs text-slate-600">مصدر الإيراد</div>
                   <div className="text-lg font-semibold">
-                    {fmtMoney(totals.pendingExpenses, currency)}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">صافي الربحية</div>
-                  <div
-                    className={cn(
-                      "text-lg font-semibold",
-                      totals.profit >= 0 ? "text-emerald-700" : "text-red-700"
-                    )}
-                  >
-                    {fmtMoney(totals.profit, currency)}
+                    {String(revenueRecord?.source || revenueSource || "MANUAL")}
                   </div>
                 </div>
               </div>
@@ -569,22 +598,16 @@ export default function TripFinancePage() {
 
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
                     <div>
-                      الإيراد: <span className="font-semibold">{fmtMoney(totals.revenue, currency)}</span>
+                      الإيراد الحالي: <span className="font-semibold">{fmtMoney(totals.revenue, currency)}</span>
                     </div>
                     <div>
-                      المصروفات:{" "}
-                      <span className="font-semibold">{fmtMoney(totals.totalExpenses, currency)}</span>
-                    </div>
-                    <div>
-                      الربحية:{" "}
-                      <span
-                        className={cn(
-                          "font-semibold",
-                          totals.profit >= 0 ? "text-emerald-700" : "text-red-700"
-                        )}
-                      >
-                        {fmtMoney(totals.profit, currency)}
+                      آخر قيمة محفوظة:{" "}
+                      <span className="font-semibold">
+                        {revenueRecord?.amount != null ? fmtMoney(revenueRecord.amount, currency) : "—"}
                       </span>
+                    </div>
+                    <div>
+                      العملة: <span className="font-semibold">{currency}</span>
                     </div>
                   </div>
                 </div>
@@ -662,7 +685,7 @@ export default function TripFinancePage() {
                 )}
               </div>
             </div>
-          ) : (
+          ) : tab === "actions" && canManageFinanceState ? (
             <div className="space-y-3">
               <div className="text-sm text-slate-800">
                 {t("tripFinance.actions.title")}{" "}
@@ -671,7 +694,7 @@ export default function TripFinancePage() {
                 </span>
               </div>
 
-              {!isPrivileged ? (
+              {!canManageFinanceState ? (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
                   {t("tripFinance.actions.noPerm")}
                 </div>
@@ -702,12 +725,12 @@ export default function TripFinancePage() {
                   </button>
 
                   <div className="text-xs text-slate-600">
-                    يمكن فتح المراجعة المالية ثم إغلاقها بعد اكتمال مراجعة الإيراد والمصروفات.
+                    يمكن فتح المراجعة المالية ثم إغلاقها بعد اكتمال مراجعة الربحية والمصروفات.
                   </div>
                 </div>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -137,25 +137,25 @@ function AssignTripModal({
   const canSubmit = !!vehicleId && !!driverId;
 
   async function submit() {
-  if (!canSubmit || !tripId) return;
+    if (!canSubmit || !tripId) return;
 
-  setLoading(true);
-  try {
-    await tripsService.assign(tripId, {
-      vehicle_id: vehicleId,
-      driver_id: driverId,
-      field_supervisor_id: supervisorId || null,
-    });
+    setLoading(true);
+    try {
+      await tripsService.assign(tripId, {
+        vehicle_id: vehicleId,
+        driver_id: driverId,
+        field_supervisor_id: supervisorId || null,
+      });
 
-    showToast("success", t("trips.toast.assigned"));
-    onAssigned();
-    onClose();
-  } catch (e: any) {
-    showToast("error", e?.message || t("common.failed"));
-  } finally {
-    setLoading(false);
+      showToast("success", t("trips.toast.assigned"));
+      onAssigned();
+      onClose();
+    } catch (e: any) {
+      showToast("error", e?.message || t("common.failed"));
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
@@ -417,6 +417,7 @@ export default function TripsPage() {
   const role = String(user?.role || "").toUpperCase();
 
   const canSeeFinance = useMemo(() => role === "ADMIN" || role === "ACCOUNTANT", [role]);
+  const canManageRevenue = useMemo(() => role === "ADMIN" || role === "CONTRACT_MANAGER", [role]);
   const canAssign = useMemo(() => role === "ADMIN" || role === "HR", [role]);
 
   const [loading, setLoading] = useState(true);
@@ -603,7 +604,6 @@ export default function TripsPage() {
                     <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.client")}</th>
                     <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.site")}</th>
                     <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.scheduled")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.created")}</th>
                     <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.actions")}</th>
                   </tr>
                 </thead>
@@ -615,15 +615,18 @@ export default function TripsPage() {
                     return (
                       <tr
                         key={r.id}
-                        className={cn("border-t border-slate-200 hover:bg-slate-50 cursor-pointer")}
+                        className="border-t border-slate-200 hover:bg-slate-50 cursor-pointer"
                         onClick={() => router.push(`/trips/${r.id}`)}
                       >
-                        <td className="px-4 py-2 font-mono text-slate-800">{shortId(r.id)}</td>
+                        <td className="px-4 py-2">
+                          <div className="font-mono text-slate-800">{r.trip_code || shortId(r.id)}</div>
+                          <div className="text-xs text-slate-500">{shortId(r.id)}</div>
+                        </td>
+
                         <td className="px-4 py-2 text-slate-800">{String(r.status || "—")}</td>
                         <td className="px-4 py-2 text-slate-800">{r.clients?.name || "—"}</td>
                         <td className="px-4 py-2 text-slate-800">{r.sites?.name || "—"}</td>
                         <td className="px-4 py-2 text-slate-700">{fmtDate(r.scheduled_at)}</td>
-                        <td className="px-4 py-2 text-slate-700">{fmtDate(r.created_at)}</td>
 
                         <td className="px-4 py-2">
                           <div className="flex gap-2 flex-wrap">
@@ -632,9 +635,18 @@ export default function TripsPage() {
                                 href={`/trips/${r.id}/finance`}
                                 onClick={(e) => e.stopPropagation()}
                                 className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800"
-                                title={t("tripFinance.title")}
                               >
-                                {t("trips.actions.finance")}
+                                المالية
+                              </Link>
+                            ) : null}
+
+                            {canManageRevenue ? (
+                              <Link
+                                href={`/trips/${r.id}/revenue`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs text-blue-800"
+                              >
+                                الإيراد
                               </Link>
                             ) : null}
 
@@ -681,7 +693,7 @@ export default function TripsPage() {
 
                   {!items.length ? (
                     <tr>
-                      <td className="px-4 py-6 text-slate-600" colSpan={7}>
+                      <td className="px-4 py-6 text-slate-600" colSpan={6}>
                         {t("trips.empty")}
                       </td>
                     </tr>
@@ -699,7 +711,9 @@ export default function TripsPage() {
                 {t("common.prev")}
               </button>
 
-              <div className="text-xs text-slate-600">{t("trips.meta.showing", { count: items.length, total })}</div>
+              <div className="text-xs text-slate-600">
+                {t("trips.meta.showing", { count: items.length, total })}
+              </div>
 
               <button
                 className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"

@@ -11,6 +11,12 @@ export type TripFinancialStatus =
   | "CLOSED"
   | string;
 
+export type TripProfitStatus =
+  | "PROFIT"
+  | "LOSS"
+  | "BREAK_EVEN"
+  | string;
+
 export type TripClientRef = {
   id?: string;
   name?: string | null;
@@ -70,6 +76,14 @@ export type Trip = {
 
   client_id?: string | null;
   site_id?: string | null;
+
+  revenue?: number;
+  expenses?: number;
+  company_expenses?: number;
+  advance_expenses?: number;
+  profit?: number;
+  profit_status?: TripProfitStatus | null;
+  currency?: string | null;
 
   clients?: TripClientRef;
   sites?: TripSiteRef;
