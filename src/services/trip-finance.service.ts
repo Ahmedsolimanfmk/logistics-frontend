@@ -23,4 +23,8 @@ export const tripFinanceService = {
     });
     return (res.data ?? res) as TripFinanceActionResponse;
   },
+
+  async refresh(tripId: string): Promise<TripFinanceSummary> {
+    return this.getSummary(tripId);
+  },
 };

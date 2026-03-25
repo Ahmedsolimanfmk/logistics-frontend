@@ -63,7 +63,11 @@ function StatusBadge({ s }: { s: string }) {
       ? "bg-slate-100 text-slate-700 border-slate-200"
       : "bg-white text-slate-700 border-slate-200";
 
-  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
 }
 
 function ProfitBadge({ s }: { s?: string | null }) {
@@ -78,7 +82,11 @@ function ProfitBadge({ s }: { s?: string | null }) {
       ? "bg-slate-100 text-slate-700 border-slate-200"
       : "bg-white text-slate-700 border-slate-200";
 
-  return <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>{st || "—"}</span>;
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
 }
 
 const inputCls =
@@ -113,7 +121,8 @@ export default function TripFinancePage() {
 
   const [revenueAmount, setRevenueAmount] = useState("");
   const [revenueCurrency, setRevenueCurrency] = useState("EGP");
-  const [revenueSource, setRevenueSource] = useState<TripRevenueSource>("MANUAL");
+  const [revenueSource, setRevenueSource] =
+    useState<TripRevenueSource>("MANUAL");
   const [revenueNotes, setRevenueNotes] = useState("");
 
   useEffect(() => {
@@ -153,31 +162,65 @@ export default function TripFinancePage() {
         revenue: profitability?.revenue ?? financeSummary?.revenue ?? 0,
         expenses: profitability?.expenses ?? financeSummary?.expenses ?? 0,
         pending_expenses:
-          profitability?.pending_expenses ?? financeSummary?.pending_expenses ?? 0,
+          profitability?.pending_expenses ??
+          financeSummary?.pending_expenses ??
+          0,
         company_expenses:
-          profitability?.company_expenses ?? financeSummary?.company_expenses ?? 0,
+          profitability?.company_expenses ??
+          financeSummary?.company_expenses ??
+          0,
         advance_expenses:
-          profitability?.advance_expenses ?? financeSummary?.advance_expenses ?? 0,
+          profitability?.advance_expenses ??
+          financeSummary?.advance_expenses ??
+          0,
         profit: profitability?.profit ?? financeSummary?.profit ?? 0,
         profit_status:
-          profitability?.profit_status ?? financeSummary?.profit_status ?? "BREAK_EVEN",
+          profitability?.profit_status ??
+          financeSummary?.profit_status ??
+          "BREAK_EVEN",
         currency:
           profitability?.currency ||
           financeSummary?.currency ||
           revenue?.currency ||
           "EGP",
         revenue_record:
-          profitability?.revenue_record ?? financeSummary?.revenue_record ?? revenue ?? null,
+          profitability?.revenue_record ??
+          financeSummary?.revenue_record ??
+          revenue ??
+          null,
+        current_revenue_record:
+          profitability?.current_revenue_record ??
+          financeSummary?.current_revenue_record ??
+          null,
+        current_approved_revenue_record:
+          profitability?.current_approved_revenue_record ??
+          financeSummary?.current_approved_revenue_record ??
+          null,
         breakdown_by_type:
-          profitability?.breakdown_by_type ?? financeSummary?.breakdown_by_type ?? {},
+          profitability?.breakdown_by_type ??
+          financeSummary?.breakdown_by_type ??
+          {},
+        expenses_items:
+          financeSummary?.expenses_items || profitability?.expenses_items || [],
+        pending_expenses_items:
+          financeSummary?.pending_expenses_items ||
+          profitability?.pending_expenses_items ||
+          [],
       };
 
       setSummary(mergedSummary);
       setRevenueRecord(revenue);
 
-      setRevenueAmount(revenue?.amount != null ? String(num(revenue.amount)) : "");
+      setRevenueAmount(
+        revenue?.amount != null ? String(num(revenue.amount)) : ""
+      );
       setRevenueCurrency(
-        String(revenue?.currency || profitability?.currency || financeSummary?.currency || "EGP")
+        String(
+          revenue?.currency ||
+            profitability?.currency ||
+            financeSummary?.currency ||
+            "EGP"
+        )
       );
       setRevenueSource((revenue?.source as TripRevenueSource) || "MANUAL");
       setRevenueNotes(String(revenue?.notes || ""));
@@ -277,6 +320,9 @@ export default function TripFinancePage() {
         amount,
         currency: revenueCurrency || "EGP",
         source: revenueSource,
+        contract_id: (revenueRecord as any)?.contract_id || null,
+        invoice_id: (revenueRecord as any)?.invoice_id || null,
+        pricing_rule_id: (revenueRecord as any)?.pricing_rule_id || null,
         notes: revenueNotes.trim() || null,
       });
 
@@ -316,7 +362,8 @@ export default function TripFinancePage() {
     }
   }, [tab, canEditRevenue, canManageFinanceState]);
 
-  const currency = summary?.currency || revenueRecord?.currency || revenueCurrency || "EGP";
+  const currency =
+    summary?.currency || revenueRecord?.currency || revenueCurrency || "EGP";
 
   if (user && !canViewProfitability) {
     return null;
@@ -353,6 +400,15 @@ export default function TripFinancePage() {
             >
               {t("tripFinance.trips")}
             </Link>
+
+            {canEditRevenue ? (
+              <Link
+                href={`/trips/${tripId}/revenue`}
+                className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm text-blue-800"
+              >
+                صفحة الإيراد
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -425,7 +481,9 @@ export default function TripFinancePage() {
                   <div
                     className={cn(
                       "text-lg font-semibold",
-                      totals.profit >= 0 ? "text-emerald-700" : "text-red-700"
+                      totals.profit >= 0
+                        ? "text-emerald-700"
+                        : "text-red-700"
                     )}
                   >
                     {fmtMoney(totals.profit, currency)}
@@ -435,7 +493,9 @@ export default function TripFinancePage() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">معلومات الملف المالي</div>
+                  <div className="text-sm font-semibold text-slate-900">
+                    معلومات الملف المالي
+                  </div>
 
                   <div className="text-sm text-slate-800">
                     الحالة المالية:{" "}
@@ -445,7 +505,10 @@ export default function TripFinancePage() {
                   </div>
 
                   <div className="text-sm text-slate-800">
-                    العملة: <span className="font-semibold text-slate-900">{currency}</span>
+                    العملة:{" "}
+                    <span className="font-semibold text-slate-900">
+                      {currency}
+                    </span>
                   </div>
 
                   <div className="text-sm text-slate-800">
@@ -456,7 +519,7 @@ export default function TripFinancePage() {
                   </div>
 
                   <div className="text-sm text-slate-800">
-                    آخر إيراد مسجل:{" "}
+                    آخر إيراد فعال:{" "}
                     <span className="font-semibold text-slate-900">
                       {summary?.revenue_record?.id
                         ? fmtMoney(summary?.revenue_record?.amount, currency)
@@ -478,7 +541,9 @@ export default function TripFinancePage() {
                   </div>
 
                   {expensesBreakdownEntries.length === 0 ? (
-                    <div className="text-sm text-slate-600">لا توجد مصروفات معتمدة حتى الآن.</div>
+                    <div className="text-sm text-slate-600">
+                      لا توجد مصروفات معتمدة حتى الآن.
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       {expensesBreakdownEntries.map(([key, value]) => (
@@ -502,13 +567,17 @@ export default function TripFinancePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">الإيراد الحالي</div>
-                  <div className="text-lg font-semibold">{fmtMoney(totals.revenue, currency)}</div>
+                  <div className="text-lg font-semibold">
+                    {fmtMoney(totals.revenue, currency)}
+                  </div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="text-xs text-slate-600">آخر قيمة محفوظة</div>
                   <div className="text-lg font-semibold">
-                    {revenueRecord?.amount != null ? fmtMoney(revenueRecord.amount, currency) : "—"}
+                    {revenueRecord?.amount != null
+                      ? fmtMoney(revenueRecord.amount, currency)
+                      : "—"}
                   </div>
                 </div>
 
@@ -522,10 +591,9 @@ export default function TripFinancePage() {
 
               <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-slate-900">بيانات الإيراد</div>
-                  {!canEditRevenue ? (
-                    <div className="text-xs text-amber-700">ليس لديك صلاحية تعديل الإيراد</div>
-                  ) : null}
+                  <div className="text-sm font-semibold text-slate-900">
+                    بيانات الإيراد
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -558,7 +626,9 @@ export default function TripFinancePage() {
                     <div className="text-xs text-slate-600">المصدر</div>
                     <select
                       value={revenueSource}
-                      onChange={(e) => setRevenueSource(e.target.value as TripRevenueSource)}
+                      onChange={(e) =>
+                        setRevenueSource(e.target.value as TripRevenueSource)
+                      }
                       className={inputCls}
                       disabled={!canEditRevenue || savingRevenue}
                     >
@@ -582,7 +652,10 @@ export default function TripFinancePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
                     <div>
-                      المصدر الحالي: <span className="font-semibold">{revenueRecord?.source || "—"}</span>
+                      المصدر الحالي:{" "}
+                      <span className="font-semibold">
+                        {revenueRecord?.source || "—"}
+                      </span>
                     </div>
                     <div>
                       المدخل:{" "}
@@ -592,22 +665,30 @@ export default function TripFinancePage() {
                     </div>
                     <div>
                       تاريخ الإدخال:{" "}
-                      <span className="font-semibold">{fmtDate(revenueRecord?.entered_at)}</span>
+                      <span className="font-semibold">
+                        {fmtDate(revenueRecord?.entered_at)}
+                      </span>
                     </div>
                   </div>
 
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
                     <div>
-                      الإيراد الحالي: <span className="font-semibold">{fmtMoney(totals.revenue, currency)}</span>
+                      الإيراد الحالي:{" "}
+                      <span className="font-semibold">
+                        {fmtMoney(totals.revenue, currency)}
+                      </span>
                     </div>
                     <div>
                       آخر قيمة محفوظة:{" "}
                       <span className="font-semibold">
-                        {revenueRecord?.amount != null ? fmtMoney(revenueRecord.amount, currency) : "—"}
+                        {revenueRecord?.amount != null
+                          ? fmtMoney(revenueRecord.amount, currency)
+                          : "—"}
                       </span>
                     </div>
                     <div>
-                      العملة: <span className="font-semibold">{currency}</span>
+                      العملة:{" "}
+                      <span className="font-semibold">{currency}</span>
                     </div>
                   </div>
                 </div>
@@ -635,7 +716,10 @@ export default function TripFinancePage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-slate-800">ملخص المصروفات</div>
-                <Link href="/finance/expenses" className="text-xs text-slate-600 hover:text-slate-900">
+                <Link
+                  href="/finance/expenses"
+                  className="text-xs text-slate-600 hover:text-slate-900"
+                >
                   فتح قائمة المصروفات
                 </Link>
               </div>
@@ -664,10 +748,14 @@ export default function TripFinancePage() {
               </div>
 
               <div className="rounded-lg border border-slate-200 bg-white p-4">
-                <div className="text-sm font-semibold text-slate-900 mb-3">التوزيع حسب النوع</div>
+                <div className="text-sm font-semibold text-slate-900 mb-3">
+                  التوزيع حسب النوع
+                </div>
 
                 {expensesBreakdownEntries.length === 0 ? (
-                  <div className="text-sm text-slate-600">لا توجد مصروفات معتمدة متاحة للعرض.</div>
+                  <div className="text-sm text-slate-600">
+                    لا توجد مصروفات معتمدة متاحة للعرض.
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {expensesBreakdownEntries.map(([key, value]) => (
@@ -690,45 +778,43 @@ export default function TripFinancePage() {
               <div className="text-sm text-slate-800">
                 {t("tripFinance.actions.title")}{" "}
                 <span className="text-xs text-slate-600">
-                  (Role: {role || "—"} / Finance: {String(financeStatus).toUpperCase()})
+                  (Role: {role || "—"} / Finance:{" "}
+                  {String(financeStatus).toUpperCase()})
                 </span>
               </div>
 
-              {!canManageFinanceState ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                  {t("tripFinance.actions.noPerm")}
+              <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                <button
+                  disabled={
+                    busy || String(financeStatus).toUpperCase() === "UNDER_REVIEW"
+                  }
+                  onClick={openReview}
+                  className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-sm disabled:opacity-50 text-amber-800"
+                >
+                  {t("tripFinance.actions.openReview")}
+                </button>
+
+                <button
+                  disabled={busy || String(financeStatus).toUpperCase() === "CLOSED"}
+                  onClick={closeFinance}
+                  className="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-sm disabled:opacity-50 text-emerald-800"
+                >
+                  {t("tripFinance.actions.closeFinance")}
+                </button>
+
+                <button
+                  disabled={busy}
+                  onClick={load}
+                  className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
+                >
+                  {t("tripFinance.actions.refresh")}
+                </button>
+
+                <div className="text-xs text-slate-600">
+                  يمكن فتح المراجعة المالية ثم إغلاقها بعد اكتمال مراجعة الربحية
+                  والمصروفات والإيراد.
                 </div>
-              ) : (
-                <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-                  <button
-                    disabled={busy || String(financeStatus).toUpperCase() === "UNDER_REVIEW"}
-                    onClick={openReview}
-                    className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-sm disabled:opacity-50 text-amber-800"
-                  >
-                    {t("tripFinance.actions.openReview")}
-                  </button>
-
-                  <button
-                    disabled={busy || String(financeStatus).toUpperCase() === "CLOSED"}
-                    onClick={closeFinance}
-                    className="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-sm disabled:opacity-50 text-emerald-800"
-                  >
-                    {t("tripFinance.actions.closeFinance")}
-                  </button>
-
-                  <button
-                    disabled={busy}
-                    onClick={load}
-                    className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
-                  >
-                    {t("tripFinance.actions.refresh")}
-                  </button>
-
-                  <div className="text-xs text-slate-600">
-                    يمكن فتح المراجعة المالية ثم إغلاقها بعد اكتمال مراجعة الربحية والمصروفات.
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           ) : null}
         </div>

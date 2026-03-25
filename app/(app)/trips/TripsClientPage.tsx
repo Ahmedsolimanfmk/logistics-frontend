@@ -16,6 +16,15 @@ import type {
   TripOptionVehicle,
 } from "@/src/types/trips.types";
 
+type TripOptionContract = {
+  id: string;
+  contract_no?: string | null;
+  status?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  currency?: string | null;
+};
+
 const fmtDate = (d: any) => {
   if (!d) return "—";
   const dt = new Date(String(d));
@@ -27,6 +36,26 @@ const shortId = (id: any) => {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
+};
+
+const num = (v: any) => {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const fmtMoney = (n: any, currency = "EGP") => {
+  const v = num(n);
+  try {
+    return new Intl.NumberFormat("ar-EG", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(v);
+  } catch {
+    return new Intl.NumberFormat("ar-EG", {
+      maximumFractionDigits: 2,
+    }).format(v);
+  }
 };
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -47,6 +76,7 @@ function Toast({
   t: (k: string, vars?: Record<string, any>) => string;
 }) {
   if (!open) return null;
+
   return (
     <div
       onClick={onClose}
@@ -57,8 +87,71 @@ function Toast({
       role="alert"
     >
       <div className="font-semibold">{message}</div>
-      <div className="mt-1 text-xs opacity-85">{t("tripModals.toastCloseHint")}</div>
+      <div className="mt-1 text-xs opacity-85">
+        {t("tripModals.toastCloseHint")}
+      </div>
     </div>
+  );
+}
+
+function StatusBadge({ value }: { value?: string | null }) {
+  const st = String(value || "").toUpperCase();
+
+  const cls =
+    st === "DRAFT"
+      ? "bg-slate-100 text-slate-700 border-slate-200"
+      : st === "ASSIGNED"
+      ? "bg-blue-50 text-blue-800 border-blue-200"
+      : st === "IN_PROGRESS"
+      ? "bg-amber-50 text-amber-800 border-amber-200"
+      : st === "COMPLETED"
+      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+      : st === "CANCELLED"
+      ? "bg-red-50 text-red-800 border-red-200"
+      : "bg-white text-slate-700 border-slate-200";
+
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
+}
+
+function FinancialStatusBadge({ value }: { value?: string | null }) {
+  const st = String(value || "").toUpperCase();
+
+  const cls =
+    st === "OPEN"
+      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+      : st === "UNDER_REVIEW"
+      ? "bg-amber-50 text-amber-800 border-amber-200"
+      : st === "CLOSED"
+      ? "bg-slate-100 text-slate-700 border-slate-200"
+      : "bg-white text-slate-700 border-slate-200";
+
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
+  );
+}
+
+function ProfitBadge({ value }: { value?: string | null }) {
+  const st = String(value || "").toUpperCase();
+
+  const cls =
+    st === "PROFIT"
+      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+      : st === "LOSS"
+      ? "bg-red-50 text-red-800 border-red-200"
+      : st === "BREAK_EVEN"
+      ? "bg-slate-100 text-slate-700 border-slate-200"
+      : "bg-white text-slate-700 border-slate-200";
+
+  return (
+    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
+      {st || "—"}
+    </span>
   );
 }
 
@@ -87,16 +180,18 @@ function AssignTripModal({
   const [supervisorId, setSupervisorId] = useState("");
 
   const vehicleLabel = (v: TripOptionVehicle) => {
-    const fleet = String(v?.fleet_no || "").trim();
-    const plate = String(v?.plate_no || v?.plate_number || "").trim();
-    const disp = String(v?.display_name || "").trim();
+    const fleet = String((v as any)?.fleet_no || "").trim();
+    const plate = String(
+      (v as any)?.plate_no || (v as any)?.plate_number || ""
+    ).trim();
+    const disp = String((v as any)?.display_name || "").trim();
 
     if (fleet && plate) return `${fleet} - ${plate}`;
     if (fleet) return fleet;
     if (plate) return plate;
     if (disp) return disp;
 
-    return shortId(v?.id);
+    return shortId((v as any)?.id);
   };
 
   useEffect(() => {
@@ -116,8 +211,10 @@ function AssignTripModal({
         ]);
 
         const filteredVehicles = vItems.filter((v) => {
-          if (v?.is_active === false) return false;
-          if (v?.status) return String(v.status).toUpperCase() === "AVAILABLE";
+          if ((v as any)?.is_active === false) return false;
+          if ((v as any)?.status) {
+            return String((v as any).status).toUpperCase() === "AVAILABLE";
+          }
           return true;
         });
 
@@ -158,14 +255,20 @@ function AssignTripModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-xl rounded-2xl bg-white text-slate-900 border border-slate-200 p-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">{t("tripModals.assignTitle")}</h3>
-          <button onClick={onClose} className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50">
+          <button
+            onClick={onClose}
+            className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
+          >
             ✕
           </button>
         </div>
@@ -181,7 +284,7 @@ function AssignTripModal({
             >
               <option value="">{t("tripModals.selectVehicle")}</option>
               {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
+                <option key={(v as any).id} value={(v as any).id}>
                   {vehicleLabel(v)}
                 </option>
               ))}
@@ -198,8 +301,11 @@ function AssignTripModal({
             >
               <option value="">{t("tripModals.selectDriver")}</option>
               {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.full_name || d.name || d.phone || d.id}
+                <option key={(d as any).id} value={(d as any).id}>
+                  {(d as any).full_name ||
+                    (d as any).name ||
+                    (d as any).phone ||
+                    (d as any).id}
                 </option>
               ))}
             </select>
@@ -215,8 +321,8 @@ function AssignTripModal({
             >
               <option value="">{t("tripModals.none")}</option>
               {supervisors.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.full_name || s.email || s.id}
+                <option key={(s as any).id} value={(s as any).id}>
+                  {(s as any).full_name || (s as any).email || (s as any).id}
                 </option>
               ))}
             </select>
@@ -258,21 +364,72 @@ function CreateTripModal({
   const t = useT();
 
   const [loading, setLoading] = useState(false);
+  const [contractsLoading, setContractsLoading] = useState(false);
+
   const [clients, setClients] = useState<TripOptionClient[]>([]);
   const [sites, setSites] = useState<TripOptionSite[]>([]);
+  const [contracts, setContracts] = useState<TripOptionContract[]>([]);
 
   const [clientId, setClientId] = useState("");
+  const [contractId, setContractId] = useState("");
   const [siteId, setSiteId] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [notes, setNotes] = useState("");
+
+  const filteredSites = useMemo(() => {
+    if (!clientId) return [];
+    return sites.filter((s: any) => {
+      if (!s?.client_id) return true;
+      return String(s.client_id) === String(clientId);
+    });
+  }, [sites, clientId]);
+
+  const contractLabel = (c: TripOptionContract) => {
+    const no = String(c.contract_no || "").trim();
+    const st = String(c.status || "").trim();
+    if (no && st) return `${no} — ${st}`;
+    if (no) return no;
+    return shortId(c.id);
+  };
+
+  const siteLabel = (s: any) => {
+    const name = String(s?.name || "").trim();
+    const city = String(s?.city || "").trim();
+    const addr = String(s?.address || "").trim();
+
+    if (name && city) return `${name} — ${city}`;
+    if (name && addr) return `${name} — ${addr}`;
+    if (name) return name;
+    if (addr) return addr;
+    return shortId(s?.id);
+  };
+
+  async function loadContractsForClient(nextClientId: string) {
+    setContracts([]);
+    setContractId("");
+
+    if (!nextClientId) return;
+
+    setContractsLoading(true);
+    try {
+      const rows = await tripsService.listContractsOptions(nextClientId);
+      setContracts(Array.isArray(rows) ? rows : []);
+    } catch (e: any) {
+      showToast("error", e?.message || "فشل تحميل العقود");
+    } finally {
+      setContractsLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
 
     setClientId("");
+    setContractId("");
     setSiteId("");
     setScheduledAt("");
     setNotes("");
+    setContracts([]);
 
     (async () => {
       setLoading(true);
@@ -291,18 +448,40 @@ function CreateTripModal({
     })();
   }, [open, t, showToast]);
 
+  useEffect(() => {
+    if (!clientId) {
+      setSiteId("");
+      setContractId("");
+      setContracts([]);
+      return;
+    }
+
+    const stillValidSite = filteredSites.some(
+      (s: any) => String(s.id) === String(siteId)
+    );
+    if (!stillValidSite) {
+      setSiteId("");
+    }
+
+    loadContractsForClient(clientId);
+  }, [clientId]);
+
   if (!open) return null;
 
   const canSubmit = !!clientId && !!siteId;
 
   async function submit() {
     if (!canSubmit) return;
+
     setLoading(true);
     try {
       await tripsService.create({
         client_id: clientId,
+        contract_id: contractId || null,
         site_id: siteId,
-        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        scheduled_at: scheduledAt
+          ? new Date(scheduledAt).toISOString()
+          : null,
         notes: notes || null,
       });
 
@@ -317,14 +496,20 @@ function CreateTripModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-xl rounded-2xl bg-white text-slate-900 border border-slate-200 p-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">{t("tripModals.createTitle")}</h3>
-          <button onClick={onClose} className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50">
+          <button
+            onClick={onClose}
+            className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
+          >
             ✕
           </button>
         </div>
@@ -340,8 +525,27 @@ function CreateTripModal({
             >
               <option value="">{t("common.search")}</option>
               {clients.map((c) => (
+                <option key={(c as any).id} value={(c as any).id}>
+                  {(c as any).name || (c as any).id}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-2 text-sm">
+            العقد (اختياري حاليًا لكن مهم للتسعير)
+            <select
+              value={contractId}
+              onChange={(e) => setContractId(e.target.value)}
+              disabled={loading || contractsLoading || !clientId}
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
+            >
+              <option value="">
+                {contractsLoading ? "جارٍ تحميل العقود..." : "بدون عقد محدد"}
+              </option>
+              {contracts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name || c.id}
+                  {contractLabel(c)}
                 </option>
               ))}
             </select>
@@ -352,13 +556,15 @@ function CreateTripModal({
             <select
               value={siteId}
               onChange={(e) => setSiteId(e.target.value)}
-              disabled={loading}
+              disabled={loading || !clientId}
               className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
             >
-              <option value="">{t("common.search")}</option>
-              {sites.map((s) => (
+              <option value="">
+                {clientId ? t("common.search") : "اختر العميل أولًا"}
+              </option>
+              {filteredSites.map((s: any) => (
                 <option key={s.id} value={s.id}>
-                  {s.name || s.address || s.id}
+                  {siteLabel(s)}
                 </option>
               ))}
             </select>
@@ -383,6 +589,13 @@ function CreateTripModal({
               rows={3}
             />
           </label>
+
+          {clientId && !contractsLoading && contracts.length === 0 ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              لا توجد عقود متاحة لهذا العميل حاليًا. يمكن إنشاء الرحلة بدون
+              عقد، لكن التسعير التعاقدي لن يعمل بشكل كامل.
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-5 flex items-center justify-end gap-2">
@@ -416,8 +629,14 @@ export default function TripsPage() {
   const user = useAuth((s) => s.user);
   const role = String(user?.role || "").toUpperCase();
 
-  const canSeeFinance = useMemo(() => role === "ADMIN" || role === "ACCOUNTANT", [role]);
-  const canManageRevenue = useMemo(() => role === "ADMIN" || role === "CONTRACT_MANAGER", [role]);
+  const canSeeFinance = useMemo(
+    () => role === "ADMIN" || role === "ACCOUNTANT",
+    [role]
+  );
+  const canManageRevenue = useMemo(
+    () => role === "ADMIN" || role === "CONTRACT_MANAGER",
+    [role]
+  );
   const canAssign = useMemo(() => role === "ADMIN" || role === "HR", [role]);
 
   const [loading, setLoading] = useState(true);
@@ -455,7 +674,10 @@ export default function TripsPage() {
   }, [token, router]);
 
   const page = Math.max(parseInt(sp.get("page") || "1", 10), 1);
-  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10), 1), 100);
+  const pageSize = Math.min(
+    Math.max(parseInt(sp.get("pageSize") || "25", 10), 1),
+    100
+  );
   const status = sp.get("status") || "";
 
   const setParam = (k: string, v: string) => {
@@ -480,7 +702,9 @@ export default function TripsPage() {
 
       setItems(res.items);
       setTotal(res.total);
-      setTotalPages(res.pages || Math.max(Math.ceil((res.total || 0) / pageSize), 1));
+      setTotalPages(
+        res.pages || Math.max(Math.ceil((res.total || 0) / pageSize), 1)
+      );
     } catch (e: any) {
       setErr(e?.message || t("trips.errors.fetchFailed"));
       setItems([]);
@@ -547,7 +771,10 @@ export default function TripsPage() {
           </div>
 
           <div className="text-xs text-slate-600">
-            {t("trips.meta.role")}: <span className="text-slate-900 font-semibold">{role || "—"}</span>
+            {t("trips.meta.role")}:{" "}
+            <span className="text-slate-900 font-semibold">
+              {role || "—"}
+            </span>
           </div>
         </div>
 
@@ -558,15 +785,22 @@ export default function TripsPage() {
             className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm outline-none"
           >
             <option value="">{t("trips.filters.allStatuses")}</option>
-            <option value="ASSIGNED,IN_PROGRESS">{t("trips.filters.active")}</option>
+            <option value="ASSIGNED,IN_PROGRESS">
+              {t("trips.filters.active")}
+            </option>
             <option value="DRAFT">{t("trips.filters.DRAFT")}</option>
             <option value="ASSIGNED">{t("trips.filters.ASSIGNED")}</option>
-            <option value="IN_PROGRESS">{t("trips.filters.IN_PROGRESS")}</option>
-            <option value="COMPLETED">{t("trips.filters.COMPLETED")}</option>
+            <option value="IN_PROGRESS">
+              {t("trips.filters.IN_PROGRESS")}
+            </option>
+            <option value="COMPLETED">
+              {t("trips.filters.COMPLETED")}
+            </option>
           </select>
 
           <span className="text-xs text-slate-600">
-            {t("trips.meta.total")}: {total} — {t("trips.meta.page")} {page}/{totalPages}
+            {t("trips.meta.total")}: {total} — {t("trips.meta.page")} {page}/
+            {totalPages}
           </span>
 
           <button
@@ -586,7 +820,9 @@ export default function TripsPage() {
         </div>
 
         {err ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {err}
+          </div>
         ) : null}
 
         {loading ? (
@@ -596,21 +832,60 @@ export default function TripsPage() {
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <div className="overflow-auto">
-              <table className="min-w-full text-sm">
+              <table className="min-w-[1250px] w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.trip")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.client")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.site")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.scheduled")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("trips.table.actions")}</th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      {t("trips.table.trip")}
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      {t("trips.table.status")}
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      الحالة المالية
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      {t("trips.table.client")}
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      العقد
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      {t("trips.table.site")}
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      الإيراد
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      الربحية
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      {t("trips.table.scheduled")}
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      {t("trips.table.actions")}
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {items.map((r) => {
-                    const st = String(r.status || "").toUpperCase();
+                  {items.map((r: any) => {
+                    const st = String(r?.status || "").toUpperCase();
+                    const currency = String(
+                      r?.currency || r?.revenue_currency || "EGP"
+                    );
+
+                    const siteName =
+                      r?.site?.name ||
+                      r?.sites?.name ||
+                      r?.pickup_site?.name ||
+                      r?.dropoff_site?.name ||
+                      "—";
+
+                    const contractNo =
+                      r?.client_contracts?.contract_no ||
+                      r?.contract?.contract_no ||
+                      (r?.contract_id ? shortId(r.contract_id) : "—");
 
                     return (
                       <tr
@@ -619,14 +894,53 @@ export default function TripsPage() {
                         onClick={() => router.push(`/trips/${r.id}`)}
                       >
                         <td className="px-4 py-2">
-                          <div className="font-mono text-slate-800">{r.trip_code || shortId(r.id)}</div>
-                          <div className="text-xs text-slate-500">{shortId(r.id)}</div>
+                          <div className="font-mono text-slate-800">
+                            {r.trip_code || shortId(r.id)}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {shortId(r.id)}
+                          </div>
                         </td>
 
-                        <td className="px-4 py-2 text-slate-800">{String(r.status || "—")}</td>
-                        <td className="px-4 py-2 text-slate-800">{r.clients?.name || "—"}</td>
-                        <td className="px-4 py-2 text-slate-800">{r.sites?.name || "—"}</td>
-                        <td className="px-4 py-2 text-slate-700">{fmtDate(r.scheduled_at)}</td>
+                        <td className="px-4 py-2">
+                          <StatusBadge value={r.status} />
+                        </td>
+
+                        <td className="px-4 py-2">
+                          <FinancialStatusBadge value={r.financial_status} />
+                        </td>
+
+                        <td className="px-4 py-2 text-slate-800">
+                          {r?.clients?.name || "—"}
+                        </td>
+
+                        <td className="px-4 py-2 text-slate-800">
+                          {contractNo}
+                        </td>
+
+                        <td className="px-4 py-2 text-slate-800">
+                          {siteName}
+                        </td>
+
+                        <td className="px-4 py-2 text-slate-800 whitespace-nowrap">
+                          {fmtMoney(
+                            r?.revenue ?? r?.agreed_revenue ?? 0,
+                            currency
+                          )}
+                        </td>
+
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="whitespace-nowrap text-slate-800">
+                              {fmtMoney(r?.profit ?? 0, currency)}
+                            </span>
+                            <ProfitBadge value={r?.profit_status} />
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-2 text-slate-700">
+                          {fmtDate(r.scheduled_at)}
+                        </td>
 
                         <td className="px-4 py-2">
                           <div className="flex gap-2 flex-wrap">
@@ -693,7 +1007,7 @@ export default function TripsPage() {
 
                   {!items.length ? (
                     <tr>
-                      <td className="px-4 py-6 text-slate-600" colSpan={6}>
+                      <td className="px-4 py-6 text-slate-600" colSpan={10}>
                         {t("trips.empty")}
                       </td>
                     </tr>
@@ -742,7 +1056,13 @@ export default function TripsPage() {
         showToast={showToast}
       />
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} onClose={() => setToastOpen(false)} t={t} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        onClose={() => setToastOpen(false)}
+        t={t}
+      />
     </div>
   );
 }

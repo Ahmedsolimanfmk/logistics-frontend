@@ -7,7 +7,11 @@ import { Toast } from "@/src/components/Toast";
 import { useT } from "@/src/i18n/useT";
 
 import { sitesService } from "@/src/services/sites.service";
-import type { Site, SiteClientOption, SitePayload } from "@/src/types/sites.types";
+import type {
+  Site,
+  SiteClientOption,
+  SitePayload,
+} from "@/src/types/sites.types";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -20,13 +24,30 @@ const fmtDate = (d: any) => {
   return dt.toLocaleString("ar-EG");
 };
 
+function SiteStatusBadge({ active }: { active?: boolean | null }) {
+  if (active === false) {
+    return (
+      <span className="inline-flex rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+        غير نشط
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+      نشط
+    </span>
+  );
+}
+
 export default function SitesPage() {
   const t = useT();
-
   const router = useRouter();
   const token = useAuth((s: any) => s.token);
 
   const [loading, setLoading] = useState(true);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const [rawItems, setRawItems] = useState<Site[]>([]);
@@ -44,6 +65,8 @@ export default function SitesPage() {
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [siteType, setSiteType] = useState("");
   const [clientId, setClientId] = useState<string>("");
 
   function showToast(type: "success" | "error", msg: string) {
@@ -65,11 +88,14 @@ export default function SitesPage() {
   }, [token, router]);
 
   async function loadClients() {
+    setClientsLoading(true);
     try {
       const items = await sitesService.listClientsOptions();
       setClients(Array.isArray(items) ? items : []);
     } catch {
       setClients([]);
+    } finally {
+      setClientsLoading(false);
     }
   }
 
@@ -81,11 +107,11 @@ export default function SitesPage() {
 
     try {
       const res = await sitesService.list({
-        search,
+        search: search.trim() || undefined,
         client_id: clientFilter || undefined,
       });
 
-      setRawItems(res.items);
+      setRawItems(Array.isArray(res.items) ? res.items : []);
     } catch (e: any) {
       setErr(e?.message || t("sites.errors.loadFailed"));
       setRawItems([]);
@@ -97,6 +123,7 @@ export default function SitesPage() {
   useEffect(() => {
     if (token === null) return;
     if (!token) return;
+
     loadClients();
     loadSites();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,11 +131,17 @@ export default function SitesPage() {
 
   const items = useMemo(() => rawItems, [rawItems]);
 
-  function openCreate() {
+  function resetForm() {
     setEditing(null);
     setName("");
     setAddress("");
+    setCity("");
+    setSiteType("");
     setClientId("");
+  }
+
+  function openCreate() {
+    resetForm();
     setModalOpen(true);
   }
 
@@ -116,52 +149,68 @@ export default function SitesPage() {
     setEditing(s);
     setName(String(s?.name || ""));
     setAddress(String(s?.address || ""));
+    setCity(String((s as any)?.city || ""));
+    setSiteType(String((s as any)?.site_type || ""));
     setClientId(String(s?.client_id || s?.clients?.id || ""));
     setModalOpen(true);
   }
 
   async function submit() {
-    const v = name.trim();
-    if (!v) {
-      showToast("error", t("sites.toast.nameRequired"));
+    const vName = name.trim();
+    const vClientId = String(clientId || "").trim();
+
+    if (!vName) {
+      showToast("error", "اسم الموقع مطلوب");
+      return;
+    }
+
+    if (!vClientId) {
+      showToast("error", "العميل مطلوب");
       return;
     }
 
     const payload: SitePayload = {
-      name: v,
+      name: vName,
+      client_id: vClientId,
       address: address.trim() || null,
-      client_id: clientId || null,
+      city: city.trim() || null,
+      site_type: siteType.trim() || null,
     };
 
     try {
+      setSaving(true);
+
       if (editing?.id) {
         await sitesService.update(editing.id, payload);
-        showToast("success", t("sites.toast.updated"));
+        showToast("success", "تم تحديث الموقع بنجاح");
       } else {
         await sitesService.create(payload);
-        showToast("success", t("sites.toast.created"));
+        showToast("success", "تم إنشاء الموقع بنجاح");
       }
 
       setModalOpen(false);
+      resetForm();
       await loadSites();
     } catch (e: any) {
-      showToast("error", e?.message || t("sites.toast.saveFailed"));
+      showToast("error", e?.message || "فشل حفظ الموقع");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function toggleActive(id: string) {
     try {
       await sitesService.toggle(id);
-      showToast("success", t("sites.toast.toggled"));
+      showToast("success", "تم تحديث حالة الموقع");
       await loadSites();
     } catch (e: any) {
-      showToast("error", e?.message || t("sites.toast.toggleFailed"));
+      showToast("error", e?.message || "فشل تغيير حالة الموقع");
     }
   }
 
   if (token === null) {
     return (
-      <div className="min-h-screen bg-white text-slate-900 p-6">
+      <div className="min-h-screen bg-white text-slate-900 p-6" dir="rtl">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
           {t("common.checkingSession")}
         </div>
@@ -170,19 +219,21 @@ export default function SitesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900" dir="rtl">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xl font-bold">{t("sites.title")}</div>
-            <div className="text-sm text-slate-600">{t("sites.subtitle")}</div>
+            <div className="text-xl font-bold">المواقع</div>
+            <div className="text-sm text-slate-600">
+              إدارة مواقع العملاء التشغيلية وربطها بالعميل
+            </div>
           </div>
 
           <button
             onClick={openCreate}
             className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm text-white"
           >
-            {t("sites.actions.add")}
+            إضافة موقع
           </button>
         </div>
 
@@ -190,7 +241,7 @@ export default function SitesPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("sites.filters.searchPlaceholder")}
+            placeholder="بحث بالاسم أو العنوان"
             className="px-3 py-2 w-full sm:w-80 rounded-xl bg-white border border-slate-200 outline-none text-sm"
           />
 
@@ -199,7 +250,7 @@ export default function SitesPage() {
             onChange={(e) => setClientFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-sm"
           >
-            <option value="">{t("sites.filters.allClients")}</option>
+            <option value="">كل العملاء</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name || c.id}
@@ -229,30 +280,51 @@ export default function SitesPage() {
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <div className="overflow-auto">
-              <table className="min-w-full text-sm">
+              <table className="min-w-[1000px] w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("sites.table.name")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("sites.table.client")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("sites.table.address")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("sites.table.status")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("sites.table.created")}</th>
-                    <th className="px-4 py-2 text-left text-slate-700">{t("sites.table.actions")}</th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      اسم الموقع
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      العميل
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      النوع
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      المدينة
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      العنوان
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      الحالة
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      تاريخ الإنشاء
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      الإجراءات
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {items.map((s) => (
-                    <tr key={s.id} className={cn("border-t border-slate-200 hover:bg-slate-50")}>
+                    <tr
+                      key={s.id}
+                      className={cn("border-t border-slate-200 hover:bg-slate-50")}
+                    >
                       <td className="px-4 py-2 font-medium">{s.name || "—"}</td>
                       <td className="px-4 py-2">{s.clients?.name || "—"}</td>
+                      <td className="px-4 py-2">
+                        {(s as any)?.site_type || "—"}
+                      </td>
+                      <td className="px-4 py-2">{(s as any)?.city || "—"}</td>
                       <td className="px-4 py-2">{s.address || "—"}</td>
                       <td className="px-4 py-2">
-                        {s.is_active === false ? (
-                          <span className="text-red-700 font-medium">{t("common.disabled")}</span>
-                        ) : (
-                          <span className="text-emerald-700 font-medium">{t("common.active")}</span>
-                        )}
+                        <SiteStatusBadge active={s.is_active} />
                       </td>
                       <td className="px-4 py-2">{fmtDate(s.created_at)}</td>
                       <td className="px-4 py-2">
@@ -276,8 +348,8 @@ export default function SitesPage() {
 
                   {!items.length ? (
                     <tr>
-                      <td className="px-4 py-6 text-slate-700" colSpan={6}>
-                        {t("sites.empty")}
+                      <td className="px-4 py-6 text-slate-700" colSpan={8}>
+                        لا توجد مواقع حالياً
                       </td>
                     </tr>
                   ) : null}
@@ -290,18 +362,24 @@ export default function SitesPage() {
         {modalOpen ? (
           <div
             className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-3"
-            onClick={() => setModalOpen(false)}
+            onClick={() => {
+              if (saving) return;
+              setModalOpen(false);
+            }}
           >
             <div
-              className="w-full max-w-xl rounded-2xl bg-white text-slate-900 border border-slate-200 p-4"
+              className="w-full max-w-2xl rounded-2xl bg-white text-slate-900 border border-slate-200 p-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">
-                  {editing ? t("sites.modal.editTitle") : t("sites.modal.createTitle")}
+                  {editing ? "تعديل الموقع" : "إضافة موقع جديد"}
                 </h3>
                 <button
-                  onClick={() => setModalOpen(false)}
+                  onClick={() => {
+                    if (saving) return;
+                    setModalOpen(false);
+                  }}
                   className="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50"
                 >
                   ✕
@@ -310,23 +388,27 @@ export default function SitesPage() {
 
               <div className="mt-4 grid gap-3">
                 <label className="grid gap-2 text-sm">
-                  {t("sites.fields.name")}
+                  اسم الموقع *
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none"
-                    placeholder={t("sites.placeholders.name")}
+                    placeholder="مثال: موقع السخنة"
+                    disabled={saving}
                   />
                 </label>
 
                 <label className="grid gap-2 text-sm">
-                  {t("sites.fields.client")} ({t("common.optional")})
+                  العميل *
                   <select
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
                     className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none"
+                    disabled={saving || clientsLoading}
                   >
-                    <option value="">{t("sites.placeholders.noClient")}</option>
+                    <option value="">
+                      {clientsLoading ? "جارٍ تحميل العملاء..." : "اختر العميل"}
+                    </option>
                     {clients.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name || c.id}
@@ -335,29 +417,61 @@ export default function SitesPage() {
                   </select>
                 </label>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="grid gap-2 text-sm">
+                    المدينة
+                    <input
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none"
+                      placeholder="مثال: السويس"
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label className="grid gap-2 text-sm">
+                    نوع الموقع
+                    <input
+                      value={siteType}
+                      onChange={(e) => setSiteType(e.target.value)}
+                      className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none"
+                      placeholder="مثال: مصنع / مخزن / ميناء"
+                      disabled={saving}
+                    />
+                  </label>
+                </div>
+
                 <label className="grid gap-2 text-sm">
-                  {t("sites.fields.address")} ({t("common.optional")})
+                  العنوان
                   <input
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none"
-                    placeholder={t("sites.placeholders.address")}
+                    placeholder="العنوان التفصيلي"
+                    disabled={saving}
                   />
                 </label>
+
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                  الموقع يتبع العميل مباشرة، ولا يتم تعطيله تلقائيًا بانتهاء العقد.
+                  انتهاء العقد يؤثر على التعاقد والتسعير وليس على وجود الموقع نفسه.
+                </div>
               </div>
 
               <div className="mt-5 flex items-center justify-end gap-2">
                 <button
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm disabled:opacity-60"
                 >
                   {t("common.cancel")}
                 </button>
                 <button
                   onClick={submit}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white disabled:opacity-60"
                 >
-                  {t("common.save")}
+                  {saving ? "جارٍ الحفظ..." : t("common.save")}
                 </button>
               </div>
             </div>

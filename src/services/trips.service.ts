@@ -12,6 +12,16 @@ import type {
   TripOptionSupervisor,
 } from "@/src/types/trips.types";
 
+export interface TripOptionContract {
+  id: string;
+  contract_no?: string | null;
+  status?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  currency?: string | null;
+  client_id?: string | null;
+}
+
 function asArray(body: any): any[] {
   if (Array.isArray(body)) return body;
   if (Array.isArray(body?.items)) return body.items;
@@ -33,8 +43,24 @@ function normalizeTripsList(body: any): ApiListResponse<Trip> {
     items,
     total: Number.isFinite(Number(totalRaw)) ? Number(totalRaw) : items.length,
     page: Number(body?.page || body?.meta?.page || 1),
-    pages: Number(body?.pages || body?.meta?.pages || 1),
+    pages: Number(
+      body?.pages ||
+        body?.meta?.pages ||
+        Math.max(Math.ceil((Number(totalRaw) || items.length) / Number(body?.pageSize || 25)), 1)
+    ),
   };
+}
+
+function normalizeContractsList(body: any): TripOptionContract[] {
+  return asArray(body).map((row: any) => ({
+    id: String(row?.id || ""),
+    contract_no: row?.contract_no ?? null,
+    status: row?.status ?? null,
+    start_date: row?.start_date ?? null,
+    end_date: row?.end_date ?? null,
+    currency: row?.currency ?? null,
+    client_id: row?.client_id ?? row?.clients?.id ?? null,
+  }));
 }
 
 export const tripsService = {
@@ -45,6 +71,8 @@ export const tripsService = {
     };
 
     if (filters.status) params.status = filters.status;
+    if ((filters as any).client_id) params.client_id = (filters as any).client_id;
+    if ((filters as any).route_id) params.route_id = (filters as any).route_id;
 
     const res = await api.get("/trips", { params });
     const body = res.data ?? res;
@@ -57,8 +85,13 @@ export const tripsService = {
     return (body?.trip || body) as Trip;
   },
 
-  async create(payload: TripCreatePayload) {
-    const res = await api.post("/trips", payload);
+  async create(payload: TripCreatePayload & { contract_id?: string | null }) {
+    const cleanPayload = {
+      ...payload,
+      contract_id: payload.contract_id || null,
+    };
+
+    const res = await api.post("/trips", cleanPayload);
     return res.data ?? res;
   },
 
@@ -82,9 +115,18 @@ export const tripsService = {
     return asArray(res.data ?? res);
   },
 
-  async listSitesOptions(): Promise<TripOptionSite[]> {
-    const res = await api.get("/sites");
+  async listSitesOptions(clientId?: string): Promise<TripOptionSite[]> {
+    const res = await api.get("/sites", {
+      params: clientId ? { client_id: clientId } : undefined,
+    });
     return asArray(res.data ?? res);
+  },
+
+  async listContractsOptions(clientId?: string): Promise<TripOptionContract[]> {
+    const res = await api.get("/contracts", {
+      params: clientId ? { client_id: clientId } : undefined,
+    });
+    return normalizeContractsList(res.data ?? res);
   },
 
   async listVehiclesOptions(): Promise<TripOptionVehicle[]> {
@@ -100,6 +142,8 @@ export const tripsService = {
   async listSupervisorsOptions(): Promise<TripOptionSupervisor[]> {
     const res = await api.get("/users");
     const items = asArray(res.data ?? res);
-    return items.filter((x: any) => String(x.role || "").toUpperCase() === "FIELD_SUPERVISOR");
+    return items.filter(
+      (x: any) => String(x.role || "").toUpperCase() === "FIELD_SUPERVISOR"
+    );
   },
 };

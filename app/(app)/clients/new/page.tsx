@@ -1,237 +1,171 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { api } from "@/src/lib/api";
+import Link from "next/link";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-import { PageHeader } from "@/src/components/ui/PageHeader";
+import { clientsService } from "@/src/services/clients.service";
+import type { Client } from "@/src/types/clients.types";
+
 import { Button } from "@/src/components/ui/Button";
-import { Card } from "@/src/components/ui/Card";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-type ToastState = { type: "success" | "error"; msg: string } | null;
+type ClientRow = Client;
 
-export default function NewClientPage() {
+function StatusBadge({ active }: { active: boolean }) {
+  return active ? (
+    <span className="inline-flex items-center gap-2 text-emerald-700">
+      <span className="h-2 w-2 rounded-full bg-emerald-600" />
+      نشط
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-2 text-red-700">
+      <span className="h-2 w-2 rounded-full bg-red-600" />
+      غير نشط
+    </span>
+  );
+}
+
+export default function ClientsPage() {
   const t = useT();
-  const router = useRouter();
   const token = useAuth((s) => s.token);
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<ClientRow[]>([]);
+  const [total, setTotal] = useState(0);
 
-  // Prisma fields
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [search, setSearch] = useState("");
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  const [hqAddress, setHqAddress] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-
-  const [taxNo, setTaxNo] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<ToastState>(null);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!token || loading) return;
-
-    const vName = name.trim();
-    if (!vName) {
-      setToast({ type: "error", msg: t("clients.errors.nameRequired") || "Name is required" });
-      return;
-    }
+  async function load() {
+    if (!token) return;
 
     setLoading(true);
-    setToast(null);
-
     try {
-      await api.post("/clients", {
-        name: vName,
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        hq_address: hqAddress.trim() || null,
-        contact_name: contactName.trim() || null,
-        contact_phone: contactPhone.trim() || null,
-        contact_email: contactEmail.trim() || null,
-        tax_no: taxNo.trim() || null,
-        notes: notes.trim() || null,
+      const res = await clientsService.list({
+        search,
+        page: 1,
+        limit: 50,
       });
 
-      setToast({ type: "success", msg: t("clients.new.toast.created") || "Client created" });
-
-      // رجّع للقائمة بعد نجاح بسيط
-      setTimeout(() => router.replace("/clients"), 400);
+      setItems(res.items);
+      setTotal(res.total);
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || t("clients.new.errors.createFailed") || "Create failed";
-      setToast({ type: "error", msg: String(msg) });
+      setToast({
+        type: "error",
+        msg: e?.message || t("clients.errors.loadFailed"),
+      });
+      setItems([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   }
 
-  if (!mounted) return null;
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, search]);
+
+  const columns: DataTableColumn<ClientRow>[] = useMemo(
+    () => [
+      {
+        key: "name",
+        label: t("clients.table.name"),
+        render: (row) => row?.name || "—",
+      },
+      {
+        key: "email",
+        label: t("clients.table.email"),
+        render: (row) => row?.email || "—",
+      },
+      {
+        key: "phone",
+        label: "الهاتف",
+        render: (row) => row?.phone || "—",
+      },
+      {
+        key: "status",
+        label: "الحالة",
+        render: (row) => <StatusBadge active={!!row?.is_active} />,
+      },
+      {
+        key: "actions",
+        label: t("clients.table.actions"),
+        render: (row) => (
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/clients/${row.id}`}>
+              <Button variant="secondary">{t("clients.actions.viewDetails")}</Button>
+            </Link>
+            <Link href={`/clients/${row.id}/edit`}>
+              <Button variant="secondary">تعديل</Button>
+            </Link>
+          </div>
+        ),
+      },
+    ],
+    [t]
+  );
 
   return (
     <div className="min-h-screen">
       <PageHeader
-        title={t("clients.new.title")}
-        subtitle={t("clients.new.subtitle")}
+        title={t("clients.title")}
+        subtitle={t("clients.subtitleList")}
         actions={
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => router.push("/clients")} disabled={loading}>
-              {t("clients.new.buttons.back")}
-            </Button>
-            <Button onClick={() => (document.getElementById("new-client-form") as any)?.requestSubmit?.()} disabled={loading}>
-              {loading ? t("clients.new.buttons.creating") : t("clients.new.buttons.create")}
+          <Link href="/clients/new">
+            <Button>+ {t("clients.actions.add")}</Button>
+          </Link>
+        }
+      />
+
+      <FiltersBar
+        left={
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("clients.filters.searchPlaceholder")}
+            className={cn(
+              "w-full sm:w-[360px] px-3 py-2 rounded-xl",
+              "bg-white border border-slate-200 outline-none text-sm",
+              "focus:ring-2 focus:ring-slate-200"
+            )}
+          />
+        }
+        right={
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-slate-500">
+              {t("common.total")}:{" "}
+              <span className="text-slate-900 font-semibold">{total}</span>
+            </div>
+            <Button variant="secondary" onClick={() => setSearch("")} disabled={!search}>
+              {t("common.reset")}
             </Button>
           </div>
         }
       />
 
-      <div className="max-w-3xl">
-        <Card className="p-4">
-          <form id="new-client-form" onSubmit={onSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* name */}
-              <div>
-                <label className="text-sm text-slate-700">{t("clients.new.form.name")}</label>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.name")}
-                />
-              </div>
+      <DataTable
+        title={t("clients.title")}
+        subtitle={t("clients.subtitle")}
+        columns={columns}
+        rows={items}
+        loading={loading}
+        emptyTitle={t("clients.empty")}
+        emptyHint={t("clients.emptyHint") || ""}
+      />
 
-              {/* email */}
-              <div>
-                <label className="text-sm text-slate-700">{t("clients.new.form.email")}</label>
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.email")}
-                />
-              </div>
-
-              {/* phone */}
-              <div>
-                <label className="text-sm text-slate-700">{t("clients.new.form.phone")}</label>
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.phone")}
-                />
-              </div>
-
-              {/* tax no */}
-              <div>
-                <label className="text-sm text-slate-700">{t("clients.new.form.taxNo")}</label>
-                <input
-                  value={taxNo}
-                  onChange={(e) => setTaxNo(e.target.value)}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.taxNo")}
-                />
-              </div>
-
-              {/* HQ address */}
-              <div className="md:col-span-2">
-                <label className="text-sm text-slate-700">{t("clients.new.form.hqAddress")}</label>
-                <input
-                  value={hqAddress}
-                  onChange={(e) => setHqAddress(e.target.value)}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.hqAddress")}
-                />
-              </div>
-
-              {/* contact name */}
-              <div>
-                <label className="text-sm text-slate-700">{t("clients.new.form.contactName")}</label>
-                <input
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.contactName")}
-                />
-              </div>
-
-              {/* contact phone */}
-              <div>
-                <label className="text-sm text-slate-700">{t("clients.new.form.contactPhone")}</label>
-                <input
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.contactPhone")}
-                />
-              </div>
-
-              {/* ✅ contact email */}
-              <div className="md:col-span-2">
-                <label className="text-sm text-slate-700">{t("clients.new.form.contactEmail")}</label>
-                <input
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.contactEmail")}
-                />
-              </div>
-
-              {/* notes */}
-              <div className="md:col-span-2">
-                <label className="text-sm text-slate-700">{t("clients.new.form.notes")}</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
-                  className={cn("mt-1 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none",
-                    "focus:ring-2 focus:ring-slate-200")}
-                  placeholder={t("clients.new.placeholders.notes")}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <Button variant="secondary" type="button" onClick={() => router.push("/clients")} disabled={loading}>
-                {t("clients.new.buttons.back")}
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? t("clients.new.buttons.creating") : t("clients.new.buttons.create")}
-              </Button>
-            </div>
-          </form>
-        </Card>
-      </div>
-
-      {toast ? (
-        <Toast
-          open={true}
-          type={toast.type}
-          message={toast.msg}
-          onClose={() => setToast(null)}
-        />
-      ) : null}
+      {toast && (
+        <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />
+      )}
     </div>
   );
 }

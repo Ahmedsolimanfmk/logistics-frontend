@@ -19,7 +19,10 @@ type Status =
   | "RESERVED"
   | "ISSUED"
   | "INSTALLED"
-  | "SCRAPPED";
+  | "SCRAPPED"
+  | "ACTIVE"
+  | "INACTIVE"
+  | "EXPIRED";
 
 function norm(s: any) {
   return String(s || "").toUpperCase();
@@ -54,6 +57,10 @@ export function StatusBadge({ status, className = "" }: { status: any; className
     CANCELLED: "bg-red-100 text-red-800",
 
     POSTED: "bg-blue-100 text-blue-800",
+
+    ACTIVE: "bg-green-100 text-green-800",
+    INACTIVE: "bg-gray-100 text-gray-700",
+    EXPIRED: "bg-red-100 text-red-800",
   };
 
   const cls = map[s] || "bg-gray-100 text-gray-700";

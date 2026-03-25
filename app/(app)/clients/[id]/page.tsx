@@ -1,320 +1,423 @@
-// app/(app)/clients/[id]/page.tsx
 "use client";
 
+import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { api } from "@/src/lib/api";
+import { useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-import { PageHeader } from "@/src/components/ui/PageHeader";
-import { FiltersBar } from "@/src/components/ui/FiltersBar";
-import { Button } from "@/src/components/ui/Button";
-import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { clientsService } from "@/src/services/clients.service";
+import { contractsService } from "@/src/services/contracts.service";
+
+import type { Client } from "@/src/types/clients.types";
+import type { Contract } from "@/src/types/contracts.types";
+
 import { Toast } from "@/src/components/Toast";
+import { Button } from "@/src/components/ui/Button";
+import { PageHeader } from "@/src/components/ui/PageHeader";
 import { KpiCard } from "@/src/components/ui/KpiCard";
-import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
+import { Card } from "@/src/components/ui/Card";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
+type ToastState =
+  | {
+      type: "success" | "error";
+      msg: string;
+    }
+  | null;
+
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("ar-EG").format(d);
 }
 
-function fmtMoney(v: any) {
-  const n = Number(v || 0);
-  if (!Number.isFinite(n)) return String(v ?? "0");
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
+function formatMoney(value?: number | null, currency?: string | null) {
+  if (value == null) return "—";
+
+  try {
+    return new Intl.NumberFormat("ar-EG", {
+      style: "currency",
+      currency: currency || "EGP",
+      maximumFractionDigits: 2,
+    }).format(Number(value));
+  } catch {
+    return `${value} ${currency || "EGP"}`;
+  }
 }
 
-function currentMonthYYYYMM() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
+function monthValueOrCurrent(v: string | null) {
+  if (v && /^\d{4}-\d{2}$/.test(v)) return v;
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
   return `${y}-${m}`;
 }
 
-type DashboardPayload = {
-  month: string;
-  client: {
-    id: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    hq_address?: string | null;
-    contact_name?: string | null;
-    contact_phone?: string | null;
-    contact_email?: string | null;
-    tax_no?: string | null;
-    notes?: string | null;
-    is_active: boolean;
-    created_at?: string | null;
-  };
-  financial: {
-    total_invoiced: number;
-    total_paid: number;
-    balance: number;
-  };
-  sites: Array<{
-    id: string;
-    name: string;
-    address?: string | null;
-    is_active: boolean;
-    trips_this_month: number;
-  }>;
-};
-
 export default function ClientDetailsPage() {
   const t = useT();
-  const router = useRouter();
   const token = useAuth((s) => s.token);
 
   const params = useParams();
-  const id = String((params as any)?.id || "");
+  const searchParams = useSearchParams();
+
+  const id = String(params?.id || "");
+  const month = monthValueOrCurrent(searchParams.get("month"));
 
   const [loading, setLoading] = useState(true);
-  const [month, setMonth] = useState(currentMonthYYYYMM());
-  const [data, setData] = useState<DashboardPayload | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [contractsLoading, setContractsLoading] = useState(true);
 
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
+  const [dashboard, setDashboard] = useState<any>(null);
 
-  // Toggle dialog
-  const [toggleOpen, setToggleOpen] = useState(false);
-  const [toggleLoading, setToggleLoading] = useState(false);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contractsTotal, setContractsTotal] = useState(0);
 
-  async function load() {
+  const [toast, setToast] = useState<ToastState>(null);
+
+  async function loadClientAndDashboard() {
     if (!token || !id) return;
+
     setLoading(true);
+    setDashboardLoading(true);
+
     try {
-      const res = await api.get(`/clients/${id}/dashboard?month=${encodeURIComponent(month)}`);
-      const payload = (res as any)?.data ?? res;
-      setData(payload);
+      const [detailsRes, dashboardRes] = await Promise.all([
+        clientsService.getByIdFromDetails(id, month),
+        clientsService.getDashboard(id, month),
+      ]);
+
+      const detailsBody: any = detailsRes as any;
+      const dashboardBody: any = dashboardRes as any;
+
+      setClient(
+        detailsBody?.client ||
+          detailsBody?.data?.client ||
+          detailsBody?.data ||
+          detailsBody ||
+          null
+      );
+
+      setDashboard(dashboardBody?.data || dashboardBody || null);
     } catch (e: any) {
+      setClient(null);
+      setDashboard(null);
       setToast({
         type: "error",
-        msg: e?.response?.data?.message || e?.message || t("clients.details.errors.loadFailed"),
+        msg: e?.response?.data?.message || e?.message || "فشل تحميل بيانات العميل",
       });
-      setData(null);
     } finally {
       setLoading(false);
+      setDashboardLoading(false);
     }
   }
 
-  async function doToggle() {
+  async function loadContracts() {
     if (!id) return;
-    setToggleLoading(true);
+
+    setContractsLoading(true);
     try {
-      await api.patch(`/clients/${id}/toggle`);
-      setToast({ type: "success", msg: t("clients.toast.toggled") });
-      setToggleOpen(false);
-      await load(); // refresh status + data
+      const res = await contractsService.list({
+        client_id: id,
+        page: 1,
+        limit: 20,
+      });
+
+      setContracts(res.items || []);
+      setContractsTotal(res.total || 0);
     } catch (e: any) {
+      setContracts([]);
+      setContractsTotal(0);
       setToast({
         type: "error",
-        msg: e?.response?.data?.message || e?.message || t("clients.errors.toggleFailed"),
+        msg: e?.response?.data?.message || e?.message || "فشل تحميل العقود",
       });
     } finally {
-      setToggleLoading(false);
+      setContractsLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    loadClientAndDashboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, id, month]);
 
-  const client = data?.client;
+  useEffect(() => {
+    loadContracts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-  const siteColumns: DataTableColumn<DashboardPayload["sites"][number]>[] = useMemo(
+  const clientName = useMemo(() => {
+    return client?.name || "تفاصيل العميل";
+  }, [client]);
+
+  const contractColumns: DataTableColumn<Contract>[] = useMemo(
     () => [
       {
-        key: "name",
-        label: t("clients.details.sites.table.name"),
-        render: (row) => row?.name || "—",
+        key: "contract_no",
+        label: "رقم العقد",
+        render: (row) => row.contract_no || "—",
       },
       {
-        key: "address",
-        label: t("clients.details.sites.table.address"),
-        render: (row) => row?.address || "—",
+        key: "start_date",
+        label: "البداية",
+        render: (row) => formatDate(row.start_date),
       },
       {
-        key: "trips",
-        label: t("clients.details.sites.table.tripsThisMonth"),
-        render: (row) => <span className="font-semibold">{row?.trips_this_month ?? 0}</span>,
+        key: "end_date",
+        label: "النهاية",
+        render: (row) => formatDate(row.end_date),
+      },
+      {
+        key: "billing_cycle",
+        label: "دورة الفاتورة",
+        render: (row) => row.billing_cycle || "—",
+      },
+      {
+        key: "contract_value",
+        label: "القيمة",
+        render: (row) => formatMoney(row.contract_value, row.currency),
       },
       {
         key: "status",
-        label: t("clients.details.sites.table.status"),
-        render: (row) =>
-          row?.is_active ? (
-            <span className="inline-flex items-center gap-2 text-emerald-700">
-              <span className="h-2 w-2 rounded-full bg-emerald-600" />
-              {t("common.active")}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-2 text-red-700">
-              <span className="h-2 w-2 rounded-full bg-red-600" />
-              {t("common.disabled")}
-            </span>
-          ),
+        label: "الحالة",
+        render: (row) => <StatusBadge status={row.status || "-"} />,
+      },
+      {
+        key: "actions",
+        label: "الإجراءات",
+        render: (row) => (
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/contracts/${row.id}`}>
+              <Button variant="secondary">عرض</Button>
+            </Link>
+            <Link href={`/contracts/${row.id}?mode=edit`}>
+              <Button variant="secondary">تعديل</Button>
+            </Link>
+          </div>
+        ),
       },
     ],
-    [t]
+    []
   );
 
+  const sitesColumns: DataTableColumn<any>[] = useMemo(
+    () => [
+      {
+        key: "name",
+        label: "الموقع",
+        render: (row) => row?.name || row?.site_name || "—",
+      },
+      {
+        key: "location",
+        label: "العنوان",
+        render: (row) => row?.address || row?.location || "—",
+      },
+      {
+        key: "status",
+        label: "الحالة",
+        render: (row) => (
+          <span className={row?.is_active ? "text-emerald-700" : "text-red-700"}>
+            {row?.is_active ? "نشط" : "غير نشط"}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  const sitesRows =
+    dashboard?.sites ||
+    dashboard?.data?.sites ||
+    dashboard?.operations?.sites ||
+    [];
+
+  const totalTrips =
+    dashboard?.operations?.total_trips_this_month ??
+    dashboard?.total_trips_this_month ??
+    0;
+
+  const activeSites =
+    dashboard?.operations?.active_sites_count ??
+    dashboard?.active_sites_count ??
+    0;
+
+  const totalSites =
+    dashboard?.operations?.total_sites_count ??
+    dashboard?.total_sites_count ??
+    (Array.isArray(sitesRows) ? sitesRows.length : 0);
+
+  const totalRevenue =
+    dashboard?.finance?.total_revenue ??
+    dashboard?.total_revenue ??
+    dashboard?.financial?.total_revenue ??
+    null;
+
+  if (loading && !client) {
+    return <div className="p-6">جارٍ تحميل بيانات العميل...</div>;
+  }
+
+  if (!client) {
+    return <div className="p-6">العميل غير موجود</div>;
+  }
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen space-y-6">
       <PageHeader
-        title={t("clients.details.title")}
-        subtitle={t("clients.details.subtitle")}
+        title={clientName}
+        subtitle="عرض بيانات العميل والعقود والمواقع والمؤشرات"
         actions={
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => router.push(`/clients/${id}/edit`)}>
-              {t("common.edit")}
-            </Button>
-
-            <Button
-              variant={client?.is_active ? "danger" : "primary"}
-              onClick={() => setToggleOpen(true)}
-              disabled={!client}
-            >
-              {client?.is_active ? t("common.disable") : t("common.enable")}
-            </Button>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/clients">
+              <Button variant="secondary">رجوع</Button>
+            </Link>
+            <Link href={`/clients/${id}/edit`}>
+              <Button variant="secondary">تعديل العميل</Button>
+            </Link>
+            <Link href={`/contracts/new?client_id=${id}`}>
+              <Button>إضافة عقد</Button>
+            </Link>
           </div>
         }
       />
 
-      <FiltersBar
-        left={
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-slate-500">{t("clients.details.filters.month")}</div>
-            <input
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              placeholder="YYYY-MM"
-              className={cn(
-                "w-[140px] px-3 py-2 rounded-xl",
-                "bg-white border border-slate-200 outline-none text-sm",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
-            />
-            <Button variant="secondary" onClick={() => setMonth(currentMonthYYYYMM())}>
-              {t("clients.details.filters.thisMonth")}
-            </Button>
-            <div className="text-[11px] text-slate-500">{t("clients.details.filters.monthHint")}</div>
-          </div>
-        }
-        right={
-          <div className="text-xs text-slate-500">
-            {t("clients.details.profile.status")}:{" "}
-            <span className="font-semibold text-slate-900">
-              {client?.is_active ? t("common.active") : t("common.disabled")}
-            </span>
-          </div>
-        }
-      />
-
-      {/* KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <KpiCard
-          label={t("clients.details.kpi.totalInvoiced")}
-          value={fmtMoney(data?.financial?.total_invoiced ?? 0)}
-          hint={t("clients.details.kpi.hintInvoices")}
+          label="إجمالي الرحلات هذا الشهر"
+          value={totalTrips}
+          formatValue
         />
         <KpiCard
-          label={t("clients.details.kpi.totalPaid")}
-          value={fmtMoney(data?.financial?.total_paid ?? 0)}
-          hint={t("clients.details.kpi.hintPayments")}
+          label="المواقع النشطة"
+          value={activeSites}
+          formatValue
         />
         <KpiCard
-          label={t("clients.details.kpi.balance")}
-          value={fmtMoney(data?.financial?.balance ?? 0)}
-          hint={t("clients.details.kpi.hintBalance")}
+          label="إجمالي المواقع"
+          value={totalSites}
+          formatValue
+        />
+        <KpiCard
+          label="إجمالي العقود"
+          value={contractsTotal}
+          formatValue
         />
       </div>
 
-      {/* Profile */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-4">
-        <div className="text-sm font-semibold mb-3">{t("clients.details.profile.title")}</div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card className="p-5">
+          <h2 className="mb-4 text-lg font-semibold">بيانات العميل</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.name")}</div>
-            <div className="mt-1 font-medium">{client?.name || "—"}</div>
-          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <div className="text-xs text-slate-500">الاسم</div>
+              <div className="mt-1 font-medium">{client?.name || "—"}</div>
+            </div>
 
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.email")}</div>
-            <div className="mt-1 font-medium">{client?.email || "—"}</div>
-          </div>
+            <div>
+              <div className="text-xs text-slate-500">الحالة</div>
+              <div className="mt-1">
+                <span
+                  className={
+                    client?.is_active ? "text-emerald-700 font-medium" : "text-red-700 font-medium"
+                  }
+                >
+                  {client?.is_active ? "نشط" : "غير نشط"}
+                </span>
+              </div>
+            </div>
 
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.phone")}</div>
-            <div className="mt-1 font-medium">{client?.phone || "—"}</div>
-          </div>
+            <div>
+              <div className="text-xs text-slate-500">البريد الإلكتروني</div>
+              <div className="mt-1 font-medium">{client?.email || "—"}</div>
+            </div>
 
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.hqAddress")}</div>
-            <div className="mt-1 font-medium">{client?.hq_address || "—"}</div>
-          </div>
+            <div>
+              <div className="text-xs text-slate-500">الهاتف</div>
+              <div className="mt-1 font-medium">{client?.phone || "—"}</div>
+            </div>
 
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.contactName")}</div>
-            <div className="mt-1 font-medium">{client?.contact_name || "—"}</div>
+            <div className="sm:col-span-2">
+              <div className="text-xs text-slate-500">ملاحظات</div>
+              <div className="mt-1 whitespace-pre-wrap font-medium">
+                {(client as any)?.notes || "—"}
+              </div>
+            </div>
           </div>
+        </Card>
 
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.contactPhone")}</div>
-            <div className="mt-1 font-medium">{client?.contact_phone || "—"}</div>
-          </div>
+        <Card className="p-5">
+          <h2 className="mb-4 text-lg font-semibold">ملخص مالي</h2>
 
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.contactEmail")}</div>
-            <div className="mt-1 font-medium">{client?.contact_email || "—"}</div>
-          </div>
+          {dashboardLoading ? (
+            <div className="text-sm text-slate-500">جارٍ تحميل المؤشرات...</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <div className="text-xs text-slate-500">إجمالي الإيراد</div>
+                <div className="mt-1 font-medium">
+                  {formatMoney(totalRevenue, "EGP")}
+                </div>
+              </div>
 
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.taxNo")}</div>
-            <div className="mt-1 font-medium">{client?.tax_no || "—"}</div>
-          </div>
+              <div>
+                <div className="text-xs text-slate-500">الشهر</div>
+                <div className="mt-1 font-medium">{month}</div>
+              </div>
 
-          <div className="md:col-span-3">
-            <div className="text-xs text-slate-500">{t("clients.details.profile.notes")}</div>
-            <div className="mt-1 font-medium">{client?.notes || "—"}</div>
-          </div>
-        </div>
+              <div>
+                <div className="text-xs text-slate-500">إجمالي العقود</div>
+                <div className="mt-1 font-medium">{contractsTotal}</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-slate-500">إجمالي المواقع</div>
+                <div className="mt-1 font-medium">{totalSites}</div>
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
 
-      {/* Sites */}
       <DataTable
-        title={t("clients.details.sites.title")}
-        subtitle={t("clients.details.sites.subtitle").replace("{month}", month)}
-        columns={siteColumns}
-        rows={data?.sites || []}
-        loading={loading}
-        emptyTitle={t("clients.details.sites.empty")}
-        emptyHint={t("clients.details.sites.emptyHint") || ""}
-      />
-
-      {/* Toggle Confirm */}
-      <ConfirmDialog
-        open={toggleOpen}
-        title={t("common.confirm")}
-        description={
-          client?.is_active
-            ? t("clients.confirm.disableDesc")
-            : t("clients.confirm.enableDesc")
+        title="عقود العميل"
+        subtitle="العقود المرتبطة بهذا العميل"
+        columns={contractColumns}
+        rows={contracts}
+        loading={contractsLoading}
+        emptyTitle="لا توجد عقود"
+        emptyHint="لم يتم إضافة أي عقود لهذا العميل حتى الآن."
+        right={
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/contracts?client_id=${id}`}>
+              <Button variant="secondary">عرض الكل</Button>
+            </Link>
+            <Link href={`/contracts/new?client_id=${id}`}>
+              <Button>إضافة عقد</Button>
+            </Link>
+          </div>
         }
-        confirmText={client?.is_active ? t("common.disable") : t("common.enable")}
-        cancelText={t("common.cancel")}
-        tone="warning"
-        isLoading={toggleLoading}
-        onClose={() => {
-          if (toggleLoading) return;
-          setToggleOpen(false);
-        }}
-        onConfirm={doToggle}
       />
 
-      {toast && <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />}
+      <DataTable
+        title="مواقع العميل"
+        subtitle="المواقع التابعة لهذا العميل"
+        columns={sitesColumns}
+        rows={Array.isArray(sitesRows) ? sitesRows : []}
+        loading={dashboardLoading}
+        emptyTitle="لا توجد مواقع"
+        emptyHint="لم يتم العثور على مواقع مرتبطة بهذا العميل."
+      />
+
+      <Toast
+        open={!!toast}
+        type={toast?.type || "success"}
+        message={toast?.msg || ""}
+        onClose={() => setToast(null)}
+      />
     </div>
   );
 }

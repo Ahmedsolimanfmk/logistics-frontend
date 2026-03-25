@@ -1,11 +1,12 @@
-// app/(app)/clients/page.tsx
 "use client";
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
-import { api, unwrapItems, unwrapTotal } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
+
+import { clientsService } from "@/src/services/clients.service";
+import type { Client } from "@/src/types/clients.types";
 
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
@@ -17,12 +18,21 @@ function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-type ClientRow = {
-  id: string;
-  name: string;
-  email?: string | null;
-  is_active: boolean;
-};
+type ClientRow = Client;
+
+function StatusBadge({ active }: { active: boolean }) {
+  return active ? (
+    <span className="inline-flex items-center gap-2 text-emerald-700">
+      <span className="h-2 w-2 rounded-full bg-emerald-600" />
+      نشط
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-2 text-red-700">
+      <span className="h-2 w-2 rounded-full bg-red-600" />
+      غير نشط
+    </span>
+  );
+}
 
 export default function ClientsPage() {
   const t = useT();
@@ -37,13 +47,22 @@ export default function ClientsPage() {
 
   async function load() {
     if (!token) return;
+
     setLoading(true);
     try {
-      const res = await api.get(`/clients?search=${encodeURIComponent(search)}&page=1&limit=50`);
-      setItems(unwrapItems<ClientRow>(res));
-      setTotal(unwrapTotal(res) || unwrapItems(res).length);
+      const res = await clientsService.list({
+        search,
+        page: 1,
+        limit: 50,
+      });
+
+      setItems(res.items);
+      setTotal(res.total);
     } catch (e: any) {
-      setToast({ type: "error", msg: e?.message || t("clients.errors.loadFailed") });
+      setToast({
+        type: "error",
+        msg: e?.message || t("clients.errors.loadFailed"),
+      });
       setItems([]);
       setTotal(0);
     } finally {
@@ -69,12 +88,25 @@ export default function ClientsPage() {
         render: (row) => row?.email || "—",
       },
       {
+        key: "phone",
+        label: "الهاتف",
+        render: (row) => row?.phone || "—",
+      },
+      {
+        key: "status",
+        label: "الحالة",
+        render: (row) => <StatusBadge active={!!row?.is_active} />,
+      },
+      {
         key: "actions",
         label: t("clients.table.actions"),
         render: (row) => (
           <div className="flex flex-wrap gap-2">
             <Link href={`/clients/${row.id}`}>
               <Button variant="secondary">{t("clients.actions.viewDetails")}</Button>
+            </Link>
+            <Link href={`/clients/${row.id}/edit`}>
+              <Button variant="secondary">تعديل</Button>
             </Link>
           </div>
         ),
@@ -86,14 +118,14 @@ export default function ClientsPage() {
   return (
     <div className="min-h-screen">
       <PageHeader
-  title={t("clients.title")}
-  subtitle={t("clients.subtitleList")}
-  actions={
-    <Link href="/clients/new">
-      <Button>+ {t("clients.actions.add")}</Button>
-    </Link>
-  }
-/>
+        title={t("clients.title")}
+        subtitle={t("clients.subtitleList")}
+        actions={
+          <Link href="/clients/new">
+            <Button>+ {t("clients.actions.add")}</Button>
+          </Link>
+        }
+      />
 
       <FiltersBar
         left={
@@ -111,7 +143,8 @@ export default function ClientsPage() {
         right={
           <div className="flex items-center gap-2">
             <div className="text-xs text-slate-500">
-              {t("common.total")}: <span className="text-slate-900 font-semibold">{total}</span>
+              {t("common.total")}:{" "}
+              <span className="text-slate-900 font-semibold">{total}</span>
             </div>
             <Button variant="secondary" onClick={() => setSearch("")} disabled={!search}>
               {t("common.reset")}
@@ -130,7 +163,9 @@ export default function ClientsPage() {
         emptyHint={t("clients.emptyHint") || ""}
       />
 
-      {toast && <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />
+      )}
     </div>
   );
 }

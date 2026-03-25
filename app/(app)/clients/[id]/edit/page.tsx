@@ -1,4 +1,3 @@
-// app/(app)/clients/[id]/edit/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -7,239 +6,339 @@ import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
-import { Card } from "@/src/components/ui/Card";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { Button } from "@/src/components/ui/Button";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
+import { KpiCard } from "@/src/components/ui/KpiCard";
+import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-type ClientDetailsResponse = {
+function fmtMoney(v: any) {
+  const n = Number(v || 0);
+  if (!Number.isFinite(n)) return String(v ?? "0");
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
+}
+
+function currentMonthYYYYMM() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+type DashboardPayload = {
+  month: string;
   client: {
     id: string;
     name: string;
-    phone?: string | null;
     email?: string | null;
-
+    phone?: string | null;
     hq_address?: string | null;
-
     contact_name?: string | null;
     contact_phone?: string | null;
     contact_email?: string | null;
-
     tax_no?: string | null;
     notes?: string | null;
-
     is_active: boolean;
     created_at?: string | null;
-    updated_at?: string | null;
   };
+  financial: {
+    total_invoiced: number;
+    total_paid: number;
+    balance: number;
+    monthly_trip_revenue?: number;
+  };
+  operations?: {
+    total_trips_this_month?: number;
+    active_sites_count?: number;
+    total_sites_count?: number;
+  };
+  sites: Array<{
+    id: string;
+    name: string;
+    address?: string | null;
+    is_active: boolean;
+    trips_this_month: number;
+  }>;
 };
 
-export default function ClientEditPage() {
+export default function ClientDetailsPage() {
   const t = useT();
   const router = useRouter();
-  const params = useParams<{ id: string }>();
   const token = useAuth((s) => s.token);
 
-  const id = String(params?.id || "");
+  const params = useParams();
+  const id = String((params as any)?.id || "");
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [month, setMonth] = useState(currentMonthYYYYMM());
+  const [data, setData] = useState<DashboardPayload | null>(null);
 
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  // fields
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [hqAddress, setHqAddress] = useState("");
-
-  const [contactName, setContactName] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-
-  const [taxNo, setTaxNo] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const inputClass = useMemo(
-    () =>
-      cn(
-        "w-full px-3 py-2 rounded-xl",
-        "bg-white border border-slate-200 outline-none text-sm",
-        "focus:ring-2 focus:ring-slate-200"
-      ),
-    []
-  );
+  const [toggleOpen, setToggleOpen] = useState(false);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   async function load() {
     if (!token || !id) return;
-
     setLoading(true);
     try {
-      const res = await api.get(`/clients/${id}/details`);
-      const data = (res as any)?.data ?? res;
-
-      const payload = data as ClientDetailsResponse;
-      const c = payload?.client;
-
-      if (!c?.id) {
-        setToast({ type: "error", msg: t("clients.details.errors.loadFailed") || "Failed to load client" });
-        return;
-      }
-
-      setName(c.name ?? "");
-      setEmail(c.email ?? "");
-      setPhone(c.phone ?? "");
-      setHqAddress(c.hq_address ?? "");
-
-      setContactName(c.contact_name ?? "");
-      setContactPhone(c.contact_phone ?? "");
-      setContactEmail(c.contact_email ?? "");
-
-      setTaxNo(c.tax_no ?? "");
-      setNotes(c.notes ?? "");
+      const res = await api.get(`/clients/${id}/dashboard?month=${encodeURIComponent(month)}`);
+      const payload = (res as any)?.data ?? res;
+      setData(payload);
     } catch (e: any) {
-      setToast({ type: "error", msg: e?.message || t("clients.details.errors.loadFailed") || "Failed to load client" });
+      setToast({
+        type: "error",
+        msg: e?.response?.data?.message || e?.message || t("clients.details.errors.loadFailed"),
+      });
+      setData(null);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function doToggle() {
+    if (!id) return;
+    setToggleLoading(true);
+    try {
+      await api.patch(`/clients/${id}/toggle`);
+      setToast({ type: "success", msg: t("clients.toast.toggled") });
+      setToggleOpen(false);
+      await load();
+    } catch (e: any) {
+      setToast({
+        type: "error",
+        msg: e?.response?.data?.message || e?.message || t("clients.errors.toggleFailed"),
+      });
+    } finally {
+      setToggleLoading(false);
     }
   }
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, id]);
+  }, [token, id, month]);
 
-  async function onSave() {
-    if (!id) return;
-    if (saving) return;
+  const client = data?.client;
 
-    const vName = name.trim();
-    if (!vName) {
-      setToast({ type: "error", msg: t("clients.errors.nameRequired") || "Name is required" });
-      return;
-    }
-
-    setSaving(true);
-    setToast(null);
-
-    try {
-      // 1) Update name (existing endpoint)
-      await api.put(`/clients/${id}`, { name: vName });
-
-      // 2) Update profile fields (new endpoint you should add)
-      await api.put(`/clients/${id}/profile`, {
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        hq_address: hqAddress.trim() || null,
-
-        contact_name: contactName.trim() || null,
-        contact_phone: contactPhone.trim() || null,
-        contact_email: contactEmail.trim() || null,
-
-        tax_no: taxNo.trim() || null,
-        notes: notes.trim() || null,
-      });
-
-      setToast({ type: "success", msg: t("clients.toast.updated") || "Client updated" });
-
-      // رجوع للتفاصيل
-      router.push(`/clients/${id}`);
-    } catch (e: any) {
-      setToast({ type: "error", msg: e?.response?.data?.message || e?.message || t("clients.errors.saveFailed") || "Save failed" });
-    } finally {
-      setSaving(false);
-    }
-  }
+  const siteColumns: DataTableColumn<DashboardPayload["sites"][number]>[] = useMemo(
+    () => [
+      {
+        key: "name",
+        label: t("clients.details.sites.table.name"),
+        render: (row) => row?.name || "—",
+      },
+      {
+        key: "address",
+        label: t("clients.details.sites.table.address"),
+        render: (row) => row?.address || "—",
+      },
+      {
+        key: "trips",
+        label: t("clients.details.sites.table.tripsThisMonth"),
+        render: (row) => <span className="font-semibold">{row?.trips_this_month ?? 0}</span>,
+      },
+      {
+        key: "status",
+        label: t("clients.details.sites.table.status"),
+        render: (row) =>
+          row?.is_active ? (
+            <span className="inline-flex items-center gap-2 text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-600" />
+              {t("common.active")}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2 text-red-700">
+              <span className="h-2 w-2 rounded-full bg-red-600" />
+              {t("common.disabled")}
+            </span>
+          ),
+      },
+    ],
+    [t]
+  );
 
   return (
     <div className="min-h-screen">
       <PageHeader
-        title={t("clients.edit.title") || "Edit client"}
-        subtitle={t("clients.edit.subtitle") || "Update client profile"}
+        title={client?.name || t("clients.details.title")}
+        subtitle={t("clients.details.subtitle")}
         actions={
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => router.push(`/clients/${id}`)} disabled={saving}>
-              {t("common.cancel") || "Cancel"}
+            <Button variant="secondary" onClick={() => router.push(`/clients/${id}/edit`)}>
+              {t("common.edit")}
             </Button>
-            <Button onClick={onSave} disabled={saving || loading}>
-              {saving ? (t("common.saving") || "Saving…") : (t("common.save") || "Save")}
+
+            <Button
+              variant={client?.is_active ? "danger" : "primary"}
+              onClick={() => setToggleOpen(true)}
+              disabled={!client}
+            >
+              {client?.is_active ? t("common.disable") : t("common.enable")}
             </Button>
           </div>
         }
       />
 
-      <div className="mt-4 space-y-4">
-        <Card className="p-4">
-          <div className="text-sm font-semibold mb-3">{t("clients.edit.sections.basic") || "Basic info"}</div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.name") || "Name"}</div>
-              <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("clients.edit.placeholders.name") || "Client name"} />
-            </div>
-
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.email") || "Email"}</div>
-              <input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("clients.edit.placeholders.email") || "client@email.com"} />
-            </div>
-
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.phone") || "Phone"}</div>
-              <input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("clients.edit.placeholders.phone") || "+20..."} />
-            </div>
-
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.hqAddress") || "HQ address"}</div>
-              <input className={inputClass} value={hqAddress} onChange={(e) => setHqAddress(e.target.value)} placeholder={t("clients.edit.placeholders.hqAddress") || "Address"} />
+      <FiltersBar
+        left={
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-slate-500">{t("clients.details.filters.month")}</div>
+            <input
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              placeholder="YYYY-MM"
+              className={cn(
+                "w-[140px] px-3 py-2 rounded-xl",
+                "bg-white border border-slate-200 outline-none text-sm",
+                "focus:ring-2 focus:ring-slate-200"
+              )}
+            />
+            <Button variant="secondary" onClick={() => setMonth(currentMonthYYYYMM())}>
+              {t("clients.details.filters.thisMonth")}
+            </Button>
+            <div className="text-[11px] text-slate-500">
+              {t("clients.details.filters.monthHint")}
             </div>
           </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="text-sm font-semibold mb-3">{t("clients.edit.sections.contact") || "Contact person"}</div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.contactName") || "Contact name"}</div>
-              <input className={inputClass} value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder={t("clients.edit.placeholders.contactName") || "Name"} />
-            </div>
-
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.contactPhone") || "Contact phone"}</div>
-              <input className={inputClass} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder={t("clients.edit.placeholders.contactPhone") || "+20..."} />
-            </div>
-
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.contactEmail") || "Contact email"}</div>
-              <input className={inputClass} value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t("clients.edit.placeholders.contactEmail") || "contact@email.com"} />
-            </div>
+        }
+        right={
+          <div className="text-xs text-slate-500">
+            {t("clients.details.profile.status")}:{" "}
+            <span className="font-semibold text-slate-900">
+              {client?.is_active ? t("common.active") : t("common.disabled")}
+            </span>
           </div>
-        </Card>
+        }
+      />
 
-        <Card className="p-4">
-          <div className="text-sm font-semibold mb-3">{t("clients.edit.sections.finance") || "Finance"}</div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.taxNo") || "Tax number"}</div>
-              <input className={inputClass} value={taxNo} onChange={(e) => setTaxNo(e.target.value)} placeholder={t("clients.edit.placeholders.taxNo") || "Tax No"} />
-            </div>
-
-            <div>
-              <div className="text-xs text-slate-500 mb-1">{t("clients.edit.form.notes") || "Notes"}</div>
-              <textarea className={cn(inputClass, "min-h-[90px]")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("clients.edit.placeholders.notes") || "Notes"} />
-            </div>
-          </div>
-        </Card>
-
-        {loading ? <div className="text-sm text-slate-500">{t("common.loading") || "Loading..."}</div> : null}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <KpiCard
+          label={t("clients.details.kpi.totalInvoiced")}
+          value={fmtMoney(data?.financial?.total_invoiced ?? 0)}
+          hint={t("clients.details.kpi.hintInvoices")}
+        />
+        <KpiCard
+          label={t("clients.details.kpi.totalPaid")}
+          value={fmtMoney(data?.financial?.total_paid ?? 0)}
+          hint={t("clients.details.kpi.hintPayments")}
+        />
+        <KpiCard
+          label={t("clients.details.kpi.balance")}
+          value={fmtMoney(data?.financial?.balance ?? 0)}
+          hint={t("clients.details.kpi.hintBalance")}
+        />
+        <KpiCard
+          label="إيراد الرحلات بالشهر"
+          value={fmtMoney(data?.financial?.monthly_trip_revenue ?? 0)}
+          hint="إجمالي إيراد الرحلات لهذا الشهر"
+        />
       </div>
 
-      {toast && <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <KpiCard
+          label="إجمالي الرحلات هذا الشهر"
+          value={String(data?.operations?.total_trips_this_month ?? 0)}
+        />
+        <KpiCard
+          label="المواقع النشطة"
+          value={String(data?.operations?.active_sites_count ?? 0)}
+        />
+        <KpiCard
+          label="إجمالي المواقع"
+          value={String(data?.operations?.total_sites_count ?? 0)}
+        />
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-4">
+        <div className="text-sm font-semibold mb-3">{t("clients.details.profile.title")}</div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+          <div>
+            <div className="text-xs text-slate-500">{t("clients.details.profile.name")}</div>
+            <div className="mt-1 font-medium">{client?.name || "—"}</div>
+          </div>
+
+          <div>
+            <div className="text-xs text-slate-500">{t("clients.details.profile.email")}</div>
+            <div className="mt-1 font-medium">{client?.email || "—"}</div>
+          </div>
+
+          <div>
+            <div className="text-xs text-slate-500">{t("clients.details.profile.phone")}</div>
+            <div className="mt-1 font-medium">{client?.phone || "—"}</div>
+          </div>
+
+          <div>
+            <div className="text-xs text-slate-500">{t("clients.details.profile.hqAddress")}</div>
+            <div className="mt-1 font-medium">{client?.hq_address || "—"}</div>
+          </div>
+
+          <div>
+            <div className="text-xs text-slate-500">{t("clients.details.profile.contactName")}</div>
+            <div className="mt-1 font-medium">{client?.contact_name || "—"}</div>
+          </div>
+
+          <div>
+            <div className="text-xs text-slate-500">{t("clients.details.profile.contactPhone")}</div>
+            <div className="mt-1 font-medium">{client?.contact_phone || "—"}</div>
+          </div>
+
+          <div>
+            <div className="text-xs text-slate-500">{t("clients.details.profile.contactEmail")}</div>
+            <div className="mt-1 font-medium">{client?.contact_email || "—"}</div>
+          </div>
+
+          <div>
+            <div className="text-xs text-slate-500">{t("clients.details.profile.taxNo")}</div>
+            <div className="mt-1 font-medium">{client?.tax_no || "—"}</div>
+          </div>
+
+          <div className="md:col-span-3">
+            <div className="text-xs text-slate-500">{t("clients.details.profile.notes")}</div>
+            <div className="mt-1 font-medium">{client?.notes || "—"}</div>
+          </div>
+        </div>
+      </div>
+
+      <DataTable
+        title={t("clients.details.sites.title")}
+        subtitle={t("clients.details.sites.subtitle").replace("{month}", month)}
+        columns={siteColumns}
+        rows={data?.sites || []}
+        loading={loading}
+        emptyTitle={t("clients.details.sites.empty")}
+        emptyHint={t("clients.details.sites.emptyHint") || ""}
+      />
+
+      <ConfirmDialog
+        open={toggleOpen}
+        title={t("common.confirm")}
+        description={
+          client?.is_active
+            ? t("clients.confirm.disableDesc")
+            : t("clients.confirm.enableDesc")
+        }
+        confirmText={client?.is_active ? t("common.disable") : t("common.enable")}
+        cancelText={t("common.cancel")}
+        tone="warning"
+        isLoading={toggleLoading}
+        onClose={() => {
+          if (toggleLoading) return;
+          setToggleOpen(false);
+        }}
+        onConfirm={doToggle}
+      />
+
+      {toast && (
+        <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />
+      )}
     </div>
   );
 }
