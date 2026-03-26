@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { contractsService } from "@/src/services/contracts.service";
@@ -22,13 +22,19 @@ type ToastState =
 export default function NewContractClientPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialClientId = searchParams.get("client_id") || "";
+
+  // ✅ حل آمن مع Next build
+  const initialValues = useMemo(() => {
+    return {
+      client_id: searchParams.get("client_id") || "",
+    };
+  }, [searchParams]);
 
   const [toast, setToast] = useState<ToastState>(null);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState<ContractPayload>({
-    client_id: initialClientId,
+    client_id: "",
     contract_no: "",
     start_date: "",
     end_date: "",
@@ -38,6 +44,16 @@ export default function NewContractClientPage() {
     notes: "",
     status: "ACTIVE",
   });
+
+  // ✅ تحميل القيم من URL بعد mount
+  useEffect(() => {
+    if (initialValues.client_id) {
+      setForm((prev) => ({
+        ...prev,
+        client_id: initialValues.client_id,
+      }));
+    }
+  }, [initialValues]);
 
   function setField<K extends keyof ContractPayload>(key: K, value: ContractPayload[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -64,7 +80,9 @@ export default function NewContractClientPage() {
         contract_no: form.contract_no || null,
         end_date: form.end_date || null,
         contract_value:
-          form.contract_value === null || form.contract_value === undefined || form.contract_value === ("" as any)
+          form.contract_value === null ||
+          form.contract_value === undefined ||
+          form.contract_value === ("" as any)
             ? null
             : Number(form.contract_value),
         currency: form.currency || "EGP",
@@ -73,6 +91,7 @@ export default function NewContractClientPage() {
       });
 
       setToast({ type: "success", message: "تم إنشاء العقد بنجاح" });
+
       router.push(`/contracts/${created.id}`);
     } catch (error: any) {
       setToast({
@@ -121,7 +140,7 @@ export default function NewContractClientPage() {
               className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
               value={form.contract_no || ""}
               onChange={(e) => setField("contract_no", e.target.value)}
-              placeholder="مثال: CNT-2026-001"
+              placeholder="CNT-2026-001"
             />
           </div>
 
@@ -171,39 +190,6 @@ export default function NewContractClientPage() {
                 )
               }
               placeholder="0"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">العملة</label>
-            <input
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.currency || "EGP"}
-              onChange={(e) => setField("currency", e.target.value)}
-              placeholder="EGP"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">الحالة</label>
-            <select
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.status || "ACTIVE"}
-              onChange={(e) => setField("status", e.target.value)}
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
-              <option value="EXPIRED">EXPIRED</option>
-            </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">ملاحظات</label>
-            <textarea
-              className="min-h-[120px] w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.notes || ""}
-              onChange={(e) => setField("notes", e.target.value)}
-              placeholder="أي ملاحظات إضافية"
             />
           </div>
 
