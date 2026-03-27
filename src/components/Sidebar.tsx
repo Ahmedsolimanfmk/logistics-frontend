@@ -47,65 +47,82 @@ export function Sidebar() {
   };
 
   const items = useMemo<(NavItem | NavGroup)[]>(
-  () => [
-    { labelKey: "sidebar.dashboard", href: "/dashboard" },
-    { labelKey: "sidebar.trips", href: "/trips" },
+    () => [
+      { labelKey: "sidebar.dashboard", href: "/dashboard" },
+      { labelKey: "sidebar.trips", href: "/trips" },
 
-    {
-      labelKey: "sidebar.finance",
-      key: "finance",
-      roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR"],
-      children: [
-        { labelKey: "sidebar.financeOverview", href: "/finance" },
-        { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
-        { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
-        { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
-        { labelKey: "sidebar.financeARClients", href: "/finance/ar/clients" },
-        { labelKey: "sidebar.financeARInvoices", href: "/finance/ar/invoices" },
-        { labelKey: "sidebar.financeARPayments", href: "/finance/ar/payments" },
-      ],
-    },
+      {
+        labelKey: "sidebar.finance",
+        key: "finance",
+        roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR"],
+        children: [
+          { labelKey: "sidebar.financeOverview", href: "/finance" },
+          { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
+          { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
+          { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
 
-    { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR"] },
-    { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR"] },
-    { labelKey: "sidebar.vehicles", href: "/vehicles", roles: ["ADMIN", "HR"] },
-    { labelKey: "sidebar.drivers", href: "/drivers", roles: ["ADMIN", "HR"] },
+          // كان /finance/ar/clients وده غير موجود فعلياً
+          { labelKey: "sidebar.financeARClients", href: "/finance/ar" },
 
-    { labelKey: "sidebar.cash", href: "/cash", roles: ["FIELD_SUPERVISOR"] },
+          { labelKey: "sidebar.financeARInvoices", href: "/finance/ar/invoices" },
+          { labelKey: "sidebar.financeARPayments", href: "/finance/ar/payments" },
+          { labelKey: "sidebar.financeARLedger", href: "/finance/ar/ledger" },
+        ],
+      },
 
-    {
-      labelKey: "sidebar.maintenance",
-      key: "maintenance",
-      roles: ["ADMIN", "HR", "ACCOUNTANT", "FIELD_SUPERVISOR"],
-      children: [
-        { labelKey: "sidebar.maintenanceRequests", href: "/maintenance/requests" },
-        { labelKey: "sidebar.maintenanceWorkOrders", href: "/maintenance/work-orders" },
-      ],
-    },
+      { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR"] },
+      { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR"] },
 
-    { labelKey: "sidebar.vendors", href: "/vendors", roles: ["ADMIN", "ACCOUNTANT", "HR"] },
+      // الصفحات الجديدة
+      {
+        labelKey: "sidebar.contracts",
+        href: "/contracts",
+        roles: ["ADMIN", "HR", "ACCOUNTANT"],
+      },
+      {
+        labelKey: "sidebar.contractPricing",
+        href: "/contract-pricing",
+        roles: ["ADMIN", "HR", "ACCOUNTANT"],
+      },
 
-    {
-      labelKey: "sidebar.inventory",
-      key: "inventory",
-      roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT"],
-      children: [
-        { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
-        { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
-        { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
-        { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
-      ],
-    },
+      { labelKey: "sidebar.vehicles", href: "/vehicles", roles: ["ADMIN", "HR"] },
+      { labelKey: "sidebar.drivers", href: "/drivers", roles: ["ADMIN", "HR"] },
 
-    { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN"] },
-    {
-      labelKey: "sidebar.supervisors",
-      href: "/supervisors",
-      roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR"],
-    },
-  ],
-  []
-);
+      { labelKey: "sidebar.cash", href: "/cash", roles: ["FIELD_SUPERVISOR"] },
+
+      {
+        labelKey: "sidebar.maintenance",
+        key: "maintenance",
+        roles: ["ADMIN", "HR", "ACCOUNTANT", "FIELD_SUPERVISOR"],
+        children: [
+          { labelKey: "sidebar.maintenanceRequests", href: "/maintenance/requests" },
+          { labelKey: "sidebar.maintenanceWorkOrders", href: "/maintenance/work-orders" },
+        ],
+      },
+
+      { labelKey: "sidebar.vendors", href: "/vendors", roles: ["ADMIN", "ACCOUNTANT", "HR"] },
+
+      {
+        labelKey: "sidebar.inventory",
+        key: "inventory",
+        roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT"],
+        children: [
+          { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
+          { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
+          { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
+          { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
+        ],
+      },
+
+      { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN"] },
+      {
+        labelKey: "sidebar.supervisors",
+        href: "/supervisors",
+        roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR"],
+      },
+    ],
+    []
+  );
 
   const canSee = (roles?: string[]) => {
     if (!roles || roles.length === 0) return true;
@@ -121,22 +138,27 @@ export function Sidebar() {
   });
 
   useEffect(() => {
-    if (pathname?.startsWith("/maintenance")) setOpen((p) => ({ ...p, maintenance: true }));
-    if (pathname?.startsWith("/finance")) setOpen((p) => ({ ...p, finance: true }));
-    if (pathname?.startsWith("/inventory")) setOpen((p) => ({ ...p, inventory: true }));
+    if (pathname?.startsWith("/maintenance")) {
+      setOpen((p) => ({ ...p, maintenance: true }));
+    }
+    if (pathname?.startsWith("/finance")) {
+      setOpen((p) => ({ ...p, finance: true }));
+    }
+    if (pathname?.startsWith("/inventory")) {
+      setOpen((p) => ({ ...p, inventory: true }));
+    }
   }, [pathname]);
 
   return (
     <aside className="h-screen w-[260px] shrink-0 border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] sticky top-0 flex flex-col shadow-[0_0_30px_rgba(0,0,0,0.06)]">
-      {/* Header */}
       <div className="p-4 border-b border-black/10 bg-[rgba(var(--trex-card),0.7)]">
         <div className="text-lg font-bold tracking-wide">{t("sidebar.appName")}</div>
         <div className="mt-1 text-xs text-slate-500">
-          {user?.full_name || user?.email || "—"} — <span className="text-slate-900">{role || "—"}</span>
+          {user?.full_name || user?.email || "—"} —{" "}
+          <span className="text-slate-900">{role || "—"}</span>
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="p-3 space-y-1 flex-1 overflow-auto">
         {items
           .filter((it) => canSee((it as any).roles))
@@ -201,7 +223,6 @@ export function Sidebar() {
           })}
       </nav>
 
-      {/* Footer */}
       <div className="p-3 border-t border-black/10">
         <button
           onClick={logout}
