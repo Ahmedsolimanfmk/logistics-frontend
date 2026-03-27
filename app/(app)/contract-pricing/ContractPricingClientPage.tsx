@@ -162,7 +162,7 @@ export default function ContractPricingClientPage() {
 
       setItems(res.items || []);
       setTotal(res.total || 0);
-      setPages(res.meta?.pages || 1);
+      setPages(res.pages || 1);
     } catch (e: any) {
       setItems([]);
       setTotal(0);
