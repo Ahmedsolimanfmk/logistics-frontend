@@ -6,11 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-import {
-  tripRevenuesService,
-  type TripRevenue,
-  type TripRevenueSource,
-} from "@/src/services/trip-revenues.service";
+import { tripRevenuesService } from "@/src/services/trip-revenues.service";
+
+import type {
+  TripRevenue,
+  TripRevenueSource,
+} from "@/src/types/trip-revenues.types";
 import { tripsService } from "@/src/services/trips.service";
 
 function cn(...v: Array<string | false | null | undefined>) {
