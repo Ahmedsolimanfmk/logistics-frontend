@@ -13,7 +13,7 @@ export default async function PartItemsPage() {
         <ul className="space-y-2">
           {items.map((item) => (
             <li key={item.id} className="border p-2 rounded">
-              {item.name || item.id}
+              {item.name || item.parts?.name || item.internal_serial || item.id}
             </li>
           ))}
         </ul>
