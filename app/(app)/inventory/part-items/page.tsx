@@ -1,25 +1,23 @@
-import { api } from "@/src/lib/api";
-import type {
-  PartItem,
-  PartItemsFilters,
-} from "@/src/types/part-items.types";
+import { partItemsService } from "@/src/services/part-items.service";
 
-function asArray<T = unknown>(body: any): T[] {
-  if (Array.isArray(body)) return body as T[];
-  if (Array.isArray(body?.items)) return body.items as T[];
-  if (Array.isArray(body?.data?.items)) return body.data.items as T[];
-  if (Array.isArray(body?.data)) return body.data as T[];
-  return [];
+export default async function PartItemsPage() {
+  const items = await partItemsService.list();
+
+  return (
+    <div className="p-4">
+      <h1 className="text-xl font-bold mb-4">Part Items</h1>
+
+      {items.length === 0 ? (
+        <p>No items found</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item) => (
+            <li key={item.id} className="border p-2 rounded">
+              {item.name || item.id}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
-
-export const partItemsService = {
-  async list(filters: PartItemsFilters = {}): Promise<PartItem[]> {
-    const res = await api.get("/inventory/part-items", {
-      params: filters,
-    });
-
-    return asArray<PartItem>(res.data ?? res);
-  },
-};
-
-export default partItemsService;

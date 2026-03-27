@@ -12,13 +12,23 @@ function asArray<T = unknown>(body: any): T[] {
   return [];
 }
 
+function normalizePartItem(item: PartItem): PartItem {
+  return {
+    ...item,
+    name: item.name ?? item.parts?.name ?? null,
+    brand: item.brand ?? item.parts?.brand ?? null,
+    category: item.category ?? item.parts?.category ?? null,
+    unit: item.unit ?? item.parts?.unit ?? null,
+  };
+}
+
 export const partItemsService = {
   async list(filters: PartItemsFilters = {}): Promise<PartItem[]> {
     const res = await api.get("/inventory/part-items", {
       params: filters,
     });
 
-    return asArray<PartItem>(res.data ?? res);
+    return asArray<PartItem>(res.data ?? res).map(normalizePartItem);
   },
 };
 

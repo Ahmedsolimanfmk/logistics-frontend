@@ -30,6 +30,12 @@ export interface PartItem {
 
   parts?: PartRef | null;
   warehouses?: WarehouseRef | null;
+
+  // frontend-friendly flattened fields
+  name?: string | null;
+  brand?: string | null;
+  category?: string | null;
+  unit?: string | null;
 }
 
 export interface PartItemsFilters {
