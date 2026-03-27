@@ -5,10 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
-import { getInventoryRequest, type InventoryRequest } from "@/src/lib/inventory.api";
-import { createIssueDraft } from "@/src/lib/issues.api";
 
-// ✅ Design System
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
@@ -16,7 +13,14 @@ import { FiltersBar } from "@/src/components/ui/FiltersBar";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
-function shortId(id: any) {
+import { inventoryIssuesService } from "@/src/services/inventory-issues.service";
+import type {
+  InventoryRequest,
+  PartItem,
+  ToastType,
+} from "@/src/types/inventory-issues.types";
+
+function shortId(id: unknown) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
@@ -28,106 +32,129 @@ export default function NewIssueClientPage() {
   const sp = useSearchParams();
 
   const requestId = sp.get("requestId") || "";
-  const showRequest = !!requestId;
+  const showRequest = Boolean(requestId);
 
   const [loading, setLoading] = useState(false);
-  const [reqRow, setReqRow] = useState<InventoryRequest | null>(null);
+  const [requestRow, setRequestRow] = useState<InventoryRequest | null>(null);
 
   const [warehouseId, setWarehouseId] = useState("");
   const [workOrderId, setWorkOrderId] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [toast, setToast] = useState({
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    type: ToastType;
+  }>({
     open: false,
     message: "",
-    type: "success" as "success" | "error",
+    type: "success",
   });
 
-  const showError = (msg: string) => setToast({ open: true, message: msg, type: "error" });
-  const showOk = (msg: string) => setToast({ open: true, message: msg, type: "success" });
+  function showToast(message: string, type: ToastType) {
+    setToast({ open: true, message, type });
+  }
 
-  const reservedItems = useMemo(() => {
-    const res: any[] = (reqRow as any)?.reservations || [];
-    return res
-      .map((r) => r?.part_items)
-      .filter(Boolean)
-      .map((x) => x!);
-  }, [reqRow]);
+  const reservedItems = useMemo<PartItem[]>(() => {
+    const reservations = requestRow?.reservations || [];
+    return reservations
+      .map((reservation) => reservation?.part_items || null)
+      .filter(Boolean) as PartItem[];
+  }, [requestRow]);
 
   useEffect(() => {
-    const boot = async () => {
+    async function boot() {
       if (!requestId) return;
 
       setLoading(true);
       try {
-        const r = await getInventoryRequest(requestId);
-        setReqRow(r);
-        setWarehouseId((r as any)?.warehouse_id || "");
-        setWorkOrderId((r as any)?.work_order_id || "");
-      } catch (e: any) {
-        showError(e?.message || t("common.failed"));
+        const request = await inventoryIssuesService.getInventoryRequest(requestId);
+        setRequestRow(request);
+        setWarehouseId(request?.warehouse_id || "");
+        setWorkOrderId(request?.work_order_id || "");
+      } catch (error: any) {
+        showToast(error?.message || t("common.failed"), "error");
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     boot();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestId]);
+  }, [requestId, t]);
 
-  const onCreate = async () => {
-    if (!warehouseId.trim()) return showError(t("issues.errWarehouse"));
-    if (!workOrderId.trim()) return showError(t("issues.errWorkOrder"));
-    if (!requestId) return showError(t("issues.errRequestId"));
-    if (reservedItems.length === 0) return showError(t("issues.errNoReserved"));
+  async function onCreate() {
+    if (!warehouseId.trim()) {
+      showToast(t("issues.errWarehouse"), "error");
+      return;
+    }
+
+    if (!workOrderId.trim()) {
+      showToast(t("issues.errWorkOrder"), "error");
+      return;
+    }
+
+    if (!requestId) {
+      showToast(t("issues.errRequestId"), "error");
+      return;
+    }
+
+    if (reservedItems.length === 0) {
+      showToast(t("issues.errNoReserved"), "error");
+      return;
+    }
 
     setLoading(true);
     try {
-      const created = await createIssueDraft({
+      const created = await inventoryIssuesService.createIssueDraft({
         warehouse_id: warehouseId.trim(),
         work_order_id: workOrderId.trim(),
         request_id: requestId,
         notes: notes.trim() ? notes.trim() : null,
-        lines: reservedItems.map((pi: any) => ({
-          part_id: pi.part_id,
-          part_item_id: pi.id,
+        lines: reservedItems.map((item) => ({
+          part_id: item.part_id,
+          part_item_id: item.id,
           qty: 1,
         })),
       });
 
-      showOk(t("issues.createdOk"));
+      showToast(t("issues.createdOk"), "success");
       router.push(`/inventory/issues/${created.id}`);
-    } catch (e: any) {
-      showError(e?.response?.data?.message || e?.message || t("common.failed"));
+    } catch (error: any) {
+      showToast(
+        error?.response?.data?.message || error?.message || t("common.failed"),
+        "error"
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const columns: DataTableColumn<any>[] = [
+  const columns: DataTableColumn<PartItem>[] = [
     {
       key: "part",
       label: t("issues.colPart"),
-      render: (pi) => (
+      render: (item) => (
         <div>
-          <div className="text-gray-900">{pi?.parts?.name || "—"}</div>
-          <div className="text-xs text-gray-500 font-mono">{shortId(pi?.part_id)}</div>
+          <div className="text-gray-900">{item?.parts?.name || "—"}</div>
+          <div className="text-xs text-gray-500 font-mono">
+            {shortId(item?.part_id)}
+          </div>
         </div>
       ),
     },
     {
       key: "serial",
       label: t("issues.colSerial"),
-      render: (pi) => (
+      render: (item) => (
         <div className="font-mono text-xs text-gray-900">
-          {pi?.internal_serial || pi?.manufacturer_serial || pi?.id || "—"}
+          {item?.internal_serial || item?.manufacturer_serial || item?.id || "—"}
         </div>
       ),
     },
     {
       key: "status",
       label: t("issues.colStatus"),
-      render: (pi) => <StatusBadge status={pi?.status} />,
+      render: (item) => <StatusBadge status={item?.status} />,
     },
   ];
 
@@ -137,7 +164,7 @@ export default function NewIssueClientPage() {
         open={toast.open}
         message={toast.message}
         type={toast.type}
-        onClose={() => setToast((p) => ({ ...p, open: false }))}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
       />
 
       <PageHeader
@@ -155,7 +182,6 @@ export default function NewIssueClientPage() {
         }
       />
 
-      {/* Form */}
       <Card>
         {showRequest ? (
           <div className="text-sm text-gray-700">
@@ -191,7 +217,9 @@ export default function NewIssueClientPage() {
               <>
                 {requestId ? (
                   <Link href={`/inventory/requests/${requestId}`}>
-                    <Button variant="secondary">{t("common.open") || "Open Request"}</Button>
+                    <Button variant="secondary">
+                      {t("common.open") || "Open Request"}
+                    </Button>
                   </Link>
                 ) : null}
 
@@ -214,17 +242,20 @@ export default function NewIssueClientPage() {
         </div>
 
         <div className="mt-3 text-xs text-gray-500">
-          warehouse_id: <span className="font-mono">{warehouseId ? shortId(warehouseId) : "—"}</span>
+          warehouse_id:{" "}
+          <span className="font-mono">
+            {warehouseId ? shortId(warehouseId) : "—"}
+          </span>
           {workOrderId ? (
             <>
               {" "}
-              • work_order_id: <span className="font-mono">{shortId(workOrderId)}</span>
+              • work_order_id:{" "}
+              <span className="font-mono">{shortId(workOrderId)}</span>
             </>
           ) : null}
         </div>
       </Card>
 
-      {/* Preview reserved items */}
       <DataTable
         title={t("issues.linesPreview")}
         subtitle={

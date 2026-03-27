@@ -1,210 +1,341 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
-import { unwrapItems } from "@/src/lib/api";
-import { listIssues, type InventoryIssue } from "@/src/lib/issues.api";
 
-// ✅ Design System
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
-function fmtDate(d?: string | null) {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
-}
+import { inventoryIssuesService } from "@/src/services/inventory-issues.service";
+import type {
+  PartItem,
+  ToastType,
+} from "@/src/types/inventory-issues.types";
 
-function shortId(id: any) {
+function shortId(id: unknown) {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
 const inputCls =
-"w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none " +
-  "text-gray-900 placeholder:text-gray-400 focus:border-gray-300";
-export default function InventoryIssuesPage() {
+  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none text-gray-900 placeholder:text-gray-400 focus:border-gray-300";
+
+const textareaCls =
+  "w-full min-h-[90px] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none text-gray-900 placeholder:text-gray-400 focus:border-gray-300";
+
+export default function NewDirectIssueClientPage() {
   const t = useT();
+  const router = useRouter();
 
-  const [status, setStatus] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
-  const [requestId, setRequestId] = useState("");
   const [workOrderId, setWorkOrderId] = useState("");
+  const [notes, setNotes] = useState("");
 
+  const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<InventoryIssue[]>([]);
 
-  const [toast, setToast] = useState({
+  const [stock, setStock] = useState<PartItem[]>([]);
+  const [selected, setSelected] = useState<Record<string, PartItem>>({});
+
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    type: ToastType;
+  }>({
     open: false,
     message: "",
-    type: "success" as "success" | "error",
+    type: "success",
   });
 
-  const items = useMemo(() => rows || [], [rows]);
+  function showToast(message: string, type: ToastType) {
+    setToast({ open: true, message, type });
+  }
 
-  const load = async () => {
+  function toggle(item: PartItem) {
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (next[item.id]) delete next[item.id];
+      else next[item.id] = item;
+      return next;
+    });
+  }
+
+  const selectedList = useMemo(() => Object.values(selected), [selected]);
+  const selectedCount = selectedList.length;
+
+  const canLoad = Boolean(warehouseId.trim());
+  const canCreate =
+    Boolean(warehouseId.trim()) &&
+    Boolean(workOrderId.trim()) &&
+    Boolean(notes.trim()) &&
+    notes.trim().length >= 5 &&
+    selectedCount > 0;
+
+  async function loadStock() {
+    if (!warehouseId.trim()) {
+      showToast(t("directIssue.errWarehouse"), "error");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await listIssues({
-        status: status || undefined,
-        warehouse_id: warehouseId || undefined,
-        request_id: requestId || undefined,
-        work_order_id: workOrderId || undefined,
+      const items = await inventoryIssuesService.listPartItems({
+        warehouse_id: warehouseId.trim(),
+        status: "IN_STOCK",
+        q: q.trim() || undefined,
       });
-      setRows(unwrapItems<InventoryIssue>(res));
-    } catch (e: any) {
-      setToast({
-        open: true,
-        message: e?.response?.data?.message || e?.message || t("common.failed"),
-        type: "error",
-      });
+      setStock(items);
+    } catch (error: any) {
+      showToast(
+        error?.response?.data?.message || error?.message || t("common.failed"),
+        "error"
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  async function onCreateDraft() {
+    if (!warehouseId.trim()) {
+      showToast(t("directIssue.errWarehouse"), "error");
+      return;
+    }
+    if (!workOrderId.trim()) {
+      showToast(t("directIssue.errWorkOrder"), "error");
+      return;
+    }
+    if (!notes.trim() || notes.trim().length < 5) {
+      showToast(t("directIssue.errNotes"), "error");
+      return;
+    }
+    if (selectedCount === 0) {
+      showToast(t("directIssue.errPick"), "error");
+      return;
+    }
 
-  const reset = () => {
-    setStatus("");
-    setWarehouseId("");
-    setRequestId("");
-    setWorkOrderId("");
-    setTimeout(load, 0);
-  };
+    setLoading(true);
+    try {
+      const created = await inventoryIssuesService.createIssueDraft({
+        warehouse_id: warehouseId.trim(),
+        work_order_id: workOrderId.trim(),
+        request_id: null,
+        notes: notes.trim(),
+        lines: selectedList.map((item) => ({
+          part_id: item.part_id,
+          part_item_id: item.id,
+          qty: 1,
+        })),
+      });
+
+      showToast(t("directIssue.createdOk"), "success");
+      router.push(`/inventory/issues/${created.id}`);
+    } catch (error: any) {
+      showToast(
+        error?.response?.data?.message || error?.message || t("common.failed"),
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const columns: DataTableColumn<PartItem>[] = [
+    {
+      key: "pick",
+      label: t("directIssue.colPick"),
+      render: (item) => {
+        const isSelected = Boolean(selected[item.id]);
+        return (
+          <Button
+            variant={isSelected ? "primary" : "secondary"}
+            onClick={() => toggle(item)}
+            disabled={loading}
+          >
+            {isSelected ? t("directIssue.picked") : t("directIssue.pick")}
+          </Button>
+        );
+      },
+    },
+    {
+      key: "serial",
+      label: t("directIssue.colSerial"),
+      render: (item) => (
+        <div>
+          <div className="font-mono text-xs text-gray-900">
+            {item.internal_serial || "—"}
+          </div>
+          <div className="font-mono text-xs text-gray-600">
+            {item.manufacturer_serial || "—"}
+          </div>
+          <div className="font-mono text-[11px] text-gray-500">
+            {shortId(item.id)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "part",
+      label: t("directIssue.colPart"),
+      render: (item) => (
+        <div>
+          <div className="text-gray-900">{item.parts?.name || "—"}</div>
+          <div className="text-xs text-gray-600">{item.parts?.brand || ""}</div>
+          <div className="text-xs text-gray-500 font-mono">
+            {shortId(item.part_id)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "warehouse",
+      label: t("directIssue.colWarehouse"),
+      render: (item) => (
+        <div>
+          <div className="text-gray-900">{item.warehouses?.name || "—"}</div>
+          <div className="text-xs text-gray-500 font-mono">
+            {shortId(item.warehouse_id)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      label: t("directIssue.colStatus"),
+      render: (item) => <StatusBadge status={item.status} />,
+    },
+  ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       <Toast
         open={toast.open}
         message={toast.message}
         type={toast.type}
-        onClose={() => setToast((p) => ({ ...p, open: false }))}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
       />
 
       <PageHeader
-        title={t("issues.title") || "أذون الصرف"}
-        subtitle={t("issues.subtitle") || "إدارة وإصدار أذون الصرف من المخزن"}
+        title={t("directIssue.title")}
+        subtitle={t("directIssue.subtitle")}
         actions={
-          <div className="flex gap-2">
-            <Link href="/inventory/issues/new">
-              <Button variant="secondary">{t("issues.new") || "إذن صرف جديد"}</Button>
-            </Link>
-            <Button variant="secondary" onClick={load} isLoading={loading}>
-              {t("common.refresh") || "تحديث"}
+          <>
+            <Button variant="secondary" onClick={() => router.back()}>
+              {t("common.prev")}
             </Button>
-          </div>
+            <Button
+              variant="primary"
+              onClick={onCreateDraft}
+              isLoading={loading}
+              disabled={!canCreate}
+            >
+              {t("directIssue.createDraft")}
+            </Button>
+          </>
         }
       />
 
-      {/* Filters */}
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div>
-            <div className="text-xs text-gray-500 mb-1">{t("issues.filterStatus") || "الحالة"}</div>
-            <input value={status} onChange={(e) => setStatus(e.target.value)} placeholder="DRAFT / POSTED / ..." className={inputCls} />
-          </div>
+        <FiltersBar
+          left={
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full">
+              <input
+                value={warehouseId}
+                onChange={(e) => setWarehouseId(e.target.value)}
+                placeholder={t("directIssue.warehouseId") || "warehouse_id"}
+                className={inputCls}
+              />
+              <input
+                value={workOrderId}
+                onChange={(e) => setWorkOrderId(e.target.value)}
+                placeholder={t("directIssue.workOrderId") || "work_order_id"}
+                className={inputCls}
+              />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("directIssue.searchPh")}
+                className={inputCls}
+              />
+            </div>
+          }
+          right={
+            <>
+              <Button
+                variant="secondary"
+                onClick={loadStock}
+                isLoading={loading}
+                disabled={!canLoad}
+              >
+                {t("directIssue.loadStock")}
+              </Button>
 
-          <div>
-            <div className="text-xs text-gray-500 mb-1">{t("issues.filterWarehouseId") || "warehouse_id"}</div>
-            <input value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} placeholder="uuid" className={inputCls} />
-          </div>
+              <Button
+                variant="secondary"
+                onClick={() => setSelected({})}
+                disabled={selectedCount === 0 || loading}
+              >
+                {t("common.clear")}
+              </Button>
+            </>
+          }
+        />
 
-          <div>
-            <div className="text-xs text-gray-500 mb-1">{t("issues.filterRequestId") || "request_id"}</div>
-            <input value={requestId} onChange={(e) => setRequestId(e.target.value)} placeholder="uuid" className={inputCls} />
-          </div>
-
-          <div>
-            <div className="text-xs text-gray-500 mb-1">{t("issues.filterWorkOrderId") || "work_order_id"}</div>
-            <input value={workOrderId} onChange={(e) => setWorkOrderId(e.target.value)} placeholder="uuid" className={inputCls} />
-          </div>
+        <div className="mt-3">
+          <div className="text-xs text-slate-400 mb-1">{t("directIssue.notes")}</div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t("directIssue.notesPh")}
+            className={textareaCls}
+          />
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2 items-center">
-          <Button variant="primary" onClick={load} isLoading={loading}>
-            {t("common.search") || "بحث"}
-          </Button>
-          <Button variant="secondary" onClick={reset} disabled={loading}>
-            {t("common.reset") || "إعادة ضبط"}
-          </Button>
+        <div className="mt-3 text-sm text-gray-700">
+          {t("directIssue.selectedCount", { n: selectedCount })}{" "}
+          {selectedCount ? (
+            <span className="text-gray-500">
+              ({selectedList
+                .map((item) => shortId(item.id))
+                .slice(0, 3)
+                .join(", ")}
+              {selectedCount > 3 ? "…" : ""})
+            </span>
+          ) : null}
+        </div>
 
-          <div className="ml-auto text-xs text-gray-500">
-            {t("common.count") || "العدد"}: <span className="text-gray-700 font-semibold">{items.length}</span>
-          </div>
+        <div className="mt-3 flex gap-2">
+          <Button
+            variant="primary"
+            onClick={onCreateDraft}
+            isLoading={loading}
+            disabled={!canCreate}
+          >
+            {t("directIssue.createDraft")}
+          </Button>
+          <Link href="/inventory/part-items">
+            <Button variant="secondary">{t("partItems.title")}</Button>
+          </Link>
         </div>
       </Card>
 
-      {/* Table */}
-      <Card>
-        <div className="overflow-hidden rounded-2xl border border-border-gray-200">
-          <div className="overflow-auto">
-            <table className="min-w-[1100px] w-full text-sm">
-              <thead className="bg-gray-50 text-gray-700">
-                <tr>
-                  <th className="text-left px-4 py-3">{t("issues.colId") || "ID"}</th>
-                  <th className="text-left px-4 py-3">{t("issues.colStatus") || "الحالة"}</th>
-                  <th className="text-left px-4 py-3">{t("issues.colWarehouse") || "المخزن"}</th>
-                  <th className="text-left px-4 py-3">{t("issues.colRequest") || "الطلب"}</th>
-                  <th className="text-left px-4 py-3">{t("issues.colWorkOrder") || "أمر الشغل"}</th>
-                  <th className="text-left px-4 py-3">{t("issues.colLines") || "البنود"}</th>
-                  <th className="text-left px-4 py-3">{t("issues.colCreatedAt") || "تاريخ الإنشاء"}</th>
-                  <th className="text-left px-4 py-3">{t("issues.colOpen") || "فتح"}</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {items.map((r) => (
-                  <tr key={r.id} className="border-t border-gray-200">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-700/600">{shortId(r.id)}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={r.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-gray-900">{r.warehouses?.name || "—"}</div>
-                      <div className="text-xs text-gray-500 font-mono">{shortId(r.warehouse_id)}</div>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-700">{r.request_id ? shortId(r.request_id) : "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-700">{r.work_order_id ? shortId(r.work_order_id) : "—"}</td>
-                    <td className="px-4 py-3 text-gray-700">{r.inventory_issue_lines?.length ?? 0}</td>
-                    <td className="px-4 py-3 text-gray-700/600">{fmtDate(r.created_at)}</td>
-                    <td className="px-4 py-3">
-                      <Link href={`/inventory/issues/${r.id}`} className="inline-flex px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 hover:bg-white/10">
-                        {t("common.open") || "فتح"}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-
-                {!loading && items.length === 0 && (
-                  <tr>
-                    <td className="px-4 py-6 text-gray-500" colSpan={8}>
-                      {t("common.noData") || "لا توجد بيانات"}
-                    </td>
-                  </tr>
-                )}
-
-                {loading && (
-                  <tr>
-                    <td className="px-4 py-6 text-gray-500" colSpan={8}>
-                      {t("common.loading") || "جاري التحميل..."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </Card>
+      <DataTable
+        title={t("directIssue.stockTitle")}
+        subtitle={t("directIssue.subtitle")}
+        columns={columns}
+        rows={stock}
+        loading={loading}
+        emptyTitle={t("directIssue.noStock")}
+        emptyHint={t("directIssue.noStockHint") || "اختر مخزن ثم اضغط تحميل المتاح"}
+        minWidthClassName="min-w-[1100px]"
+      />
     </div>
   );
 }

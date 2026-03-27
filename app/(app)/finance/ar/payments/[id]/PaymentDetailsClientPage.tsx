@@ -98,9 +98,9 @@ export default function PaymentDetailsClientPage({ id }: { id: string }) {
     setLoading(true);
     try {
       const res = await getArPaymentById(paymentId);
-      setPayment(res.payment);
-      setAllocations(res.allocations || []);
-      setTotals(res.totals || { allocated: 0, remaining: 0 });
+      setPayment(res?.payment ?? null);
+setAllocations(Array.isArray(res?.allocations) ? res.allocations : []);
+setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
     } catch (e: any) {
       setToast({
         open: true,

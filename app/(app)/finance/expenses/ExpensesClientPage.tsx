@@ -1,15 +1,12 @@
-// app/(app)/finance/expenses/ExpensesClientPage.tsx
 "use client";
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
-import { api } from "@/src/lib/api";
-import { useAuth } from "@/src/store/auth";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Toast } from "@/src/components/Toast";
+import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-// ✅ UI System
+import { Toast } from "@/src/components/Toast";
 import { Button } from "@/src/components/ui/Button";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { PageHeader } from "@/src/components/ui/PageHeader";
@@ -20,42 +17,40 @@ import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { TabsBar } from "@/src/components/ui/TabsBar";
 import { Card } from "@/src/components/ui/Card";
 
-function roleUpper(r: any) {
-  return String(r || "").toUpperCase();
+import { cashExpensesService } from "@/src/services/cash-expenses.service";
+import type {
+  CashExpense,
+  CashExpenseListStatusFilter,
+  CashExpenseSummaryTotals,
+} from "@/src/types/cash-expenses.types";
+
+function roleUpper(role: unknown): string {
+  return String(role || "").toUpperCase();
 }
 
-function fmtMoney(n: any) {
-  const v = Number(n || 0);
+function fmtMoney(value: unknown): string {
+  const v = Number(value || 0);
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
 
-function fmtDate(d?: string | null) {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
+function fmtDate(value?: string | null): string {
+  if (!value) return "—";
+  const d = new Date(String(value));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString("ar-EG");
 }
 
-function shortId(id: any) {
+function shortId(id: unknown): string {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
-type TabKey = "PENDING" | "APPROVED" | "REJECTED" | "APPEALED" | "ALL";
+function expenseStatus(expense: CashExpense): string {
+  return String(expense.approval_status || expense.status || "").toUpperCase();
+}
 
-type ExpenseRow = {
-  id: string;
-  amount?: number;
-  expense_type?: string | null;
-  approval_status?: string | null;
-  status?: string | null;
-  trip_id?: string | null;
-  vehicle_id?: string | null;
-  created_at?: string | null;
-  rejection_reason?: string | null;
-  vehicles?: { plate_no?: string | null; plate_number?: string | null } | null;
-};
+type TabKey = CashExpenseListStatusFilter;
 
 export default function ExpensesClientPage(): React.ReactElement {
   const t = useT();
@@ -76,16 +71,16 @@ export default function ExpensesClientPage(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const [items, setItems] = useState<ExpenseRow[]>([]);
+  const [items, setItems] = useState<CashExpense[]>([]);
   const [total, setTotal] = useState(0);
-  const [summary, setSummary] = useState<any | null>(null);
+  const [summary, setSummary] = useState<CashExpenseSummaryTotals | null>(null);
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
-  // Toast
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
+
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
     setToastMsg(msg);
@@ -93,50 +88,41 @@ export default function ExpensesClientPage(): React.ReactElement {
     setTimeout(() => setToastOpen(false), 2500);
   }
 
-  const setParam = (k: string, v: string) => {
-    const p = new URLSearchParams(sp.toString());
-    if (v) p.set(k, v);
-    else p.delete(k);
-    if (k !== "page") p.set("page", "1");
-    router.push(`/finance/expenses?${p.toString()}`);
+  const setParam = (key: string, value: string) => {
+    const params = new URLSearchParams(sp.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+
+    if (key !== "page") params.set("page", "1");
+
+    router.push(`/finance/expenses?${params.toString()}`);
   };
 
   const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
 
   async function load() {
-    if (token === null) return;
-    if (!token) return;
+    if (token === null || !token) return;
 
     setLoading(true);
     setErr(null);
 
     try {
       const [listRes, summaryRes] = await Promise.all([
-        api.get("/cash/cash-expenses", {
-          params: {
-            status: status === "ALL" ? undefined : status,
-            page,
-            page_size: pageSize,
-            q: q || undefined,
-          },
+        cashExpensesService.list({
+          status,
+          page,
+          page_size: pageSize,
+          q: q || undefined,
         }),
-        api.get("/cash/cash-expenses/summary", {
-          params: {
-            status: status === "ALL" ? undefined : status,
-            q: q || undefined,
-          },
+        cashExpensesService.getSummary({
+          status,
+          q: q || undefined,
         }),
       ]);
 
-      const listData = (listRes as any)?.data ?? listRes;
-      const list = Array.isArray(listData) ? listData : (listData as any)?.items || [];
-      const tTotal = Array.isArray(listData) ? list.length : Number((listData as any)?.total || 0);
-
-      setItems(Array.isArray(list) ? list : []);
-      setTotal(tTotal);
-
-      const sumData = (summaryRes as any)?.data ?? summaryRes;
-      setSummary(sumData?.totals || null);
+      setItems(listRes.items);
+      setTotal(listRes.total);
+      setSummary(summaryRes.totals);
 
       showToast("success", t("common.refresh"));
     } catch (e: any) {
@@ -157,11 +143,6 @@ export default function ExpensesClientPage(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qsKey, token]);
 
-  function normStatus(x: any) {
-    return String(x?.approval_status || x?.status || "").toUpperCase();
-  }
-
-  // ====== Approve / Reject dialogs ======
   const [approveOpen, setApproveOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -187,26 +168,29 @@ export default function ExpensesClientPage(): React.ReactElement {
   }
 
   async function submitApprove() {
-    if (!canReview) return;
-    if (!activeId) return;
+    if (!canReview || !activeId) return;
 
     setBusy(true);
     try {
-      await api.post(`/cash/cash-expenses/${activeId}/approve`, { notes: approveNotes || null });
+      await cashExpensesService.approve(activeId, {
+        notes: approveNotes || null,
+      });
       showToast("success", t("common.save") || t("common.saved") || "تم الحفظ");
       setApproveOpen(false);
       setActiveId("");
       await load();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("financeExpenses.errors.approveFailed"));
+      showToast(
+        "error",
+        e?.response?.data?.message || e?.message || t("financeExpenses.errors.approveFailed")
+      );
     } finally {
       setBusy(false);
     }
   }
 
   async function submitReject() {
-    if (!canReview) return;
-    if (!activeId) return;
+    if (!canReview || !activeId) return;
 
     const reason = rejectReason.trim();
     const notes = rejectNotes.trim();
@@ -218,16 +202,19 @@ export default function ExpensesClientPage(): React.ReactElement {
 
     setBusy(true);
     try {
-      await api.post(`/cash/cash-expenses/${activeId}/reject`, {
+      await cashExpensesService.reject(activeId, {
         reason,
-        notes: notes ? notes : null,
+        notes: notes || null,
       });
       showToast("success", t("common.save") || t("common.saved") || "تم الحفظ");
       setRejectOpen(false);
       setActiveId("");
       await load();
     } catch (e: any) {
-      showToast("error", e?.response?.data?.message || e?.message || t("financeExpenses.errors.rejectFailed"));
+      showToast(
+        "error",
+        e?.response?.data?.message || e?.message || t("financeExpenses.errors.rejectFailed")
+      );
     } finally {
       setBusy(false);
     }
@@ -252,34 +239,29 @@ export default function ExpensesClientPage(): React.ReactElement {
       };
     }
 
-    const rows = Array.isArray(items) ? items : [];
-    const sumAll = rows.reduce((acc, x) => acc + Number(x?.amount || 0), 0);
-
-    const sumApproved = rows
-      .filter((x) => ["APPROVED", "REAPPROVED"].includes(normStatus(x)))
-      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
-
-    const sumPending = rows
-      .filter((x) => normStatus(x) === "PENDING")
-      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
-
-    const sumRejected = rows
-      .filter((x) => normStatus(x) === "REJECTED")
-      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
-
-    const sumAppealed = rows
-      .filter((x) => normStatus(x) === "APPEALED")
-      .reduce((acc, x) => acc + Number(x?.amount || 0), 0);
+    const sumAll = items.reduce((acc, x) => acc + Number(x.amount || 0), 0);
+    const sumApproved = items
+      .filter((x) => ["APPROVED", "REAPPROVED"].includes(expenseStatus(x)))
+      .reduce((acc, x) => acc + Number(x.amount || 0), 0);
+    const sumPending = items
+      .filter((x) => expenseStatus(x) === "PENDING")
+      .reduce((acc, x) => acc + Number(x.amount || 0), 0);
+    const sumRejected = items
+      .filter((x) => expenseStatus(x) === "REJECTED")
+      .reduce((acc, x) => acc + Number(x.amount || 0), 0);
+    const sumAppealed = items
+      .filter((x) => expenseStatus(x) === "APPEALED")
+      .reduce((acc, x) => acc + Number(x.amount || 0), 0);
 
     return { sumAll, sumApproved, sumPending, sumRejected, sumAppealed };
   }, [items, summary]);
 
   const pageTotal = useMemo(
-    () => (Array.isArray(items) ? items : []).reduce((acc, x) => acc + Number(x?.amount || 0), 0),
+    () => items.reduce((acc, x) => acc + Number(x.amount || 0), 0),
     [items]
   );
 
-  const columns: DataTableColumn<ExpenseRow>[] = useMemo(
+  const columns: DataTableColumn<CashExpense>[] = useMemo(
     () => [
       {
         key: "id",
@@ -299,12 +281,13 @@ export default function ExpensesClientPage(): React.ReactElement {
       {
         key: "status",
         label: t("financeExpenses.table.status"),
-        render: (x) => <StatusBadge status={normStatus(x)} />,
+        render: (x) => <StatusBadge status={expenseStatus(x)} />,
       },
       {
         key: "trip",
         label: t("financeExpenses.table.trip"),
-        render: (x) => (x.trip_id ? <span className="font-mono text-xs">{shortId(x.trip_id)}</span> : "—"),
+        render: (x) =>
+          x.trip_id ? <span className="font-mono text-xs">{shortId(x.trip_id)}</span> : "—",
       },
       {
         key: "vehicle",
@@ -320,7 +303,8 @@ export default function ExpensesClientPage(): React.ReactElement {
         key: "actions",
         label: t("financeExpenses.table.actions"),
         render: (x) => {
-          const st = normStatus(x);
+          const st = expenseStatus(x);
+
           return (
             <div className="flex flex-wrap items-center gap-2 justify-start">
               <Link href={`/finance/expenses/${x.id}`}>
@@ -375,10 +359,8 @@ export default function ExpensesClientPage(): React.ReactElement {
         }
       />
 
-      {/* Tabs (Unified) */}
       <TabsBar<TabKey> tabs={tabs} value={status} onChange={(k) => setParam("status", k)} />
 
-      {/* Filters */}
       <Card>
         <FiltersBar
           left={
@@ -437,7 +419,6 @@ export default function ExpensesClientPage(): React.ReactElement {
         />
       </Card>
 
-      {/* KPI */}
       {!loading && !err ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <KpiCard label={t("financeExpenses.kpi.total")} value={fmtMoney(kpi.sumAll)} />
@@ -454,7 +435,7 @@ export default function ExpensesClientPage(): React.ReactElement {
         </Card>
       ) : null}
 
-      <DataTable<ExpenseRow>
+      <DataTable<CashExpense>
         title={t("financeExpenses.title")}
         columns={columns}
         rows={items}
@@ -475,7 +456,6 @@ export default function ExpensesClientPage(): React.ReactElement {
         onRowClick={(row) => router.push(`/finance/expenses/${row.id}`)}
       />
 
-      {/* Approve Dialog */}
       <ConfirmDialog
         open={approveOpen}
         title={t("financeExpenses.actions.approve") || "اعتماد المصروف"}
@@ -507,7 +487,6 @@ export default function ExpensesClientPage(): React.ReactElement {
         onConfirm={submitApprove}
       />
 
-      {/* Reject Dialog */}
       <ConfirmDialog
         open={rejectOpen}
         title={t("financeExpenses.actions.reject") || "رفض المصروف"}
@@ -555,7 +534,13 @@ export default function ExpensesClientPage(): React.ReactElement {
         onConfirm={submitReject}
       />
 
-      <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        dir="rtl"
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

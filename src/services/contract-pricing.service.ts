@@ -12,6 +12,8 @@ import type {
   VehicleClassesListResponse,
 } from "@/src/types/contract-pricing.types";
 
+/* ---------------- Helpers ---------------- */
+
 function asArray(body: any): any[] {
   if (Array.isArray(body)) return body;
   if (Array.isArray(body?.items)) return body.items;
@@ -25,45 +27,76 @@ function toNumberOr(value: any, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function normalizeRulesList(body: any): PricingRulesListResponse {
-  const items = asArray(body) as PricingRule[];
-
-  const total = toNumberOr(body?.total ?? body?.count ?? items.length, items.length);
-  const page = toNumberOr(body?.page ?? body?.meta?.page ?? 1, 1);
-  const pageSize = toNumberOr(body?.pageSize ?? body?.meta?.pageSize ?? 25, 25);
-  const pages = Math.max(Math.ceil(total / Math.max(pageSize, 1)), 1);
-
-  return {
-    items,
-    total,
-    meta: {
-      page,
-      pageSize,
-      pages,
-    },
-  };
+function normalizeSingle<T>(body: any): T {
+  return (body?.data ?? body) as T;
 }
 
-function normalizeVehicleClassesList(body: any): VehicleClassesListResponse {
-  const items = asArray(body) as VehicleClassRef[];
-  const total = toNumberOr(body?.total ?? 0, items.length);
-  const page = toNumberOr(body?.page ?? 1, 1);
-  const pageSize = toNumberOr(body?.pageSize ?? 25, 25);
-  const pages = Math.max(Math.ceil(total / Math.max(pageSize, 1)), 1);
+/* ---------------- Normalizers ---------------- */
+
+function normalizePagination(body: any, itemsLength: number) {
+  const total = toNumberOr(body?.total ?? body?.count ?? itemsLength, itemsLength);
+
+  const page = toNumberOr(body?.page ?? body?.meta?.page ?? 1, 1);
+
+  const pageSize = toNumberOr(
+    body?.pageSize ?? body?.meta?.pageSize ?? body?.meta?.limit ?? 25,
+    25
+  );
+
+  const pages = toNumberOr(
+    body?.pages ??
+      body?.meta?.pages ??
+      Math.max(Math.ceil(total / Math.max(pageSize, 1)), 1),
+    1
+  );
+
+  return { total, page, pageSize, pages };
+}
+
+function normalizeRulesList(body: any): PricingRulesListResponse {
+  const items = asArray(body) as PricingRule[];
+  const { total, page, pageSize, pages } = normalizePagination(body, items.length);
 
   return {
     items,
     total,
     page,
+    pageSize,
     pages,
   };
 }
 
-function normalizeSingle<T>(body: any): T {
-  return (body?.data ?? body) as T;
+function normalizeVehicleClassesList(body: any): VehicleClassesListResponse {
+  const items = asArray(body) as VehicleClassRef[];
+  const { total, page, pageSize, pages } = normalizePagination(body, items.length);
+
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    pages,
+  };
 }
 
+function normalizeSimpleList<T>(body: any) {
+  const items = asArray(body) as T[];
+  const { total, page, pageSize, pages } = normalizePagination(body, items.length);
+
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    pages,
+  };
+}
+
+/* ---------------- Service ---------------- */
+
 export const contractPricingService = {
+  /* -------- Rules -------- */
+
   async listRules(filters: PricingRulesFilters = {}): Promise<PricingRulesListResponse> {
     const params: Record<string, any> = {};
 
@@ -76,13 +109,16 @@ export const contractPricingService = {
     if (filters.vehicle_class_id) params.vehicle_class_id = filters.vehicle_class_id;
     if (filters.cargo_type_id) params.cargo_type_id = filters.cargo_type_id;
     if (filters.trip_type) params.trip_type = filters.trip_type;
-    if (filters.is_active !== "" && filters.is_active !== undefined) params.is_active = filters.is_active;
+
+    if (filters.is_active !== "" && filters.is_active !== undefined) {
+      params.is_active = filters.is_active;
+    }
+
     if (filters.page) params.page = filters.page;
     if (filters.pageSize) params.pageSize = filters.pageSize;
 
     const res = await api.get("/contract-pricing/rules", { params });
-    const body = res.data ?? res;
-    return normalizeRulesList(body);
+    return normalizeRulesList(res.data ?? res);
   },
 
   async getRuleById(id: string): Promise<PricingRule> {
@@ -105,6 +141,8 @@ export const contractPricingService = {
     return normalizeSingle<PricingRule>(res.data ?? res);
   },
 
+  /* -------- Vehicle Classes -------- */
+
   async listVehicleClasses(
     filters: VehicleClassesFilters = {}
   ): Promise<VehicleClassesListResponse> {
@@ -119,8 +157,7 @@ export const contractPricingService = {
     }
 
     const res = await api.get("/contract-pricing/vehicle-classes", { params });
-    const body = res.data ?? res;
-    return normalizeVehicleClassesList(body);
+    return normalizeVehicleClassesList(res.data ?? res);
   },
 
   async getVehicleClassById(id: string): Promise<VehicleClassRef> {
@@ -143,19 +180,19 @@ export const contractPricingService = {
     return normalizeSingle<VehicleClassRef>(res.data ?? res);
   },
 
+  /* -------- Cargo Types -------- */
+
   async listCargoTypes(params?: {
     q?: string;
     is_active?: boolean | "";
     page?: number;
     pageSize?: number;
-  }): Promise<{ items: CargoTypeRef[]; total: number }> {
+  }) {
     const res = await api.get("/contract-pricing/cargo-types", { params });
-    const body = res.data ?? res;
-    return {
-      items: asArray(body) as CargoTypeRef[],
-      total: Number(body?.total || 0),
-    };
+    return normalizeSimpleList<CargoTypeRef>(res.data ?? res);
   },
+
+  /* -------- Routes -------- */
 
   async listRoutes(params?: {
     q?: string;
@@ -163,13 +200,9 @@ export const contractPricingService = {
     is_active?: boolean | "";
     page?: number;
     pageSize?: number;
-  }): Promise<{ items: PricingRouteRef[]; total: number }> {
+  }) {
     const res = await api.get("/contract-pricing/routes", { params });
-    const body = res.data ?? res;
-    return {
-      items: asArray(body) as PricingRouteRef[],
-      total: Number(body?.total || 0),
-    };
+    return normalizeSimpleList<PricingRouteRef>(res.data ?? res);
   },
 };
 

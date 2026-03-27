@@ -22,37 +22,59 @@ export interface TripOptionContract {
   client_id?: string | null;
 }
 
-function asArray(body: any): any[] {
-  if (Array.isArray(body)) return body;
-  if (Array.isArray(body?.items)) return body.items;
-  if (Array.isArray(body?.data?.items)) return body.data.items;
-  if (Array.isArray(body?.data)) return body.data;
+type ListLikeResponse<T> = ApiListResponse<T>;
+
+function asArray<T = unknown>(body: any): T[] {
+  if (Array.isArray(body)) return body as T[];
+  if (Array.isArray(body?.items)) return body.items as T[];
+  if (Array.isArray(body?.data?.items)) return body.data.items as T[];
+  if (Array.isArray(body?.data)) return body.data as T[];
   return [];
 }
 
-function normalizeTripsList(body: any): ApiListResponse<Trip> {
-  const items = asArray(body);
-  const totalRaw =
-    body?.total ??
-    body?.meta?.total ??
-    body?.count ??
-    body?.data?.total ??
-    items.length;
+function toNumberOr(value: any, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function normalizePagination(body: any, itemsLength: number) {
+  const total = toNumberOr(
+    body?.total ?? body?.meta?.total ?? body?.count ?? body?.data?.total ?? itemsLength,
+    itemsLength
+  );
+
+  const page = toNumberOr(body?.page ?? body?.meta?.page ?? 1, 1);
+
+  const pageSize = toNumberOr(
+    body?.pageSize ?? body?.meta?.pageSize ?? body?.meta?.limit ?? 25,
+    25
+  );
+
+  const pages = toNumberOr(
+    body?.pages ??
+      body?.meta?.pages ??
+      Math.max(Math.ceil(total / Math.max(pageSize, 1)), 1),
+    1
+  );
+
+  return { total, page, pageSize, pages };
+}
+
+function normalizeTripsList(body: any): ListLikeResponse<Trip> {
+  const items = asArray<Trip>(body);
+  const { total, page, pageSize, pages } = normalizePagination(body, items.length);
 
   return {
     items,
-    total: Number.isFinite(Number(totalRaw)) ? Number(totalRaw) : items.length,
-    page: Number(body?.page || body?.meta?.page || 1),
-    pages: Number(
-      body?.pages ||
-        body?.meta?.pages ||
-        Math.max(Math.ceil((Number(totalRaw) || items.length) / Number(body?.pageSize || 25)), 1)
-    ),
+    total,
+    page,
+    pageSize,
+    pages,
   };
 }
 
 function normalizeContractsList(body: any): TripOptionContract[] {
-  return asArray(body).map((row: any) => ({
+  return asArray<any>(body).map((row) => ({
     id: String(row?.id || ""),
     contract_no: row?.contract_no ?? null,
     status: row?.status ?? null,
@@ -63,6 +85,10 @@ function normalizeContractsList(body: any): TripOptionContract[] {
   }));
 }
 
+function normalizeSingle<T>(body: any): T {
+  return (body?.data ?? body?.trip ?? body) as T;
+}
+
 export const tripsService = {
   async list(filters: TripListFilters = {}): Promise<ApiListResponse<Trip>> {
     const params: Record<string, any> = {
@@ -71,55 +97,53 @@ export const tripsService = {
     };
 
     if (filters.status) params.status = filters.status;
-    if ((filters as any).client_id) params.client_id = (filters as any).client_id;
-    if ((filters as any).route_id) params.route_id = (filters as any).route_id;
+    if (filters.client_id) params.client_id = filters.client_id;
+    if (filters.route_id) params.route_id = filters.route_id;
 
     const res = await api.get("/trips", { params });
-    const body = res.data ?? res;
-    return normalizeTripsList(body);
+    return normalizeTripsList(res.data ?? res);
   },
 
   async getById(id: string): Promise<Trip> {
     const res = await api.get(`/trips/${id}`);
-    const body = res.data ?? res;
-    return (body?.trip || body) as Trip;
+    return normalizeSingle<Trip>(res.data ?? res);
   },
 
-  async create(payload: TripCreatePayload & { contract_id?: string | null }) {
+  async create(payload: TripCreatePayload & { contract_id?: string | null }): Promise<Trip> {
     const cleanPayload = {
       ...payload,
       contract_id: payload.contract_id || null,
     };
 
     const res = await api.post("/trips", cleanPayload);
-    return res.data ?? res;
+    return normalizeSingle<Trip>(res.data ?? res);
   },
 
-  async assign(id: string, payload: TripAssignPayload) {
+  async assign(id: string, payload: TripAssignPayload): Promise<any> {
     const res = await api.post(`/trips/${id}/assign`, payload);
     return res.data ?? res;
   },
 
-  async start(id: string) {
+  async start(id: string): Promise<any> {
     const res = await api.post(`/trips/${id}/start`);
     return res.data ?? res;
   },
 
-  async finish(id: string) {
+  async finish(id: string): Promise<any> {
     const res = await api.post(`/trips/${id}/finish`);
     return res.data ?? res;
   },
 
   async listClientsOptions(): Promise<TripOptionClient[]> {
     const res = await api.get("/clients");
-    return asArray(res.data ?? res);
+    return asArray<TripOptionClient>(res.data ?? res);
   },
 
   async listSitesOptions(clientId?: string): Promise<TripOptionSite[]> {
     const res = await api.get("/sites", {
       params: clientId ? { client_id: clientId } : undefined,
     });
-    return asArray(res.data ?? res);
+    return asArray<TripOptionSite>(res.data ?? res);
   },
 
   async listContractsOptions(clientId?: string): Promise<TripOptionContract[]> {
@@ -131,19 +155,22 @@ export const tripsService = {
 
   async listVehiclesOptions(): Promise<TripOptionVehicle[]> {
     const res = await api.get("/vehicles");
-    return asArray(res.data ?? res);
+    return asArray<TripOptionVehicle>(res.data ?? res);
   },
 
   async listDriversOptions(): Promise<TripOptionDriver[]> {
     const res = await api.get("/drivers/active");
-    return asArray(res.data ?? res);
+    return asArray<TripOptionDriver>(res.data ?? res);
   },
 
   async listSupervisorsOptions(): Promise<TripOptionSupervisor[]> {
     const res = await api.get("/users");
-    const items = asArray(res.data ?? res);
+    const items = asArray<TripOptionSupervisor & { role?: string | null }>(res.data ?? res);
+
     return items.filter(
-      (x: any) => String(x.role || "").toUpperCase() === "FIELD_SUPERVISOR"
+      (x) => String(x.role || "").toUpperCase() === "FIELD_SUPERVISOR"
     );
   },
 };
+
+export default tripsService;

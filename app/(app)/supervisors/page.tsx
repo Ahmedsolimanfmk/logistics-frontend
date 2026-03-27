@@ -1,67 +1,52 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 
-// ✅ Theme Components
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { FiltersBar } from "@/src/components/ui/FiltersBar";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { Card } from "@/src/components/ui/Card";
-import { Toast } from "@/src/components/Toast"; // عندك نسختين: ui/Toast و components/Toast
-// لو عندك Toast في ui (زي اللي كتبته قبل كده): غيّر السطر اللي فوق إلى:
-// import { Toast } from "@/src/components/ui/Toast";
+import { Toast } from "@/src/components/Toast";
 
-type User = {
-  id: string;
-  full_name: string;
-  email?: string | null;
-  phone?: string | null;
-  role: string;
-  is_active: boolean;
-  created_at?: string | null;
-};
+import { supervisorsService } from "@/src/services/supervisors.service";
+import type {
+  SupervisorUser,
+  SupervisorVehicle,
+  CreateSupervisorPayload,
+  ToastType,
+} from "@/src/types/supervisors.types";
 
-type Vehicle = {
-  id: string;
-  fleet_no?: string | null;
-  plate_no?: string | null;
-  display_name?: string | null;
-  status?: string | null;
-  is_active?: boolean;
-  supervisor_id?: string | null;
-  created_at?: string | null;
-};
+/* ---------------- Helpers ---------------- */
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-function extractItems(payload: any): any[] {
-  const p = payload?.data ?? payload;
-
-  if (Array.isArray(p?.items)) return p.items;
-  if (Array.isArray(p?.data)) return p.data;
-  if (Array.isArray(p?.data?.items)) return p.data.items;
-  if (Array.isArray(p)) return p;
-
-  return [];
+function getErrorMessage(error: unknown, fallback: string) {
+  return (
+    (error as any)?.response?.data?.message ||
+    (error as any)?.message ||
+    fallback
+  );
 }
 
-function vehicleLabel(v: Vehicle) {
-  const fleet = String(v.fleet_no || "").trim();
-  const plate = String(v.plate_no || "").trim();
-  const disp = String(v.display_name || "").trim();
+function vehicleLabel(vehicle: SupervisorVehicle) {
+  const fleet = String(vehicle.fleet_no || "").trim();
+  const plate = String(vehicle.plate_no || "").trim();
+  const displayName = String(vehicle.display_name || "").trim();
+
   if (fleet && plate) return `${fleet} - ${plate}`;
-  return fleet || plate || disp || v.id;
+  return fleet || plate || displayName || vehicle.id;
 }
 
-function isSupervisor(u: User) {
-  return String(u.role || "").toUpperCase() === "FIELD_SUPERVISOR";
+function isFieldSupervisor(user: SupervisorUser) {
+  return String(user.role || "").toUpperCase() === "FIELD_SUPERVISOR";
 }
+
+/* ---------------- Styles ---------------- */
 
 const inputCls =
   "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none " +
@@ -70,7 +55,8 @@ const inputCls =
 const selectCls =
   "rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-black/10";
 
-/* ---------------- Modal Shell (Unified) ---------------- */
+/* ---------------- Modal Shell ---------------- */
+
 function Modal({
   open,
   title,
@@ -106,7 +92,9 @@ function Modal({
           title={
             <div>
               <div className="text-sm font-semibold text-gray-900">{title}</div>
-              {subtitle ? <div className="mt-1 text-xs text-gray-500">{subtitle}</div> : null}
+              {subtitle ? (
+                <div className="mt-1 text-xs text-gray-500">{subtitle}</div>
+              ) : null}
             </div>
           }
           right={
@@ -117,7 +105,11 @@ function Modal({
         >
           <div className="space-y-4">{children}</div>
 
-          {footer ? <div className="mt-4 flex items-center justify-start gap-2">{footer}</div> : null}
+          {footer ? (
+            <div className="mt-4 flex items-center justify-start gap-2">
+              {footer}
+            </div>
+          ) : null}
         </Card>
       </div>
     </div>
@@ -125,6 +117,7 @@ function Modal({
 }
 
 /* ---------------- Create Supervisor Modal ---------------- */
+
 function CreateSupervisorModal({
   open,
   onClose,
@@ -134,7 +127,7 @@ function CreateSupervisorModal({
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
-  showToast: (type: "success" | "error", msg: string) => void;
+  showToast: (type: ToastType, msg: string) => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -154,22 +147,24 @@ function CreateSupervisorModal({
 
   async function submit() {
     if (!canSubmit) return;
+
     setSaving(true);
     try {
-      await api.post("/users", {
+      const payload: CreateSupervisorPayload = {
         full_name: fullName.trim(),
         phone: phone.trim() || null,
         email: email.trim() || null,
         password: password.trim(),
         role: "FIELD_SUPERVISOR",
-      });
+      };
+
+      await supervisorsService.createSupervisor(payload);
 
       showToast("success", "تم إنشاء المشرف");
       onCreated();
       onClose();
-    } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || "فشل إنشاء المشرف";
-      showToast("error", msg);
+    } catch (error) {
+      showToast("error", getErrorMessage(error, "فشل إنشاء المشرف"));
     } finally {
       setSaving(false);
     }
@@ -188,15 +183,28 @@ function CreateSupervisorModal({
           <Button variant="secondary" onClick={onClose} disabled={saving}>
             إلغاء
           </Button>
-          <Button variant="primary" onClick={submit} disabled={!canSubmit || saving} isLoading={saving}>
+          <Button
+            variant="primary"
+            onClick={submit}
+            disabled={!canSubmit || saving}
+            isLoading={saving}
+          >
             حفظ
           </Button>
         </>
       }
     >
-      {/* منع autofill اللي كان بيثبت ايميل/باسورد الأدمن */}
-      <input style={{ position: "absolute", left: "-9999px", top: "-9999px" }} autoComplete="username" name="fake-username" />
-      <input style={{ position: "absolute", left: "-9999px", top: "-9999px" }} autoComplete="current-password" name="fake-password" type="password" />
+      <input
+        style={{ position: "absolute", left: "-9999px", top: "-9999px" }}
+        autoComplete="username"
+        name="fake-username"
+      />
+      <input
+        style={{ position: "absolute", left: "-9999px", top: "-9999px" }}
+        autoComplete="current-password"
+        name="fake-password"
+        type="password"
+      />
 
       <div className="grid gap-2">
         <div className="text-xs text-gray-500">اسم المشرف *</div>
@@ -249,6 +257,7 @@ function CreateSupervisorModal({
 }
 
 /* ---------------- Manage Vehicles Modal ---------------- */
+
 function ManageSupervisorVehiclesModal({
   open,
   supervisor,
@@ -258,13 +267,12 @@ function ManageSupervisorVehiclesModal({
   showToast,
 }: {
   open: boolean;
-  supervisor: User | null;
-  vehicles: Vehicle[];
+  supervisor: SupervisorUser | null;
+  vehicles: SupervisorVehicle[];
   onClose: () => void;
   onSaved: () => void;
-  showToast: (type: "success" | "error", msg: string) => void;
+  showToast: (type: ToastType, msg: string) => void;
 }) {
-  // ✅ Hooks unconditionally
   const [saving, setSaving] = useState(false);
   const [q, setQ] = useState("");
   const [localSelected, setLocalSelected] = useState<Set<string>>(new Set());
@@ -274,25 +282,27 @@ function ManageSupervisorVehiclesModal({
 
   const selectedIdsArr = useMemo(() => {
     if (!supervisorId) return [] as string[];
+
     return vehicles
-      .filter((v) => String(v.supervisor_id || "") === supervisorId)
-      .map((v) => v.id);
+      .filter((vehicle) => String(vehicle.supervisor_id || "") === supervisorId)
+      .map((vehicle) => vehicle.id);
   }, [vehicles, supervisorId]);
 
   useEffect(() => {
     if (!isOpenOk) return;
     setQ("");
     setLocalSelected(new Set(selectedIdsArr));
-  }, [isOpenOk, supervisorId, selectedIdsArr]);
+  }, [isOpenOk, selectedIdsArr]);
 
   const list = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    const base = vehicles.filter((v) => v.is_active !== false);
-    if (!s) return base;
+    const search = q.trim().toLowerCase();
+    const base = vehicles.filter((vehicle) => vehicle.is_active !== false);
 
-    return base.filter((v) => {
-      const text = `${vehicleLabel(v)} ${v.status || ""}`.toLowerCase();
-      return text.includes(s);
+    if (!search) return base;
+
+    return base.filter((vehicle) => {
+      const text = `${vehicleLabel(vehicle)} ${vehicle.status || ""}`.toLowerCase();
+      return text.includes(search);
     });
   }, [vehicles, q]);
 
@@ -307,6 +317,7 @@ function ManageSupervisorVehiclesModal({
 
   async function save() {
     if (!supervisorId) return;
+
     setSaving(true);
     try {
       const current = new Set(selectedIdsArr);
@@ -316,43 +327,47 @@ function ManageSupervisorVehiclesModal({
       const toRemove = Array.from(current).filter((id) => !wanted.has(id));
 
       for (const id of toAdd) {
-        await api.patch(`/vehicles/${id}`, { supervisor_id: supervisorId });
+        await supervisorsService.updateVehicleSupervisor(id, supervisorId);
       }
+
       for (const id of toRemove) {
-        await api.patch(`/vehicles/${id}`, { supervisor_id: null });
+        await supervisorsService.updateVehicleSupervisor(id, null);
       }
 
       showToast("success", "تم حفظ سيارات المشرف");
       onSaved();
       onClose();
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        "فشل الحفظ (تأكد أن PATCH /vehicles/:id يدعم supervisor_id)";
-      showToast("error", msg);
+    } catch (error) {
+      showToast(
+        "error",
+        getErrorMessage(
+          error,
+          "فشل الحفظ (تأكد أن PATCH /vehicles/:id يدعم supervisor_id)"
+        )
+      );
     } finally {
       setSaving(false);
     }
   }
 
-  // ✅ return after hooks
-  if (!isOpenOk) return null;
+  const currentSupervisor = supervisor;
+  if (!isOpenOk || !currentSupervisor) return null;
 
-  const columns: DataTableColumn<Vehicle>[] = [
+  const columns: DataTableColumn<SupervisorVehicle>[] = [
     {
       key: "select",
       label: "اختيار",
       headerClassName: "w-[80px]",
-      render: (v) => {
-        const checked = localSelected.has(v.id);
-        const ownedByOther = v.supervisor_id && v.supervisor_id !== supervisorId;
+      render: (vehicle) => {
+        const checked = localSelected.has(vehicle.id);
+        const ownedByOther =
+          vehicle.supervisor_id && vehicle.supervisor_id !== supervisorId;
 
         return (
           <input
             type="checkbox"
             checked={checked}
-            onChange={() => toggle(v.id)}
+            onChange={() => toggle(vehicle.id)}
             disabled={saving || Boolean(ownedByOther)}
             className="h-4 w-4"
             title={ownedByOther ? "مربوطة بمشرف آخر" : ""}
@@ -360,18 +375,34 @@ function ManageSupervisorVehiclesModal({
         );
       },
     },
-    { key: "vehicle", label: "العربية", render: (v) => <span className="font-medium">{vehicleLabel(v)}</span> },
-    { key: "status", label: "الحالة", render: (v) => v.status || "—" },
+    {
+      key: "vehicle",
+      label: "العربية",
+      render: (vehicle) => (
+        <span className="font-medium">{vehicleLabel(vehicle)}</span>
+      ),
+    },
+    {
+      key: "status",
+      label: "الحالة",
+      render: (vehicle) => vehicle.status || "—",
+    },
     {
       key: "active",
       label: "نشط",
-      render: (v) => <StatusBadge status={v.is_active === false ? "INACTIVE" : "ACTIVE"} />,
+      render: (vehicle) => (
+        <StatusBadge status={vehicle.is_active === false ? "INACTIVE" : "ACTIVE"} />
+      ),
     },
     {
       key: "owner",
       label: "المشرف الحالي",
-      render: (v) =>
-        v.supervisor_id ? (v.supervisor_id === supervisorId ? "هذا المشرف" : "مشرف آخر") : "—",
+      render: (vehicle) =>
+        vehicle.supervisor_id
+          ? vehicle.supervisor_id === supervisorId
+            ? "هذا المشرف"
+            : "مشرف آخر"
+          : "—",
     },
   ];
 
@@ -381,7 +412,7 @@ function ManageSupervisorVehiclesModal({
       onClose={() => {
         if (!saving) onClose();
       }}
-      title={`سيارات المشرف: ${supervisor!.full_name}`}
+      title={`سيارات المشرف: ${currentSupervisor.full_name}`}
       subtitle="لكل عربية مشرف واحد فقط."
       maxWidthClassName="max-w-4xl"
       footer={
@@ -408,7 +439,10 @@ function ManageSupervisorVehiclesModal({
         }
         right={
           <div className="text-sm text-gray-600">
-            Selected: <span className="font-semibold text-gray-900">{localSelected.size}</span>
+            Selected:{" "}
+            <span className="font-semibold text-gray-900">
+              {localSelected.size}
+            </span>
           </div>
         }
       />
@@ -428,48 +462,48 @@ function ManageSupervisorVehiclesModal({
 }
 
 /* ---------------- Page ---------------- */
+
 export default function SupervisorsPage() {
   const user = useAuth((s) => s.user);
   const role = String(user?.role || "").toUpperCase();
 
   const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [users, setUsers] = useState<SupervisorUser[]>([]);
+  const [vehicles, setVehicles] = useState<SupervisorVehicle[]>([]);
 
   const [q, setQ] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("");
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState<"success" | "error">("success");
+  const [toastType, setToastType] = useState<ToastType>("success");
 
   const [manageOpen, setManageOpen] = useState(false);
-  const [selectedSupervisor, setSelectedSupervisor] = useState<User | null>(null);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<SupervisorUser | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  function showToast(type: "success" | "error", msg: string) {
+  const canCreate = role === "ADMIN";
+  const canManage =
+    role === "ADMIN" || role === "HR" || role === "GENERAL_SUPERVISOR";
+
+  function showToast(type: ToastType, msg: string) {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
   }
 
-  const canCreate = role === "ADMIN";
-  const canManage = role === "ADMIN" || role === "HR" || role === "GENERAL_SUPERVISOR";
-
   async function loadAll() {
     setLoading(true);
     try {
-      const uRes = await api.get("/users");
-      const uItems = extractItems(uRes);
+      const [usersData, vehiclesData] = await Promise.all([
+        supervisorsService.listUsers(),
+        supervisorsService.listVehicles(),
+      ]);
 
-      const vRes = await api.get("/vehicles?limit=200");
-      const vItems = extractItems(vRes);
-
-      setUsers(uItems);
-      setVehicles(vItems);
-    } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || "فشل تحميل البيانات";
-      showToast("error", msg);
+      setUsers(usersData);
+      setVehicles(vehiclesData);
+    } catch (error) {
+      showToast("error", getErrorMessage(error, "فشل تحميل البيانات"));
     } finally {
       setLoading(false);
     }
@@ -479,21 +513,28 @@ export default function SupervisorsPage() {
     try {
       (useAuth as any).getState?.().hydrate?.();
     } catch {}
+
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const supervisors = useMemo(() => {
-    let list = users.filter(isSupervisor);
+    let list = users.filter(isFieldSupervisor);
 
-    if (activeFilter === "true") list = list.filter((u) => u.is_active === true);
-    if (activeFilter === "false") list = list.filter((u) => u.is_active === false);
+    if (activeFilter === "true") {
+      list = list.filter((u) => u.is_active === true);
+    }
 
-    const s = q.trim().toLowerCase();
-    if (s) {
+    if (activeFilter === "false") {
+      list = list.filter((u) => u.is_active === false);
+    }
+
+    const search = q.trim().toLowerCase();
+    if (search) {
       list = list.filter((u) => {
-        const text = `${u.full_name || ""} ${u.email || ""} ${u.phone || ""}`.toLowerCase();
-        return text.includes(s);
+        const text =
+          `${u.full_name || ""} ${u.email || ""} ${u.phone || ""}`.toLowerCase();
+        return text.includes(search);
       });
     }
 
@@ -501,7 +542,11 @@ export default function SupervisorsPage() {
       const aa = a.is_active ? 0 : 1;
       const bb = b.is_active ? 0 : 1;
       if (aa !== bb) return aa - bb;
-      return String(a.full_name || "").localeCompare(String(b.full_name || ""), "ar");
+
+      return String(a.full_name || "").localeCompare(
+        String(b.full_name || ""),
+        "ar"
+      );
     });
 
     return list;
@@ -509,42 +554,62 @@ export default function SupervisorsPage() {
 
   const vehiclesBySupervisor = useMemo(() => {
     const map = new Map<string, number>();
-    for (const v of vehicles) {
-      const sid = String(v.supervisor_id || "");
+
+    for (const vehicle of vehicles) {
+      const sid = String(vehicle.supervisor_id || "");
       if (!sid) continue;
       map.set(sid, (map.get(sid) || 0) + 1);
     }
+
     return map;
   }, [vehicles]);
 
-  function openManage(u: User) {
-    setSelectedSupervisor(u);
+  function openManage(userRow: SupervisorUser) {
+    setSelectedSupervisor(userRow);
     setManageOpen(true);
   }
 
-  const columns: DataTableColumn<User>[] = [
-    { key: "full_name", label: "الاسم", render: (u) => <span className="font-medium">{u.full_name}</span> },
-    { key: "phone", label: "الهاتف", render: (u) => u.phone || "—" },
-    { key: "email", label: "البريد", render: (u) => u.email || "—" },
+  const columns: DataTableColumn<SupervisorUser>[] = [
+    {
+      key: "full_name",
+      label: "الاسم",
+      render: (row) => <span className="font-medium">{row.full_name}</span>,
+    },
+    {
+      key: "phone",
+      label: "الهاتف",
+      render: (row) => row.phone || "—",
+    },
+    {
+      key: "email",
+      label: "البريد",
+      render: (row) => row.email || "—",
+    },
     {
       key: "status",
       label: "الحالة",
-      render: (u) => <StatusBadge status={u.is_active ? "ACTIVE" : "INACTIVE"} />,
+      render: (row) => (
+        <StatusBadge status={row.is_active ? "ACTIVE" : "INACTIVE"} />
+      ),
     },
     {
       key: "vehicles_count",
       label: "عدد العربيات",
-      render: (u) => <span className="font-semibold">{vehiclesBySupervisor.get(u.id) || 0}</span>,
+      render: (row) => (
+        <span className="font-semibold">
+          {vehiclesBySupervisor.get(row.id) || 0}
+        </span>
+      ),
     },
     {
       key: "actions",
       label: "إجراءات",
       headerClassName: "w-[240px]",
-      render: (u) => (
+      render: (row) => (
         <div className="flex gap-2 justify-start">
           <Button
             variant="secondary"
-            onClick={() => openManage(u)}
+            onClick={() => openManage(row)}
             disabled={!canManage}
             title={!canManage ? "غير مصرح لك" : ""}
           >
@@ -606,7 +671,9 @@ export default function SupervisorsPage() {
 
                   <div className="text-sm text-gray-600">
                     الإجمالي:{" "}
-                    <span className="font-semibold text-gray-900">{supervisors.length}</span>
+                    <span className="font-semibold text-gray-900">
+                      {supervisors.length}
+                    </span>
                   </div>
                 </div>
               }
@@ -629,7 +696,7 @@ export default function SupervisorsPage() {
       <CreateSupervisorModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => loadAll()}
+        onCreated={loadAll}
         showToast={showToast}
       />
 
@@ -638,7 +705,7 @@ export default function SupervisorsPage() {
         supervisor={selectedSupervisor}
         vehicles={vehicles}
         onClose={() => setManageOpen(false)}
-        onSaved={() => loadAll()}
+        onSaved={loadAll}
         showToast={showToast}
       />
 

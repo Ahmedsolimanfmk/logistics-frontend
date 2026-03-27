@@ -1,8 +1,10 @@
 export type TripRevenueSource = "MANUAL" | "CONTRACT" | "INVOICE" | string;
 
+export type ProfitStatus = "PROFIT" | "LOSS" | "BREAK_EVEN" | string;
+
 export interface TripRevenueUser {
   id: string;
-  full_name: string;
+  full_name?: string | null;
   email?: string | null;
   role?: string | null;
 }
@@ -21,12 +23,53 @@ export interface TripRevenueInvoice {
   total_amount?: number | string | null;
 }
 
-export interface TripRevenuePricingRule {
+export interface TripRevenuePricingRuleRef {
   id: string;
   base_price?: number | string | null;
   currency?: string | null;
   priority?: number | null;
   is_active?: boolean | null;
+}
+
+export interface PricingRuleSnapshotData {
+  id: string;
+  contract_id?: string | null;
+  client_id?: string | null;
+  route_id?: string | null;
+  pickup_site_id?: string | null;
+  dropoff_site_id?: string | null;
+  from_zone_id?: string | null;
+  to_zone_id?: string | null;
+  vehicle_class_id?: string | null;
+  cargo_type_id?: string | null;
+  trip_type?: string | null;
+  min_weight?: number | null;
+  max_weight?: number | null;
+  base_price?: number | string | null;
+  currency?: string | null;
+  price_per_ton?: number | string | null;
+  price_per_km?: number | string | null;
+  priority?: number | null;
+  effective_from?: string | null;
+  effective_to?: string | null;
+  is_active?: boolean | null;
+  notes?: string | null;
+  updated_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface PricingRuleSnapshotResolver {
+  matched?: boolean;
+  matched_rules_count?: number;
+  resolved_amount?: number | null;
+  resolved_currency?: string | null;
+}
+
+export interface PricingRuleSnapshot {
+  rule_id: string;
+  captured_at: string;
+  resolver?: PricingRuleSnapshotResolver | null;
+  data?: PricingRuleSnapshotData | null;
 }
 
 export interface TripRevenue {
@@ -51,10 +94,11 @@ export interface TripRevenue {
   replaced_at?: string | null;
 
   is_current?: boolean;
-  version_no?: number;
+  version_no?: number | null;
   is_approved?: boolean;
   approval_notes?: string | null;
-  pricing_rule_snapshot?: any;
+
+  pricing_rule_snapshot?: PricingRuleSnapshot | null;
   notes?: string | null;
 
   users_entered?: TripRevenueUser | null;
@@ -63,7 +107,7 @@ export interface TripRevenue {
 
   client_contracts?: TripRevenueContract | null;
   ar_invoices?: TripRevenueInvoice | null;
-  contract_pricing_rules?: TripRevenuePricingRule | null;
+  contract_pricing_rules?: TripRevenuePricingRuleRef | null;
 }
 
 export interface TripRevenueResponse {
@@ -92,6 +136,40 @@ export interface ApproveTripRevenuePayload {
   approval_notes?: string | null;
 }
 
+export interface AutoPriceTripRevenuePayload {
+  contract_id?: string | null;
+  notes?: string | null;
+  auto_approve?: boolean;
+}
+
+export interface AutoPriceTripRevenueData {
+  success?: boolean;
+  trip_id?: string;
+  resolver?: {
+    trip?: Record<string, unknown>;
+    matched?: boolean;
+    matched_rules_count?: number;
+    resolved_rule?: Record<string, unknown> | null;
+    candidates?: Record<string, unknown>[];
+  } | null;
+  revenue?: TripRevenue | null;
+}
+
+export interface AutoPriceTripRevenueResponse {
+  success: boolean;
+  message?: string;
+  data?: AutoPriceTripRevenueData | null;
+}
+
+export interface TripProfitabilityExpenseItem {
+  id: string;
+  amount: string | number;
+  payment_source?: string | null;
+  expense_type?: string | null;
+  approval_status?: string | null;
+  created_at?: string | null;
+}
+
 export interface TripProfitability {
   trip_id: string;
   financial_status: string;
@@ -104,7 +182,7 @@ export interface TripProfitability {
   advance_expenses?: number;
 
   profit: number;
-  profit_status?: "PROFIT" | "LOSS" | "BREAK_EVEN" | string;
+  profit_status?: ProfitStatus;
 
   currency?: string | null;
   breakdown_by_type?: Record<string, number>;
@@ -112,6 +190,9 @@ export interface TripProfitability {
   revenue_record?: TripRevenue | null;
   current_revenue_record?: TripRevenue | null;
   current_approved_revenue_record?: TripRevenue | null;
+
+  expenses_items?: TripProfitabilityExpenseItem[];
+  pending_expenses_items?: TripProfitabilityExpenseItem[];
 }
 
 export interface TripProfitabilityResponse {

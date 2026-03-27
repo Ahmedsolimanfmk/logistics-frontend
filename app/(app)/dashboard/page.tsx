@@ -2,1968 +2,469 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
-
-import { useAuth } from "@/src/store/auth";
-import LanguageSwitcher from "@/src/components/LanguageSwitcher";
 import { useT } from "@/src/i18n/useT";
-import { api, apiAuthGet } from "@/src/lib/api";
 
-// =====================
-// Helpers
-// =====================
-function getCurrentLocale(): string {
-  if (typeof window === "undefined") return "ar-EG";
-  const v = localStorage.getItem("app_lang");
-  return v === "en" ? "en-US" : "ar-EG";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Button } from "@/src/components/ui/Button";
+import { Card } from "@/src/components/ui/Card";
+import { TabsBar } from "@/src/components/ui/TabsBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { Toast } from "@/src/components/Toast";
+
+import dashboardService from "@/src/services/dashboard.service";
+import type {
+  DashboardAlertRow,
+  DashboardComplianceDriverItem,
+  DashboardComplianceVehicleItem,
+  DashboardSummaryResponse,
+  DashboardTabKey,
+  DashboardTrendsBundle,
+  DashboardComplianceResponse,
+  DashboardAlertsSummary,
+} from "@/src/types/dashboard.types";
+
+function cn(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
 }
 
-const fmtInt = (n: unknown) =>
-  new Intl.NumberFormat(getCurrentLocale(), { maximumFractionDigits: 0 }).format(
-    Number(n ?? 0)
-  );
+function getCurrentLocale(): string {
+  if (typeof document !== "undefined") {
+    return document.documentElement.lang || "ar-EG";
+  }
+  return "ar-EG";
+}
 
-const fmtMoney = (n: unknown) =>
-  new Intl.NumberFormat(getCurrentLocale(), { maximumFractionDigits: 0 }).format(
-    Number(n ?? 0)
-  );
+function fmtInt(value: unknown): string {
+  const n = Number(value ?? 0);
+  return new Intl.NumberFormat(getCurrentLocale(), {
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(n) ? n : 0);
+}
 
-const fmtDate = (d: unknown) => {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString(getCurrentLocale());
-};
+function fmtMoney(value: unknown): string {
+  const n = Number(value ?? 0);
+  return new Intl.NumberFormat(getCurrentLocale(), {
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(n) ? n : 0);
+}
 
-const shortId = (id: unknown) => {
-  const s = String(id ?? "");
+function fmtDate(value?: string | null): string {
+  if (!value) return "—";
+  const d = new Date(String(value));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString(getCurrentLocale());
+}
+
+function shortId(value: unknown): string {
+  const s = String(value ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
-};
-
-async function safeCopy(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {}
 }
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
-
-function daysLeft(d: any) {
-  if (!d) return null;
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return null;
-  const now = new Date();
-  const diff = dt.getTime() - now.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
-
-function areaLabel(area: string, t: any) {
-  switch (String(area || "").toLowerCase()) {
-    case "operations":
-      return t("tabs.operations");
-    case "finance":
-      return t("tabs.finance");
-    case "maintenance":
-      return t("tabs.maintenance");
-    case "compliance":
-      return t("dashboard.compliance.title") || "Compliance";
-    default:
-      return area || "—";
-  }
-}
-
-// =====================
-// Types
-// =====================
-type TabKey = "operations" | "finance" | "maintenance" | "dev";
-const TAB_STORAGE_KEY = "dash_active_tab_v1";
-type TrendPoint = { label: string; value: number };
-
-type DashboardAlertRow = {
-  id: string;
-  alert_key?: string;
-  type: string;
-  severity: "danger" | "warn" | "info";
-  area: string;
-  title: string;
-  message: string;
-  entity_id?: string | null;
-  href?: string | null;
-  created_at: string;
-  is_read?: boolean;
-  read_at?: string | null;
-};
-
-// =====================
-// Role-based tabs
-// =====================
-function roleUpper(r?: string) {
-  return String(r || "").toUpperCase();
-}
-
-function getAllowedTabs(role?: string): TabKey[] {
-  const r = roleUpper(role);
-  if (r === "ADMIN") return ["operations", "finance", "maintenance", "dev"];
-  if (r === "FIELD_SUPERVISOR") return ["operations", "maintenance"];
-  if (r === "FINANCE" || r === "ACCOUNTANT") return ["operations", "finance"];
-  if (r === "HR") return ["operations"];
-  return ["operations"];
-}
-
-function canSeeDev(role?: string) {
-  return process.env.NODE_ENV === "development" && roleUpper(role) === "ADMIN";
-}
-
-function isAdminOrAccountant(role?: string) {
-  const r = roleUpper(role);
-  return r === "ADMIN" || r === "ACCOUNTANT";
-}
-
-function isAdminOrHR(role?: string) {
-  const r = roleUpper(role);
-  return r === "ADMIN" || r === "HR";
-}
-
-// =====================
-// KPI Delta
-// =====================
-function deltaFromSeries(points: TrendPoint[] | null | undefined) {
-  const arr = points || [];
-  const last = Number(arr[arr.length - 1]?.value ?? 0);
-  const prev = Number(arr[arr.length - 2]?.value ?? 0);
-
-  if (!prev && !last) return { pct: 0, dir: "flat" as const, last, prev };
-  if (!prev && last) return { pct: 100, dir: "up" as const, last, prev };
-
-  const pct = Math.round(((last - prev) / Math.abs(prev)) * 100);
-  const dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
-  return { pct, dir, last, prev };
-}
-
-function DeltaBadge({ points }: { points: TrendPoint[] | null | undefined }) {
-  const t = useT();
-  const d = deltaFromSeries(points);
+function SeverityBadge({ severity }: { severity?: string | null }) {
+  const s = String(severity || "").toLowerCase();
 
   const cls =
-    d.dir === "up"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : d.dir === "down"
-      ? "bg-rose-50 text-rose-700 border-rose-200"
-      : "bg-gray-50 text-gray-700 border-gray-200";
-
-  const icon = d.dir === "up" ? "↑" : d.dir === "down" ? "↓" : "•";
+    s === "danger"
+      ? "bg-red-500/10 text-red-700 border-red-500/20"
+      : s === "warn"
+      ? "bg-amber-500/10 text-amber-700 border-amber-500/20"
+      : "bg-sky-500/10 text-sky-700 border-sky-500/20";
 
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs", cls)}>
-      <span>{icon}</span>
-      <span>{d.pct}%</span>
-      <span className="opacity-70">{t("common.vsPrev")}</span>
+    <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs", cls)}>
+      {s || "info"}
     </span>
   );
 }
 
-// =====================
-// UI atoms
-// =====================
-function EmptyNice({ title, hint }: { title: string; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
-      <div className="text-sm font-semibold text-gray-900">{title}</div>
-      <div className="mt-1 text-sm text-gray-600">{hint}</div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  right,
-  children,
-}: {
-  title: string;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base md:text-lg font-semibold text-gray-900">{title}</h2>
-        {right}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Tabs({
-  value,
-  items,
-  onChange,
-}: {
-  value: TabKey;
-  items: { key: TabKey; label: string; count?: number }[];
-  onChange: (k: TabKey) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((it) => {
-        const active = it.key === value;
-        return (
-          <button
-            key={it.key}
-            type="button"
-            onClick={() => onChange(it.key)}
-            className={cn(
-              "px-3 py-2 rounded-xl border text-sm transition",
-              active
-                ? "bg-orange-50 border-orange-200 text-orange-800"
-                : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
-            )}
-          >
-            {it.label}
-            {typeof it.count === "number" ? (
-              <span className="mr-2 text-xs opacity-80">({it.count})</span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function DataTable({
-  title,
-  rows,
-  columns,
-  empty,
-  searchable = false,
-  onRowClick,
-  right,
-}: {
-  title: string;
-  rows: any[];
-  columns: {
-    key: string;
-    label: string;
-    render?: (r: any) => React.ReactNode;
-    className?: string;
-  }[];
-  empty?: React.ReactNode | string;
-  searchable?: boolean;
-  onRowClick?: (r: any) => void;
-  right?: React.ReactNode;
-}) {
-  const t = useT();
-  const [q, setQ] = useState("");
-
-  const filtered = useMemo(() => {
-    if (!searchable) return rows || [];
-    const s = q.trim().toLowerCase();
-    if (!s) return rows || [];
-    return (rows || []).filter((r) => JSON.stringify(r).toLowerCase().includes(s));
-  }, [rows, q, searchable]);
-
-  const clickable = Boolean(onRowClick);
-  const emptyNode = typeof empty !== "undefined" ? empty : t("common.noData");
-
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
-        <div className="text-sm font-semibold text-gray-900">{title}</div>
-
-        <div className="flex items-center gap-2">
-          {right}
-          {searchable ? (
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t("common.search")}
-              className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-200"
-            />
-          ) : null}
-          <span className="text-xs text-gray-600">
-            {fmtInt(filtered.length)} {t("common.rows")}
-          </span>
-        </div>
-      </div>
-
-      {!filtered.length ? (
-        <div className="p-5 text-sm text-gray-700">
-          {typeof emptyNode === "string" ? emptyNode : emptyNode}
-        </div>
-      ) : (
-        <div className="overflow-auto">
-          <table className="min-w-full text-sm" dir="rtl">
-            <thead className="bg-gray-50">
-              <tr>
-                {columns.map((c) => (
-                  <th
-                    key={c.key}
-                    className={cn(
-                      "text-right font-medium text-gray-700 px-4 py-2 whitespace-nowrap",
-                      c.className
-                    )}
-                  >
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.map((r, idx) => (
-                <tr
-                  key={idx}
-                  className={cn(
-                    "border-t border-gray-200 hover:bg-gray-50",
-                    !r?.is_read && "bg-blue-50/30",
-                    clickable && "cursor-pointer"
-                  )}
-                  onClick={() => {
-                    if (onRowClick) onRowClick(r);
-                  }}
-                >
-                  {columns.map((c) => (
-                    <td
-                      key={c.key}
-                      className={cn(
-                        "px-4 py-2 text-gray-900 whitespace-nowrap text-right",
-                        c.className
-                      )}
-                    >
-                      {c.render ? c.render(r) : String(r?.[c.key] ?? "")}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MiniChart({
-  title,
-  points,
-  valueKey,
-}: {
-  title: string;
-  points: TrendPoint[];
-  valueKey: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4">
-      <div className="text-sm font-semibold text-gray-900 mb-3">{title}</div>
-      <div className="h-44">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={points || []}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" hide />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey={valueKey} dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-}
-
-function ActionTile({
-  title,
+function StatCard({
+  label,
   value,
   hint,
-  tone = "neutral",
-  href,
-  openLabel,
 }: {
-  title: string;
-  value: React.ReactNode;
-  hint?: React.ReactNode;
-  tone?: "neutral" | "warn" | "danger" | "good";
-  href?: string;
-  openLabel?: string;
+  label: string;
+  value: string | number;
+  hint?: string;
 }) {
-  const t = useT();
-
-  const toneCls =
-    tone === "danger"
-      ? "border-rose-200 bg-rose-50"
-      : tone === "warn"
-      ? "border-amber-200 bg-amber-50"
-      : tone === "good"
-      ? "border-emerald-200 bg-emerald-50"
-      : "border-gray-200 bg-white";
-
-  const Body = (
-    <div className={cn("rounded-2xl border p-4 shadow-sm", toneCls)}>
-      <div className="text-xs text-gray-600">{title}</div>
-      <div className="mt-1 text-2xl font-semibold tracking-tight text-gray-900">
-        {value}
+  return (
+    <Card>
+      <div className="space-y-1">
+        <div className="text-xs text-slate-500">{label}</div>
+        <div className="text-xl font-semibold text-[rgb(var(--trex-fg))]">{value}</div>
+        {hint ? <div className="text-xs text-slate-500">{hint}</div> : null}
       </div>
-      {hint ? <div className="mt-1 text-xs text-gray-600">{hint}</div> : null}
-      {href ? (
-        <div className="mt-3">
-          <span className="inline-flex text-xs text-orange-700 underline">
-            {openLabel || t("common.open")}
-          </span>
-        </div>
-      ) : null}
-    </div>
-  );
-
-  return href ? (
-    <Link href={href} className="block">
-      {Body}
-    </Link>
-  ) : (
-    Body
+    </Card>
   );
 }
 
-function CompactKpi({
-  title,
-  value,
-  sub,
-  right,
-  href,
-}: {
-  title: string;
-  value: React.ReactNode;
-  sub?: React.ReactNode;
-  right?: React.ReactNode;
-  href?: string;
-}) {
-  const Body = (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 hover:bg-gray-50 transition">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xs text-gray-600">{title}</div>
-          <div className="mt-1 text-2xl font-semibold text-gray-900">{value}</div>
-          {sub ? <div className="mt-1 text-xs text-gray-600">{sub}</div> : null}
-        </div>
-        {right}
-      </div>
-    </div>
-  );
+type GenericRow = Record<string, unknown>;
 
-  return href ? (
-    <Link href={href} className="block">
-      {Body}
-    </Link>
-  ) : (
-    Body
-  );
-}
-
-// =====================
-// Page
-// =====================
 export default function DashboardPage() {
-  const router = useRouter();
   const t = useT();
 
-  const token = useAuth((s) => s.token);
-  const user = useAuth((s) => s.user);
-  const logout = useAuth((s) => s.logout);
-
-  useEffect(() => {
-    try {
-      (useAuth as any).getState?.().hydrate?.();
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    if (token === null) return;
-    if (!token) window.location.href = "/login";
-  }, [token]);
-
-  const allowedTabs = useMemo(() => getAllowedTabs(user?.role), [user?.role]);
-  const isAdminAcc = useMemo(() => isAdminOrAccountant(user?.role), [user?.role]);
-  const canSeeCompliance = useMemo(() => isAdminOrHR(user?.role), [user?.role]);
-
-  const [tab, setTab] = useState<TabKey>("operations");
-  const [summary, setSummary] = useState<any>(null);
-  const [bundle, setBundle] = useState<any>(null);
-
-  const [loadingSummary, setLoadingSummary] = useState(true);
-  const [loadingCharts, setLoadingCharts] = useState(false);
+  const [tab, setTab] = useState<DashboardTabKey>("operations");
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const [compliance, setCompliance] = useState<any>(null);
-  const [loadingCompliance, setLoadingCompliance] = useState(false);
-  const [complianceErr, setComplianceErr] = useState<string | null>(null);
-
+  const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
+  const [trendsBundle, setTrendsBundle] = useState<DashboardTrendsBundle | null>(null);
+  const [compliance, setCompliance] = useState<DashboardComplianceResponse | null>(null);
   const [alertsList, setAlertsList] = useState<DashboardAlertRow[]>([]);
-  const [alertsSummary, setAlertsSummary] = useState<any>(null);
-  const [loadingAlerts, setLoadingAlerts] = useState(false);
-  const [alertsErr, setAlertsErr] = useState<string | null>(null);
+  const [alertsSummary, setAlertsSummary] = useState<DashboardAlertsSummary | null>(null);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(TAB_STORAGE_KEY) as TabKey | null;
-      if (saved && allowedTabs.includes(saved)) setTab(saved);
-      else setTab(allowedTabs[0] || "operations");
-    } catch {
-      setTab(allowedTabs[0] || "operations");
-    }
-  }, [allowedTabs]);
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    type: "success" as "success" | "error",
+  });
 
-  const changeTab = (k: TabKey) => {
-    if (!allowedTabs.includes(k)) return;
-    setTab(k);
-    try {
-      localStorage.setItem(TAB_STORAGE_KEY, k);
-    } catch {}
-  };
+  function showToast(type: "success" | "error", message: string) {
+    setToast({ open: true, message, type });
+  }
 
-  const fetchSummary = async (activeTab: TabKey) => {
-    setLoadingSummary(true);
+  async function load() {
+    setLoading(true);
     setErr(null);
+
     try {
-      const data = await apiAuthGet(`/dashboard/summary`, { tab: activeTab });
-      setSummary(data);
-    } catch (e: any) {
-      setErr(e?.message || t("common.failed"));
-      setSummary(null);
+      const [summaryRes, trendsRes, complianceRes, alertsRes, alertsSummaryRes] =
+        await Promise.all([
+          dashboardService.getSummary(tab),
+          dashboardService.getTrendsBundle("daily"),
+          dashboardService.getComplianceAlerts(30, 20),
+          dashboardService.getAlerts(10),
+          dashboardService.getAlertsSummary(),
+        ]);
+
+      setSummary(summaryRes);
+      setTrendsBundle(trendsRes);
+      setCompliance(complianceRes);
+      setAlertsList(Array.isArray(alertsRes.items) ? alertsRes.items : []);
+      setAlertsSummary(alertsSummaryRes);
+    } catch (e: unknown) {
+      const message =
+        e && typeof e === "object" && "message" in e
+          ? String((e as { message?: string }).message || t("common.failed"))
+          : t("common.failed");
+
+      setErr(message);
+      showToast("error", message);
     } finally {
-      setLoadingSummary(false);
+      setLoading(false);
     }
-  };
-
-  const fetchBundleIfNeeded = async (activeTab: TabKey) => {
-    if (activeTab !== "operations") {
-      setBundle(null);
-      setLoadingCharts(false);
-      return;
-    }
-
-    setLoadingCharts(true);
-    try {
-      const data = await apiAuthGet(`/dashboard/trends/bundle`, { bucket: "daily" });
-      const normalized = (data && (data.data ?? data)) || null;
-      setBundle(normalized);
-    } catch {
-      setBundle(null);
-    } finally {
-      setLoadingCharts(false);
-    }
-  };
-
-  const fetchComplianceIfNeeded = async (activeTab: TabKey) => {
-    if (activeTab !== "operations" || !canSeeCompliance) {
-      setCompliance(null);
-      setComplianceErr(null);
-      setLoadingCompliance(false);
-      return;
-    }
-
-    setLoadingCompliance(true);
-    setComplianceErr(null);
-    try {
-      const data = await apiAuthGet(`/dashboard/compliance-alerts`, { days: 30, limit: 100 });
-      setCompliance(data?.data ?? data);
-    } catch (e: any) {
-      setCompliance(null);
-      setComplianceErr(e?.response?.data?.message || e?.message || t("common.failed"));
-    } finally {
-      setLoadingCompliance(false);
-    }
-  };
-
-  const fetchCentralAlertsIfNeeded = async (activeTab: TabKey) => {
-    if (activeTab !== "operations") {
-      setAlertsList([]);
-      setAlertsSummary(null);
-      setAlertsErr(null);
-      setLoadingAlerts(false);
-      return;
-    }
-
-    setLoadingAlerts(true);
-    setAlertsErr(null);
-    try {
-      const [listData, summaryData] = await Promise.all([
-        apiAuthGet(`/dashboard/alerts`, { limit: 10 }),
-        apiAuthGet(`/dashboard/alerts/summary`),
-      ]);
-
-      setAlertsList(Array.isArray(listData?.items) ? listData.items : []);
-      setAlertsSummary(summaryData || null);
-    } catch (e: any) {
-      setAlertsList([]);
-      setAlertsSummary(null);
-      setAlertsErr(e?.response?.data?.message || e?.message || t("common.failed"));
-    } finally {
-      setLoadingAlerts(false);
-    }
-  };
-
-  const reloadAll = async () => {
-    await Promise.all([
-      fetchSummary(tab),
-      fetchBundleIfNeeded(tab),
-      fetchComplianceIfNeeded(tab),
-      fetchCentralAlertsIfNeeded(tab),
-    ]);
-  };
-
-  async function markDashboardAlertRead(row: DashboardAlertRow) {
-    const alertKey = String(row?.alert_key || row?.id || "").trim();
-    if (!alertKey || row?.is_read) return;
-
-    try {
-      await api.patch("/dashboard/alerts/read", {
-        alert_key: alertKey,
-      });
-
-      setAlertsList((prev) =>
-        prev.map((item) =>
-          String(item.alert_key || item.id) === alertKey
-            ? {
-                ...item,
-                is_read: true,
-                read_at: new Date().toISOString(),
-              }
-            : item
-        )
-      );
-
-      setAlertsSummary((prev: any) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          unread: Math.max(0, Number(prev?.unread ?? 0) - 1),
-          read: Number(prev?.read ?? 0) + 1,
-        };
-      });
-    } catch {}
-  }
-
-  async function openDashboardAlert(row: DashboardAlertRow) {
-    await markDashboardAlertRead(row);
-
-    if (row?.href) {
-      router.push(row.href);
-      return;
-    }
-
-    const params = new URLSearchParams();
-    if (row?.severity) params.set("severity", row.severity);
-    if (row?.area) params.set("area", String(row.area).toLowerCase());
-    if (!row?.is_read) params.set("read_status", "unread");
-
-    const query = params.toString();
-    router.push(query ? `/alerts?${query}` : "/alerts");
   }
 
   useEffect(() => {
-    if (!token) return;
-    let cancel = false;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
-    (async () => {
-      await fetchSummary(tab);
-      if (cancel) return;
-      await fetchBundleIfNeeded(tab);
-      if (cancel) return;
-      await fetchComplianceIfNeeded(tab);
-      if (cancel) return;
-      await fetchCentralAlertsIfNeeded(tab);
-    })();
+  const tabs = useMemo(
+    () => [
+      { key: "operations" as const, label: t("dashboard.tabs.operations") || "العمليات" },
+      { key: "finance" as const, label: t("dashboard.tabs.finance") || "المالية" },
+      { key: "maintenance" as const, label: t("dashboard.tabs.maintenance") || "الصيانة" },
+      { key: "dev" as const, label: t("dashboard.tabs.dev") || "التطوير" },
+    ],
+    [t]
+  );
 
-    return () => {
-      cancel = true;
-    };
-  }, [token, tab, canSeeCompliance]);
+  const activeTripsRows = useMemo(
+    () => (summary?.tables?.active_trips_now as GenericRow[] | undefined) ?? [],
+    [summary]
+  );
 
-  const cards = summary?.cards || {};
-  const tables = summary?.tables || {};
-  const alerts = summary?.alerts || {};
+  const financeCloseRows = useMemo(
+    () => (summary?.tables?.trips_needing_finance_close as GenericRow[] | undefined) ?? [],
+    [summary]
+  );
 
-  const tabItems = useMemo(() => {
-    const opsCount =
-      Number(alerts?.active_trips_now_count ?? tables?.active_trips_now?.length ?? 0) +
-      Number(alertsSummary?.by_area?.operations ?? 0) +
-      Number(alertsSummary?.by_area?.compliance ?? 0);
+  const vehicleExpiringRows = useMemo(
+    () => compliance?.items?.vehicles_expiring ?? [],
+    [compliance]
+  );
 
-    const finCount =
-      Number(alerts?.advances_open ?? 0) +
-      Number(alerts?.expenses_pending_too_long ?? 0) +
-      Number(alerts?.ar_overdue_count ?? 0) +
-      Number(alertsSummary?.by_area?.finance ?? 0);
+  const driverExpiringRows = useMemo(
+    () => compliance?.items?.drivers_expiring ?? [],
+    [compliance]
+  );
 
-    const m = cards?.maintenance || {};
-    const mntCount =
-      Number(m?.open_work_orders ?? 0) +
-      Number(m?.qa_needs ?? 0) +
-      Number(alertsSummary?.by_area?.maintenance ?? 0);
+  const recentAlertsColumns: DataTableColumn<DashboardAlertRow>[] = [
+    {
+      key: "severity",
+      label: t("dashboard.alerts.severity") || "الأولوية",
+      render: (row) => <SeverityBadge severity={row.severity} />,
+    },
+    {
+      key: "title",
+      label: t("dashboard.alerts.title") || "العنوان",
+      render: (row) => (
+        <div className="space-y-0.5">
+          <div className="font-medium">{row.title}</div>
+          <div className="text-xs text-slate-500">{row.message}</div>
+        </div>
+      ),
+    },
+    {
+      key: "area",
+      label: t("dashboard.alerts.area") || "المجال",
+      render: (row) => row.area || "—",
+    },
+    {
+      key: "created_at",
+      label: t("dashboard.alerts.created") || "التاريخ",
+      render: (row) => fmtDate(row.created_at),
+    },
+    {
+      key: "open",
+      label: "",
+      className: "text-left",
+      headerClassName: "text-left",
+      render: (row) =>
+        row.href ? (
+          <Link href={row.href}>
+            <Button variant="secondary">{t("common.open") || "فتح"}</Button>
+          </Link>
+        ) : row.entity_id ? (
+          <span className="font-mono text-xs text-slate-500">{shortId(row.entity_id)}</span>
+        ) : (
+          "—"
+        ),
+    },
+  ];
 
-    const items: { key: TabKey; label: string; count?: number }[] = [];
+  const activeTripsColumns: DataTableColumn<GenericRow>[] = [
+    {
+      key: "trip_id",
+      label: t("dashboard.tables.trip") || "الرحلة",
+      render: (row) => shortId(row.trip_id),
+    },
+    {
+      key: "vehicle",
+      label: t("dashboard.tables.vehicle") || "العربية",
+      render: (row) =>
+        String(row.fleet_no ?? row.plate_no ?? row.vehicle_id ?? "—"),
+    },
+    {
+      key: "supervisor",
+      label: t("dashboard.tables.supervisor") || "المشرف",
+      render: (row) => String(row.supervisor_name ?? row.field_supervisor_id ?? "—"),
+    },
+  ];
 
-    if (allowedTabs.includes("operations")) {
-      items.push({ key: "operations", label: t("tabs.operations"), count: opsCount });
-    }
-    if (allowedTabs.includes("finance")) {
-      items.push({ key: "finance", label: t("tabs.finance"), count: finCount });
-    }
-    if (allowedTabs.includes("maintenance")) {
-      items.push({ key: "maintenance", label: t("tabs.maintenance"), count: mntCount });
-    }
-    if (allowedTabs.includes("dev") && canSeeDev(user?.role)) {
-      items.push({ key: "dev", label: t("tabs.dev") });
-    }
+  const financeCloseColumns: DataTableColumn<GenericRow>[] = [
+    {
+      key: "trip_id",
+      label: t("dashboard.tables.trip") || "الرحلة",
+      render: (row) => shortId(row.trip_id ?? row.id),
+    },
+    {
+      key: "trip_code",
+      label: t("dashboard.tables.code") || "الكود",
+      render: (row) => String(row.trip_code ?? row.code ?? "—"),
+    },
+    {
+      key: "status",
+      label: t("dashboard.tables.status") || "الحالة",
+      render: (row) => String(row.financial_status ?? row.status ?? "—"),
+    },
+  ];
 
-    return items;
-  }, [allowedTabs, alerts, tables, cards, user?.role, t, alertsSummary]);
+  const vehiclesColumns: DataTableColumn<DashboardComplianceVehicleItem>[] = [
+    {
+      key: "display_name",
+      label: t("dashboard.compliance.vehicle") || "العربية",
+      render: (row) => row.display_name || row.fleet_no || row.plate_no || "—",
+    },
+    {
+      key: "license_no",
+      label: t("dashboard.compliance.license") || "الرخصة",
+      render: (row) => row.license_no || "—",
+    },
+    {
+      key: "license_expiry_date",
+      label: t("dashboard.compliance.expiry") || "الانتهاء",
+      render: (row) => fmtDate(row.license_expiry_date),
+    },
+  ];
 
-  const chartData = useMemo(() => {
-    if (!bundle) return null;
-    const pick = (arr: any[]): TrendPoint[] =>
-      (arr || []).map((x) => ({
-        label: x.label || x.bucket,
-        value: Number(x.value || 0),
-      }));
-
-    return {
-      trips_created: pick(bundle.trips_created),
-      trips_assigned: pick(bundle.trips_assigned),
-      expenses_approved: pick(bundle.expenses_approved),
-      expenses_pending: pick(bundle.expenses_pending),
-    };
-  }, [bundle]);
-
-  const ops = useMemo(() => {
-    const tripsTodayTotal = Number(cards?.trips_today?.total ?? 0);
-    const activeNow = Number(tables?.active_trips_now?.length ?? 0);
-    const needingClose = Number(tables?.trips_needing_finance_close?.length ?? 0);
-
-    const toneActive = activeNow >= 10 ? "warn" : activeNow > 0 ? "neutral" : "good";
-    const toneClose = needingClose > 0 ? "danger" : "good";
-
-    return { tripsTodayTotal, activeNow, needingClose, toneActive, toneClose } as const;
-  }, [cards, tables]);
-
-  const fin = useMemo(() => {
-    const pendingTooLong = Number(alerts?.expenses_pending_too_long ?? 0);
-    const advancesOpen = Number(alerts?.advances_open ?? 0);
-
-    const arDueSoonCount = Number(alerts?.ar_due_soon_count ?? cards?.ar_due_soon?.count ?? 0);
-    const arOverdueCount = Number(alerts?.ar_overdue_count ?? cards?.ar_overdue?.count ?? 0);
-    const arDueSoonTotal = Number(alerts?.ar_due_soon_total ?? cards?.ar_due_soon?.total ?? 0);
-    const arOverdueTotal = Number(alerts?.ar_overdue_total ?? cards?.ar_overdue?.total ?? 0);
-
-    const apEnabled = Boolean(alerts?.ap_enabled ?? cards?.ap_due_soon?.enabled ?? false);
-    const apDueSoonCount = Number(alerts?.ap_due_soon_count ?? cards?.ap_due_soon?.count ?? 0);
-    const apOverdueCount = Number(alerts?.ap_overdue_count ?? cards?.ap_overdue?.count ?? 0);
-    const apDueSoonTotal = Number(alerts?.ap_due_soon_total ?? cards?.ap_due_soon?.total ?? 0);
-    const apOverdueTotal = Number(alerts?.ap_overdue_total ?? cards?.ap_overdue?.total ?? 0);
-
-    const tonePending = pendingTooLong > 0 ? "warn" : "good";
-    const toneAdv = advancesOpen > 0 ? "neutral" : "good";
-    const toneArDueSoon = arDueSoonCount > 0 ? "warn" : "good";
-    const toneArOverdue = arOverdueCount > 0 ? "danger" : "good";
-    const toneAp = "neutral";
-
-    return {
-      pendingTooLong,
-      advancesOpen,
-      tonePending,
-      toneAdv,
-      arDueSoonCount,
-      arOverdueCount,
-      arDueSoonTotal,
-      arOverdueTotal,
-      toneArDueSoon,
-      toneArOverdue,
-      apEnabled,
-      apDueSoonCount,
-      apOverdueCount,
-      apDueSoonTotal,
-      apOverdueTotal,
-      toneAp,
-    } as const;
-  }, [alerts, cards]);
-
-  const mnt = useMemo(() => {
-    const m = cards?.maintenance || {};
-    const openWos = Number(m.open_work_orders ?? 0);
-    const completedToday = Number(m.completed_today ?? 0);
-    const qaNeeds = Number(m.qa_needs ?? 0);
-    const qaFailed = Number(m.qa_failed ?? 0);
-    const mismatch = Number(m.parts_mismatch ?? 0);
-
-    const toneOpen = openWos > 0 ? "warn" : "good";
-    const toneQa = qaNeeds > 0 ? "warn" : "good";
-    const toneFail = qaFailed > 0 ? "danger" : "good";
-    const toneMismatch = mismatch > 0 ? "danger" : "good";
-
-    return { openWos, completedToday, qaNeeds, qaFailed, mismatch, toneOpen, toneQa, toneFail, toneMismatch } as const;
-  }, [cards]);
-
-  const complianceCounts = useMemo(() => {
-    const c = compliance || {};
-    const vehicles = c?.counts?.vehicles || {};
-    const drivers = c?.counts?.drivers || {};
-    return {
-      vehExpiring: Number(vehicles.expiring ?? 0),
-      vehExpired: Number(vehicles.expired ?? 0),
-      drvExpiring: Number(drivers.expiring ?? 0),
-      drvExpired: Number(drivers.expired ?? 0),
-      vehiclesExpiringList: Array.isArray(c?.items?.vehicles_expiring) ? c.items.vehicles_expiring : [],
-      driversExpiringList: Array.isArray(c?.items?.drivers_expiring) ? c.items.drivers_expiring : [],
-      days: Number(c?.range?.days ?? 30),
-    };
-  }, [compliance]);
-
-  const alertsKpi = useMemo(() => {
-    const s = alertsSummary || {};
-    return {
-      total: Number(s?.total ?? 0),
-      unread: Number(s?.unread ?? 0),
-      danger: Number(s?.by_severity?.danger ?? 0),
-      warn: Number(s?.by_severity?.warn ?? 0),
-      info: Number(s?.by_severity?.info ?? 0),
-    };
-  }, [alertsSummary]);
+  const driversColumns: DataTableColumn<DashboardComplianceDriverItem>[] = [
+    {
+      key: "full_name",
+      label: t("dashboard.compliance.driver") || "السائق",
+      render: (row) => row.full_name || "—",
+    },
+    {
+      key: "license_no",
+      label: t("dashboard.compliance.license") || "الرخصة",
+      render: (row) => row.license_no || "—",
+    },
+    {
+      key: "license_expiry_date",
+      label: t("dashboard.compliance.expiry") || "الانتهاء",
+      render: (row) => fmtDate(row.license_expiry_date),
+    },
+  ];
 
   return (
-    <div className="min-h-screen text-gray-900" dir="rtl">
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold">{t("dashboard.title")}</div>
-            <div className="text-sm text-gray-600">
-              {user?.full_name || "—"} — {user?.role || "—"}
+    <div className="space-y-4">
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
+
+      <PageHeader
+        title={t("dashboard.title") || "لوحة المتابعة"}
+        subtitle={t("dashboard.subtitle") || "ملخص العمليات والتنبيهات والالتزام"}
+        actions={
+          <div className="flex items-center gap-2">
+            <Link href="/alerts">
+              <Button variant="secondary">{t("dashboard.actions.alerts") || "التنبيهات"}</Button>
+            </Link>
+            <Button onClick={load} isLoading={loading}>
+              {t("common.refresh") || "تحديث"}
+            </Button>
+          </div>
+        }
+      />
+
+      <TabsBar<DashboardTabKey> tabs={tabs} value={tab} onChange={setTab} />
+
+      {err ? (
+        <Card className="border-red-500/20">
+          <div className="text-sm text-red-600">{err}</div>
+        </Card>
+      ) : null}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <StatCard
+          label={t("dashboard.cards.activeTrips") || "الرحلات النشطة الآن"}
+          value={fmtInt(summary?.alerts?.active_trips_now_count)}
+        />
+        <StatCard
+          label={t("dashboard.cards.advancesOpen") || "العهد المفتوحة"}
+          value={fmtInt(summary?.alerts?.advances_open)}
+        />
+        <StatCard
+          label={t("dashboard.cards.expensesPendingLong") || "مصروفات معلقة طويلًا"}
+          value={fmtInt(summary?.alerts?.expenses_pending_too_long)}
+        />
+        <StatCard
+          label={t("dashboard.cards.unreadAlerts") || "التنبيهات غير المقروءة"}
+          value={fmtInt(alertsSummary?.unread)}
+          hint={`${t("common.total") || "الإجمالي"}: ${fmtInt(alertsSummary?.total)}`}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <StatCard
+          label={t("dashboard.finance.arDueSoon") || "AR قريب الاستحقاق"}
+          value={fmtMoney(summary?.alerts?.ar_due_soon_total)}
+          hint={`${fmtInt(summary?.alerts?.ar_due_soon_count)} ${t("common.items") || "عنصر"}`}
+        />
+        <StatCard
+          label={t("dashboard.finance.arOverdue") || "AR متأخر"}
+          value={fmtMoney(summary?.alerts?.ar_overdue_total)}
+          hint={`${fmtInt(summary?.alerts?.ar_overdue_count)} ${t("common.items") || "عنصر"}`}
+        />
+        <StatCard
+          label={t("dashboard.finance.apDueSoon") || "AP قريب الاستحقاق"}
+          value={fmtMoney(summary?.alerts?.ap_due_soon_total)}
+          hint={`${fmtInt(summary?.alerts?.ap_due_soon_count)} ${t("common.items") || "عنصر"}`}
+        />
+        <StatCard
+          label={t("dashboard.finance.apOverdue") || "AP متأخر"}
+          value={fmtMoney(summary?.alerts?.ap_overdue_total)}
+          hint={`${fmtInt(summary?.alerts?.ap_overdue_count)} ${t("common.items") || "عنصر"}`}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <DataTable<DashboardAlertRow>
+          title={t("dashboard.sections.recentAlerts") || "أحدث التنبيهات"}
+          columns={recentAlertsColumns}
+          rows={alertsList}
+          loading={loading}
+          emptyTitle={t("dashboard.empty.noAlerts") || "لا توجد تنبيهات"}
+          emptyHint={t("dashboard.empty.noAlertsHint") || "كل شيء يبدو هادئًا."}
+        />
+
+        <Card title={t("dashboard.sections.trends") || "الاتجاهات السريعة"}>
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm font-medium mb-2">
+                {t("dashboard.trends.tripsCreated") || "الرحلات المنشأة"}
+              </div>
+              <div className="space-y-2">
+                {(trendsBundle?.trips_created ?? []).map((point, index) => (
+                  <div key={`${point.label}-${index}`} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">{point.label}</span>
+                    <span className="font-semibold">{fmtInt(point.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium mb-2">
+                {t("dashboard.trends.expensesPending") || "المصروفات المعلقة"}
+              </div>
+              <div className="space-y-2">
+                {(trendsBundle?.expenses_pending ?? []).map((point, index) => (
+                  <div key={`${point.label}-${index}`} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">{point.label}</span>
+                    <span className="font-semibold">{fmtInt(point.value)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
+        </Card>
+      </div>
 
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <DataTable<GenericRow>
+          title={t("dashboard.sections.activeTrips") || "الرحلات النشطة الآن"}
+          columns={activeTripsColumns}
+          rows={activeTripsRows}
+          loading={loading}
+          emptyTitle={t("dashboard.empty.noActiveTrips") || "لا توجد رحلات نشطة"}
+          emptyHint={t("dashboard.empty.noActiveTripsHint") || "لا توجد بيانات حالياً."}
+        />
 
-            <button
-              type="button"
-              onClick={reloadAll}
-              className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm"
-            >
-              {t("common.refresh")}
-            </button>
+        <DataTable<GenericRow>
+          title={t("dashboard.sections.financeClose") || "رحلات تحتاج إغلاق مالي"}
+          columns={financeCloseColumns}
+          rows={financeCloseRows}
+          loading={loading}
+          emptyTitle={t("dashboard.empty.noFinanceClose") || "لا توجد رحلات تحتاج إغلاق"}
+          emptyHint={t("dashboard.empty.noFinanceCloseHint") || "كل شيء متابع."}
+        />
+      </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                logout();
-                window.location.href = "/login";
-              }}
-              className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm"
-            >
-              {t("common.logout")}
-            </button>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <DataTable<DashboardComplianceVehicleItem>
+          title={t("dashboard.sections.vehiclesExpiring") || "عربيات رخصها قربت تنتهي"}
+          subtitle={`${fmtInt(compliance?.counts?.vehicles?.expiring)} ${t("common.items") || "عنصر"}`}
+          columns={vehiclesColumns}
+          rows={vehicleExpiringRows}
+          loading={loading}
+          emptyTitle={t("dashboard.empty.noVehicleCompliance") || "لا توجد عربيات قريبة الانتهاء"}
+          emptyHint={t("dashboard.empty.noVehicleComplianceHint") || "الوضع جيد."}
+        />
 
-        {err ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {err}
-          </div>
-        ) : null}
-
-        <Tabs value={tab} items={tabItems} onChange={changeTab} />
-
-        {loadingSummary ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-gray-200 bg-white p-4">
-                <div className="h-4 w-28 bg-gray-100 rounded" />
-                <div className="mt-3 h-8 w-16 bg-gray-100 rounded" />
-                <div className="mt-2 h-3 w-36 bg-gray-100 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <>
-            {tab === "operations" && (
-              <div className="space-y-6">
-                <Section
-                  title={t("sections.opsAction")}
-                  right={
-                    <span className="text-xs text-gray-600">
-                      {t("common.lastRefresh")} {new Date().toLocaleTimeString(getCurrentLocale())}
-                    </span>
-                  }
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <ActionTile
-                      title={t("dashboard.ops.tripsNeedingFinanceClose.title")}
-                      value={fmtInt(Number(tables?.trips_needing_finance_close?.length ?? 0))}
-                      hint={t("dashboard.ops.tripsNeedingFinanceClose.hintOn")}
-                      tone="danger"
-                      href="/trips?status=COMPLETED&financial_closed_at=null"
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.ops.activeTripsNow.title")}
-                      value={fmtInt(Number(tables?.active_trips_now?.length ?? 0))}
-                      hint={t("dashboard.ops.activeTripsNow.hintOn")}
-                      tone={ops.toneActive as any}
-                      href="/trips?status=ASSIGNED,IN_PROGRESS"
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.ops.tripsToday.title")}
-                      value={fmtInt(ops.tripsTodayTotal)}
-                      hint={t("dashboard.ops.tripsToday.hint")}
-                      tone={ops.tripsTodayTotal ? "neutral" : "good"}
-                      href="/trips?range=today"
-                      openLabel={t("common.open")}
-                    />
-                  </div>
-                </Section>
-
-                <Section
-                  title={t("dashboard.alerts.title")}
-                  right={
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href="/alerts"
-                        className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
-                      >
-                        {t("common.viewAll")}
-                      </Link>
-
-                      <button
-                        type="button"
-                        onClick={() => fetchCentralAlertsIfNeeded("operations")}
-                        className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
-                        disabled={loadingAlerts}
-                      >
-                        {loadingAlerts ? t("common.loading") : t("common.refresh")}
-                      </button>
-                    </div>
-                  }
-                >
-                  {alertsErr ? (
-                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                      {alertsErr}
-                    </div>
-                  ) : null}
-
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <ActionTile
-                      title={t("dashboard.alerts.total")}
-                      value={fmtInt(alertsKpi.total)}
-                      hint={t("dashboard.alerts.totalHint")}
-                      tone={alertsKpi.total > 0 ? "neutral" : "good"}
-                      href="/alerts"
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("alertsPage.unread") || "غير مقروء"}
-                      value={fmtInt(alertsKpi.unread)}
-                      hint={t("alertsPage.unreadHint") || "التنبيهات التي لم يتم فتحها بعد"}
-                      tone={alertsKpi.unread > 0 ? "warn" : "good"}
-                      href="/alerts?read_status=unread"
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.alerts.danger")}
-                      value={fmtInt(alertsKpi.danger)}
-                      hint={t("dashboard.alerts.dangerHint")}
-                      tone={alertsKpi.danger > 0 ? "danger" : "good"}
-                      href="/alerts?severity=danger"
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.alerts.warn")}
-                      value={fmtInt(alertsKpi.warn)}
-                      hint={t("dashboard.alerts.warnHint")}
-                      tone={alertsKpi.warn > 0 ? "warn" : "good"}
-                      href="/alerts?severity=warn"
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.alerts.info")}
-                      value={fmtInt(alertsKpi.info)}
-                      hint={t("dashboard.alerts.infoHint")}
-                      tone="neutral"
-                      href="/alerts?severity=info"
-                      openLabel={t("common.open")}
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <Link href="/alerts?area=operations" className="text-xs text-orange-700 underline">
-                      {t("tabs.operations")}
-                    </Link>
-                    <Link href="/alerts?area=finance" className="text-xs text-orange-700 underline">
-                      {t("tabs.finance")}
-                    </Link>
-                    <Link href="/alerts?area=maintenance" className="text-xs text-orange-700 underline">
-                      {t("tabs.maintenance")}
-                    </Link>
-                    {canSeeCompliance ? (
-                      <Link href="/alerts?area=compliance" className="text-xs text-orange-700 underline">
-                        {t("dashboard.compliance.title")}
-                      </Link>
-                    ) : null}
-                  </div>
-
-                  <DataTable
-                    title={t("dashboard.alerts.latestTableTitle")}
-                    rows={alertsList || []}
-                    searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.alerts.emptyTitle")}
-                        hint={t("dashboard.alerts.emptyHint")}
-                      />
-                    }
-                    right={
-                      <Link href="/alerts" className="text-xs text-orange-700 underline">
-                        {t("common.viewAll")} ←
-                      </Link>
-                    }
-                    onRowClick={(r) => {
-                      openDashboardAlert(r);
-                    }}
-                    columns={[
-                      {
-                        key: "status",
-                        label: t("alertsPage.status") || "الحالة",
-                        render: (r) => (
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
-                              r?.is_read
-                                ? "border-gray-200 bg-gray-50 text-gray-700"
-                                : "border-blue-200 bg-blue-50 text-blue-700 font-medium"
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "inline-block h-2 w-2 rounded-full",
-                                r?.is_read ? "bg-gray-400" : "bg-blue-600"
-                              )}
-                            />
-                            {r?.is_read
-                              ? t("alertsPage.read") || "تمت القراءة"
-                              : t("alertsPage.unread") || "غير مقروء"}
-                          </span>
-                        ),
-                      },
-                      {
-                        key: "severity",
-                        label: t("dashboard.alerts.columns.severity"),
-                        render: (r) => {
-                          const sev = String(r?.severity || "");
-                          const cls =
-                            sev === "danger"
-                              ? "border-rose-200 bg-rose-50 text-rose-700"
-                              : sev === "warn"
-                              ? "border-amber-200 bg-amber-50 text-amber-700"
-                              : "border-gray-200 bg-gray-50 text-gray-700";
-
-                          const text =
-                            sev === "danger"
-                              ? t("dashboard.alerts.severity.danger")
-                              : sev === "warn"
-                              ? t("dashboard.alerts.severity.warn")
-                              : t("dashboard.alerts.severity.info");
-
-                          return (
-                            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-xs", cls)}>
-                              {text}
-                            </span>
-                          );
-                        },
-                      },
-                      {
-                        key: "area",
-                        label: t("dashboard.alerts.columns.area"),
-                        render: (r) => areaLabel(r?.area, t),
-                      },
-                      {
-                        key: "title",
-                        label: t("dashboard.alerts.columns.title"),
-                        render: (r) => (
-                          <div className="flex flex-col items-end">
-                            <span className={cn(r?.is_read ? "font-medium" : "font-semibold")}>
-                              {r?.title || "—"}
-                            </span>
-                            <span className="text-xs text-gray-600">{r?.message || "—"}</span>
-                          </div>
-                        ),
-                      },
-                      {
-                        key: "entity_id",
-                        label: t("dashboard.alerts.columns.reference"),
-                        render: (r) => (
-                          <span className="font-mono">
-                            {r?.entity_id ? shortId(r.entity_id) : "—"}
-                          </span>
-                        ),
-                      },
-                      {
-                        key: "created_at",
-                        label: t("dashboard.alerts.columns.createdAt"),
-                        render: (r) => fmtDate(r?.created_at),
-                      },
-                    ]}
-                  />
-                </Section>
-
-                {canSeeCompliance ? (
-                  <Section
-                    title={t("dashboard.compliance.title") || "تنبيهات الالتزام (الرخص)"}
-                    right={
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-600">
-                          {t("dashboard.compliance.range") || "خلال"} {fmtInt(complianceCounts.days)}{" "}
-                          {t("common.days") || "يوم"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => fetchComplianceIfNeeded("operations")}
-                          className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs"
-                          disabled={loadingCompliance}
-                        >
-                          {loadingCompliance ? (t("common.loading") || "تحميل...") : (t("common.refresh") || "تحديث")}
-                        </button>
-                      </div>
-                    }
-                  >
-                    {complianceErr ? (
-                      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                        {complianceErr}
-                      </div>
-                    ) : null}
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <ActionTile
-                        title={t("dashboard.compliance.vehiclesExpiring") || "مركبات قرب انتهاء الرخصة"}
-                        value={fmtInt(complianceCounts.vehExpiring)}
-                        hint={t("dashboard.compliance.openVehicles") || "افتح صفحة التنبيهات"}
-                        tone={complianceCounts.vehExpiring > 0 ? "warn" : "good"}
-                        href="/alerts?area=compliance&type=VEHICLE_LICENSE_EXPIRING"
-                        openLabel={t("common.open") || "فتح"}
-                      />
-                      <ActionTile
-                        title={t("dashboard.compliance.vehiclesExpired") || "مركبات انتهت الرخصة"}
-                        value={fmtInt(complianceCounts.vehExpired)}
-                        hint={t("dashboard.compliance.reviewVehicles") || "راجع العناصر الحرجة"}
-                        tone={complianceCounts.vehExpired > 0 ? "danger" : "good"}
-                        href="/alerts?area=compliance&type=VEHICLE_LICENSE_EXPIRED"
-                        openLabel={t("common.open") || "فتح"}
-                      />
-                      <ActionTile
-                        title={t("dashboard.compliance.driversExpiring") || "سائقين قرب انتهاء الرخصة"}
-                        value={fmtInt(complianceCounts.drvExpiring)}
-                        hint={t("dashboard.compliance.openDrivers") || "افتح صفحة التنبيهات"}
-                        tone={complianceCounts.drvExpiring > 0 ? "warn" : "good"}
-                        href="/alerts?area=compliance&type=DRIVER_LICENSE_EXPIRING"
-                        openLabel={t("common.open") || "فتح"}
-                      />
-                      <ActionTile
-                        title={t("dashboard.compliance.driversExpired") || "سائقين انتهت الرخصة"}
-                        value={fmtInt(complianceCounts.drvExpired)}
-                        hint={t("dashboard.compliance.reviewDrivers") || "راجع العناصر الحرجة"}
-                        tone={complianceCounts.drvExpired > 0 ? "danger" : "good"}
-                        href="/alerts?area=compliance&type=DRIVER_LICENSE_EXPIRED"
-                        openLabel={t("common.open") || "فتح"}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                      <DataTable
-                        title={t("dashboard.compliance.vehiclesTable") || "المركبات الأقرب لانتهاء الرخصة"}
-                        rows={complianceCounts.vehiclesExpiringList || []}
-                        searchable
-                        empty={
-                          <EmptyNice
-                            title={t("dashboard.compliance.vehiclesEmptyTitle") || "لا توجد مركبات قرب انتهاء الرخصة"}
-                            hint={t("dashboard.compliance.vehiclesEmptyHint") || "لا توجد عناصر ضمن نطاق التنبيه الحالي"}
-                          />
-                        }
-                        onRowClick={(r) => {
-                          if (r?.id) router.push(`/vehicles/${r.id}`);
-                        }}
-                        right={
-                          <Link href="/vehicles" className="text-xs text-orange-700 underline">
-                            {t("common.open") || "فتح"} ←
-                          </Link>
-                        }
-                        columns={[
-                          {
-                            key: "id",
-                            label: t("dashboard.columns.vehicle") || "المركبة",
-                            render: (r) => {
-                              const fleet = String(r?.fleet_no || "").trim();
-                              const plate = String(r?.plate_no || "").trim();
-                              const name =
-                                fleet && plate
-                                  ? `${fleet} - ${plate}`
-                                  : fleet || plate || r?.display_name || shortId(r?.id);
-                              return (
-                                <button
-                                  type="button"
-                                  className="font-medium text-orange-700 underline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`/vehicles/${r?.id}`);
-                                  }}
-                                >
-                                  {name}
-                                </button>
-                              );
-                            },
-                          },
-                          {
-                            key: "license_no",
-                            label: t("dashboard.compliance.licenseNo") || "رقم الرخصة",
-                            render: (r) => (r?.license_no ? String(r.license_no) : "—"),
-                          },
-                          {
-                            key: "license_expiry_date",
-                            label: t("dashboard.compliance.expiry") || "الانتهاء",
-                            render: (r) => {
-                              const dl = daysLeft(r?.license_expiry_date);
-                              const tone =
-                                dl == null
-                                  ? "bg-gray-50 text-gray-700 border-gray-200"
-                                  : dl <= 0
-                                  ? "bg-rose-50 text-rose-700 border-rose-200"
-                                  : dl <= 7
-                                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                                  : "bg-emerald-50 text-emerald-700 border-emerald-200";
-                              return (
-                                <div className="flex items-center justify-end gap-2">
-                                  <span className={cn("text-xs rounded-full border px-2 py-0.5", tone)}>
-                                    {dl == null ? "—" : dl <= 0 ? "منتهية" : `${dl} يوم`}
-                                  </span>
-                                  <span className="text-gray-700">{fmtDate(r?.license_expiry_date)}</span>
-                                </div>
-                              );
-                            },
-                          },
-                          {
-                            key: "supervisor_id",
-                            label: t("dashboard.compliance.supervisor") || "مشرف",
-                            render: (r) => (r?.supervisor_id ? shortId(r.supervisor_id) : "—"),
-                          },
-                        ]}
-                      />
-
-                      <DataTable
-                        title={t("dashboard.compliance.driversTable") || "السائقين الأقرب لانتهاء الرخصة"}
-                        rows={complianceCounts.driversExpiringList || []}
-                        searchable
-                        empty={
-                          <EmptyNice
-                            title={t("dashboard.compliance.driversEmptyTitle") || "لا يوجد سائقين قرب انتهاء الرخصة"}
-                            hint={t("dashboard.compliance.driversEmptyHint") || "لا توجد عناصر ضمن نطاق التنبيه الحالي"}
-                          />
-                        }
-                        onRowClick={(r) => {
-                          if (r?.id) router.push(`/drivers/${r.id}`);
-                        }}
-                        right={
-                          <Link href="/drivers" className="text-xs text-orange-700 underline">
-                            {t("common.open") || "فتح"} ←
-                          </Link>
-                        }
-                        columns={[
-                          {
-                            key: "full_name",
-                            label: t("dashboard.columns.driver") || "السائق",
-                            render: (r) => (
-                              <div className="flex flex-col items-end">
-                                <button
-                                  type="button"
-                                  className="font-medium text-orange-700 underline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`/drivers/${r?.id}`);
-                                  }}
-                                >
-                                  {r?.full_name || "—"}
-                                </button>
-                                <span className="text-xs text-gray-600">{r?.phone || r?.phone2 || "—"}</span>
-                              </div>
-                            ),
-                          },
-                          {
-                            key: "license_no",
-                            label: t("dashboard.compliance.licenseNo") || "رقم الرخصة",
-                            render: (r) => (r?.license_no ? String(r.license_no) : "—"),
-                          },
-                          {
-                            key: "license_expiry_date",
-                            label: t("dashboard.compliance.expiry") || "الانتهاء",
-                            render: (r) => {
-                              const dl = daysLeft(r?.license_expiry_date);
-                              const tone =
-                                dl == null
-                                  ? "bg-gray-50 text-gray-700 border-gray-200"
-                                  : dl <= 0
-                                  ? "bg-rose-50 text-rose-700 border-rose-200"
-                                  : dl <= 7
-                                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                                  : "bg-emerald-50 text-emerald-700 border-emerald-200";
-                              return (
-                                <div className="flex items-center justify-end gap-2">
-                                  <span className={cn("text-xs rounded-full border px-2 py-0.5", tone)}>
-                                    {dl == null ? "—" : dl <= 0 ? "منتهية" : `${dl} يوم`}
-                                  </span>
-                                  <span className="text-gray-700">{fmtDate(r?.license_expiry_date)}</span>
-                                </div>
-                              );
-                            },
-                          },
-                          {
-                            key: "national_id",
-                            label: t("dashboard.compliance.nationalId") || "الرقم القومي",
-                            render: (r) => (r?.national_id ? String(r.national_id) : "—"),
-                          },
-                        ]}
-                      />
-                    </div>
-                  </Section>
-                ) : null}
-
-                <Section title={t("dashboard.ops.quickKpis")}>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <CompactKpi
-                      title={t("dashboard.ops.kpis.tripsToday")}
-                      value={fmtInt(cards?.trips_today?.total)}
-                      sub={t("dashboard.ops.kpis.allStatuses")}
-                      right={<DeltaBadge points={chartData?.trips_created} />}
-                      href="/trips?range=today"
-                    />
-                    <CompactKpi
-                      title={t("dashboard.ops.kpis.assignedToday")}
-                      value={fmtInt(cards?.trips_today?.ASSIGNED ?? 0)}
-                      sub={t("dashboard.ops.kpis.assignedStatus")}
-                      href="/trips?range=today&status=ASSIGNED"
-                    />
-                    <CompactKpi
-                      title={t("dashboard.ops.kpis.inProgressToday")}
-                      value={fmtInt(cards?.trips_today?.IN_PROGRESS ?? 0)}
-                      sub={t("dashboard.ops.kpis.inProgressStatus")}
-                      href="/trips?range=today&status=IN_PROGRESS"
-                    />
-                    <CompactKpi
-                      title={t("dashboard.ops.kpis.completedToday")}
-                      value={fmtInt(cards?.trips_today?.COMPLETED ?? 0)}
-                      sub={t("dashboard.ops.kpis.completedStatus")}
-                      href="/trips?range=today&status=COMPLETED"
-                    />
-                  </div>
-                </Section>
-
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <DataTable
-                    title={t("dashboard.ops.tables.activeTripsNow")}
-                    rows={tables?.active_trips_now || []}
-                    searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.ops.empty.activeTripsNow.title")}
-                        hint={t("dashboard.ops.empty.activeTripsNow.hint")}
-                      />
-                    }
-                    onRowClick={(r) => {
-                      if (r?.trip_id) router.push(`/trips/${r.trip_id}`);
-                    }}
-                    columns={[
-                      {
-                        key: "trip_id",
-                        label: t("dashboard.columns.trip"),
-                        render: (r) => (
-                          <div className="flex items-center gap-2 justify-end">
-                            <button
-                              className="text-xs text-orange-700 underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                safeCopy(String(r.trip_id || ""));
-                              }}
-                              type="button"
-                            >
-                              {t("common.copy")}
-                            </button>
-                            <span className="font-mono">{shortId(r.trip_id)}</span>
-                          </div>
-                        ),
-                      },
-                      { key: "trip_status", label: t("dashboard.columns.status") },
-                      { key: "client", label: t("dashboard.columns.client") },
-                      { key: "site", label: t("dashboard.columns.site") },
-                      {
-                        key: "vehicle_plate_number",
-                        label: t("dashboard.columns.vehicle"),
-                        render: (r) =>
-                          r?.vehicle_id ? (
-                            <button
-                              type="button"
-                              className="text-orange-700 underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/vehicles/${r.vehicle_id}`);
-                              }}
-                            >
-                              {r?.vehicle_plate_number || shortId(r?.vehicle_id)}
-                            </button>
-                          ) : (
-                            r?.vehicle_plate_number || "—"
-                          ),
-                      },
-                      {
-                        key: "driver_name",
-                        label: t("dashboard.columns.driver"),
-                        render: (r) =>
-                          r?.driver_id ? (
-                            <button
-                              type="button"
-                              className="text-orange-700 underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/drivers/${r.driver_id}`);
-                              }}
-                            >
-                              {r?.driver_name || shortId(r?.driver_id)}
-                            </button>
-                          ) : (
-                            r?.driver_name || "—"
-                          ),
-                      },
-                      {
-                        key: "trip_created_at",
-                        label: t("dashboard.columns.created"),
-                        render: (r) => fmtDate(r.trip_created_at),
-                      },
-                    ]}
-                  />
-
-                  <DataTable
-                    title={t("dashboard.ops.tables.tripsNeedingClose")}
-                    rows={tables?.trips_needing_finance_close || []}
-                    searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.ops.empty.tripsNeedingClose.title")}
-                        hint={t("dashboard.ops.empty.tripsNeedingClose.hint")}
-                      />
-                    }
-                    onRowClick={(r) => {
-                      if (r?.id) router.push(`/trips/${r.id}`);
-                    }}
-                    columns={[
-                      {
-                        key: "id",
-                        label: t("dashboard.columns.trip"),
-                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
-                      },
-                      { key: "status", label: t("dashboard.columns.status") },
-                      { key: "financial_status", label: t("dashboard.columns.financial") },
-                      { key: "client", label: t("dashboard.columns.client") },
-                      { key: "site", label: t("dashboard.columns.site") },
-                      {
-                        key: "created_at",
-                        label: t("dashboard.columns.created"),
-                        render: (r) => fmtDate(r.created_at),
-                      },
-                    ]}
-                  />
-                </div>
-
-                <Section
-                  title={t("dashboard.ops.trendTitle")}
-                  right={
-                    loadingCharts ? (
-                      <span className="text-xs text-gray-600">{t("common.loading")}</span>
-                    ) : chartData ? (
-                      <span className="text-xs text-gray-600">{t("common.daily")}</span>
-                    ) : (
-                      <span className="text-xs text-gray-600">{t("common.unavailable")}</span>
-                    )
-                  }
-                >
-                  {loadingCharts ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4">
-                        <div className="h-4 w-40 bg-gray-100 rounded" />
-                        <div className="mt-3 h-44 bg-gray-100 rounded" />
-                      </div>
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4">
-                        <div className="h-4 w-40 bg-gray-100 rounded" />
-                        <div className="mt-3 h-44 bg-gray-100 rounded" />
-                      </div>
-                    </div>
-                  ) : chartData ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <MiniChart
-                        title={t("dashboard.ops.charts.tripsCreated")}
-                        points={chartData.trips_created}
-                        valueKey="value"
-                      />
-                      <MiniChart
-                        title={t("dashboard.ops.charts.tripsAssigned")}
-                        points={chartData.trips_assigned}
-                        valueKey="value"
-                      />
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
-                      {t("dashboard.errors.trendsUnavailable")}
-                    </div>
-                  )}
-                </Section>
-              </div>
-            )}
-
-            {tab === "finance" && (
-              <div className="space-y-6">
-                <Section title={t("dashboard.finance.actionRequired")}>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <ActionTile
-                      title={t("dashboard.finance.pendingTooLong.title")}
-                      value={fmtInt(fin.pendingTooLong)}
-                      hint={
-                        fin.pendingTooLong
-                          ? t("dashboard.finance.pendingTooLong.hintOn")
-                          : t("dashboard.finance.pendingTooLong.hintOff")
-                      }
-                      tone={fin.tonePending as any}
-                      href="/alerts?area=finance&severity=warn"
-                      openLabel={t("common.open")}
-                    />
-                    <ActionTile
-                      title={t("dashboard.finance.openAdvances.title")}
-                      value={fmtInt(fin.advancesOpen)}
-                      hint={
-                        fin.advancesOpen
-                          ? t("dashboard.finance.openAdvances.hintOn")
-                          : t("dashboard.finance.openAdvances.hintOff")
-                      }
-                      tone={fin.toneAdv as any}
-                      href="/alerts?area=finance&severity=warn"
-                      openLabel={t("common.open")}
-                    />
-                    <ActionTile
-                      title={t("dashboard.finance.expensesTodayApproved.title")}
-                      value={fmtMoney(cards?.expenses_today?.APPROVED ?? 0)}
-                      hint={t("dashboard.finance.expensesTodayApproved.hint")}
-                      tone={Number(cards?.expenses_today?.APPROVED ?? 0) > 0 ? "neutral" : "good"}
-                      href="/finance/expenses?status=APPROVED"
-                      openLabel={t("common.open")}
-                    />
-                  </div>
-                </Section>
-
-                <Section title={t("dashboard.finance.arAlertsSection")}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <ActionTile
-                      title={t("dashboard.finance.arDueSoon.title")}
-                      value={fmtInt(fin.arDueSoonCount)}
-                      hint={
-                        fin.arDueSoonCount > 0
-                          ? t("dashboard.finance.arDueSoon.hintOn", {
-                              total: fmtMoney(fin.arDueSoonTotal),
-                            })
-                          : t("dashboard.finance.arDueSoon.hintOff")
-                      }
-                      tone={fin.toneArDueSoon as any}
-                      href="/alerts?area=finance&severity=warn"
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.finance.arOverdue.title")}
-                      value={fmtInt(fin.arOverdueCount)}
-                      hint={
-                        fin.arOverdueCount > 0
-                          ? t("dashboard.finance.arOverdue.hintOn", {
-                              total: fmtMoney(fin.arOverdueTotal),
-                            })
-                          : t("dashboard.finance.arOverdue.hintOff")
-                      }
-                      tone={fin.toneArOverdue as any}
-                      href="/alerts?area=finance&severity=danger"
-                      openLabel={t("common.open")}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.finance.apDueSoon.title")}
-                      value={fmtInt(fin.apDueSoonCount)}
-                      hint={
-                        fin.apEnabled
-                          ? t("dashboard.finance.apDueSoon.hintOn", {
-                              total: fmtMoney(fin.apDueSoonTotal),
-                            })
-                          : t("dashboard.finance.apDueSoon.hintOff")
-                      }
-                      tone={fin.toneAp as any}
-                    />
-
-                    <ActionTile
-                      title={t("dashboard.finance.apOverdue.title")}
-                      value={fmtInt(fin.apOverdueCount)}
-                      hint={
-                        fin.apEnabled
-                          ? t("dashboard.finance.apOverdue.hintOn", {
-                              total: fmtMoney(fin.apOverdueTotal),
-                            })
-                          : t("dashboard.finance.apOverdue.hintOff")
-                      }
-                      tone={fin.toneAp as any}
-                    />
-                  </div>
-                </Section>
-
-                <Section title={t("dashboard.finance.topArOverdue.sectionTitle")}>
-                  <DataTable
-                    title={t("dashboard.finance.topArOverdue.tableTitle")}
-                    rows={tables?.top_ar_overdue_invoices || []}
-                    searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.finance.topArOverdue.emptyTitle")}
-                        hint={t("dashboard.finance.topArOverdue.emptyHint")}
-                      />
-                    }
-                    onRowClick={() => {
-                      router.push(`/finance/ar/invoices`);
-                    }}
-                    right={
-                      <Link href="/finance/ar/invoices" className="text-xs text-orange-700 underline">
-                        {t("common.open")} ←
-                      </Link>
-                    }
-                    columns={[
-                      {
-                        key: "invoice_no",
-                        label: t("dashboard.columns.invoice"),
-                        render: (r) => (
-                          <div className="flex items-center gap-2 justify-end">
-                            <button
-                              className="text-xs text-orange-700 underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                safeCopy(String(r?.invoice_no || ""));
-                              }}
-                              type="button"
-                            >
-                              {t("common.copy")}
-                            </button>
-                            <span className="font-medium">{r?.invoice_no || shortId(r?.id)}</span>
-                          </div>
-                        ),
-                      },
-                      {
-                        key: "client_name",
-                        label: t("dashboard.columns.client"),
-                        render: (r) => r?.client_name || "—",
-                      },
-                      {
-                        key: "due_date",
-                        label: t("dashboard.columns.dueDate"),
-                        render: (r) => fmtDate(r?.due_date),
-                      },
-                      {
-                        key: "days_overdue",
-                        label: t("dashboard.columns.daysOverdue"),
-                        render: (r) => (
-                          <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs text-rose-700">
-                            {fmtInt(r?.days_overdue ?? 0)}
-                          </span>
-                        ),
-                      },
-                      {
-                        key: "outstanding_amount",
-                        label: t("dashboard.columns.outstanding"),
-                        render: (r) => fmtMoney(r?.outstanding_amount ?? 0),
-                      },
-                      {
-                        key: "status",
-                        label: t("dashboard.columns.status"),
-                        render: (r) => r?.status || "—",
-                      },
-                    ]}
-                  />
-                </Section>
-
-                <Section title={t("dashboard.finance.topArDueSoon.sectionTitle")}>
-                  <DataTable
-                    title={t("dashboard.finance.topArDueSoon.tableTitle")}
-                    rows={tables?.top_ar_due_soon_invoices || []}
-                    searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.finance.topArDueSoon.emptyTitle")}
-                        hint={t("dashboard.finance.topArDueSoon.emptyHint")}
-                      />
-                    }
-                    onRowClick={() => {
-                      router.push(`/finance/ar/invoices`);
-                    }}
-                    right={
-                      <Link href="/finance/ar/invoices" className="text-xs text-orange-700 underline">
-                        {t("common.open")} ←
-                      </Link>
-                    }
-                    columns={[
-                      {
-                        key: "invoice_no",
-                        label: t("dashboard.columns.invoice"),
-                        render: (r) => (
-                          <div className="flex items-center gap-2 justify-end">
-                            <button
-                              className="text-xs text-orange-700 underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                safeCopy(String(r?.invoice_no || ""));
-                              }}
-                              type="button"
-                            >
-                              {t("common.copy")}
-                            </button>
-                            <span className="font-medium">{r?.invoice_no || shortId(r?.id)}</span>
-                          </div>
-                        ),
-                      },
-                      {
-                        key: "client_name",
-                        label: t("dashboard.columns.client"),
-                        render: (r) => r?.client_name || "—",
-                      },
-                      {
-                        key: "due_date",
-                        label: t("dashboard.columns.dueDate"),
-                        render: (r) => fmtDate(r?.due_date),
-                      },
-                      {
-                        key: "days_to_due",
-                        label: t("dashboard.columns.daysToDue"),
-                        render: (r) => (
-                          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
-                            {fmtInt(r?.days_to_due ?? 0)}
-                          </span>
-                        ),
-                      },
-                      {
-                        key: "outstanding_amount",
-                        label: t("dashboard.columns.outstanding"),
-                        render: (r) => fmtMoney(r?.outstanding_amount ?? 0),
-                      },
-                      {
-                        key: "status",
-                        label: t("dashboard.columns.status"),
-                        render: (r) => r?.status || "—",
-                      },
-                    ]}
-                  />
-                </Section>
-
-                <Section title={t("dashboard.finance.topExpenseTypesToday.sectionTitle")}>
-                  <DataTable
-                    title={t("dashboard.finance.topExpenseTypesToday.tableTitle")}
-                    rows={tables?.top_expense_types_today || []}
-                    searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.finance.empty.noApprovedToday.title")}
-                        hint={t("dashboard.finance.empty.noApprovedToday.hint")}
-                      />
-                    }
-                    columns={[
-                      { key: "expense_type", label: t("dashboard.columns.type") },
-                      {
-                        key: "amount",
-                        label: t("dashboard.columns.amount"),
-                        render: (r) => fmtMoney(r.amount),
-                      },
-                    ]}
-                  />
-                </Section>
-              </div>
-            )}
-
-            {tab === "maintenance" && (
-              <div className="space-y-6">
-                <Section title={t("dashboard.maintenance.actionRequired")}>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <ActionTile
-                      title={t("dashboard.maintenance.openWorkOrders.title")}
-                      value={fmtInt(mnt.openWos)}
-                      hint={
-                        mnt.openWos
-                          ? t("dashboard.maintenance.openWorkOrders.hintOn")
-                          : t("dashboard.maintenance.openWorkOrders.hintOff")
-                      }
-                      tone={mnt.toneOpen as any}
-                      href="/alerts?area=maintenance&severity=warn"
-                      openLabel={t("common.open")}
-                    />
-                    <ActionTile
-                      title={t("dashboard.maintenance.qaNeeds.title")}
-                      value={fmtInt(mnt.qaNeeds)}
-                      hint={
-                        mnt.qaNeeds
-                          ? t("dashboard.maintenance.qaNeeds.hintOn")
-                          : t("dashboard.maintenance.qaNeeds.hintOff")
-                      }
-                      tone={mnt.toneQa as any}
-                      href="/alerts?area=maintenance&severity=warn"
-                      openLabel={t("common.open")}
-                    />
-                    <ActionTile
-                      title={t("dashboard.maintenance.qaFailed.title")}
-                      value={fmtInt(mnt.qaFailed)}
-                      hint={
-                        mnt.qaFailed
-                          ? t("dashboard.maintenance.qaFailed.hintOn")
-                          : t("dashboard.maintenance.qaFailed.hintOff")
-                      }
-                      tone={mnt.toneFail as any}
-                      href="/alerts?area=maintenance&severity=danger"
-                      openLabel={t("common.open")}
-                    />
-                    <ActionTile
-                      title={t("dashboard.maintenance.partsMismatch.title")}
-                      value={fmtInt(mnt.mismatch)}
-                      hint={
-                        mnt.mismatch
-                          ? t("dashboard.maintenance.partsMismatch.hintOn")
-                          : t("dashboard.maintenance.partsMismatch.hintOff")
-                      }
-                      tone={mnt.toneMismatch as any}
-                      href="/alerts?area=maintenance&severity=danger"
-                      openLabel={t("common.open")}
-                    />
-                  </div>
-
-                  {!isAdminAcc ? (
-                    <div className="mt-2 text-xs text-gray-600">{t("dashboard.maintenance.supervisorNote")}</div>
-                  ) : null}
-                </Section>
-
-                <Section title={t("dashboard.maintenance.kpisToday")}>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <CompactKpi
-                      title={t("dashboard.maintenance.completedToday.title")}
-                      value={fmtInt(mnt.completedToday)}
-                      sub={t("dashboard.maintenance.completedToday.sub")}
-                    />
-                    <CompactKpi
-                      title={t("dashboard.maintenance.partsCostToday.title")}
-                      value={fmtMoney(cards?.maintenance?.maintenance_parts_cost_today ?? 0)}
-                      sub={t("dashboard.maintenance.partsCostToday.sub")}
-                    />
-                    <CompactKpi
-                      title={t("dashboard.maintenance.cashCostToday.title")}
-                      value={fmtMoney(cards?.maintenance?.maintenance_cash_cost_today ?? 0)}
-                      sub={t("dashboard.maintenance.cashCostToday.sub")}
-                    />
-                    <CompactKpi
-                      title={t("dashboard.maintenance.totalCostToday.title")}
-                      value={fmtMoney(cards?.maintenance?.maintenance_cost_today ?? 0)}
-                      sub={t("dashboard.maintenance.totalCostToday.sub")}
-                    />
-                  </div>
-                </Section>
-
-                <Section
-                  title={t("dashboard.maintenance.recentWorkOrders.sectionTitle")}
-                  right={
-                    <Link
-                      href={isAdminAcc ? "/maintenance/work-orders" : "/maintenance/requests"}
-                      className="text-xs text-orange-700 underline"
-                    >
-                      {t("dashboard.maintenance.recentWorkOrders.openList")} ←
-                    </Link>
-                  }
-                >
-                  <DataTable
-                    title={t("dashboard.maintenance.recentWorkOrders.tableTitle")}
-                    rows={tables?.maintenance_recent_work_orders || []}
-                    searchable
-                    empty={
-                      <EmptyNice
-                        title={t("dashboard.maintenance.empty.noWorkOrders.title")}
-                        hint={t("dashboard.maintenance.empty.noWorkOrders.hint")}
-                      />
-                    }
-                    onRowClick={(r) => {
-                      if (isAdminAcc && r?.id) router.push(`/maintenance/work-orders/${r.id}`);
-                      else router.push(`/maintenance/requests`);
-                    }}
-                    columns={[
-                      {
-                        key: "id",
-                        label: t("dashboard.columns.wo"),
-                        render: (r) => <span className="font-mono">{shortId(r.id)}</span>,
-                      },
-                      { key: "status", label: t("dashboard.columns.status") },
-                      { key: "type", label: t("dashboard.columns.type") },
-                      {
-                        key: "vehicle_id",
-                        label: t("dashboard.columns.vehicle"),
-                        render: (r) =>
-                          r?.vehicle_id ? (
-                            <button
-                              type="button"
-                              className="text-orange-700 underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/vehicles/${r.vehicle_id}`);
-                              }}
-                            >
-                              {shortId(r.vehicle_id)}
-                            </button>
-                          ) : (
-                            "—"
-                          ),
-                      },
-                      {
-                        key: "opened_at",
-                        label: t("dashboard.columns.opened"),
-                        render: (r) => fmtDate(r.opened_at),
-                      },
-                      {
-                        key: "completed_at",
-                        label: t("dashboard.columns.completed"),
-                        render: (r) => fmtDate(r.completed_at),
-                      },
-                    ]}
-                  />
-                </Section>
-              </div>
-            )}
-
-            {tab === "dev" && (
-              <div className="space-y-6">
-                <EmptyNice title={t("dashboard.dev.title")} hint={t("dashboard.dev.hint")} />
-              </div>
-            )}
-          </>
-        )}
+        <DataTable<DashboardComplianceDriverItem>
+          title={t("dashboard.sections.driversExpiring") || "سائقون رخصهم قربت تنتهي"}
+          subtitle={`${fmtInt(compliance?.counts?.drivers?.expiring)} ${t("common.items") || "عنصر"}`}
+          columns={driversColumns}
+          rows={driverExpiringRows}
+          loading={loading}
+          emptyTitle={t("dashboard.empty.noDriverCompliance") || "لا يوجد سائقون قريبون من الانتهاء"}
+          emptyHint={t("dashboard.empty.noDriverComplianceHint") || "الوضع جيد."}
+        />
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
   type TripRevenue,
   type TripRevenueSource,
 } from "@/src/services/trip-revenues.service";
+import { tripsService } from "@/src/services/trips.service";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -82,6 +83,93 @@ const inputCls =
 const textareaCls =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 min-h-[100px]";
 
+type TripDetailsLite = {
+  id: string;
+  contract_id?: string | null;
+  cargo_weight?: number | string | null;
+  status?: string | null;
+  trip_type?: string | null;
+  routes?: {
+    id?: string | null;
+    name?: string | null;
+    code?: string | null;
+    distance_km?: number | null;
+  } | null;
+  pickup_site?: {
+    id?: string | null;
+    name?: string | null;
+    zone_id?: string | null;
+  } | null;
+  dropoff_site?: {
+    id?: string | null;
+    name?: string | null;
+    zone_id?: string | null;
+  } | null;
+  cargo_types?: {
+    id?: string | null;
+    name?: string | null;
+    code?: string | null;
+  } | null;
+  trip_assignments?: Array<{
+    id?: string;
+    is_active?: boolean;
+    vehicles?: {
+      id?: string | null;
+      vehicle_class_id?: string | null;
+      display_name?: string | null;
+      plate_no?: string | null;
+      fleet_no?: string | null;
+    } | null;
+  }>;
+};
+
+type AutoPricingReadiness = {
+  ok: boolean;
+  reasons: string[];
+  hasContract: boolean;
+  hasVehicleClass: boolean;
+  hasWeight: boolean;
+};
+
+function getActiveVehicleClassId(trip: TripDetailsLite | null): string | null {
+  if (!trip?.trip_assignments?.length) return null;
+  const active =
+    trip.trip_assignments.find((x) => x?.is_active !== false) ||
+    trip.trip_assignments[0];
+  return active?.vehicles?.vehicle_class_id || null;
+}
+
+function buildAutoPricingReadiness(trip: TripDetailsLite | null): AutoPricingReadiness {
+  const reasons: string[] = [];
+
+  const hasContract = Boolean(trip?.contract_id);
+  const hasVehicleClass = Boolean(getActiveVehicleClassId(trip));
+  const hasWeight =
+    trip?.cargo_weight !== undefined &&
+    trip?.cargo_weight !== null &&
+    String(trip.cargo_weight).trim() !== "";
+
+  if (!hasContract) {
+    reasons.push("لا يمكن حساب السعر تلقائيًا لأن الرحلة غير مرتبطة بعقد.");
+  }
+
+  if (!hasVehicleClass) {
+    reasons.push("لا يمكن حساب السعر تلقائيًا لأن الرحلة لا تحتوي على سيارة مخصصة بفئة سيارة معروفة.");
+  }
+
+  if (!hasWeight) {
+    reasons.push("لا يمكن ضمان حساب السعر تلقائيًا لأن وزن الحمولة غير مُسجل.");
+  }
+
+  return {
+    ok: reasons.length === 0,
+    reasons,
+    hasContract,
+    hasVehicleClass,
+    hasWeight,
+  };
+}
+
 export default function TripRevenuePage() {
   const t = useT();
   const params = useParams();
@@ -97,8 +185,11 @@ export default function TripRevenuePage() {
   const [loading, setLoading] = useState(true);
   const [savingRevenue, setSavingRevenue] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [autoPricing, setAutoPricing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
+  const [trip, setTrip] = useState<TripDetailsLite | null>(null);
   const [revenueRecord, setRevenueRecord] = useState<TripRevenue | null>(null);
   const [history, setHistory] = useState<TripRevenue[]>([]);
 
@@ -125,31 +216,42 @@ export default function TripRevenuePage() {
     setError(null);
 
     try {
-      const [revenueRes, historyRes] = await Promise.all([
+      const [tripRes, revenueRes, historyRes] = await Promise.all([
+        tripsService.getById(tripId),
         tripRevenuesService.getByTrip(tripId),
         tripRevenuesService.getHistory(tripId),
       ]);
 
+      const tripData = (tripRes ?? null) as TripDetailsLite | null;
       const revenue = revenueRes?.data || null;
       const historyItems = historyRes?.data || [];
 
-      setRevenueRecord(revenue);
+      setTrip(tripData);
+      setRevenueRecord(revenue as TripRevenue | null);
       setHistory(
         Array.isArray(historyItems) && historyItems.length
-          ? historyItems
+          ? (historyItems as TripRevenue[])
           : revenue
-          ? [revenue]
+          ? [revenue as TripRevenue]
           : []
       );
 
       setRevenueAmount(
-        revenue?.amount != null ? String(num(revenue.amount)) : ""
+        revenue && (revenue as TripRevenue).amount != null
+          ? String(num((revenue as TripRevenue).amount))
+          : ""
       );
-      setRevenueCurrency(String(revenue?.currency || "EGP"));
-      setRevenueSource((revenue?.source as TripRevenueSource) || "MANUAL");
-      setRevenueNotes(String(revenue?.notes || ""));
+      setRevenueCurrency(
+        String((revenue as TripRevenue | null)?.currency || "EGP")
+      );
+      setRevenueSource(
+        (((revenue as TripRevenue | null)?.source as TripRevenueSource) ||
+          "MANUAL")
+      );
+      setRevenueNotes(String((revenue as TripRevenue | null)?.notes || ""));
     } catch (e: any) {
       setError(e?.message || "فشل تحميل بيانات الإيراد");
+      setTrip(null);
       setRevenueRecord(null);
       setHistory([]);
     } finally {
@@ -163,6 +265,10 @@ export default function TripRevenuePage() {
   }, [tripId, canManageRevenue]);
 
   const currency = revenueRecord?.currency || revenueCurrency || "EGP";
+  const autoPricingReadiness = useMemo(
+    () => buildAutoPricingReadiness(trip),
+    [trip]
+  );
 
   const saveBlockedReason = useMemo(() => {
     if (revenueSource === "CONTRACT") {
@@ -170,7 +276,7 @@ export default function TripRevenuePage() {
         Boolean((revenueRecord as any)?.contract_id) ||
         Boolean((revenueRecord as any)?.pricing_rule_id);
       if (!hasContractLink) {
-        return "لا يمكن حفظ إيراد CONTRACT من هذه الشاشة بدون وجود contract_id أو pricing_rule_id محفوظ مسبقًا.";
+        return "لا يمكن حفظ إيراد CONTRACT من هذه الشاشة بدون وجود contract_id أو pricing_rule_id محفوظ مسبقًا. استخدم زر احسب السعر من العقد أولًا.";
       }
     }
 
@@ -200,6 +306,7 @@ export default function TripRevenuePage() {
 
     setSavingRevenue(true);
     setError(null);
+    setInfo(null);
 
     try {
       await tripRevenuesService.save(tripId, {
@@ -212,6 +319,7 @@ export default function TripRevenuePage() {
         notes: revenueNotes.trim() || null,
       });
 
+      setInfo("تم حفظ الإيراد بنجاح");
       await load();
     } catch (e: any) {
       setError(e?.message || "فشل حفظ إيراد الرحلة");
@@ -220,13 +328,55 @@ export default function TripRevenuePage() {
     }
   }
 
+  async function autoCalculateRevenue() {
+    if (!canManageRevenue || !tripId) return;
+
+    if (!autoPricingReadiness.ok) {
+      setError(autoPricingReadiness.reasons.join(" "));
+      return;
+    }
+
+    setAutoPricing(true);
+    setError(null);
+    setInfo(null);
+
+    try {
+      const result = await tripRevenuesService.autoPrice(tripId, {
+        auto_approve: false,
+        notes: "AUTO_CALCULATED_FROM_REVENUE_PAGE",
+      });
+
+      const revenue = result?.data?.revenue || null;
+      const amount = revenue?.amount ?? null;
+      const ruleId = revenue?.pricing_rule_id ?? null;
+      const resolvedCurrency = revenue?.currency || "EGP";
+
+      setInfo(
+        amount != null
+          ? `تم حساب السعر تلقائيًا${
+              ruleId ? ` باستخدام قاعدة التسعير ${ruleId}` : ""
+            } بقيمة ${fmtMoney(amount, resolvedCurrency)}`
+          : "تم حساب السعر تلقائيًا بنجاح"
+      );
+
+      await load();
+    } catch (e: any) {
+      setError(e?.message || "فشل حساب السعر تلقائيًا");
+    } finally {
+      setAutoPricing(false);
+    }
+  }
+
   async function approveRevenue() {
     if (!canApproveRevenue || !tripId) return;
 
     setApproving(true);
     setError(null);
+    setInfo(null);
+
     try {
       await tripRevenuesService.approve(tripId, {});
+      setInfo("تم اعتماد الإيراد بنجاح");
       await load();
     } catch (e: any) {
       setError(e?.message || "فشل اعتماد الإيراد");
@@ -281,6 +431,54 @@ export default function TripRevenuePage() {
           </div>
         )}
 
+        {info && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700">
+            {info}
+          </div>
+        )}
+
+        {!loading && !autoPricingReadiness.ok ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <div className="font-semibold mb-2">متطلبات التسعير التلقائي غير مكتملة</div>
+            <ul className="list-disc pr-5 space-y-1">
+              {autoPricingReadiness.reasons.map((reason, idx) => (
+                <li key={idx}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {!loading && trip ? (
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="text-sm font-semibold text-slate-900 mb-3">
+              جاهزية التسعير التلقائي
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs text-slate-600 mb-1">العقد</div>
+                <div className={autoPricingReadiness.hasContract ? "text-emerald-700 font-semibold" : "text-red-700 font-semibold"}>
+                  {autoPricingReadiness.hasContract ? "موجود" : "غير موجود"}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs text-slate-600 mb-1">فئة السيارة</div>
+                <div className={autoPricingReadiness.hasVehicleClass ? "text-emerald-700 font-semibold" : "text-red-700 font-semibold"}>
+                  {autoPricingReadiness.hasVehicleClass ? "موجودة" : "غير موجودة"}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs text-slate-600 mb-1">وزن الحمولة</div>
+                <div className={autoPricingReadiness.hasWeight ? "text-emerald-700 font-semibold" : "text-red-700 font-semibold"}>
+                  {autoPricingReadiness.hasWeight ? `موجود (${trip.cargo_weight})` : "غير موجود"}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           {loading ? (
             <div className="text-sm text-slate-600">{t("common.loading")}</div>
@@ -333,7 +531,7 @@ export default function TripRevenuePage() {
                       value={revenueAmount}
                       onChange={(e) => setRevenueAmount(e.target.value)}
                       className={inputCls}
-                      disabled={savingRevenue}
+                      disabled={savingRevenue || autoPricing}
                     />
                   </label>
 
@@ -343,7 +541,7 @@ export default function TripRevenuePage() {
                       value={revenueCurrency}
                       onChange={(e) => setRevenueCurrency(e.target.value)}
                       className={inputCls}
-                      disabled={savingRevenue}
+                      disabled={savingRevenue || autoPricing}
                     >
                       <option value="EGP">EGP</option>
                       <option value="USD">USD</option>
@@ -359,7 +557,7 @@ export default function TripRevenuePage() {
                         setRevenueSource(e.target.value as TripRevenueSource)
                       }
                       className={inputCls}
-                      disabled={savingRevenue}
+                      disabled={savingRevenue || autoPricing}
                     >
                       <option value="MANUAL">MANUAL</option>
                       <option value="CONTRACT">CONTRACT</option>
@@ -374,7 +572,7 @@ export default function TripRevenuePage() {
                     value={revenueNotes}
                     onChange={(e) => setRevenueNotes(e.target.value)}
                     className={textareaCls}
-                    disabled={savingRevenue}
+                    disabled={savingRevenue || autoPricing}
                   />
                 </label>
 
@@ -418,6 +616,7 @@ export default function TripRevenuePage() {
                       <span className="font-semibold">
                         {(revenueRecord as any)?.client_contracts?.contract_no ||
                           (revenueRecord as any)?.contract_id ||
+                          trip?.contract_id ||
                           "—"}
                       </span>
                     </div>
@@ -446,7 +645,7 @@ export default function TripRevenuePage() {
 
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
-                    disabled={savingRevenue}
+                    disabled={savingRevenue || autoPricing}
                     onClick={saveRevenue}
                     className="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-sm disabled:opacity-50 text-emerald-800"
                   >
@@ -454,7 +653,20 @@ export default function TripRevenuePage() {
                   </button>
 
                   <button
-                    disabled={approving || !!revenueRecord?.is_approved}
+                    disabled={!autoPricingReadiness.ok || autoPricing || savingRevenue || approving}
+                    onClick={autoCalculateRevenue}
+                    className="px-3 py-2 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-sm disabled:opacity-50 text-purple-800"
+                    title={
+                      autoPricingReadiness.ok
+                        ? "احسب السعر من العقد"
+                        : autoPricingReadiness.reasons.join(" ")
+                    }
+                  >
+                    {autoPricing ? "جارٍ الحساب..." : "احسب السعر من العقد"}
+                  </button>
+
+                  <button
+                    disabled={approving || !!revenueRecord?.is_approved || autoPricing}
                     onClick={approveRevenue}
                     className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm disabled:opacity-50 text-blue-800"
                   >
@@ -466,7 +678,7 @@ export default function TripRevenuePage() {
                   </button>
 
                   <button
-                    disabled={savingRevenue || approving}
+                    disabled={savingRevenue || approving || autoPricing}
                     onClick={load}
                     className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
                   >
@@ -530,6 +742,23 @@ export default function TripRevenuePage() {
                             العملة:{" "}
                             <span className="font-semibold text-slate-900">
                               {row?.currency || "EGP"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-600">
+                          <div>
+                            العقد:{" "}
+                            <span className="font-semibold text-slate-900">
+                              {(row as any)?.client_contracts?.contract_no ||
+                                (row as any)?.contract_id ||
+                                "—"}
+                            </span>
+                          </div>
+                          <div>
+                            قاعدة التسعير:{" "}
+                            <span className="font-semibold text-slate-900">
+                              {(row as any)?.pricing_rule_id || "—"}
                             </span>
                           </div>
                         </div>
