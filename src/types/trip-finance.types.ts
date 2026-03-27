@@ -10,7 +10,7 @@ export interface TripRevenueRecord {
   approved_at?: string | null;
   notes?: string | null;
   is_approved?: boolean;
-  version_no?: number;
+  version_no?: number | null;
   pricing_rule_id?: string | null;
   pricing_rule_snapshot?: any;
 }

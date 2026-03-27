@@ -7,13 +7,13 @@ import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
 import { tripFinanceService } from "@/src/services/trip-finance.service";
-import {
-  tripRevenuesService,
-  type TripRevenue,
-  type TripRevenueSource,
-} from "@/src/services/trip-revenues.service";
+import { tripRevenuesService } from "@/src/services/trip-revenues.service";
 
 import type { TripFinanceSummary } from "@/src/types/trip-finance.types";
+import type {
+  TripRevenue,
+  TripRevenueSource,
+} from "@/src/types/trip-revenues.types";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -660,13 +660,13 @@ export default function TripFinancePage() {
                     <div>
                       المدخل:{" "}
                       <span className="font-semibold">
-                        {revenueRecord?.users_entered?.full_name || "—"}
+                        {(revenueRecord as any)?.users_entered?.full_name || "—"}
                       </span>
                     </div>
                     <div>
                       تاريخ الإدخال:{" "}
                       <span className="font-semibold">
-                        {fmtDate(revenueRecord?.entered_at)}
+                        {fmtDate((revenueRecord as any)?.entered_at)}
                       </span>
                     </div>
                   </div>
