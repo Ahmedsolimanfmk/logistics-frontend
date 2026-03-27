@@ -155,13 +155,24 @@ export interface PricingRulePayload {
   route_id?: string | null;
   pickup_site_id?: string | null;
   dropoff_site_id?: string | null;
+  from_zone_id?: string | null;
+  to_zone_id?: string | null;
   vehicle_class_id?: string | null;
   cargo_type_id?: string | null;
 
+  trip_type?: string | null;
+
+  min_weight?: number | null;
+  max_weight?: number | null;
+
+  currency?: string | null;
   price_per_ton?: number | null;
   price_per_km?: number | null;
 
   priority?: number | null;
+  effective_from?: string | null;
+  effective_to?: string | null;
+
   is_active?: boolean;
   notes?: string | null;
 }
