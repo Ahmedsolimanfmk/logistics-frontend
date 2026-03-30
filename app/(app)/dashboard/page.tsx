@@ -10,6 +10,8 @@ import { Card } from "@/src/components/ui/Card";
 import { TabsBar } from "@/src/components/ui/TabsBar";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
+import { DashboardAssistantPanel } from "@/src/components/dashboard/DashboardAssistantPanel";
+import { DashboardInsightsPanel } from "@/src/components/dashboard/DashboardInsightsPanel";
 
 import dashboardService from "@/src/services/dashboard.service";
 import type {
@@ -169,6 +171,15 @@ export default function DashboardPage() {
     ],
     [t]
   );
+
+  const assistantContext = useMemo<
+    "finance" | "ar" | "maintenance" | "inventory" | "trips"
+  >(() => {
+    if (tab === "operations") return "trips";
+    if (tab === "finance") return "finance";
+    if (tab === "maintenance") return "maintenance";
+    return "finance";
+  }, [tab]);
 
   const activeTripsRows = useMemo(
     () => (summary?.tables?.active_trips_now as GenericRow[] | undefined) ?? [],
@@ -333,13 +344,23 @@ export default function DashboardPage() {
 
       <TabsBar<DashboardTabKey> tabs={tabs} value={tab} onChange={setTab} />
 
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        <div className="xl:col-span-3">
+          <DashboardAssistantPanel context={assistantContext} />
+        </div>
+
+        <div className="xl:col-span-2">
+          <DashboardInsightsPanel context={assistantContext} />
+        </div>
+      </div>
+
       {err ? (
         <Card className="border-red-500/20">
           <div className="text-sm text-red-600">{err}</div>
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t("dashboard.cards.activeTrips") || "الرحلات النشطة الآن"}
           value={fmtInt(summary?.alerts?.active_trips_now_count)}
@@ -359,7 +380,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t("dashboard.finance.arDueSoon") || "AR قريب الاستحقاق"}
           value={fmtMoney(summary?.alerts?.ar_due_soon_total)}
@@ -382,7 +403,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DataTable<DashboardAlertRow>
           title={t("dashboard.sections.recentAlerts") || "أحدث التنبيهات"}
           columns={recentAlertsColumns}
@@ -395,12 +416,15 @@ export default function DashboardPage() {
         <Card title={t("dashboard.sections.trends") || "الاتجاهات السريعة"}>
           <div className="space-y-4">
             <div>
-              <div className="text-sm font-medium mb-2">
+              <div className="mb-2 text-sm font-medium">
                 {t("dashboard.trends.tripsCreated") || "الرحلات المنشأة"}
               </div>
               <div className="space-y-2">
                 {(trendsBundle?.trips_created ?? []).map((point, index) => (
-                  <div key={`${point.label}-${index}`} className="flex items-center justify-between text-sm">
+                  <div
+                    key={`${point.label}-${index}`}
+                    className="flex items-center justify-between text-sm"
+                  >
                     <span className="text-slate-600">{point.label}</span>
                     <span className="font-semibold">{fmtInt(point.value)}</span>
                   </div>
@@ -409,12 +433,15 @@ export default function DashboardPage() {
             </div>
 
             <div>
-              <div className="text-sm font-medium mb-2">
+              <div className="mb-2 text-sm font-medium">
                 {t("dashboard.trends.expensesPending") || "المصروفات المعلقة"}
               </div>
               <div className="space-y-2">
                 {(trendsBundle?.expenses_pending ?? []).map((point, index) => (
-                  <div key={`${point.label}-${index}`} className="flex items-center justify-between text-sm">
+                  <div
+                    key={`${point.label}-${index}`}
+                    className="flex items-center justify-between text-sm"
+                  >
                     <span className="text-slate-600">{point.label}</span>
                     <span className="font-semibold">{fmtInt(point.value)}</span>
                   </div>
@@ -425,7 +452,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DataTable<GenericRow>
           title={t("dashboard.sections.activeTrips") || "الرحلات النشطة الآن"}
           columns={activeTripsColumns}
@@ -445,10 +472,12 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <DataTable<DashboardComplianceVehicleItem>
           title={t("dashboard.sections.vehiclesExpiring") || "عربيات رخصها قربت تنتهي"}
-          subtitle={`${fmtInt(compliance?.counts?.vehicles?.expiring)} ${t("common.items") || "عنصر"}`}
+          subtitle={`${fmtInt(compliance?.counts?.vehicles?.expiring)} ${
+            t("common.items") || "عنصر"
+          }`}
           columns={vehiclesColumns}
           rows={vehicleExpiringRows}
           loading={loading}
@@ -458,11 +487,15 @@ export default function DashboardPage() {
 
         <DataTable<DashboardComplianceDriverItem>
           title={t("dashboard.sections.driversExpiring") || "سائقون رخصهم قربت تنتهي"}
-          subtitle={`${fmtInt(compliance?.counts?.drivers?.expiring)} ${t("common.items") || "عنصر"}`}
+          subtitle={`${fmtInt(compliance?.counts?.drivers?.expiring)} ${
+            t("common.items") || "عنصر"
+          }`}
           columns={driversColumns}
           rows={driverExpiringRows}
           loading={loading}
-          emptyTitle={t("dashboard.empty.noDriverCompliance") || "لا يوجد سائقون قريبون من الانتهاء"}
+          emptyTitle={
+            t("dashboard.empty.noDriverCompliance") || "لا يوجد سائقون قريبون من الانتهاء"
+          }
           emptyHint={t("dashboard.empty.noDriverComplianceHint") || "الوضع جيد."}
         />
       </div>
