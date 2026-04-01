@@ -34,6 +34,13 @@ export function Sidebar() {
 
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
+  const effectiveRole = roleUpper((user as any)?.effective_role);
+  const platformRole = roleUpper((user as any)?.platform_role);
+
+  const isSuperAdmin =
+    role === "SUPER_ADMIN" ||
+    effectiveRole === "SUPER_ADMIN" ||
+    platformRole === "SUPER_ADMIN";
 
   const logout = () => {
     const st: any = (useAuth as any).getState?.();
@@ -121,8 +128,9 @@ export function Sidebar() {
   );
 
   const canSee = (roles?: string[]) => {
+    if (isSuperAdmin) return true;
     if (!roles || roles.length === 0) return true;
-    return roles.includes(role);
+    return roles.includes(role) || roles.includes(effectiveRole);
   };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
@@ -151,7 +159,7 @@ export function Sidebar() {
         <div className="text-lg font-bold tracking-wide">{t("sidebar.appName")}</div>
         <div className="mt-1 text-xs text-slate-500">
           {user?.full_name || user?.email || "—"} —{" "}
-          <span className="text-slate-900">{role || "—"}</span>
+          <span className="text-slate-900">{effectiveRole || role || "—"}</span>
         </div>
       </div>
 
