@@ -225,7 +225,7 @@ export function DashboardAssistantPanel({
   const t = useT();
 
   const text = useMemo(() => {
-    const isAr = document?.documentElement?.lang === "en" ? false : false;
+    
     return {
       title: t("dashboardAssistant.title") === "dashboardAssistant.title"
         ? "المساعد الذكي داخل الداشبورد"
