@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/src/components/ui/Card";
 import { Button } from "@/src/components/ui/Button";
 import { apiAuthPost } from "@/src/lib/api";
+import { useT } from "@/src/i18n/useT";
 
 type DashboardAssistantContext =
   | "finance"
@@ -71,38 +72,22 @@ function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-function getErrorMessage(err: any) {
-  return (
-    err?.response?.data?.message ||
-    err?.message ||
-    "حدث خطأ أثناء الاتصال بالمساعد الذكي."
-  );
-}
-
 function toChatMode(value: unknown): ChatMode {
   if (value === "query") return "query";
   if (value === "action") return "action";
   return "unknown";
 }
 
-function renderExecutionStatus(status?: ExecutionStatus | null) {
-  if (status === "needs_more_info") return "يحتاج بيانات إضافية";
-  if (status === "ready_to_execute") return "جاهز للتنفيذ";
-  if (status === "executed") return "تم التنفيذ";
-  if (status === "execution_failed") return "فشل التنفيذ";
-  return null;
-}
-
-function getPrimaryEntityLabel(snapshot: any): string | null {
+function getPrimaryEntityLabel(snapshot: any, t: (key: string) => string): string | null {
   const entity = snapshot?.entity_context?.primary_entity;
   if (!entity) return null;
 
   const typeMap: Record<string, string> = {
-    client: "العميل",
-    vehicle: "المركبة",
-    trip: "الرحلة",
-    site: "الموقع",
-    work_order: "أمر العمل",
+    client: t("clients.title"),
+    vehicle: t("vehicles.title"),
+    trip: t("trips.title"),
+    site: t("sites.title"),
+    work_order: t("workOrders.title"),
   };
 
   const typeLabel = typeMap[String(entity.type || "")] || "العنصر";
@@ -232,40 +217,146 @@ function ResultsTable({ items }: { items: any[] }) {
   );
 }
 
-function getWelcomeMessage(context: DashboardAssistantContext) {
-  const messages: Record<DashboardAssistantContext, string> = {
-    finance: "مرحبًا، اسألني عن المصروفات والموردين وحالات الاعتماد.",
-    ar: "مرحبًا، اسألني عن مديونية العملاء والمتأخرات وأعلى العملاء مديونية.",
-    maintenance: "مرحبًا، اسألني عن أوامر العمل المفتوحة وتكلفة الصيانة.",
-    inventory: "مرحبًا، اسألني عن الأصناف منخفضة المخزون وأكثر الأصناف صرفًا.",
-    trips: "مرحبًا، اسألني عن الرحلات النشطة والإغلاق المالي وأعلى العملاء أو المركبات.",
-  };
-
-  return messages[context];
-}
-
-function getExamplesByContext(context: DashboardAssistantContext) {
-  const examples: Record<DashboardAssistantContext, string> = {
-    finance:
-      "أمثلة: كم إجمالي المصروفات هذا الشهر؟ / اعرض أعلى 5 موردين مصروفات / ما أعلى نوع مصروف؟",
-    ar:
-      "أمثلة: كم إجمالي مستحقات العملاء؟ / اعرض أعلى 5 عملاء مديونية / الأول",
-    maintenance:
-      "أمثلة: كم عدد أوامر العمل المفتوحة؟ / اعرض أعلى 5 مركبات تكلفة صيانة / الأولى",
-    inventory:
-      "أمثلة: ما الأصناف القريبة من النفاد؟ / اعرض أعلى 5 أصناف صرفًا / الأول",
-    trips:
-      "أمثلة: اعرض الرحلات النشطة / اعرض أعلى 5 عملاء حسب الرحلات / الأول / رحلاته",
-  };
-
-  return examples[context];
-}
-
 export function DashboardAssistantPanel({
   context = "finance",
 }: {
   context?: DashboardAssistantContext;
 }) {
+  const t = useT();
+
+  const text = useMemo(() => {
+    const isAr = document?.documentElement?.lang === "en" ? false : false;
+    return {
+      title: t("dashboardAssistant.title") === "dashboardAssistant.title"
+        ? "المساعد الذكي داخل الداشبورد"
+        : t("dashboardAssistant.title"),
+      newChat:
+        t("dashboardAssistant.newChat") === "dashboardAssistant.newChat"
+          ? "محادثة جديدة"
+          : t("dashboardAssistant.newChat"),
+      currentContext:
+        t("dashboardAssistant.currentContext") === "dashboardAssistant.currentContext"
+          ? "السياق الحالي:"
+          : t("dashboardAssistant.currentContext"),
+      quickInsights:
+        t("dashboardAssistant.quickInsights") === "dashboardAssistant.quickInsights"
+          ? "Insights سريعة"
+          : t("dashboardAssistant.quickInsights"),
+      assistant:
+        t("dashboardAssistant.assistant") === "dashboardAssistant.assistant"
+          ? "المساعد"
+          : t("dashboardAssistant.assistant"),
+      you:
+        t("dashboardAssistant.you") === "dashboardAssistant.you"
+          ? "أنت"
+          : t("dashboardAssistant.you"),
+      executeNow:
+        t("dashboardAssistant.executeNow") === "dashboardAssistant.executeNow"
+          ? "تنفيذ الآن"
+          : t("dashboardAssistant.executeNow"),
+      analyzing:
+        t("dashboardAssistant.analyzing") === "dashboardAssistant.analyzing"
+          ? "جاري التحليل..."
+          : t("dashboardAssistant.analyzing"),
+      suggestedFollowups:
+        t("dashboardAssistant.suggestedFollowups") === "dashboardAssistant.suggestedFollowups"
+          ? "متابعة مقترحة"
+          : t("dashboardAssistant.suggestedFollowups"),
+      placeholder:
+        t("dashboardAssistant.placeholder") === "dashboardAssistant.placeholder"
+          ? "اكتب سؤالك هنا..."
+          : t("dashboardAssistant.placeholder"),
+      send:
+        t("dashboardAssistant.send") === "dashboardAssistant.send"
+          ? "إرسال"
+          : t("dashboardAssistant.send"),
+      error:
+        t("dashboardAssistant.error") === "dashboardAssistant.error"
+          ? "حدث خطأ أثناء الاتصال بالمساعد الذكي."
+          : t("dashboardAssistant.error"),
+      needsMoreInfo:
+        t("dashboardAssistant.status.needsMoreInfo") === "dashboardAssistant.status.needsMoreInfo"
+          ? "يحتاج بيانات إضافية"
+          : t("dashboardAssistant.status.needsMoreInfo"),
+      readyToExecute:
+        t("dashboardAssistant.status.readyToExecute") === "dashboardAssistant.status.readyToExecute"
+          ? "جاهز للتنفيذ"
+          : t("dashboardAssistant.status.readyToExecute"),
+      executed:
+        t("dashboardAssistant.status.executed") === "dashboardAssistant.status.executed"
+          ? "تم التنفيذ"
+          : t("dashboardAssistant.status.executed"),
+      executionFailed:
+        t("dashboardAssistant.status.executionFailed") === "dashboardAssistant.status.executionFailed"
+          ? "فشل التنفيذ"
+          : t("dashboardAssistant.status.executionFailed"),
+      welcome: {
+        finance:
+          t("dashboardAssistant.welcome.finance") === "dashboardAssistant.welcome.finance"
+            ? "مرحبًا، اسألني عن المصروفات والموردين وحالات الاعتماد."
+            : t("dashboardAssistant.welcome.finance"),
+        ar:
+          t("dashboardAssistant.welcome.ar") === "dashboardAssistant.welcome.ar"
+            ? "مرحبًا، اسألني عن مديونية العملاء والمتأخرات وأعلى العملاء مديونية."
+            : t("dashboardAssistant.welcome.ar"),
+        maintenance:
+          t("dashboardAssistant.welcome.maintenance") === "dashboardAssistant.welcome.maintenance"
+            ? "مرحبًا، اسألني عن أوامر العمل المفتوحة وتكلفة الصيانة."
+            : t("dashboardAssistant.welcome.maintenance"),
+        inventory:
+          t("dashboardAssistant.welcome.inventory") === "dashboardAssistant.welcome.inventory"
+            ? "مرحبًا، اسألني عن الأصناف منخفضة المخزون وأكثر الأصناف صرفًا."
+            : t("dashboardAssistant.welcome.inventory"),
+        trips:
+          t("dashboardAssistant.welcome.trips") === "dashboardAssistant.welcome.trips"
+            ? "مرحبًا، اسألني عن الرحلات النشطة والإغلاق المالي وأعلى العملاء أو المركبات."
+            : t("dashboardAssistant.welcome.trips"),
+      },
+      examples: {
+        finance:
+          t("dashboardAssistant.examples.finance") === "dashboardAssistant.examples.finance"
+            ? "أمثلة: كم إجمالي المصروفات هذا الشهر؟ / اعرض أعلى 5 موردين مصروفات / ما أعلى نوع مصروف؟"
+            : t("dashboardAssistant.examples.finance"),
+        ar:
+          t("dashboardAssistant.examples.ar") === "dashboardAssistant.examples.ar"
+            ? "أمثلة: كم إجمالي مستحقات العملاء؟ / اعرض أعلى 5 عملاء مديونية / الأول"
+            : t("dashboardAssistant.examples.ar"),
+        maintenance:
+          t("dashboardAssistant.examples.maintenance") === "dashboardAssistant.examples.maintenance"
+            ? "أمثلة: كم عدد أوامر العمل المفتوحة؟ / اعرض أعلى 5 مركبات تكلفة صيانة / الأولى"
+            : t("dashboardAssistant.examples.maintenance"),
+        inventory:
+          t("dashboardAssistant.examples.inventory") === "dashboardAssistant.examples.inventory"
+            ? "أمثلة: ما الأصناف القريبة من النفاد؟ / اعرض أعلى 5 أصناف صرفًا / الأول"
+            : t("dashboardAssistant.examples.inventory"),
+        trips:
+          t("dashboardAssistant.examples.trips") === "dashboardAssistant.examples.trips"
+            ? "أمثلة: اعرض الرحلات النشطة / اعرض أعلى 5 عملاء حسب الرحلات / الأول / رحلاته"
+            : t("dashboardAssistant.examples.trips"),
+      },
+    };
+  }, [t]);
+
+  function getErrorMessage(err: any) {
+    return err?.response?.data?.message || err?.message || text.error;
+  }
+
+  function renderExecutionStatus(status?: ExecutionStatus | null) {
+    if (status === "needs_more_info") return text.needsMoreInfo;
+    if (status === "ready_to_execute") return text.readyToExecute;
+    if (status === "executed") return text.executed;
+    if (status === "execution_failed") return text.executionFailed;
+    return null;
+  }
+
+  function getWelcomeMessage(contextValue: DashboardAssistantContext) {
+    return text.welcome[contextValue];
+  }
+
+  function getExamplesByContext(contextValue: DashboardAssistantContext) {
+    return text.examples[contextValue];
+  }
+
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -285,9 +376,25 @@ export function DashboardAssistantPanel({
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    setMessages([
+      {
+        id: uid(),
+        role: "assistant",
+        text: getWelcomeMessage(context),
+        response: null,
+      },
+    ]);
+    setConversationId(null);
+    setSessionSnapshot(null);
+    setFollowUps([]);
+    setInsights([]);
+    setQuestion("");
+  }, [context, text]);
+
   const activeEntityLabel = useMemo(
-    () => getPrimaryEntityLabel(sessionSnapshot),
-    [sessionSnapshot]
+    () => getPrimaryEntityLabel(sessionSnapshot, t),
+    [sessionSnapshot, t]
   );
 
   async function ask(rawQuestion?: string, autoExecute = false) {
@@ -366,11 +473,11 @@ export function DashboardAssistantPanel({
 
   return (
     <Card
-      title="المساعد الذكي داخل الداشبورد"
+      title={text.title}
       right={
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={handleNewChat}>
-            محادثة جديدة
+            {text.newChat}
           </Button>
         </div>
       }
@@ -379,14 +486,14 @@ export function DashboardAssistantPanel({
       <div className="space-y-4">
         {activeEntityLabel ? (
           <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-            <span className="font-semibold">السياق الحالي:</span> {activeEntityLabel}
+            <span className="font-semibold">{text.currentContext}</span> {activeEntityLabel}
           </div>
         ) : null}
 
         {!!insights.length && (
           <div className="space-y-2">
             <div className="text-sm font-semibold text-[rgb(var(--trex-fg))]">
-              Insights سريعة
+              {text.quickInsights}
             </div>
 
             <div className="space-y-2">
@@ -432,7 +539,7 @@ export function DashboardAssistantPanel({
                   )}
                 >
                   <div className="mb-1 text-[11px] opacity-70">
-                    {m.role === "assistant" ? "المساعد" : "أنت"}
+                    {m.role === "assistant" ? text.assistant : text.you}
                   </div>
 
                   {response?.ui?.title ? (
@@ -485,7 +592,7 @@ export function DashboardAssistantPanel({
                           className="!px-2.5 !py-1 text-xs"
                           onClick={() => ask("نفذ الآن", true)}
                         >
-                          تنفيذ الآن
+                          {text.executeNow}
                         </Button>
                       ) : null}
                     </div>
@@ -500,7 +607,7 @@ export function DashboardAssistantPanel({
           {loading ? (
             <div className="flex justify-start">
               <div className="max-w-[85%] rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-black shadow-sm">
-                جاري التحليل...
+                {text.analyzing}
               </div>
             </div>
           ) : null}
@@ -511,7 +618,7 @@ export function DashboardAssistantPanel({
         {!!followUps.length && (
           <div className="space-y-2">
             <div className="text-sm font-semibold text-[rgb(var(--trex-fg))]">
-              متابعة مقترحة
+              {text.suggestedFollowups}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -536,11 +643,11 @@ export function DashboardAssistantPanel({
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="اكتب سؤالك هنا..."
+              placeholder={text.placeholder}
               className="trex-input min-h-[52px] max-h-[120px] flex-1 resize-none px-3 py-2 text-sm"
             />
             <Button onClick={() => ask()} isLoading={loading}>
-              إرسال
+              {text.send}
             </Button>
           </div>
         </div>

@@ -56,6 +56,8 @@
   "appName": "Logistics",
   "dashboard": "Dashboard",
   "trips": "Trips",
+  "contracts": "Contracts",
+"contractPricing": "Contract Pricing",
 
   "finance": "Finance",
   "financeOverview": "Overview",
@@ -308,6 +310,63 @@
     "vehicleLicenseExpiring": "Vehicle license expiring soon",
     "driverLicenseExpired": "Driver license expired",
     "driverLicenseExpiring": "Driver license expiring soon"
+  }
+},
+"dashboardAssistant": {
+  "title": "Dashboard Assistant",
+  "newChat": "New chat",
+  "currentContext": "Current context:",
+  "quickInsights": "Quick insights",
+  "assistant": "Assistant",
+  "you": "You",
+  "executeNow": "Execute now",
+  "analyzing": "Analyzing...",
+  "suggestedFollowups": "Suggested follow-ups",
+  "placeholder": "Type your question here...",
+  "send": "Send",
+  "error": "An error occurred while contacting the assistant.",
+  "status": {
+    "needsMoreInfo": "Needs more information",
+    "readyToExecute": "Ready to execute",
+    "executed": "Executed",
+    "executionFailed": "Execution failed"
+  },
+  "welcome": {
+    "finance": "Hi, ask me about expenses, vendors, and approval statuses.",
+    "ar": "Hi, ask me about customer receivables, overdue balances, and top debtors.",
+    "maintenance": "Hi, ask me about open work orders and maintenance cost.",
+    "inventory": "Hi, ask me about low-stock items and top issued parts.",
+    "trips": "Hi, ask me about active trips, financial close, and top clients or vehicles."
+  },
+  "examples": {
+    "finance": "Examples: What is total expense this month? / Show top 5 vendors by expenses / What is the top expense type?",
+    "ar": "Examples: What is total outstanding receivables? / Show top 5 debtors / the first one",
+    "maintenance": "Examples: How many open work orders? / Show top 5 vehicles by maintenance cost / the first one",
+    "inventory": "Examples: Which items are low in stock? / Show top 5 issued parts / the first one",
+    "trips": "Examples: Show active trips / Show top 5 clients by trips / the first one / its trips"
+  }
+},
+"dashboardInsights": {
+  "emptyTitle": "No insights available right now",
+  "loadError": "Unable to load insights right now.",
+  "groups": {
+    "error": "Critical items",
+    "warning": "Need attention",
+    "info": "Quick info"
+  },
+  "titles": {
+    "finance": "Finance Insights",
+    "ar": "AR Insights",
+    "maintenance": "Maintenance Insights",
+    "inventory": "Inventory Insights",
+    "trips": "Trips Insights"
+  },
+  "subtitles": {
+    "finance": "A quick summary of key expense, vendor, and approval indicators.",
+    "ar": "Key indicators for receivables, overdue balances, and top debtors.",
+    "maintenance": "Indicators for open work orders and maintenance costs.",
+    "inventory": "Key alerts around low-stock items and top issued parts.",
+    "trips": "A summary of active trips, financial close, and important operating patterns."
   }
 },
   "users": {

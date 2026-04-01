@@ -60,10 +60,7 @@ export function Sidebar() {
           { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
           { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
           { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
-
-          // كان /finance/ar/clients وده غير موجود فعلياً
           { labelKey: "sidebar.financeARClients", href: "/finance/ar" },
-
           { labelKey: "sidebar.financeARInvoices", href: "/finance/ar/invoices" },
           { labelKey: "sidebar.financeARPayments", href: "/finance/ar/payments" },
           { labelKey: "sidebar.financeARLedger", href: "/finance/ar/ledger" },
@@ -73,7 +70,6 @@ export function Sidebar() {
       { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR"] },
       { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR"] },
 
-      // الصفحات الجديدة
       {
         labelKey: "sidebar.contracts",
         href: "/contracts",
@@ -150,8 +146,8 @@ export function Sidebar() {
   }, [pathname]);
 
   return (
-    <aside className="h-screen w-[260px] shrink-0 border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] sticky top-0 flex flex-col shadow-[0_0_30px_rgba(0,0,0,0.06)]">
-      <div className="p-4 border-b border-black/10 bg-[rgba(var(--trex-card),0.7)]">
+    <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] shadow-[0_0_30px_rgba(0,0,0,0.06)]">
+      <div className="border-b border-black/10 bg-[rgba(var(--trex-card),0.7)] p-4">
         <div className="text-lg font-bold tracking-wide">{t("sidebar.appName")}</div>
         <div className="mt-1 text-xs text-slate-500">
           {user?.full_name || user?.email || "—"} —{" "}
@@ -159,7 +155,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="p-3 space-y-1 flex-1 overflow-auto">
+      <nav className="flex-1 space-y-1 overflow-auto p-3">
         {items
           .filter((it) => canSee((it as any).roles))
           .map((it) => {
@@ -172,10 +168,10 @@ export function Sidebar() {
                   <button
                     onClick={() => setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))}
                     className={cn(
-                      "w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm border transition",
+                      "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm transition",
                       active
-                        ? "bg-[rgba(var(--trex-accent),0.12)] border-[rgba(var(--trex-accent),0.25)] text-slate-900"
-                        : "text-slate-700 border-transparent hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
+                        ? "border-[rgba(var(--trex-accent),0.25)] bg-[rgba(var(--trex-accent),0.12)] text-slate-900"
+                        : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
                     )}
                   >
                     <span>{t(it.labelKey)}</span>
@@ -183,7 +179,7 @@ export function Sidebar() {
                   </button>
 
                   {isOpen && (
-                    <div className="pr-2 space-y-1">
+                    <div className="space-y-1 pr-2">
                       {it.children
                         .filter((c) => canSee(c.roles))
                         .map((c) => (
@@ -191,7 +187,7 @@ export function Sidebar() {
                             key={c.href}
                             href={c.href}
                             className={cn(
-                              "block rounded-xl px-3 py-2 text-sm border-r-2 transition",
+                              "block rounded-xl border-r-2 px-3 py-2 text-sm transition",
                               isActive(c.href)
                                 ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.10)] text-slate-900"
                                 : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
@@ -211,7 +207,7 @@ export function Sidebar() {
                 key={it.href}
                 href={it.href}
                 className={cn(
-                  "block rounded-xl px-3 py-2 text-sm border-r-2 transition",
+                  "block rounded-xl border-r-2 px-3 py-2 text-sm transition",
                   isActive(it.href)
                     ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.12)] text-slate-900"
                     : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
@@ -223,10 +219,10 @@ export function Sidebar() {
           })}
       </nav>
 
-      <div className="p-3 border-t border-black/10">
+      <div className="border-t border-black/10 p-3">
         <button
           onClick={logout}
-          className="w-full px-3 py-2 rounded-xl border border-[rgba(var(--trex-accent),0.30)] bg-[rgba(var(--trex-accent),0.12)] hover:bg-[rgba(var(--trex-accent),0.18)] text-sm transition text-slate-900"
+          className="w-full rounded-xl border border-[rgba(var(--trex-accent),0.30)] bg-[rgba(var(--trex-accent),0.12)] px-3 py-2 text-sm text-slate-900 transition hover:bg-[rgba(var(--trex-accent),0.18)]"
         >
           {t("common.logout")}
         </button>
