@@ -1,4 +1,3 @@
-// src/store/auth.ts
 "use client";
 
 import { create } from "zustand";
@@ -7,7 +6,10 @@ export type User = {
   id: string;
   full_name: string;
   email: string;
+
   role: string;
+  effective_role?: string;
+  platform_role?: string;
 };
 
 export type AuthState = {
@@ -19,11 +21,31 @@ export type AuthState = {
   logout: () => void;
 };
 
+function normalizeUser(u: any): User {
+  const role = String(
+    u?.effective_role ||
+      (u?.platform_role === "SUPER_ADMIN" ? "SUPER_ADMIN" : u?.role) ||
+      ""
+  ).toUpperCase();
+
+  return {
+    id: u.id,
+    full_name: u.full_name,
+    email: u.email,
+
+    role,
+    effective_role: role,
+    platform_role: u?.platform_role || role,
+  };
+}
+
 export const useAuth = create<AuthState>((set) => ({
   token: null,
   user: null,
 
-  setAuth: (token, user) => {
+  setAuth: (token, userRaw) => {
+    const user = normalizeUser(userRaw);
+
     try {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
@@ -36,7 +58,9 @@ export const useAuth = create<AuthState>((set) => ({
     try {
       const token = localStorage.getItem("token");
       const userRaw = localStorage.getItem("user");
-      const user = userRaw ? (JSON.parse(userRaw) as User) : null;
+
+      const parsed = userRaw ? JSON.parse(userRaw) : null;
+      const user = parsed ? normalizeUser(parsed) : null;
 
       set({ token, user });
     } catch {
