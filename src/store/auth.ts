@@ -14,6 +14,7 @@ export type User = {
 export type AuthState = {
   token: string | null;
   user: User | null;
+  hasHydrated: boolean;
 
   setAuth: (token: string, user: User) => void;
   hydrate: () => void;
@@ -44,6 +45,7 @@ function normalizeUser(u: any): User {
 export const useAuth = create<AuthState>((set) => ({
   token: null,
   user: null,
+  hasHydrated: false,
 
   setAuth: (token, userRaw) => {
     const user = normalizeUser(userRaw);
@@ -53,7 +55,7 @@ export const useAuth = create<AuthState>((set) => ({
       localStorage.setItem("user", JSON.stringify(user));
     } catch {}
 
-    set({ token, user });
+    set({ token, user, hasHydrated: true });
   },
 
   hydrate: () => {
@@ -63,9 +65,17 @@ export const useAuth = create<AuthState>((set) => ({
       const parsed = userRaw ? JSON.parse(userRaw) : null;
       const user = parsed ? normalizeUser(parsed) : null;
 
-      set({ token, user });
+      set({
+        token,
+        user,
+        hasHydrated: true,
+      });
     } catch {
-      set({ token: null, user: null });
+      set({
+        token: null,
+        user: null,
+        hasHydrated: true,
+      });
     }
   },
 
@@ -77,7 +87,7 @@ export const useAuth = create<AuthState>((set) => ({
       localStorage.removeItem("persist:auth");
     } catch {}
 
-    set({ token: null, user: null });
+    set({ token: null, user: null, hasHydrated: true });
 
     if (typeof window !== "undefined") {
       window.location.href = "/login";

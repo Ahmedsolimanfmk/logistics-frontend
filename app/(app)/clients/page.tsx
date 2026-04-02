@@ -36,7 +36,7 @@ function StatusBadge({ active }: { active: boolean }) {
 
 export default function ClientsPage() {
   const t = useT();
-  const token = useAuth((s) => s.token);
+  const { token, hasHydrated } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ClientRow[]>([]);
@@ -48,7 +48,12 @@ export default function ClientsPage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   async function load() {
-    if (!token) return;
+    if (!token) {
+      setItems([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -64,8 +69,8 @@ export default function ClientsPage() {
               : false,
       });
 
-      setItems(res.items);
-      setTotal(res.total);
+      setItems(res.items || []);
+      setTotal(res.total || 0);
     } catch (e: any) {
       setItems([]);
       setTotal(0);
@@ -79,9 +84,10 @@ export default function ClientsPage() {
   }
 
   useEffect(() => {
+    if (!hasHydrated) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, search, activeFilter]);
+  }, [hasHydrated, token, search, activeFilter]);
 
   const columns: DataTableColumn<ClientRow>[] = useMemo(
     () => [
@@ -113,7 +119,6 @@ export default function ClientsPage() {
             <Link href={`/clients/${row.id}`}>
               <Button variant="secondary">{t("clients.actions.viewDetails")}</Button>
             </Link>
-
             <Link href={`/clients/${row.id}/edit`}>
               <Button variant="secondary">{t("common.edit") || "تعديل"}</Button>
             </Link>
