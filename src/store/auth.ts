@@ -6,7 +6,6 @@ export type User = {
   id: string;
   full_name: string;
   email: string;
-
   role: string;
   effective_role?: string;
   platform_role?: string;
@@ -22,20 +21,23 @@ export type AuthState = {
 };
 
 function normalizeUser(u: any): User {
-  const role = String(
+  const effectiveRole = String(
     u?.effective_role ||
-      (u?.platform_role === "SUPER_ADMIN" ? "SUPER_ADMIN" : u?.role) ||
+      (String(u?.platform_role || "").toUpperCase() === "SUPER_ADMIN"
+        ? "SUPER_ADMIN"
+        : u?.role) ||
       ""
   ).toUpperCase();
 
-  return {
-    id: u.id,
-    full_name: u.full_name,
-    email: u.email,
+  const platformRole = String(u?.platform_role || effectiveRole || "").toUpperCase();
 
-    role,
-    effective_role: role,
-    platform_role: u?.platform_role || role,
+  return {
+    id: String(u?.id || ""),
+    full_name: String(u?.full_name || ""),
+    email: String(u?.email || ""),
+    role: effectiveRole,
+    effective_role: effectiveRole,
+    platform_role: platformRole,
   };
 }
 
@@ -58,7 +60,6 @@ export const useAuth = create<AuthState>((set) => ({
     try {
       const token = localStorage.getItem("token");
       const userRaw = localStorage.getItem("user");
-
       const parsed = userRaw ? JSON.parse(userRaw) : null;
       const user = parsed ? normalizeUser(parsed) : null;
 

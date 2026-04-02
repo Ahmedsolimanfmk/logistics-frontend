@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/store/auth";
@@ -49,8 +48,8 @@ export function Sidebar() {
       try {
         localStorage.removeItem("auth");
       } catch {}
+      router.push("/login");
     }
-    router.push("/login");
   };
 
   const items = useMemo<(NavItem | NavGroup)[]>(
@@ -130,7 +129,9 @@ export function Sidebar() {
   const canSee = (roles?: string[]) => {
     if (isSuperAdmin) return true;
     if (!roles || roles.length === 0) return true;
-    return roles.includes(role) || roles.includes(effectiveRole);
+
+    const allowed = roles.map((x) => String(x).toUpperCase());
+    return allowed.includes(role) || allowed.includes(effectiveRole);
   };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
@@ -153,13 +154,31 @@ export function Sidebar() {
     }
   }, [pathname]);
 
+  const navigateTo = (href: string) => {
+    if (!href || href === pathname) return;
+
+    try {
+      router.push(href);
+
+      window.setTimeout(() => {
+        if (window.location.pathname === pathname) {
+          window.location.assign(href);
+        }
+      }, 250);
+    } catch {
+      window.location.assign(href);
+    }
+  };
+
   return (
     <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] shadow-[0_0_30px_rgba(0,0,0,0.06)]">
       <div className="border-b border-black/10 bg-[rgba(var(--trex-card),0.7)] p-4">
         <div className="text-lg font-bold tracking-wide">{t("sidebar.appName")}</div>
         <div className="mt-1 text-xs text-slate-500">
           {user?.full_name || user?.email || "—"} —{" "}
-          <span className="text-slate-900">{effectiveRole || role || "—"}</span>
+          <span className="text-slate-900">
+            {effectiveRole || role || "—"}
+          </span>
         </div>
       </div>
 
@@ -174,6 +193,7 @@ export function Sidebar() {
               return (
                 <div key={it.key} className="space-y-1">
                   <button
+                    type="button"
                     onClick={() => setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))}
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm transition",
@@ -191,18 +211,19 @@ export function Sidebar() {
                       {it.children
                         .filter((c) => canSee(c.roles))
                         .map((c) => (
-                          <Link
+                          <button
                             key={c.href}
-                            href={c.href}
+                            type="button"
+                            onClick={() => navigateTo(c.href)}
                             className={cn(
-                              "block rounded-xl border-r-2 px-3 py-2 text-sm transition",
+                              "block w-full rounded-xl border-r-2 px-3 py-2 text-right text-sm transition",
                               isActive(c.href)
                                 ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.10)] text-slate-900"
                                 : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
                             )}
                           >
                             {t(c.labelKey)}
-                          </Link>
+                          </button>
                         ))}
                     </div>
                   )}
@@ -211,24 +232,26 @@ export function Sidebar() {
             }
 
             return (
-              <Link
+              <button
                 key={it.href}
-                href={it.href}
+                type="button"
+                onClick={() => navigateTo(it.href)}
                 className={cn(
-                  "block rounded-xl border-r-2 px-3 py-2 text-sm transition",
+                  "block w-full rounded-xl border-r-2 px-3 py-2 text-right text-sm transition",
                   isActive(it.href)
                     ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.12)] text-slate-900"
                     : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
                 )}
               >
                 {t(it.labelKey)}
-              </Link>
+              </button>
             );
           })}
       </nav>
 
       <div className="border-t border-black/10 p-3">
         <button
+          type="button"
           onClick={logout}
           className="w-full rounded-xl border border-[rgba(var(--trex-accent),0.30)] bg-[rgba(var(--trex-accent),0.12)] px-3 py-2 text-sm text-slate-900 transition hover:bg-[rgba(var(--trex-accent),0.18)]"
         >
