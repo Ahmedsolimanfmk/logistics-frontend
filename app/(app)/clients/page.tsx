@@ -43,6 +43,8 @@ export default function ClientsPage() {
   const [total, setTotal] = useState(0);
 
   const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   async function load() {
@@ -51,20 +53,26 @@ export default function ClientsPage() {
     setLoading(true);
     try {
       const res = await clientsService.list({
-        search,
+        search: search.trim() || undefined,
         page: 1,
         limit: 50,
+        is_active:
+          activeFilter === "all"
+            ? undefined
+            : activeFilter === "active"
+              ? true
+              : false,
       });
 
       setItems(res.items);
       setTotal(res.total);
     } catch (e: any) {
-      setToast({
-        type: "error",
-        msg: e?.message || t("clients.errors.loadFailed"),
-      });
       setItems([]);
       setTotal(0);
+      setToast({
+        type: "error",
+        msg: e?.response?.data?.message || e?.message || t("clients.errors.loadFailed"),
+      });
     } finally {
       setLoading(false);
     }
@@ -73,7 +81,7 @@ export default function ClientsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, search]);
+  }, [token, search, activeFilter]);
 
   const columns: DataTableColumn<ClientRow>[] = useMemo(
     () => [
@@ -89,12 +97,12 @@ export default function ClientsPage() {
       },
       {
         key: "phone",
-        label: "الهاتف",
+        label: t("clients.table.phone") || "الهاتف",
         render: (row) => row?.phone || "—",
       },
       {
         key: "status",
-        label: "الحالة",
+        label: t("clients.table.status") || "الحالة",
         render: (row) => <StatusBadge active={!!row?.is_active} />,
       },
       {
@@ -105,8 +113,9 @@ export default function ClientsPage() {
             <Link href={`/clients/${row.id}`}>
               <Button variant="secondary">{t("clients.actions.viewDetails")}</Button>
             </Link>
+
             <Link href={`/clients/${row.id}/edit`}>
-              <Button variant="secondary">تعديل</Button>
+              <Button variant="secondary">{t("common.edit") || "تعديل"}</Button>
             </Link>
           </div>
         ),
@@ -129,16 +138,32 @@ export default function ClientsPage() {
 
       <FiltersBar
         left={
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("clients.filters.searchPlaceholder")}
-            className={cn(
-              "w-full sm:w-[360px] px-3 py-2 rounded-xl",
-              "bg-white border border-slate-200 outline-none text-sm",
-              "focus:ring-2 focus:ring-slate-200"
-            )}
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("clients.filters.searchPlaceholder")}
+              className={cn(
+                "w-full sm:w-[360px] px-3 py-2 rounded-xl",
+                "bg-white border border-slate-200 outline-none text-sm",
+                "focus:ring-2 focus:ring-slate-200"
+              )}
+            />
+
+            <select
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value as "all" | "active" | "inactive")}
+              className={cn(
+                "w-full sm:w-[180px] px-3 py-2 rounded-xl",
+                "bg-white border border-slate-200 outline-none text-sm",
+                "focus:ring-2 focus:ring-slate-200"
+              )}
+            >
+              <option value="all">{t("common.all") || "الكل"}</option>
+              <option value="active">{t("common.active") || "نشط"}</option>
+              <option value="inactive">{t("common.disabled") || "غير نشط"}</option>
+            </select>
+          </div>
         }
         right={
           <div className="flex items-center gap-2">
@@ -146,7 +171,15 @@ export default function ClientsPage() {
               {t("common.total")}:{" "}
               <span className="text-slate-900 font-semibold">{total}</span>
             </div>
-            <Button variant="secondary" onClick={() => setSearch("")} disabled={!search}>
+
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setSearch("");
+                setActiveFilter("all");
+              }}
+              disabled={!search && activeFilter === "all"}
+            >
               {t("common.reset")}
             </Button>
           </div>

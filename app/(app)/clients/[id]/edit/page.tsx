@@ -1,340 +1,325 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { api } from "@/src/lib/api";
-import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
+import { useAuth } from "@/src/store/auth";
+
+import { clientsService } from "@/src/services/clients.service";
+import type { ClientPayload } from "@/src/types/clients.types";
 
 import { PageHeader } from "@/src/components/ui/PageHeader";
-import { FiltersBar } from "@/src/components/ui/FiltersBar";
 import { Button } from "@/src/components/ui/Button";
-import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { Card } from "@/src/components/ui/Card";
 import { Toast } from "@/src/components/Toast";
-import { KpiCard } from "@/src/components/ui/KpiCard";
-import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-function fmtMoney(v: any) {
-  const n = Number(v || 0);
-  if (!Number.isFinite(n)) return String(v ?? "0");
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
-}
-
-function currentMonthYYYYMM() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
-
-type DashboardPayload = {
-  month: string;
-  client: {
-    id: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    hq_address?: string | null;
-    contact_name?: string | null;
-    contact_phone?: string | null;
-    contact_email?: string | null;
-    tax_no?: string | null;
-    notes?: string | null;
-    is_active: boolean;
-    created_at?: string | null;
-  };
-  financial: {
-    total_invoiced: number;
-    total_paid: number;
-    balance: number;
-    monthly_trip_revenue?: number;
-  };
-  operations?: {
-    total_trips_this_month?: number;
-    active_sites_count?: number;
-    total_sites_count?: number;
-  };
-  sites: Array<{
-    id: string;
-    name: string;
-    address?: string | null;
-    is_active: boolean;
-    trips_this_month: number;
-  }>;
+type FormState = {
+  name: string;
+  phone: string;
+  email: string;
+  hq_address: string;
+  contact_name: string;
+  contact_phone: string;
+  contact_email: string;
+  tax_no: string;
+  notes: string;
+  is_active: boolean;
 };
 
-export default function ClientDetailsPage() {
+function emptyToNull(v: string) {
+  const x = v.trim();
+  return x ? x : null;
+}
+
+function toPayload(form: FormState): ClientPayload {
+  return {
+    name: form.name.trim(),
+    phone: emptyToNull(form.phone),
+    email: emptyToNull(form.email),
+    hq_address: emptyToNull(form.hq_address),
+    contact_name: emptyToNull(form.contact_name),
+    contact_phone: emptyToNull(form.contact_phone),
+    contact_email: emptyToNull(form.contact_email),
+    tax_no: emptyToNull(form.tax_no),
+    notes: emptyToNull(form.notes),
+    is_active: form.is_active,
+  };
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+}) {
+  return (
+    <label className="block">
+      <div className="mb-1 text-xs font-medium text-slate-500">
+        {label} {required ? <span className="text-red-500">*</span> : null}
+      </div>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={cn(
+          "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
+          "focus:ring-2 focus:ring-slate-200"
+        )}
+      />
+    </label>
+  );
+}
+
+export default function EditClientPage() {
   const t = useT();
   const router = useRouter();
   const token = useAuth((s) => s.token);
-
   const params = useParams();
-  const id = String((params as any)?.id || "");
+
+  const id = String(params?.id || "");
 
   const [loading, setLoading] = useState(true);
-  const [month, setMonth] = useState(currentMonthYYYYMM());
-  const [data, setData] = useState<DashboardPayload | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState<FormState>({
+    name: "",
+    phone: "",
+    email: "",
+    hq_address: "",
+    contact_name: "",
+    contact_phone: "",
+    contact_email: "",
+    tax_no: "",
+    notes: "",
+    is_active: true,
+  });
 
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  const [toggleOpen, setToggleOpen] = useState(false);
-  const [toggleLoading, setToggleLoading] = useState(false);
-
-  async function load() {
-    if (!token || !id) return;
-    setLoading(true);
-    try {
-      const res = await api.get(`/clients/${id}/dashboard?month=${encodeURIComponent(month)}`);
-      const payload = (res as any)?.data ?? res;
-      setData(payload);
-    } catch (e: any) {
-      setToast({
-        type: "error",
-        msg: e?.response?.data?.message || e?.message || t("clients.details.errors.loadFailed"),
-      });
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function doToggle() {
-    if (!id) return;
-    setToggleLoading(true);
-    try {
-      await api.patch(`/clients/${id}/toggle`);
-      setToast({ type: "success", msg: t("clients.toast.toggled") });
-      setToggleOpen(false);
-      await load();
-    } catch (e: any) {
-      setToast({
-        type: "error",
-        msg: e?.response?.data?.message || e?.message || t("clients.errors.toggleFailed"),
-      });
-    } finally {
-      setToggleLoading(false);
-    }
-  }
+  const canSubmit = useMemo(() => form.name.trim().length > 0, [form.name]);
 
   useEffect(() => {
+    async function load() {
+      if (!token || !id) return;
+
+      setLoading(true);
+      try {
+        const client = await clientsService.getById(id);
+
+        setForm({
+          name: client?.name || "",
+          phone: client?.phone || "",
+          email: client?.email || "",
+          hq_address: client?.hq_address || "",
+          contact_name: client?.contact_name || "",
+          contact_phone: client?.contact_phone || "",
+          contact_email: client?.contact_email || "",
+          tax_no: client?.tax_no || "",
+          notes: client?.notes || "",
+          is_active: Boolean(client?.is_active),
+        });
+      } catch (e: any) {
+        setToast({
+          type: "error",
+          msg: e?.response?.data?.message || e?.message || t("clients.errors.loadFailed") || "فشل تحميل بيانات العميل",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, id, month]);
+  }, [token, id, t]);
 
-  const client = data?.client;
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !canSubmit || saving) return;
 
-  const siteColumns: DataTableColumn<DashboardPayload["sites"][number]>[] = useMemo(
-    () => [
-      {
-        key: "name",
-        label: t("clients.details.sites.table.name"),
-        render: (row) => row?.name || "—",
-      },
-      {
-        key: "address",
-        label: t("clients.details.sites.table.address"),
-        render: (row) => row?.address || "—",
-      },
-      {
-        key: "trips",
-        label: t("clients.details.sites.table.tripsThisMonth"),
-        render: (row) => <span className="font-semibold">{row?.trips_this_month ?? 0}</span>,
-      },
-      {
-        key: "status",
-        label: t("clients.details.sites.table.status"),
-        render: (row) =>
-          row?.is_active ? (
-            <span className="inline-flex items-center gap-2 text-emerald-700">
-              <span className="h-2 w-2 rounded-full bg-emerald-600" />
-              {t("common.active")}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-2 text-red-700">
-              <span className="h-2 w-2 rounded-full bg-red-600" />
-              {t("common.disabled")}
-            </span>
-          ),
-      },
-    ],
-    [t]
-  );
+    setSaving(true);
+    try {
+      await clientsService.update(id, toPayload(form));
+      setToast({
+        type: "success",
+        msg: t("clients.toast.updated") || "تم تحديث العميل بنجاح",
+      });
+      router.push(`/clients/${id}`);
+    } catch (e: any) {
+      setToast({
+        type: "error",
+        msg: e?.response?.data?.message || e?.message || t("clients.errors.updateFailed") || "فشل تحديث العميل",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="p-6">{t("common.loading") || "جارٍ التحميل..."}</div>;
+  }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen space-y-6">
       <PageHeader
-        title={client?.name || t("clients.details.title")}
-        subtitle={t("clients.details.subtitle")}
+        title={t("clients.edit.title") || "تعديل العميل"}
+        subtitle={t("clients.edit.subtitle") || "تحديث بيانات العميل"}
         actions={
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => router.push(`/clients/${id}/edit`)}>
-              {t("common.edit")}
-            </Button>
-
-            <Button
-              variant={client?.is_active ? "danger" : "primary"}
-              onClick={() => setToggleOpen(true)}
-              disabled={!client}
-            >
-              {client?.is_active ? t("common.disable") : t("common.enable")}
-            </Button>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/clients/${id}`}>
+              <Button variant="secondary">{t("common.back") || "رجوع"}</Button>
+            </Link>
           </div>
         }
       />
 
-      <FiltersBar
-        left={
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-slate-500">{t("clients.details.filters.month")}</div>
-            <input
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              placeholder="YYYY-MM"
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card className="p-5">
+          <h2 className="mb-4 text-lg font-semibold">
+            {t("clients.form.sections.basic") || "البيانات الأساسية"}
+          </h2>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field
+              label={t("clients.form.name") || "اسم العميل"}
+              value={form.name}
+              onChange={(v) => setForm((s) => ({ ...s, name: v }))}
+              placeholder={t("clients.form.placeholders.name") || "أدخل اسم العميل"}
+              required
+            />
+
+            <Field
+              label={t("clients.form.phone") || "الهاتف"}
+              value={form.phone}
+              onChange={(v) => setForm((s) => ({ ...s, phone: v }))}
+              placeholder={t("clients.form.placeholders.phone") || "أدخل رقم الهاتف"}
+            />
+
+            <Field
+              label={t("clients.form.email") || "البريد الإلكتروني"}
+              value={form.email}
+              onChange={(v) => setForm((s) => ({ ...s, email: v }))}
+              placeholder={t("clients.form.placeholders.email") || "name@example.com"}
+              type="email"
+            />
+
+            <Field
+              label={t("clients.form.hqAddress") || "العنوان الرئيسي"}
+              value={form.hq_address}
+              onChange={(v) => setForm((s) => ({ ...s, hq_address: v }))}
+              placeholder={t("clients.form.placeholders.hqAddress") || "أدخل العنوان الرئيسي"}
+            />
+
+            <Field
+              label={t("clients.form.taxNo") || "الرقم الضريبي"}
+              value={form.tax_no}
+              onChange={(v) => setForm((s) => ({ ...s, tax_no: v }))}
+              placeholder={t("clients.form.placeholders.taxNo") || "أدخل الرقم الضريبي"}
+            />
+
+            <label className="block">
+              <div className="mb-1 text-xs font-medium text-slate-500">
+                {t("clients.form.status") || "الحالة"}
+              </div>
+              <select
+                value={form.is_active ? "active" : "inactive"}
+                onChange={(e) =>
+                  setForm((s) => ({
+                    ...s,
+                    is_active: e.target.value === "active",
+                  }))
+                }
+                className={cn(
+                  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
+                  "focus:ring-2 focus:ring-slate-200"
+                )}
+              >
+                <option value="active">{t("common.active") || "نشط"}</option>
+                <option value="inactive">{t("common.disabled") || "غير نشط"}</option>
+              </select>
+            </label>
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="mb-4 text-lg font-semibold">
+            {t("clients.form.sections.contact") || "بيانات المسؤول"}
+          </h2>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Field
+              label={t("clients.form.contactName") || "اسم المسؤول"}
+              value={form.contact_name}
+              onChange={(v) => setForm((s) => ({ ...s, contact_name: v }))}
+              placeholder={t("clients.form.placeholders.contactName") || "أدخل اسم المسؤول"}
+            />
+
+            <Field
+              label={t("clients.form.contactPhone") || "هاتف المسؤول"}
+              value={form.contact_phone}
+              onChange={(v) => setForm((s) => ({ ...s, contact_phone: v }))}
+              placeholder={t("clients.form.placeholders.contactPhone") || "أدخل هاتف المسؤول"}
+            />
+
+            <Field
+              label={t("clients.form.contactEmail") || "بريد المسؤول"}
+              value={form.contact_email}
+              onChange={(v) => setForm((s) => ({ ...s, contact_email: v }))}
+              placeholder={t("clients.form.placeholders.contactEmail") || "contact@example.com"}
+              type="email"
+            />
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="mb-4 text-lg font-semibold">
+            {t("clients.form.sections.notes") || "ملاحظات"}
+          </h2>
+
+          <label className="block">
+            <div className="mb-1 text-xs font-medium text-slate-500">
+              {t("clients.form.notes") || "ملاحظات"}
+            </div>
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
+              rows={5}
+              placeholder={t("clients.form.placeholders.notes") || "أدخل أي ملاحظات إضافية"}
               className={cn(
-                "w-[140px] px-3 py-2 rounded-xl",
-                "bg-white border border-slate-200 outline-none text-sm",
+                "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
                 "focus:ring-2 focus:ring-slate-200"
               )}
             />
-            <Button variant="secondary" onClick={() => setMonth(currentMonthYYYYMM())}>
-              {t("clients.details.filters.thisMonth")}
+          </label>
+        </Card>
+
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={!canSubmit || saving}>
+            {saving
+              ? t("common.saving") || "جارٍ الحفظ..."
+              : t("common.save") || "حفظ"}
+          </Button>
+
+          <Link href={`/clients/${id}`}>
+            <Button type="button" variant="secondary">
+              {t("common.cancel") || "إلغاء"}
             </Button>
-            <div className="text-[11px] text-slate-500">
-              {t("clients.details.filters.monthHint")}
-            </div>
-          </div>
-        }
-        right={
-          <div className="text-xs text-slate-500">
-            {t("clients.details.profile.status")}:{" "}
-            <span className="font-semibold text-slate-900">
-              {client?.is_active ? t("common.active") : t("common.disabled")}
-            </span>
-          </div>
-        }
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-        <KpiCard
-          label={t("clients.details.kpi.totalInvoiced")}
-          value={fmtMoney(data?.financial?.total_invoiced ?? 0)}
-          hint={t("clients.details.kpi.hintInvoices")}
-        />
-        <KpiCard
-          label={t("clients.details.kpi.totalPaid")}
-          value={fmtMoney(data?.financial?.total_paid ?? 0)}
-          hint={t("clients.details.kpi.hintPayments")}
-        />
-        <KpiCard
-          label={t("clients.details.kpi.balance")}
-          value={fmtMoney(data?.financial?.balance ?? 0)}
-          hint={t("clients.details.kpi.hintBalance")}
-        />
-        <KpiCard
-          label="إيراد الرحلات بالشهر"
-          value={fmtMoney(data?.financial?.monthly_trip_revenue ?? 0)}
-          hint="إجمالي إيراد الرحلات لهذا الشهر"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        <KpiCard
-          label="إجمالي الرحلات هذا الشهر"
-          value={String(data?.operations?.total_trips_this_month ?? 0)}
-        />
-        <KpiCard
-          label="المواقع النشطة"
-          value={String(data?.operations?.active_sites_count ?? 0)}
-        />
-        <KpiCard
-          label="إجمالي المواقع"
-          value={String(data?.operations?.total_sites_count ?? 0)}
-        />
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-4">
-        <div className="text-sm font-semibold mb-3">{t("clients.details.profile.title")}</div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.name")}</div>
-            <div className="mt-1 font-medium">{client?.name || "—"}</div>
-          </div>
-
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.email")}</div>
-            <div className="mt-1 font-medium">{client?.email || "—"}</div>
-          </div>
-
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.phone")}</div>
-            <div className="mt-1 font-medium">{client?.phone || "—"}</div>
-          </div>
-
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.hqAddress")}</div>
-            <div className="mt-1 font-medium">{client?.hq_address || "—"}</div>
-          </div>
-
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.contactName")}</div>
-            <div className="mt-1 font-medium">{client?.contact_name || "—"}</div>
-          </div>
-
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.contactPhone")}</div>
-            <div className="mt-1 font-medium">{client?.contact_phone || "—"}</div>
-          </div>
-
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.contactEmail")}</div>
-            <div className="mt-1 font-medium">{client?.contact_email || "—"}</div>
-          </div>
-
-          <div>
-            <div className="text-xs text-slate-500">{t("clients.details.profile.taxNo")}</div>
-            <div className="mt-1 font-medium">{client?.tax_no || "—"}</div>
-          </div>
-
-          <div className="md:col-span-3">
-            <div className="text-xs text-slate-500">{t("clients.details.profile.notes")}</div>
-            <div className="mt-1 font-medium">{client?.notes || "—"}</div>
-          </div>
+          </Link>
         </div>
-      </div>
-
-      <DataTable
-        title={t("clients.details.sites.title")}
-        subtitle={t("clients.details.sites.subtitle").replace("{month}", month)}
-        columns={siteColumns}
-        rows={data?.sites || []}
-        loading={loading}
-        emptyTitle={t("clients.details.sites.empty")}
-        emptyHint={t("clients.details.sites.emptyHint") || ""}
-      />
-
-      <ConfirmDialog
-        open={toggleOpen}
-        title={t("common.confirm")}
-        description={
-          client?.is_active
-            ? t("clients.confirm.disableDesc")
-            : t("clients.confirm.enableDesc")
-        }
-        confirmText={client?.is_active ? t("common.disable") : t("common.enable")}
-        cancelText={t("common.cancel")}
-        tone="warning"
-        isLoading={toggleLoading}
-        onClose={() => {
-          if (toggleLoading) return;
-          setToggleOpen(false);
-        }}
-        onConfirm={doToggle}
-      />
+      </form>
 
       {toast && (
         <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />
