@@ -7,10 +7,7 @@ export type ContractStatus =
   | "DRAFT"
   | "CANCELLED";
 
-export type BillingCycle =
-  | "DAILY"
-  | "WEEKLY"
-  | "MONTHLY";
+export type BillingCycle = "DAILY" | "WEEKLY" | "MONTHLY";
 
 export type ContractClientRef = {
   id: string;
@@ -36,7 +33,7 @@ export interface Contract {
   created_at?: string;
   updated_at?: string;
 
-  clients?: ContractClientRef;
+  client?: ContractClientRef;
 }
 
 export interface ContractListResponse {

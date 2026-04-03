@@ -383,7 +383,7 @@ export default function ContractDetailsClientPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <div className="text-sm text-slate-500">العميل</div>
-                <div className="font-medium">{contract.clients?.name || contract.client_id}</div>
+                <div className="font-medium">{contract.client?.name || contract.client_id}</div>
               </div>
 
               <div>
