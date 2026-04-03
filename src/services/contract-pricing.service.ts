@@ -12,8 +12,6 @@ import type {
   VehicleClassesListResponse,
 } from "@/src/types/contract-pricing.types";
 
-/* ---------------- Helpers ---------------- */
-
 function asArray(body: any): any[] {
   if (Array.isArray(body)) return body;
   if (Array.isArray(body?.items)) return body.items;
@@ -31,22 +29,15 @@ function normalizeSingle<T>(body: any): T {
   return (body?.data ?? body) as T;
 }
 
-/* ---------------- Normalizers ---------------- */
-
 function normalizePagination(body: any, itemsLength: number) {
   const total = toNumberOr(body?.total ?? body?.count ?? itemsLength, itemsLength);
-
   const page = toNumberOr(body?.page ?? body?.meta?.page ?? 1, 1);
-
   const pageSize = toNumberOr(
     body?.pageSize ?? body?.meta?.pageSize ?? body?.meta?.limit ?? 25,
     25
   );
-
   const pages = toNumberOr(
-    body?.pages ??
-      body?.meta?.pages ??
-      Math.max(Math.ceil(total / Math.max(pageSize, 1)), 1),
+    body?.pages ?? body?.meta?.pages ?? Math.max(Math.ceil(total / Math.max(pageSize, 1)), 1),
     1
   );
 
@@ -57,42 +48,22 @@ function normalizeRulesList(body: any): PricingRulesListResponse {
   const items = asArray(body) as PricingRule[];
   const { total, page, pageSize, pages } = normalizePagination(body, items.length);
 
-  return {
-    items,
-    total,
-    page,
-    pageSize,
-    pages,
-  };
+  return { items, total, page, pageSize, pages };
 }
 
 function normalizeVehicleClassesList(body: any): VehicleClassesListResponse {
   const items = asArray(body) as VehicleClassRef[];
   const { total, page, pageSize, pages } = normalizePagination(body, items.length);
 
-  return {
-    items,
-    total,
-    page,
-    pageSize,
-    pages,
-  };
+  return { items, total, page, pageSize, pages };
 }
 
 function normalizeSimpleList<T>(body: any) {
   const items = asArray(body) as T[];
   const { total, page, pageSize, pages } = normalizePagination(body, items.length);
 
-  return {
-    items,
-    total,
-    page,
-    pageSize,
-    pages,
-  };
+  return { items, total, page, pageSize, pages };
 }
-
-/* ---------------- Service ---------------- */
 
 export const contractPricingService = {
   async listRules(filters: PricingRulesFilters = {}): Promise<PricingRulesListResponse> {

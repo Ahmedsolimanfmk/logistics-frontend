@@ -136,6 +136,7 @@ export interface PricingRulesFilters {
 export interface PricingRulePayload {
   contract_id: string;
   client_id: string;
+
   base_price: number;
 
   route_id?: string | null;
