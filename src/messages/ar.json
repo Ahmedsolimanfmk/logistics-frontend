@@ -910,53 +910,54 @@
     }
   },
 
-  "sites": {
-    "title": "المواقع",
-    "subtitle": "إدارة المواقع لكل عميل",
-    "filters": {
-      "searchPlaceholder": "بحث في المواقع…",
-      "allClients": "كل العملاء"
-    },
-    "actions": {
-      "add": "+ إضافة موقع"
-    },
-    "table": {
-      "name": "الاسم",
-      "client": "العميل",
-      "address": "العنوان",
-      "status": "الحالة",
-      "created": "تاريخ الإنشاء",
-      "actions": "إجراءات"
-    },
-    "empty": "لا توجد مواقع.",
-    "modal": {
-      "createTitle": "إنشاء موقع",
-      "editTitle": "تعديل موقع",
-      "cancel": "إلغاء",
-      "save": "حفظ"
-    },
-    "fields": {
-      "name": "اسم الموقع",
-      "client": "العميل (اختياري)",
-      "address": "العنوان (اختياري)"
-    },
-    "placeholders": {
-      "name": "اسم الموقع",
-      "address": "عنوان الموقع",
-      "noClient": "بدون"
-    },
-    "toast": {
-      "nameRequired": "اسم الموقع مطلوب",
-      "created": "تم إضافة الموقع",
-      "updated": "تم تحديث الموقع",
-      "saveFailed": "فشل الحفظ",
-      "toggled": "تم تغيير حالة الموقع",
-      "toggleFailed": "فشل تغيير الحالة"
-    },
-    "errors": {
-      "loadFailed": "فشل تحميل المواقع"
-    }
+"sites": {
+  "title": "المواقع",
+  "subtitle": "إدارة مواقع العملاء",
+  "filters": {
+    "searchPlaceholder": "بحث في المواقع…",
+    "allClients": "كل العملاء"
   },
+  "actions": {
+    "add": "+ إضافة موقع"
+  },
+  "table": {
+    "name": "الاسم",
+    "client": "العميل",
+    "address": "العنوان",
+    "status": "الحالة",
+    "created": "تاريخ الإنشاء",
+    "actions": "إجراءات"
+  },
+  "empty": "لا توجد مواقع.",
+  "modal": {
+    "createTitle": "إنشاء موقع",
+    "editTitle": "تعديل موقع",
+    "cancel": "إلغاء",
+    "save": "حفظ"
+  },
+  "fields": {
+    "name": "اسم الموقع",
+    "client": "العميل",
+    "address": "العنوان"
+  },
+  "placeholders": {
+    "name": "اسم الموقع",
+    "address": "عنوان الموقع",
+    "noClient": "اختر العميل"
+  },
+  "toast": {
+    "nameRequired": "اسم الموقع مطلوب",
+    "clientRequired": "العميل مطلوب",
+    "created": "تم إضافة الموقع",
+    "updated": "تم تحديث الموقع",
+    "saveFailed": "فشل الحفظ",
+    "toggled": "تم تغيير حالة الموقع",
+    "toggleFailed": "فشل تغيير الحالة"
+  },
+  "errors": {
+    "loadFailed": "فشل تحميل المواقع"
+  }
+},
 "clients": {
   "title": "العملاء",
   "subtitle": "إدارة العملاء",

@@ -759,52 +759,53 @@
     }
   },
   "sites": {
-    "title": "Sites",
-    "subtitle": "Manage sites per client",
-    "filters": {
-      "searchPlaceholder": "Search site…",
-      "allClients": "All clients"
-    },
-    "actions": {
-      "add": "+ Add Site"
-    },
-    "table": {
-      "name": "Name",
-      "client": "Client",
-      "address": "Address",
-      "status": "Status",
-      "created": "Created",
-      "actions": "Actions"
-    },
-    "empty": "No sites found.",
-    "modal": {
-      "createTitle": "Create Site",
-      "editTitle": "Edit Site",
-      "cancel": "Cancel",
-      "save": "Save"
-    },
-    "fields": {
-      "name": "Name",
-      "client": "Client (optional)",
-      "address": "Address (optional)"
-    },
-    "placeholders": {
-      "name": "Site name",
-      "address": "Site address",
-      "noClient": "None"
-    },
-    "toast": {
-      "nameRequired": "Site name is required",
-      "created": "Site created",
-      "updated": "Site updated",
-      "saveFailed": "Save failed",
-      "toggled": "Site status changed",
-      "toggleFailed": "Toggle failed"
-    },
-    "errors": {
-      "loadFailed": "Failed to load sites"
-    }
+  "title": "Sites",
+  "subtitle": "Manage client sites",
+  "filters": {
+    "searchPlaceholder": "Search sites…",
+    "allClients": "All clients"
   },
+  "actions": {
+    "add": "+ Add Site"
+  },
+  "table": {
+    "name": "Name",
+    "client": "Client",
+    "address": "Address",
+    "status": "Status",
+    "created": "Created",
+    "actions": "Actions"
+  },
+  "empty": "No sites found.",
+  "modal": {
+    "createTitle": "Create Site",
+    "editTitle": "Edit Site",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "fields": {
+    "name": "Site name",
+    "client": "Client",
+    "address": "Address"
+  },
+  "placeholders": {
+    "name": "Site name",
+    "address": "Site address",
+    "noClient": "Select client"
+  },
+  "toast": {
+    "nameRequired": "Site name is required",
+    "clientRequired": "Client is required",
+    "created": "Site created",
+    "updated": "Site updated",
+    "saveFailed": "Save failed",
+    "toggled": "Site status changed",
+    "toggleFailed": "Toggle failed"
+  },
+  "errors": {
+    "loadFailed": "Failed to load sites"
+  }
+},
   "clients": {
   "title": "Clients",
   "subtitle": "Manage clients",
