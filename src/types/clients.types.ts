@@ -1,14 +1,37 @@
+export interface ClientCounts {
+  sites?: number;
+  trips?: number;
+  contracts?: number;
+  ar_invoices?: number;
+  ar_payments?: number;
+  trip_revenues?: number;
+}
+
 export interface Client {
   id: string;
+  company_id?: string;
+  code?: string | null;
   name: string;
 
   phone?: string | null;
+
+  // legacy-friendly alias returned by backend
   email?: string | null;
+
+  // canonical field in current backend/schema mapping
+  billing_email?: string | null;
+
   hq_address?: string | null;
 
+  // legacy-friendly aliases
   contact_name?: string | null;
   contact_phone?: string | null;
   contact_email?: string | null;
+
+  // canonical fields
+  primary_contact_name?: string | null;
+  primary_contact_phone?: string | null;
+  primary_contact_email?: string | null;
 
   tax_no?: string | null;
   notes?: string | null;
@@ -16,20 +39,28 @@ export interface Client {
   is_active: boolean;
   created_at?: string | null;
   updated_at?: string | null;
+
+  _count?: ClientCounts;
 }
 
 export interface ClientSite {
   id: string;
+  company_id?: string;
+  client_id?: string;
+  code?: string | null;
   name: string;
   address?: string | null;
+  is_active?: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+  trips_this_month?: number;
+
+  // nullable legacy compatibility fields
   city?: string | null;
   site_type?: string | null;
   zone?: string | null;
   zone_id?: string | null;
   zone_name?: string | null;
-  is_active?: boolean;
-  created_at?: string | null;
-  trips_this_month?: number;
 }
 
 export interface ClientFinancialSummary {
@@ -64,24 +95,45 @@ export interface ClientsListResponse {
 
 export interface ClientPayload {
   name: string;
+  code?: string | null;
   phone?: string | null;
+
+  // frontend may still send email; backend maps it to billing_email
   email?: string | null;
+  billing_email?: string | null;
+
   hq_address?: string | null;
+
+  // legacy
   contact_name?: string | null;
   contact_phone?: string | null;
   contact_email?: string | null;
+
+  // canonical
+  primary_contact_name?: string | null;
+  primary_contact_phone?: string | null;
+  primary_contact_email?: string | null;
+
   tax_no?: string | null;
   notes?: string | null;
   is_active?: boolean;
 }
 
 export interface ClientProfilePayload {
+  code?: string | null;
   phone?: string | null;
   email?: string | null;
+  billing_email?: string | null;
   hq_address?: string | null;
+
   contact_name?: string | null;
   contact_phone?: string | null;
   contact_email?: string | null;
+
+  primary_contact_name?: string | null;
+  primary_contact_phone?: string | null;
+  primary_contact_email?: string | null;
+
   tax_no?: string | null;
   notes?: string | null;
   is_active?: boolean;
