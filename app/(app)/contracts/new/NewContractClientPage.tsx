@@ -25,10 +25,15 @@ type ToastState =
 
 const CONTRACT_STATUSES: ContractStatus[] = [
   "ACTIVE",
-  "INACTIVE",
   "EXPIRED",
-  "DRAFT",
-  "CANCELLED",
+  "TERMINATED",
+];
+
+const BILLING_CYCLES: BillingCycle[] = [
+  "MONTHLY",
+  "QUARTERLY",
+  "YEARLY",
+  "ONE_OFF",
 ];
 
 export default function NewContractClientPage() {
@@ -49,6 +54,10 @@ export default function NewContractClientPage() {
     contract_no: "",
     start_date: "",
     end_date: "",
+    signed_at: "",
+    terminated_at: "",
+    termination_reason: "",
+    document_url: "",
     billing_cycle: "MONTHLY",
     contract_value: null,
     currency: "EGP",
@@ -89,6 +98,10 @@ export default function NewContractClientPage() {
         ...form,
         contract_no: form.contract_no || null,
         end_date: form.end_date || null,
+        signed_at: form.signed_at || null,
+        terminated_at: form.terminated_at || null,
+        termination_reason: form.termination_reason || null,
+        document_url: form.document_url || null,
         contract_value:
           form.contract_value === null ||
           form.contract_value === undefined ||
@@ -101,7 +114,6 @@ export default function NewContractClientPage() {
       });
 
       setToast({ type: "success", message: "تم إنشاء العقد بنجاح" });
-
       router.push(`/contracts/${created.id}`);
     } catch (error: any) {
       setToast({
@@ -175,16 +187,13 @@ export default function NewContractClientPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">دورة الفاتورة</label>
-            <select
+            <label className="mb-1 block text-sm font-medium">تاريخ التوقيع</label>
+            <input
+              type="date"
               className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.billing_cycle || "MONTHLY"}
-              onChange={(e) => setField("billing_cycle", e.target.value as BillingCycle)}
-            >
-              <option value="DAILY">يومي</option>
-              <option value="WEEKLY">أسبوعي</option>
-              <option value="MONTHLY">شهري</option>
-            </select>
+              value={form.signed_at || ""}
+              onChange={(e) => setField("signed_at", e.target.value || null)}
+            />
           </div>
 
           <div>
@@ -197,6 +206,21 @@ export default function NewContractClientPage() {
               {CONTRACT_STATUSES.map((status) => (
                 <option key={status} value={status}>
                   {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">دورة الفاتورة</label>
+            <select
+              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+              value={form.billing_cycle || "MONTHLY"}
+              onChange={(e) => setField("billing_cycle", e.target.value as BillingCycle)}
+            >
+              {BILLING_CYCLES.map((cycle) => (
+                <option key={cycle} value={cycle}>
+                  {cycle}
                 </option>
               ))}
             </select>
@@ -225,6 +249,16 @@ export default function NewContractClientPage() {
               value={form.currency || ""}
               onChange={(e) => setField("currency", e.target.value)}
               placeholder="EGP"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">رابط المستند</label>
+            <input
+              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+              value={form.document_url || ""}
+              onChange={(e) => setField("document_url", e.target.value)}
+              placeholder="https://..."
             />
           </div>
 

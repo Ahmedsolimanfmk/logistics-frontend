@@ -68,10 +68,15 @@ function readText(value?: string | number | null) {
 
 const CONTRACT_STATUSES: ContractStatus[] = [
   "ACTIVE",
-  "INACTIVE",
   "EXPIRED",
-  "DRAFT",
-  "CANCELLED",
+  "TERMINATED",
+];
+
+const BILLING_CYCLES: BillingCycle[] = [
+  "MONTHLY",
+  "QUARTERLY",
+  "YEARLY",
+  "ONE_OFF",
 ];
 
 export default function ContractDetailsClientPage() {
@@ -96,6 +101,10 @@ export default function ContractDetailsClientPage() {
     contract_no: "",
     start_date: "",
     end_date: "",
+    signed_at: "",
+    terminated_at: "",
+    termination_reason: "",
+    document_url: "",
     billing_cycle: "MONTHLY" as BillingCycle,
     contract_value: "",
     currency: "EGP",
@@ -113,6 +122,10 @@ export default function ContractDetailsClientPage() {
         contract_no: res.contract_no || "",
         start_date: formatDateInput(res.start_date),
         end_date: formatDateInput(res.end_date),
+        signed_at: formatDateInput(res.signed_at),
+        terminated_at: formatDateInput(res.terminated_at),
+        termination_reason: res.termination_reason || "",
+        document_url: res.document_url || "",
         billing_cycle: (res.billing_cycle || "MONTHLY") as BillingCycle,
         contract_value: res.contract_value == null ? "" : String(res.contract_value),
         currency: res.currency || "EGP",
@@ -143,13 +156,9 @@ export default function ContractDetailsClientPage() {
 
       setRules(res.items || []);
       setRulesTotal(res.total || 0);
-    } catch (error: any) {
+    } catch {
       setRules([]);
       setRulesTotal(0);
-      setToast({
-        type: "error",
-        message: error?.response?.data?.message || "فشل تحميل قواعد التسعير",
-      });
     } finally {
       setRulesLoading(false);
     }
@@ -181,6 +190,10 @@ export default function ContractDetailsClientPage() {
         contract_no: form.contract_no || null,
         start_date: form.start_date,
         end_date: form.end_date || null,
+        signed_at: form.signed_at || null,
+        terminated_at: form.terminated_at || null,
+        termination_reason: form.termination_reason || null,
+        document_url: form.document_url || null,
         billing_cycle: form.billing_cycle as BillingCycle,
         contract_value: form.contract_value === "" ? null : Number(form.contract_value),
         currency: form.currency || null,
@@ -338,7 +351,7 @@ export default function ContractDetailsClientPage() {
 
       <PageHeader
         title={title}
-        subtitle="عرض بيانات العقد وقواعد التسعير المرتبطة به"
+        subtitle="عرض بيانات العقد"
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href="/contracts">
@@ -402,6 +415,16 @@ export default function ContractDetailsClientPage() {
               </div>
 
               <div>
+                <div className="text-sm text-slate-500">تاريخ التوقيع</div>
+                <div className="font-medium">{formatDate(contract.signed_at)}</div>
+              </div>
+
+              <div>
+                <div className="text-sm text-slate-500">تاريخ الإنهاء</div>
+                <div className="font-medium">{formatDate(contract.terminated_at)}</div>
+              </div>
+
+              <div>
                 <div className="text-sm text-slate-500">دورة الفاتورة</div>
                 <div className="font-medium">{contract.billing_cycle || "—"}</div>
               </div>
@@ -423,6 +446,16 @@ export default function ContractDetailsClientPage() {
                 <div className="font-medium">{contract.currency || "—"}</div>
               </div>
 
+              <div>
+                <div className="text-sm text-slate-500">رابط المستند</div>
+                <div className="font-medium break-all">{contract.document_url || "—"}</div>
+              </div>
+
+              <div>
+                <div className="text-sm text-slate-500">سبب الإنهاء</div>
+                <div className="font-medium">{contract.termination_reason || "—"}</div>
+              </div>
+
               <div className="md:col-span-2">
                 <div className="text-sm text-slate-500">ملاحظات</div>
                 <div className="whitespace-pre-wrap font-medium">{contract.notes || "—"}</div>
@@ -436,17 +469,11 @@ export default function ContractDetailsClientPage() {
               <Button variant="secondary" onClick={() => quickSetStatus("ACTIVE")}>
                 تعيين ACTIVE
               </Button>
-              <Button variant="secondary" onClick={() => quickSetStatus("INACTIVE")}>
-                تعيين INACTIVE
-              </Button>
               <Button variant="secondary" onClick={() => quickSetStatus("EXPIRED")}>
                 تعيين EXPIRED
               </Button>
-              <Button variant="secondary" onClick={() => quickSetStatus("DRAFT")}>
-                تعيين DRAFT
-              </Button>
-              <Button variant="secondary" onClick={() => quickSetStatus("CANCELLED")}>
-                تعيين CANCELLED
+              <Button variant="secondary" onClick={() => quickSetStatus("TERMINATED")}>
+                تعيين TERMINATED
               </Button>
             </div>
           </Card>
@@ -470,11 +497,11 @@ export default function ContractDetailsClientPage() {
                 value={form.status}
                 onChange={(e) => setField("status", e.target.value)}
               >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
-                <option value="EXPIRED">EXPIRED</option>
-                <option value="DRAFT">DRAFT</option>
-                <option value="CANCELLED">CANCELLED</option>
+                {CONTRACT_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -499,15 +526,37 @@ export default function ContractDetailsClientPage() {
             </div>
 
             <div>
+              <label className="mb-1 block text-sm font-medium">تاريخ التوقيع</label>
+              <input
+                type="date"
+                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                value={form.signed_at}
+                onChange={(e) => setField("signed_at", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">تاريخ الإنهاء</label>
+              <input
+                type="date"
+                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                value={form.terminated_at}
+                onChange={(e) => setField("terminated_at", e.target.value)}
+              />
+            </div>
+
+            <div>
               <label className="mb-1 block text-sm font-medium">دورة الفاتورة</label>
               <select
                 className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 value={form.billing_cycle}
                 onChange={(e) => setField("billing_cycle", e.target.value)}
               >
-                <option value="DAILY">يومي</option>
-                <option value="WEEKLY">أسبوعي</option>
-                <option value="MONTHLY">شهري</option>
+                {BILLING_CYCLES.map((cycle) => (
+                  <option key={cycle} value={cycle}>
+                    {cycle}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -527,6 +576,24 @@ export default function ContractDetailsClientPage() {
                 className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
                 value={form.currency}
                 onChange={(e) => setField("currency", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">رابط المستند</label>
+              <input
+                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                value={form.document_url}
+                onChange={(e) => setField("document_url", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">سبب الإنهاء</label>
+              <input
+                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+                value={form.termination_reason}
+                onChange={(e) => setField("termination_reason", e.target.value)}
               />
             </div>
 

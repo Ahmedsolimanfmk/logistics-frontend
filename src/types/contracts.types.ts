@@ -1,13 +1,12 @@
 // src/types/contracts.types.ts
 
-export type ContractStatus =
-  | "ACTIVE"
-  | "INACTIVE"
-  | "EXPIRED"
-  | "DRAFT"
-  | "CANCELLED";
+export type ContractStatus = "ACTIVE" | "EXPIRED" | "TERMINATED";
 
-export type BillingCycle = "DAILY" | "WEEKLY" | "MONTHLY";
+export type BillingCycle =
+  | "MONTHLY"
+  | "QUARTERLY"
+  | "YEARLY"
+  | "ONE_OFF";
 
 export type ContractClientRef = {
   id: string;
@@ -16,23 +15,21 @@ export type ContractClientRef = {
 
 export interface Contract {
   id: string;
-
   client_id: string;
   contract_no?: string | null;
-
   start_date: string;
   end_date?: string | null;
-
+  signed_at?: string | null;
+  terminated_at?: string | null;
+  termination_reason?: string | null;
+  document_url?: string | null;
   billing_cycle?: BillingCycle;
   contract_value?: number | null;
   currency?: string | null;
-
   status?: ContractStatus;
   notes?: string | null;
-
   created_at?: string;
   updated_at?: string;
-
   client?: ContractClientRef;
 }
 
@@ -51,6 +48,10 @@ export interface ContractPayload {
   contract_no?: string | null;
   start_date: string;
   end_date?: string | null;
+  signed_at?: string | null;
+  terminated_at?: string | null;
+  termination_reason?: string | null;
+  document_url?: string | null;
   billing_cycle?: BillingCycle;
   contract_value?: number | null;
   currency?: string | null;
