@@ -959,29 +959,30 @@
   },
 "clients": {
   "title": "العملاء",
-  "subtitle": "إدارة العملاء والانتقال مباشرة إلى حسابات العملاء (كشف/فواتير/تحصيلات).",
+  "subtitle": "إدارة العملاء",
   "subtitleList": "قائمة العملاء",
 
   "actions": {
-    "add": "إضافة",
+    "add": "إضافة عميل",
     "viewDetails": "عرض التفاصيل",
     "edit": "تعديل",
-    "toggle": "تفعيل/تعطيل"
+    "toggle": "تفعيل / تعطيل"
   },
 
   "filters": {
-    "searchPlaceholder": "ابحث عن عميل..."
+    "searchPlaceholder": "ابحث باسم العميل أو الهاتف..."
   },
 
   "table": {
-    "name": "الاسم",
+    "name": "اسم العميل",
     "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
     "status": "الحالة",
-    "actions": "الإجراءات"
+    "actions": "إجراءات"
   },
 
   "empty": "لا يوجد عملاء",
-  "emptyHint": "قم بإضافة أول عميل للبدء.",
+  "emptyHint": "قم بإضافة أول عميل للبدء",
 
   "confirm": {
     "disableDesc": "هل تريد إيقاف هذا العميل؟",
@@ -990,46 +991,52 @@
 
   "toast": {
     "created": "تم إنشاء العميل",
-    "updated": "تم تحديث العميل",
+    "updated": "تم تحديث بيانات العميل",
     "toggled": "تم تحديث حالة العميل"
   },
 
   "errors": {
     "loadFailed": "فشل تحميل العملاء",
-    "saveFailed": "فشل حفظ العميل",
+    "saveFailed": "فشل حفظ بيانات العميل",
     "toggleFailed": "فشل تحديث الحالة",
     "nameRequired": "اسم العميل مطلوب"
+  },
+
+  "form": {
+    "sections": {
+      "basic": "البيانات الأساسية",
+      "contact": "بيانات المسؤول",
+      "notes": "ملاحظات"
+    },
+
+    "name": "اسم العميل",
+    "email": "البريد الإلكتروني",
+    "phone": "رقم الهاتف",
+    "hqAddress": "عنوان المقر",
+    "contactName": "اسم المسؤول",
+    "contactPhone": "هاتف المسؤول",
+    "contactEmail": "بريد المسؤول",
+    "taxNo": "الرقم الضريبي",
+    "notes": "ملاحظات",
+
+    "placeholders": {
+      "name": "مثال: شركة النور",
+      "email": "example@company.com",
+      "phone": "01000000000",
+      "hqAddress": "القاهرة - مدينة نصر",
+      "contactName": "اسم المسؤول",
+      "contactPhone": "01000000000",
+      "contactEmail": "contact@company.com",
+      "taxNo": "123456789",
+      "notes": "أدخل أي ملاحظات..."
+    }
   },
 
   "new": {
     "title": "إضافة عميل",
     "subtitle": "إدخال بيانات عميل جديد",
 
-    "form": {
-      "name": "اسم العميل",
-      "email": "البريد الإلكتروني",
-      "phone": "الهاتف",
-      "address": "عنوان المقر",
-      "notes": "ملاحظات",
-      "taxNo": "الرقم الضريبي",
-      "contactName": "اسم جهة الاتصال",
-      "contactPhone": "هاتف جهة الاتصال",
-      "contactEmail": "بريد جهة الاتصال"
-    },
-
-    "placeholders": {
-      "name": "مثال: شركة النور",
-      "email": "مثال: info@company.com",
-      "phone": "مثال: 01000000000",
-      "address": "مثال: القاهرة - مدينة نصر",
-      "notes": "أي ملاحظات إضافية...",
-      "taxNo": "مثال: 123456789",
-      "contactName": "مثال: أحمد علي",
-      "contactPhone": "مثال: 01000000000",
-      "contactEmail": "مثال: ahmed@company.com"
-    },
-
-    "buttons": {
+    "actions": {
       "create": "إنشاء العميل",
       "cancel": "إلغاء"
     },
@@ -1039,69 +1046,38 @@
     },
 
     "errors": {
-      "nameRequired": "اسم العميل مطلوب",
       "createFailed": "فشل إنشاء العميل"
     }
   },
 
   "edit": {
     "title": "تعديل العميل",
-    "subtitle": "تحديث بيانات العميل",
-
-    "sections": {
-      "basic": "البيانات الأساسية",
-      "contact": "بيانات جهة الاتصال",
-      "finance": "بيانات مالية"
-    },
-
-    "form": {
-      "name": "الاسم",
-      "email": "البريد الإلكتروني",
-      "phone": "الهاتف",
-      "hqAddress": "عنوان المقر",
-      "contactName": "اسم جهة الاتصال",
-      "contactPhone": "هاتف جهة الاتصال",
-      "contactEmail": "بريد جهة الاتصال",
-      "taxNo": "الرقم الضريبي",
-      "notes": "ملاحظات"
-    },
-
-    "placeholders": {
-      "name": "اسم العميل",
-      "email": "example@email.com",
-      "phone": "+20...",
-      "hqAddress": "العنوان",
-      "contactName": "اسم جهة الاتصال",
-      "contactPhone": "+20...",
-      "contactEmail": "contact@email.com",
-      "taxNo": "الرقم الضريبي",
-      "notes": "ملاحظات"
-    }
+    "subtitle": "تحديث بيانات العميل"
   },
 
   "details": {
     "title": "تفاصيل العميل",
-    "subtitle": "بيانات العميل ونشاطه",
+    "subtitle": "عرض بيانات العميل ونشاطه",
 
     "actions": {
-      "backToList": "الرجوع إلى قائمة العملاء"
+      "backToList": "العودة إلى قائمة العملاء"
     },
 
     "filters": {
       "month": "الشهر",
       "monthHint": "الصيغة: YYYY-MM",
-      "thisMonth": "هذا الشهر"
+      "thisMonth": "الشهر الحالي"
     },
 
     "profile": {
-      "title": "الملف التعريفي",
-      "name": "الاسم",
+      "title": "بيانات العميل",
+      "name": "اسم العميل",
       "email": "البريد الإلكتروني",
-      "phone": "الهاتف",
+      "phone": "رقم الهاتف",
       "hqAddress": "عنوان المقر",
-      "contactName": "اسم جهة الاتصال",
-      "contactPhone": "هاتف جهة الاتصال",
-      "contactEmail": "بريد جهة الاتصال",
+      "contactName": "اسم المسؤول",
+      "contactPhone": "هاتف المسؤول",
+      "contactEmail": "بريد المسؤول",
       "taxNo": "الرقم الضريبي",
       "notes": "ملاحظات",
       "status": "الحالة",
@@ -1110,13 +1086,12 @@
 
     "kpi": {
       "totalInvoiced": "إجمالي الفواتير",
-      "totalPaid": "إجمالي المدفوع",
+      "totalPaid": "إجمالي التحصيلات",
       "balance": "الرصيد",
-      "hintInvoices": "مجموع الفواتير (باستثناء الملغاة)",
-      "hintPayments": "مجموع التحصيلات (باستثناء الملغاة)",
-      "hintBalance": "إجمالي الفواتير ناقص التحصيلات"
-    },
-
+      "hintInvoices": "إجمالي الفواتير (باستثناء الملغاة)",
+      "hintPayments": "إجمالي التحصيلات (باستثناء الملغاة)",
+      "hintBalance": "الفواتير - التحصيلات"
+},
     "sites": {
       "title": "المواقع",
       "subtitle": "المواقع وعدد الرحلات خلال الشهر ({month})",
