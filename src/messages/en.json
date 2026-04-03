@@ -807,33 +807,31 @@
   },
   "clients": {
   "title": "Clients",
-  "subtitle": "Manage clients and access their financial accounts directly (ledger / invoices / payments).",
+  "subtitle": "Manage clients",
   "subtitleList": "Clients list",
 
   "actions": {
-    "add": "Add",
-    "viewDetails": "View details"
+    "add": "Add client",
+    "viewDetails": "View details",
+    "edit": "Edit",
+    "toggle": "Enable / Disable",
+    "addContract": "Add contract"
   },
 
   "filters": {
-    "searchPlaceholder": "Search clients..."
+    "searchPlaceholder": "Search by client name or phone..."
   },
 
   "table": {
-    "name": "Name",
+    "name": "Client name",
     "email": "Email",
+    "phone": "Phone",
     "status": "Status",
     "actions": "Actions"
   },
 
   "empty": "No clients",
-  "emptyHint": "Add your first client to get started.",
-
-  "modal": {
-    "addTitle": "Add client",
-    "editTitle": "Edit client",
-    "namePlaceholder": "Client name"
-  },
+  "emptyHint": "Add your first client to get started",
 
   "confirm": {
     "disableDesc": "Do you want to disable this client?",
@@ -853,12 +851,63 @@
     "nameRequired": "Client name is required"
   },
 
+  "form": {
+    "sections": {
+      "basic": "Basic information",
+      "contact": "Primary contact",
+      "notes": "Notes"
+    },
+
+    "name": "Client name",
+    "email": "Email",
+    "phone": "Phone",
+    "hqAddress": "HQ address",
+    "contactName": "Primary contact name",
+    "contactPhone": "Primary contact phone",
+    "contactEmail": "Primary contact email",
+    "taxNo": "Tax number",
+    "notes": "Notes",
+    "status": "Status",
+
+    "placeholders": {
+      "name": "Example: Arab Contractors",
+      "email": "example@company.com",
+      "phone": "01000000000",
+      "hqAddress": "Cairo - Nasr City",
+      "contactName": "Primary contact name",
+      "contactPhone": "01000000000",
+      "contactEmail": "contact@company.com",
+      "taxNo": "123456789",
+      "notes": "Enter any notes..."
+    }
+  },
+
+  "new": {
+    "title": "Add client",
+    "subtitle": "Create a new client",
+    "actions": {
+      "create": "Create client",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "created": "Client created successfully"
+    },
+    "errors": {
+      "createFailed": "Failed to create client"
+    }
+  },
+
+  "edit": {
+    "title": "Edit client",
+    "subtitle": "Update client details"
+  },
+
   "details": {
     "title": "Client details",
-    "subtitle": "Client profile and activity",
+    "subtitle": "View client details and activity",
 
     "actions": {
-      "backToList": "Back to clients"
+      "backToList": "Back to clients list"
     },
 
     "filters": {
@@ -868,14 +917,14 @@
     },
 
     "profile": {
-      "title": "Profile",
-      "name": "Name",
+      "title": "Client details",
+      "name": "Client name",
       "email": "Email",
       "phone": "Phone",
       "hqAddress": "HQ address",
-      "contactName": "Contact name",
-      "contactPhone": "Contact phone",
-      "contactEmail": "Contact email",
+      "contactName": "Primary contact name",
+      "contactPhone": "Primary contact phone",
+      "contactEmail": "Primary contact email",
       "taxNo": "Tax number",
       "notes": "Notes",
       "status": "Status",
@@ -884,25 +933,80 @@
 
     "kpi": {
       "totalInvoiced": "Total invoiced",
-      "totalPaid": "Total paid",
+      "totalPaid": "Total collected",
       "balance": "Balance",
-      "hintInvoices": "Sum of invoices (excluding cancelled)",
-      "hintPayments": "Sum of payments (excluding cancelled)",
-      "hintBalance": "Total invoiced minus total paid"
+      "monthlyTripRevenue": "Monthly trip revenue",
+      "totalTripsThisMonth": "Trips this month",
+      "activeSites": "Active sites",
+      "totalSites": "Total sites",
+      "hintInvoices": "Total invoices excluding cancelled ones",
+      "hintPayments": "Total collections excluding cancelled ones",
+      "hintBalance": "Invoices minus collections"
+    },
+
+    "summary": {
+      "title": "Activity summary",
+      "contracts": "Total contracts",
+      "month": "Month",
+      "activeSites": "Active sites",
+      "sites": "Total sites"
     },
 
     "sites": {
       "title": "Sites",
-      "subtitle": "Sites and monthly trips ({month})",
-
+      "subtitle": "Sites and trip count during ({month})",
       "empty": "No sites",
       "emptyHint": "This client currently has no sites.",
-
       "table": {
         "name": "Site",
         "address": "Address",
+        "city": "City",
         "tripsThisMonth": "Trips this month",
         "status": "Status"
+      }
+    },
+
+    "contracts": {
+      "title": "Contracts",
+      "subtitle": "Contracts linked to this client",
+      "empty": "No contracts",
+      "emptyHint": "No contracts have been added for this client yet.",
+      "table": {
+        "contractNo": "Contract no.",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "billingCycle": "Billing cycle",
+        "value": "Value",
+        "status": "Status",
+        "actions": "Actions"
+      }
+    },
+
+    "invoices": {
+      "title": "Invoices",
+      "subtitle": "Latest client invoices",
+      "empty": "No invoices",
+      "emptyHint": "No invoices are recorded for this client.",
+      "table": {
+        "invoiceNo": "Invoice no.",
+        "issueDate": "Issue date",
+        "dueDate": "Due date",
+        "status": "Status",
+        "amount": "Amount"
+      }
+    },
+
+    "payments": {
+      "title": "Payments",
+      "subtitle": "Latest client payments",
+      "empty": "No payments",
+      "emptyHint": "No payments are recorded for this client.",
+      "table": {
+        "paymentDate": "Payment date",
+        "amount": "Amount",
+        "method": "Method",
+        "status": "Status",
+        "reference": "Reference"
       }
     },
 
