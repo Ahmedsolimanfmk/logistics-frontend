@@ -17,12 +17,12 @@ function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
 }
 
-function fmtDate(d: any) {
+const fmtDate = (d: any) => {
   if (!d) return "—";
   const dt = new Date(String(d));
   if (Number.isNaN(dt.getTime())) return String(d);
   return dt.toLocaleString("ar-EG");
-}
+};
 
 function SiteStatusBadge({ active }: { active?: boolean | null }) {
   if (active === false) {
@@ -158,7 +158,7 @@ export default function SitesPage() {
     setName(String(site?.name || ""));
     setAddress(String(site?.address || ""));
     setCode(String(site?.code || ""));
-    setClientId(String(site?.client_id || site?.clients?.id || ""));
+    setClientId(String(site?.client_id || site?.client?.id || ""));
     setModalOpen(true);
   }
 
@@ -167,12 +167,12 @@ export default function SitesPage() {
     const vClientId = String(clientId || "").trim();
 
     if (!vName) {
-      showToast("error", t("sites.toast.nameRequired") || "اسم الموقع مطلوب");
+      showToast("error", t("sites.toast.nameRequired"));
       return;
     }
 
     if (!vClientId) {
-      showToast("error", t("sites.toast.clientRequired") || "العميل مطلوب");
+      showToast("error", t("sites.toast.clientRequired"));
       return;
     }
 
@@ -188,17 +188,17 @@ export default function SitesPage() {
 
       if (editing?.id) {
         await sitesService.update(editing.id, payload);
-        showToast("success", t("sites.toast.updated") || "تم تحديث الموقع");
+        showToast("success", t("sites.toast.updated"));
       } else {
         await sitesService.create(payload);
-        showToast("success", t("sites.toast.created") || "تم إنشاء الموقع");
+        showToast("success", t("sites.toast.created"));
       }
 
       setModalOpen(false);
       resetForm();
       await loadSites();
     } catch (e: any) {
-      showToast("error", e?.message || t("sites.toast.saveFailed") || "فشل حفظ الموقع");
+      showToast("error", e?.message || t("sites.toast.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -207,13 +207,10 @@ export default function SitesPage() {
   async function toggleActive(id: string) {
     try {
       await sitesService.toggle(id);
-      showToast("success", t("sites.toast.toggled") || "تم تحديث حالة الموقع");
+      showToast("success", t("sites.toast.toggled"));
       await loadSites();
     } catch (e: any) {
-      showToast(
-        "error",
-        e?.message || t("sites.toast.toggleFailed") || "فشل تغيير حالة الموقع"
-      );
+      showToast("error", e?.message || t("sites.toast.toggleFailed"));
     }
   }
 
@@ -299,7 +296,7 @@ export default function SitesPage() {
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="overflow-auto">
-              <table className="min-w-[900px] w-full text-sm">
+              <table className="w-full min-w-[900px] text-sm">
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-4 py-2 text-right text-slate-700">
@@ -330,7 +327,7 @@ export default function SitesPage() {
                       className={cn("border-t border-slate-200 hover:bg-slate-50")}
                     >
                       <td className="px-4 py-2 font-medium">{site.name || "—"}</td>
-                      <td className="px-4 py-2">{site.clients?.name || "—"}</td>
+                      <td className="px-4 py-2">{site.client?.name || "—"}</td>
                       <td className="px-4 py-2">{site.address || "—"}</td>
                       <td className="px-4 py-2">
                         <SiteStatusBadge active={site.is_active} />
@@ -344,7 +341,6 @@ export default function SitesPage() {
                           >
                             {t("common.edit")}
                           </button>
-
                           <button
                             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50"
                             onClick={() => toggleActive(site.id)}
@@ -385,7 +381,6 @@ export default function SitesPage() {
                 <h3 className="text-lg font-bold">
                   {editing ? t("sites.modal.editTitle") : t("sites.modal.createTitle")}
                 </h3>
-
                 <button
                   onClick={() => {
                     if (saving) return;
@@ -459,7 +454,6 @@ export default function SitesPage() {
                 >
                   {t("sites.modal.cancel")}
                 </button>
-
                 <button
                   onClick={submit}
                   disabled={saving}
