@@ -5,23 +5,10 @@ export interface SiteClientRef {
   is_active?: boolean | null;
 }
 
-export interface SiteTripRef {
-  id: string;
-  trip_code?: string | null;
-  status?: string | null;
-  financial_status?: string | null;
-  created_at?: string | null;
-  scheduled_at?: string | null;
-  origin?: string | null;
-  destination?: string | null;
-  agreed_revenue?: number | null;
-  revenue_currency?: string | null;
-}
-
 export interface Site {
   id: string;
-  company_id?: string;
   client_id: string;
+  company_id?: string;
 
   code?: string | null;
   name: string;
@@ -31,8 +18,7 @@ export interface Site {
   created_at?: string | null;
   updated_at?: string | null;
 
-  clients?: SiteClientRef | null;
-  site_trips?: SiteTripRef[];
+  client?: SiteClientRef | null;
 }
 
 export interface SiteClientOption {

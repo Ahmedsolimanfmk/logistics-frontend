@@ -30,8 +30,8 @@ function normalizeSite(raw: any): Site {
 
   return {
     id: String(site.id || ""),
-    company_id: site.company_id ?? undefined,
     client_id: String(site.client_id || ""),
+    company_id: site.company_id ?? undefined,
 
     code: site.code ?? null,
     name: String(site.name || ""),
@@ -41,30 +41,14 @@ function normalizeSite(raw: any): Site {
     created_at: site.created_at ?? null,
     updated_at: site.updated_at ?? null,
 
-    clients: site.clients
+    client: site.client
       ? {
-          id: String(site.clients.id || ""),
-          name: site.clients.name ?? null,
-          code: site.clients.code ?? null,
-          is_active: site.clients.is_active ?? null,
+          id: String(site.client.id || ""),
+          name: site.client.name ?? null,
+          code: site.client.code ?? null,
+          is_active: site.client.is_active ?? null,
         }
       : null,
-
-    site_trips: Array.isArray(site.site_trips)
-      ? site.site_trips.map((trip: any) => ({
-          id: String(trip?.id || ""),
-          trip_code: trip?.trip_code ?? null,
-          status: trip?.status ?? null,
-          financial_status: trip?.financial_status ?? null,
-          created_at: trip?.created_at ?? null,
-          scheduled_at: trip?.scheduled_at ?? null,
-          origin: trip?.origin ?? null,
-          destination: trip?.destination ?? null,
-          agreed_revenue:
-            trip?.agreed_revenue == null ? null : Number(trip.agreed_revenue),
-          revenue_currency: trip?.revenue_currency ?? null,
-        }))
-      : [],
   };
 }
 
