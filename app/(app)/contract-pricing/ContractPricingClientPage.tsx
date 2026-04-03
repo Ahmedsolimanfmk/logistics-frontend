@@ -61,6 +61,22 @@ function boolToStatus(isActive?: boolean) {
   return isActive ? "ACTIVE" : "INACTIVE";
 }
 
+function contractLooksUsable(contract: Contract) {
+  if (!contract) return false;
+
+  const status = String(contract.status || "").toUpperCase();
+  if (status && status !== "ACTIVE") return false;
+
+  if (contract.end_date) {
+    const end = new Date(contract.end_date);
+    if (!Number.isNaN(end.getTime()) && end.getTime() < Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export default function ContractPricingClientPage() {
   const token = useAuth((s) => s.token);
 
@@ -102,7 +118,10 @@ export default function ContractPricingClientPage() {
     } catch (e: any) {
       setToast({
         type: "error",
-        msg: e?.response?.data?.message || e?.message || "فشل تحميل بيانات المساعدة",
+        msg:
+          e?.response?.data?.message ||
+          e?.message ||
+          "فشل تحميل البيانات المساعدة",
       });
     }
   }
@@ -127,17 +146,23 @@ export default function ContractPricingClientPage() {
           client_id: nextClientId,
           page: 1,
           pageSize: 200,
+          is_active: true,
         }),
       ]);
 
-      setContracts(contractsRes.items || []);
+      const usableContracts = (contractsRes.items || []).filter(contractLooksUsable);
+
+      setContracts(usableContracts);
       setRoutes(routesRes.items || []);
     } catch (e: any) {
       setContracts([]);
       setRoutes([]);
       setToast({
         type: "error",
-        msg: e?.response?.data?.message || e?.message || "فشل تحميل العقود أو المسارات",
+        msg:
+          e?.response?.data?.message ||
+          e?.message ||
+          "فشل تحميل العقود أو المسارات",
       });
     }
   }
@@ -154,8 +179,7 @@ export default function ContractPricingClientPage() {
         route_id: routeId || undefined,
         vehicle_class_id: vehicleClassId || undefined,
         cargo_type_id: cargoTypeId || undefined,
-        is_active:
-          isActive === "" ? "" : isActive === "true",
+        is_active: isActive === "" ? "" : isActive === "true",
         page,
         pageSize,
       });
@@ -169,7 +193,10 @@ export default function ContractPricingClientPage() {
       setPages(1);
       setToast({
         type: "error",
-        msg: e?.response?.data?.message || e?.message || "فشل تحميل قواعد التسعير",
+        msg:
+          e?.response?.data?.message ||
+          e?.message ||
+          "فشل تحميل قواعد التسعير",
       });
     } finally {
       setLoading(false);
@@ -183,7 +210,17 @@ export default function ContractPricingClientPage() {
   useEffect(() => {
     loadRules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, q, clientId, contractId, routeId, vehicleClassId, cargoTypeId, isActive, page]);
+  }, [
+    token,
+    q,
+    clientId,
+    contractId,
+    routeId,
+    vehicleClassId,
+    cargoTypeId,
+    isActive,
+    page,
+  ]);
 
   useEffect(() => {
     loadContractsByClient(clientId);
@@ -196,6 +233,11 @@ export default function ContractPricingClientPage() {
 
   const inactiveCount = useMemo(
     () => items.filter((x) => x.is_active === false).length,
+    [items]
+  );
+
+  const withRouteCount = useMemo(
+    () => items.filter((x) => !!x.route_id).length,
     [items]
   );
 
@@ -230,6 +272,11 @@ export default function ContractPricingClientPage() {
           row.cargo_types?.name || row.cargo_types?.code || "—",
       },
       {
+        key: "trip_type",
+        label: "نوع الرحلة",
+        render: (row) => row.trip_type || "—",
+      },
+      {
         key: "base_price",
         label: "السعر الأساسي",
         render: (row) => formatMoney(row.base_price, row.currency),
@@ -257,6 +304,10 @@ export default function ContractPricingClientPage() {
           <div className="flex flex-wrap gap-2">
             <Link href={`/contract-pricing/${row.id}`}>
               <Button variant="secondary">عرض</Button>
+            </Link>
+
+            <Link href={`/contract-pricing/${row.id}?mode=edit`}>
+              <Button variant="secondary">تعديل</Button>
             </Link>
 
             <button
@@ -325,7 +376,7 @@ export default function ContractPricingClientPage() {
         <KpiCard label="إجمالي القواعد" value={total} formatValue />
         <KpiCard label="القواعد النشطة" value={activeCount} formatValue />
         <KpiCard label="القواعد غير النشطة" value={inactiveCount} formatValue />
-        <KpiCard label="الصفحات" value={pages} formatValue />
+        <KpiCard label="مرتبطة بمسار" value={withRouteCount} formatValue />
       </div>
 
       <FiltersBar

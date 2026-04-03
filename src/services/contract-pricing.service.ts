@@ -95,8 +95,6 @@ function normalizeSimpleList<T>(body: any) {
 /* ---------------- Service ---------------- */
 
 export const contractPricingService = {
-  /* -------- Rules -------- */
-
   async listRules(filters: PricingRulesFilters = {}): Promise<PricingRulesListResponse> {
     const params: Record<string, any> = {};
 
@@ -141,8 +139,6 @@ export const contractPricingService = {
     return normalizeSingle<PricingRule>(res.data ?? res);
   },
 
-  /* -------- Vehicle Classes -------- */
-
   async listVehicleClasses(
     filters: VehicleClassesFilters = {}
   ): Promise<VehicleClassesListResponse> {
@@ -180,8 +176,6 @@ export const contractPricingService = {
     return normalizeSingle<VehicleClassRef>(res.data ?? res);
   },
 
-  /* -------- Cargo Types -------- */
-
   async listCargoTypes(params?: {
     q?: string;
     is_active?: boolean | "";
@@ -191,8 +185,6 @@ export const contractPricingService = {
     const res = await api.get("/contract-pricing/cargo-types", { params });
     return normalizeSimpleList<CargoTypeRef>(res.data ?? res);
   },
-
-  /* -------- Routes -------- */
 
   async listRoutes(params?: {
     q?: string;

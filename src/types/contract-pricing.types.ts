@@ -3,10 +3,7 @@ export type TripType =
   | "TRANSFER"
   | "RETURN"
   | "INTERNAL"
-  | "OTHER"
-  | string;
-
-/* ---------------- References ---------------- */
+  | "OTHER";
 
 export interface PricingClientRef {
   id: string;
@@ -36,8 +33,6 @@ export interface PricingZoneRef {
   code?: string | null;
   name?: string | null;
 }
-
-/* ---------------- Vehicle Class ---------------- */
 
 export interface VehicleClassRef {
   id: string;
@@ -69,8 +64,6 @@ export interface VehicleClassesListResponse {
   pages: number;
 }
 
-/* ---------------- Cargo ---------------- */
-
 export interface CargoTypeRef {
   id: string;
   code?: string | null;
@@ -78,8 +71,6 @@ export interface CargoTypeRef {
   description?: string | null;
   is_active?: boolean;
 }
-
-/* ---------------- Pricing Rule ---------------- */
 
 export interface PricingRule {
   id: string;
@@ -127,8 +118,6 @@ export interface PricingRule {
   cargo_types?: CargoTypeRef;
 }
 
-/* ---------------- Filters ---------------- */
-
 export interface PricingRulesFilters {
   q?: string;
   client_id?: string;
@@ -144,12 +133,9 @@ export interface PricingRulesFilters {
   pageSize?: number;
 }
 
-/* ---------------- Payload ---------------- */
-
 export interface PricingRulePayload {
   contract_id: string;
   client_id: string;
-
   base_price: number;
 
   route_id?: string | null;
@@ -160,7 +146,7 @@ export interface PricingRulePayload {
   vehicle_class_id?: string | null;
   cargo_type_id?: string | null;
 
-  trip_type?: string | null;
+  trip_type?: TripType | null;
 
   min_weight?: number | null;
   max_weight?: number | null;
@@ -176,8 +162,6 @@ export interface PricingRulePayload {
   is_active?: boolean;
   notes?: string | null;
 }
-
-/* ---------------- List Response ---------------- */
 
 export interface PricingRulesListResponse {
   items: PricingRule[];
