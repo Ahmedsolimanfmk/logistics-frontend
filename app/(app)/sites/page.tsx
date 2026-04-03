@@ -11,6 +11,7 @@ import type {
   Site,
   SiteClientOption,
   SitePayload,
+  SiteZoneOption,
 } from "@/src/types/sites.types";
 
 function cn(...v: Array<string | false | null | undefined>) {
@@ -47,14 +48,17 @@ export default function SitesPage() {
 
   const [loading, setLoading] = useState(true);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [zonesLoading, setZonesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const [rawItems, setRawItems] = useState<Site[]>([]);
   const [clients, setClients] = useState<SiteClientOption[]>([]);
+  const [zones, setZones] = useState<SiteZoneOption[]>([]);
 
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("");
+  const [zoneFilter, setZoneFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
   const [toastOpen, setToastOpen] = useState(false);
@@ -68,6 +72,7 @@ export default function SitesPage() {
   const [address, setAddress] = useState("");
   const [code, setCode] = useState("");
   const [clientId, setClientId] = useState<string>("");
+  const [zoneId, setZoneId] = useState<string>("");
 
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
@@ -99,6 +104,18 @@ export default function SitesPage() {
     }
   }
 
+  async function loadZones() {
+    setZonesLoading(true);
+    try {
+      const items = await sitesService.listZonesOptions();
+      setZones(Array.isArray(items) ? items : []);
+    } catch {
+      setZones([]);
+    } finally {
+      setZonesLoading(false);
+    }
+  }
+
   async function loadSites() {
     if (!token) {
       setLoading(false);
@@ -112,6 +129,7 @@ export default function SitesPage() {
       const res = await sitesService.list({
         search: search.trim() || undefined,
         client_id: clientFilter || undefined,
+        zone_id: zoneFilter || undefined,
         is_active:
           statusFilter === "all"
             ? undefined
@@ -134,6 +152,7 @@ export default function SitesPage() {
     if (!token) return;
 
     loadClients();
+    loadZones();
     loadSites();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, token]);
@@ -146,6 +165,7 @@ export default function SitesPage() {
     setAddress("");
     setCode("");
     setClientId("");
+    setZoneId("");
   }
 
   function openCreate() {
@@ -159,6 +179,7 @@ export default function SitesPage() {
     setAddress(String(site?.address || ""));
     setCode(String(site?.code || ""));
     setClientId(String(site?.client_id || site?.client?.id || ""));
+    setZoneId(String(site?.zone_id || site?.zone?.id || ""));
     setModalOpen(true);
   }
 
@@ -179,6 +200,7 @@ export default function SitesPage() {
     const payload: SitePayload = {
       name: vName,
       client_id: vClientId,
+      zone_id: zoneId || null,
       address: address.trim() || null,
       code: code.trim() || null,
     };
@@ -246,7 +268,7 @@ export default function SitesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("sites.filters.searchPlaceholder")}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none sm:w-80"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none sm:w-72"
           />
 
           <select
@@ -258,6 +280,19 @@ export default function SitesPage() {
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name || c.id}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={zoneFilter}
+            onChange={(e) => setZoneFilter(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
+          >
+            <option value="">كل المناطق</option>
+            {zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name || z.code || z.id}
               </option>
             ))}
           </select>
@@ -296,7 +331,7 @@ export default function SitesPage() {
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="overflow-auto">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[1050px] text-sm">
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-4 py-2 text-right text-slate-700">
@@ -304,6 +339,9 @@ export default function SitesPage() {
                     </th>
                     <th className="px-4 py-2 text-right text-slate-700">
                       {t("sites.table.client")}
+                    </th>
+                    <th className="px-4 py-2 text-right text-slate-700">
+                      المنطقة
                     </th>
                     <th className="px-4 py-2 text-right text-slate-700">
                       {t("sites.table.address")}
@@ -328,6 +366,9 @@ export default function SitesPage() {
                     >
                       <td className="px-4 py-2 font-medium">{site.name || "—"}</td>
                       <td className="px-4 py-2">{site.client?.name || "—"}</td>
+                      <td className="px-4 py-2">
+                        {site.zone?.name || site.zone?.code || "—"}
+                      </td>
                       <td className="px-4 py-2">{site.address || "—"}</td>
                       <td className="px-4 py-2">
                         <SiteStatusBadge active={site.is_active} />
@@ -354,7 +395,7 @@ export default function SitesPage() {
 
                   {!items.length ? (
                     <tr>
-                      <td className="px-4 py-6 text-slate-700" colSpan={6}>
+                      <td className="px-4 py-6 text-slate-700" colSpan={7}>
                         {t("sites.empty")}
                       </td>
                     </tr>
@@ -418,6 +459,25 @@ export default function SitesPage() {
                     {clients.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name || c.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  المنطقة
+                  <select
+                    value={zoneId}
+                    onChange={(e) => setZoneId(e.target.value)}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none"
+                    disabled={saving || zonesLoading}
+                  >
+                    <option value="">
+                      {zonesLoading ? t("common.loading") : "بدون منطقة"}
+                    </option>
+                    {zones.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.name || z.code || z.id}
                       </option>
                     ))}
                   </select>

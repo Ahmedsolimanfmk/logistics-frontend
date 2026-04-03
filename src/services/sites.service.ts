@@ -5,6 +5,7 @@ import type {
   SitePayload,
   SitesListFilters,
   SitesListResponse,
+  SiteZoneOption,
 } from "@/src/types/sites.types";
 
 function asArray(body: any): any[] {
@@ -31,6 +32,7 @@ function normalizeSite(raw: any): Site {
   return {
     id: String(site.id || ""),
     client_id: String(site.client_id || ""),
+    zone_id: site.zone_id ?? null,
     company_id: site.company_id ?? undefined,
 
     code: site.code ?? null,
@@ -47,6 +49,15 @@ function normalizeSite(raw: any): Site {
           name: site.client.name ?? null,
           code: site.client.code ?? null,
           is_active: site.client.is_active ?? null,
+        }
+      : null,
+
+    zone: site.zone
+      ? {
+          id: String(site.zone.id || ""),
+          name: site.zone.name ?? null,
+          code: site.zone.code ?? null,
+          is_active: site.zone.is_active ?? null,
         }
       : null,
   };
@@ -90,6 +101,16 @@ function normalizeClientsOptions(body: any): SiteClientOption[] {
   }));
 }
 
+function normalizeZonesOptions(body: any): SiteZoneOption[] {
+  const items = asArray(body);
+
+  return items.map((item: any) => ({
+    id: String(item?.id ?? ""),
+    name: item?.name ?? null,
+    code: item?.code ?? null,
+  }));
+}
+
 export const sitesService = {
   async list(filters: SitesListFilters = {}): Promise<SitesListResponse> {
     const params: Record<string, any> = {};
@@ -98,6 +119,7 @@ export const sitesService = {
     if (filters.limit) params.limit = filters.limit;
     if (filters.search) params.search = filters.search;
     if (filters.client_id) params.client_id = filters.client_id;
+    if (filters.zone_id) params.zone_id = filters.zone_id;
     if (filters.code) params.code = filters.code;
     if (typeof filters.is_active === "boolean") params.is_active = filters.is_active;
 
@@ -133,6 +155,14 @@ export const sitesService = {
     });
     const body = res.data ?? res;
     return normalizeClientsOptions(body);
+  },
+
+  async listZonesOptions(): Promise<SiteZoneOption[]> {
+    const res = await api.get("/contract-pricing/zones", {
+      params: { page: 1, pageSize: 200, is_active: true },
+    });
+    const body = res.data ?? res;
+    return normalizeZonesOptions(body);
   },
 };
 

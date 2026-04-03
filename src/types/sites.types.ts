@@ -5,9 +5,17 @@ export interface SiteClientRef {
   is_active?: boolean | null;
 }
 
+export interface SiteZoneRef {
+  id: string;
+  name?: string | null;
+  code?: string | null;
+  is_active?: boolean | null;
+}
+
 export interface Site {
   id: string;
   client_id: string;
+  zone_id?: string | null;
   company_id?: string;
 
   code?: string | null;
@@ -19,6 +27,7 @@ export interface Site {
   updated_at?: string | null;
 
   client?: SiteClientRef | null;
+  zone?: SiteZoneRef | null;
 }
 
 export interface SiteClientOption {
@@ -26,11 +35,18 @@ export interface SiteClientOption {
   name?: string | null;
 }
 
+export interface SiteZoneOption {
+  id: string;
+  name?: string | null;
+  code?: string | null;
+}
+
 export interface SitesListFilters {
   page?: number;
   limit?: number;
   search?: string;
   client_id?: string;
+  zone_id?: string;
   code?: string;
   is_active?: boolean;
 }
@@ -48,6 +64,7 @@ export interface SitesListResponse {
 export interface SitePayload {
   name: string;
   client_id: string;
+  zone_id?: string | null;
   address?: string | null;
   code?: string | null;
   is_active?: boolean;
