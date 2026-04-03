@@ -5,6 +5,7 @@ import type {
   Contract,
   ContractListResponse,
   ContractPayload,
+  ContractStatus,
 } from "@/src/types/contracts.types";
 
 function asArray(body: any): any[] {
@@ -60,8 +61,8 @@ export const contractsService = {
     return (res.data ?? res) as Contract;
   },
 
-  async setStatus(id: string, status: string): Promise<Contract> {
-    const res = await api.patch(`/contracts/${id}/status`, { status });
+  async setStatus(id: string, status: ContractStatus): Promise<Contract> {
+    const res = await api.post(`/contracts/${id}/status`, { status });
     return (res.data ?? res) as Contract;
   },
 };

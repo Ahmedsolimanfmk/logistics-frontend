@@ -91,15 +91,37 @@ export default function ContractsClientPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [clientId]);
+
   const stats = useMemo(() => {
-    const active = rows.filter((x) => String(x.status || "").toUpperCase() === "ACTIVE").length;
-    const inactive = rows.filter((x) => String(x.status || "").toUpperCase() === "INACTIVE").length;
-    const expired = rows.filter((x) => String(x.status || "").toUpperCase() === "EXPIRED").length;
+    const active = rows.filter(
+      (x) => String(x.status || "").toUpperCase() === "ACTIVE"
+    ).length;
+
+    const inactive = rows.filter(
+      (x) => String(x.status || "").toUpperCase() === "INACTIVE"
+    ).length;
+
+    const expired = rows.filter(
+      (x) => String(x.status || "").toUpperCase() === "EXPIRED"
+    ).length;
+
+    const draft = rows.filter(
+      (x) => String(x.status || "").toUpperCase() === "DRAFT"
+    ).length;
+
+    const cancelled = rows.filter(
+      (x) => String(x.status || "").toUpperCase() === "CANCELLED"
+    ).length;
 
     return {
       active,
       inactive,
       expired,
+      draft,
+      cancelled,
     };
   }, [rows]);
 
@@ -187,11 +209,12 @@ export default function ContractsClientPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
         <KpiCard label="إجمالي العقود" value={total} formatValue />
         <KpiCard label="العقود النشطة" value={stats.active} formatValue />
         <KpiCard label="العقود غير النشطة" value={stats.inactive} formatValue />
         <KpiCard label="العقود المنتهية" value={stats.expired} formatValue />
+        <KpiCard label="المسودات / الملغاة" value={stats.draft + stats.cancelled} formatValue />
       </div>
 
       <Card className="p-4">

@@ -5,7 +5,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { contractsService } from "@/src/services/contracts.service";
-import type { BillingCycle, ContractPayload } from "@/src/types/contracts.types";
+import type {
+  BillingCycle,
+  ContractPayload,
+  ContractStatus,
+} from "@/src/types/contracts.types";
 
 import { Toast } from "@/src/components/Toast";
 import { Button } from "@/src/components/ui/Button";
@@ -19,11 +23,18 @@ type ToastState =
     }
   | null;
 
+const CONTRACT_STATUSES: ContractStatus[] = [
+  "ACTIVE",
+  "INACTIVE",
+  "EXPIRED",
+  "DRAFT",
+  "CANCELLED",
+];
+
 export default function NewContractClientPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ✅ حل آمن مع Next build
   const initialValues = useMemo(() => {
     return {
       client_id: searchParams.get("client_id") || "",
@@ -45,7 +56,6 @@ export default function NewContractClientPage() {
     status: "ACTIVE",
   });
 
-  // ✅ تحميل القيم من URL بعد mount
   useEffect(() => {
     if (initialValues.client_id) {
       setForm((prev) => ({
@@ -178,6 +188,21 @@ export default function NewContractClientPage() {
           </div>
 
           <div>
+            <label className="mb-1 block text-sm font-medium">الحالة</label>
+            <select
+              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+              value={form.status || "ACTIVE"}
+              onChange={(e) => setField("status", e.target.value as ContractStatus)}
+            >
+              {CONTRACT_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="mb-1 block text-sm font-medium">قيمة العقد</label>
             <input
               type="number"
@@ -190,6 +215,26 @@ export default function NewContractClientPage() {
                 )
               }
               placeholder="0"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">العملة</label>
+            <input
+              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+              value={form.currency || ""}
+              onChange={(e) => setField("currency", e.target.value)}
+              placeholder="EGP"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">ملاحظات</label>
+            <textarea
+              className="min-h-[120px] w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
+              value={form.notes || ""}
+              onChange={(e) => setField("notes", e.target.value)}
+              placeholder="ملاحظات إضافية عن العقد"
             />
           </div>
 

@@ -7,13 +7,12 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { contractsService } from "@/src/services/contracts.service";
 import { contractPricingService } from "@/src/services/contract-pricing.service";
 
-import type { BillingCycle, Contract } from "@/src/types/contracts.types";
 import type {
-  PricingRule,
-  VehicleClassRef,
-  CargoTypeRef,
-  PricingRouteRef,
-} from "@/src/types/contract-pricing.types";
+  BillingCycle,
+  Contract,
+  ContractStatus,
+} from "@/src/types/contracts.types";
+import type { PricingRule } from "@/src/types/contract-pricing.types";
 
 import { Toast } from "@/src/components/Toast";
 import { Button } from "@/src/components/ui/Button";
@@ -67,6 +66,14 @@ function readText(value?: string | number | null) {
   return String(value);
 }
 
+const CONTRACT_STATUSES: ContractStatus[] = [
+  "ACTIVE",
+  "INACTIVE",
+  "EXPIRED",
+  "DRAFT",
+  "CANCELLED",
+];
+
 export default function ContractDetailsClientPage() {
   const params = useParams();
   const router = useRouter();
@@ -89,10 +96,10 @@ export default function ContractDetailsClientPage() {
     contract_no: "",
     start_date: "",
     end_date: "",
-    billing_cycle: "MONTHLY",
+    billing_cycle: "MONTHLY" as BillingCycle,
     contract_value: "",
     currency: "EGP",
-    status: "ACTIVE",
+    status: "ACTIVE" as ContractStatus,
     notes: "",
   });
 
@@ -106,10 +113,10 @@ export default function ContractDetailsClientPage() {
         contract_no: res.contract_no || "",
         start_date: formatDateInput(res.start_date),
         end_date: formatDateInput(res.end_date),
-        billing_cycle: String(res.billing_cycle || "MONTHLY"),
+        billing_cycle: (res.billing_cycle || "MONTHLY") as BillingCycle,
         contract_value: res.contract_value == null ? "" : String(res.contract_value),
         currency: res.currency || "EGP",
-        status: String(res.status || "ACTIVE"),
+        status: (res.status || "ACTIVE") as ContractStatus,
         notes: res.notes || "",
       });
     } catch (error: any) {
@@ -177,7 +184,7 @@ export default function ContractDetailsClientPage() {
         billing_cycle: form.billing_cycle as BillingCycle,
         contract_value: form.contract_value === "" ? null : Number(form.contract_value),
         currency: form.currency || null,
-        status: form.status,
+        status: form.status as ContractStatus,
         notes: form.notes || null,
       });
 
@@ -194,7 +201,7 @@ export default function ContractDetailsClientPage() {
     }
   }
 
-  async function quickSetStatus(nextStatus: string) {
+  async function quickSetStatus(nextStatus: ContractStatus) {
     try {
       const updated = await contractsService.setStatus(id, nextStatus);
       setContract(updated);
@@ -309,7 +316,7 @@ export default function ContractDetailsClientPage() {
         ),
       },
     ],
-    [rules]
+    []
   );
 
   if (loading) {
@@ -406,6 +413,16 @@ export default function ContractDetailsClientPage() {
                 </div>
               </div>
 
+              <div>
+                <div className="text-sm text-slate-500">الحالة</div>
+                <div className="font-medium">{contract.status || "—"}</div>
+              </div>
+
+              <div>
+                <div className="text-sm text-slate-500">العملة</div>
+                <div className="font-medium">{contract.currency || "—"}</div>
+              </div>
+
               <div className="md:col-span-2">
                 <div className="text-sm text-slate-500">ملاحظات</div>
                 <div className="whitespace-pre-wrap font-medium">{contract.notes || "—"}</div>
@@ -424,6 +441,12 @@ export default function ContractDetailsClientPage() {
               </Button>
               <Button variant="secondary" onClick={() => quickSetStatus("EXPIRED")}>
                 تعيين EXPIRED
+              </Button>
+              <Button variant="secondary" onClick={() => quickSetStatus("DRAFT")}>
+                تعيين DRAFT
+              </Button>
+              <Button variant="secondary" onClick={() => quickSetStatus("CANCELLED")}>
+                تعيين CANCELLED
               </Button>
             </div>
           </Card>
@@ -450,6 +473,8 @@ export default function ContractDetailsClientPage() {
                 <option value="ACTIVE">ACTIVE</option>
                 <option value="INACTIVE">INACTIVE</option>
                 <option value="EXPIRED">EXPIRED</option>
+                <option value="DRAFT">DRAFT</option>
+                <option value="CANCELLED">CANCELLED</option>
               </select>
             </div>
 

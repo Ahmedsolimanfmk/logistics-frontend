@@ -4,13 +4,13 @@ export type ContractStatus =
   | "ACTIVE"
   | "INACTIVE"
   | "EXPIRED"
-  | string;
+  | "DRAFT"
+  | "CANCELLED";
 
 export type BillingCycle =
   | "DAILY"
   | "WEEKLY"
-  | "MONTHLY"
-  | string;
+  | "MONTHLY";
 
 export type ContractClientRef = {
   id: string;

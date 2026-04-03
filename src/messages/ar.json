@@ -46,399 +46,385 @@
     "view": "عرض",
     "viewAll": "عرض الكل"
   },
-
   "tabs": {
     "operations": "التشغيل",
     "finance": "المالية",
     "maintenance": "الصيانة",
     "dev": "المطور"
   },
-"language": {
-  "ar": "العربية",
-  "en": "English"
-},
-"sections": {
-  "opsAction": "إجراءات التشغيل"
-},
+  "language": {
+    "ar": "العربية",
+    "en": "English"
+  },
+  "sections": {
+    "opsAction": "إجراءات التشغيل"
+  },
   "sidebar": {
-  "appName": "النظام اللوجستي",
-  "dashboard": "لوحة التحكم",
-  "trips": "الرحلات",
-  "contracts": "العقود",
-"contractPricing": "تسعير العقود",
-
-  "finance": "المالية",
-  "financeOverview": "نظرة عامة",
-  "financeExpenses": "المصروفات",
-  "financeAdvances": "السلف",
-  "financePurchases": "المشتريات",
-  
-
-  "financeAR": "حسابات العملاء (AR)",
-  "financeARInvoices": "فواتير AR",
-  "financeARPayments": "مدفوعات AR",
-  "financeARLedger": "كشف حساب AR",
-
-  "clients": "العملاء",
-  "sites": "المواقع",
-  "vehicles": "المركبات",
-  "drivers": "السائقين",
-  "cash": "الكاش",
-
-  "maintenance": "الصيانة",
-  "maintenanceRequests": "طلبات الصيانة",
-  "maintenanceWorkOrders": "أوامر العمل",
-
-  "inventory": "المخازن",
-  "inventoryRequests": "طلبات المخزن",
-  "inventoryIssues": "أذون الصرف",
-  "inventoryReceipts": "الإضافة المخزنية",
-  "inventoryPartItems": "السيريالات",
-
-  "users": "المستخدمين",
-  "supervisors": "المشرفين",
-  
-  "vendors": "الموردون ومراكز الصيانة"
-},
-"notifications": {
-  "open": "فتح التنبيهات",
-  "title": "التنبيهات",
-  "subtitle": "آخر التنبيهات المهمة",
-  "empty": "لا توجد تنبيهات حالية"
-},
- "dashboard": {
-  "title": "لوحة التحكم",
-  "columns": {
-    "trip": "الرحلة",
-    "status": "الحالة",
-    "client": "العميل",
-    "site": "الموقع",
-    "vehicle": "المركبة",
-    "driver": "السائق",
-    "created": "تاريخ الإنشاء",
-    "financial": "المالية",
-    "type": "النوع",
-    "amount": "المبلغ",
-    "wo": "أمر عمل",
-    "opened": "تاريخ الفتح",
-    "completed": "تاريخ الإنهاء",
-    "invoice": "الفاتورة",
-    "dueDate": "تاريخ الاستحقاق",
-    "daysOverdue": "أيام التأخير",
-    "daysToDue": "الأيام المتبقية",
-    "outstanding": "الرصيد المستحق"
+    "appName": "النظام اللوجستي",
+    "dashboard": "لوحة التحكم",
+    "trips": "الرحلات",
+    "contracts": "العقود",
+    "contractPricing": "تسعير العقود",
+    "finance": "المالية",
+    "financeOverview": "نظرة عامة",
+    "financeExpenses": "المصروفات",
+    "financeAdvances": "السلف",
+    "financePurchases": "المشتريات",
+    "financeAR": "حسابات العملاء (AR)",
+    "financeARInvoices": "فواتير AR",
+    "financeARPayments": "مدفوعات AR",
+    "financeARLedger": "كشف حساب AR",
+    "clients": "العملاء",
+    "sites": "المواقع",
+    "vehicles": "المركبات",
+    "drivers": "السائقين",
+    "cash": "الكاش",
+    "maintenance": "الصيانة",
+    "maintenanceRequests": "طلبات الصيانة",
+    "maintenanceWorkOrders": "أوامر العمل",
+    "inventory": "المخازن",
+    "inventoryRequests": "طلبات المخزن",
+    "inventoryIssues": "أذون الصرف",
+    "inventoryReceipts": "الإضافة المخزنية",
+    "inventoryPartItems": "السيريالات",
+    "users": "المستخدمين",
+    "supervisors": "المشرفين",
+    "vendors": "الموردون ومراكز الصيانة"
   },
-  
-  "errors": {
-    "trendsUnavailable": "خدمة الاتجاهات غير متاحة."
+  "notifications": {
+    "open": "فتح التنبيهات",
+    "title": "التنبيهات",
+    "subtitle": "آخر التنبيهات المهمة",
+    "empty": "لا توجد تنبيهات حالية"
   },
-"compliance": {
-  "title": "تنبيهات الالتزام (الرخص)",
-  "range": "خلال",
-  "vehiclesExpiring": "مركبات قرب انتهاء الرخصة",
-  "vehiclesExpired": "مركبات انتهت الرخصة",
-  "driversExpiring": "سائقين قرب انتهاء الرخصة",
-  "driversExpired": "سائقين انتهت الرخصة",
-  "openVehicles": "افتح صفحة المركبات",
-  "reviewVehicles": "راجع المركبات غير المطابقة",
-  "openDrivers": "افتح صفحة السائقين",
-  "reviewDrivers": "راجع السائقين غير المطابقين",
-  "vehiclesTable": "المركبات الأقرب لانتهاء الرخصة",
-  "driversTable": "السائقين الأقرب لانتهاء الرخصة",
-  "vehiclesEmptyTitle": "لا توجد مركبات قرب انتهاء الرخصة",
-  "vehiclesEmptyHint": "لا توجد عناصر ضمن نطاق التنبيه الحالي",
-  "driversEmptyTitle": "لا يوجد سائقين قرب انتهاء الرخصة",
-  "driversEmptyHint": "لا توجد عناصر ضمن نطاق التنبيه الحالي",
-  "licenseNo": "رقم الرخصة",
-  "expiry": "الانتهاء",
-  "supervisor": "مشرف",
-  "nationalId": "الرقم القومي"
-},
-  "ops": {
-    "tripsNeedingFinanceClose": {
-      "title": "رحلات تحتاج إغلاق مالي",
-      "hintOn": "رحلات مكتملة تنتظر التسوية",
-      "hintOff": "✓ كل شيء تمت تسويته"
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "columns": {
+      "trip": "الرحلة",
+      "status": "الحالة",
+      "client": "العميل",
+      "site": "الموقع",
+      "vehicle": "المركبة",
+      "driver": "السائق",
+      "created": "تاريخ الإنشاء",
+      "financial": "المالية",
+      "type": "النوع",
+      "amount": "المبلغ",
+      "wo": "أمر عمل",
+      "opened": "تاريخ الفتح",
+      "completed": "تاريخ الإنهاء",
+      "invoice": "الفاتورة",
+      "dueDate": "تاريخ الاستحقاق",
+      "daysOverdue": "أيام التأخير",
+      "daysToDue": "الأيام المتبقية",
+      "outstanding": "الرصيد المستحق"
     },
-    "activeTripsNow": {
-      "title": "الرحلات النشطة الآن",
-      "hintOn": "مُسندة / قيد التنفيذ (متابعة التشغيل)",
-      "hintOff": "✓ كل المركبات متوقفة"
+    "errors": {
+      "trendsUnavailable": "خدمة الاتجاهات غير متاحة."
     },
-    "tripsToday": {
-      "title": "رحلات اليوم",
-      "hint": "فتح قائمة رحلات اليوم"
+    "compliance": {
+      "title": "تنبيهات الالتزام (الرخص)",
+      "range": "خلال",
+      "vehiclesExpiring": "مركبات قرب انتهاء الرخصة",
+      "vehiclesExpired": "مركبات انتهت الرخصة",
+      "driversExpiring": "سائقين قرب انتهاء الرخصة",
+      "driversExpired": "سائقين انتهت الرخصة",
+      "openVehicles": "افتح صفحة المركبات",
+      "reviewVehicles": "راجع المركبات غير المطابقة",
+      "openDrivers": "افتح صفحة السائقين",
+      "reviewDrivers": "راجع السائقين غير المطابقين",
+      "vehiclesTable": "المركبات الأقرب لانتهاء الرخصة",
+      "driversTable": "السائقين الأقرب لانتهاء الرخصة",
+      "vehiclesEmptyTitle": "لا توجد مركبات قرب انتهاء الرخصة",
+      "vehiclesEmptyHint": "لا توجد عناصر ضمن نطاق التنبيه الحالي",
+      "driversEmptyTitle": "لا يوجد سائقين قرب انتهاء الرخصة",
+      "driversEmptyHint": "لا توجد عناصر ضمن نطاق التنبيه الحالي",
+      "licenseNo": "رقم الرخصة",
+      "expiry": "الانتهاء",
+      "supervisor": "مشرف",
+      "nationalId": "الرقم القومي"
     },
-    "quickKpis": "مؤشرات سريعة",
-    "kpis": {
-      "tripsToday": "رحلات اليوم",
-      "allStatuses": "كل الحالات",
-      "assignedToday": "مُسندة اليوم",
-      "assignedStatus": "حالة مُسندة",
-      "inProgressToday": "قيد التنفيذ اليوم",
-      "inProgressStatus": "قيد التنفيذ",
-      "completedToday": "مكتملة اليوم",
-      "completedStatus": "مكتملة"
-    },
-    "tables": {
-      "activeTripsNow": "الرحلات النشطة الآن",
-      "tripsNeedingClose": "رحلات تحتاج إغلاق مالي"
-    },
-    "empty": {
-      "activeTripsNow": {
-        "title": "لا توجد رحلات نشطة الآن",
-        "hint": "✓ كل المركبات متوقفة"
+    "ops": {
+      "tripsNeedingFinanceClose": {
+        "title": "رحلات تحتاج إغلاق مالي",
+        "hintOn": "رحلات مكتملة تنتظر التسوية",
+        "hintOff": "✓ كل شيء تمت تسويته"
       },
-      "tripsNeedingClose": {
-        "title": "لا توجد رحلات تحتاج إغلاق",
-        "hint": "✓ كل شيء تمت تسويته"
+      "activeTripsNow": {
+        "title": "الرحلات النشطة الآن",
+        "hintOn": "مُسندة / قيد التنفيذ (متابعة التشغيل)",
+        "hintOff": "✓ كل المركبات متوقفة"
+      },
+      "tripsToday": {
+        "title": "رحلات اليوم",
+        "hint": "فتح قائمة رحلات اليوم"
+      },
+      "quickKpis": "مؤشرات سريعة",
+      "kpis": {
+        "tripsToday": "رحلات اليوم",
+        "allStatuses": "كل الحالات",
+        "assignedToday": "مُسندة اليوم",
+        "assignedStatus": "حالة مُسندة",
+        "inProgressToday": "قيد التنفيذ اليوم",
+        "inProgressStatus": "قيد التنفيذ",
+        "completedToday": "مكتملة اليوم",
+        "completedStatus": "مكتملة"
+      },
+      "tables": {
+        "activeTripsNow": "الرحلات النشطة الآن",
+        "tripsNeedingClose": "رحلات تحتاج إغلاق مالي"
+      },
+      "empty": {
+        "activeTripsNow": {
+          "title": "لا توجد رحلات نشطة الآن",
+          "hint": "✓ كل المركبات متوقفة"
+        },
+        "tripsNeedingClose": {
+          "title": "لا توجد رحلات تحتاج إغلاق",
+          "hint": "✓ كل شيء تمت تسويته"
+        }
+      },
+      "trendTitle": "اتجاه الرحلات (آخر 14 يوم)",
+      "charts": {
+        "tripsCreated": "رحلات تم إنشاؤها",
+        "tripsAssigned": "رحلات تم إسنادها"
       }
     },
-    "trendTitle": "اتجاه الرحلات (آخر 14 يوم)",
-    "charts": {
-      "tripsCreated": "رحلات تم إنشاؤها",
-      "tripsAssigned": "رحلات تم إسنادها"
-    }
-  },
-
-  "finance": {
-    "actionRequired": "المالية – إجراءات مطلوبة",
-    "pendingTooLong": {
-      "title": "مصروفات معلقة لفترة طويلة",
-      "hintOn": "تحتاج مراجعة/اعتماد",
-      "hintOff": "✓ لا توجد مصروفات معلقة متأخرة"
-    },
-    "openAdvances": {
-      "title": "سلف مفتوحة",
-      "hintOn": "السلف تحتاج تسوية",
-      "hintOff": "✓ لا توجد سلف مفتوحة"
-    },
-    "expensesTodayApproved": {
-      "title": "مصروفات اليوم (معتمدة)",
-      "hint": "إجمالي المعتمد اليوم"
-    },
-    "arDueSoon": {
-      "title": "فواتير عملاء مستحقة قريبًا",
-      "hintOn": "إجمالي المستحقات: {total}",
-      "hintOff": "لا توجد فواتير ضمن 7 أيام"
-    },
-    "arOverdue": {
-      "title": "فواتير عملاء متأخرة",
-      "hintOn": "إجمالي المتأخرات: {total}",
-      "hintOff": "لا توجد فواتير متأخرة"
-    },
-    "apDueSoon": {
-      "title": "مستحقات موردين قريبًا",
-      "hintOn": "إجمالي المستحقات: {total}",
-      "hintOff": "قريبًا بعد تفعيل AP"
-    },
-    "apOverdue": {
-      "title": "مستحقات موردين متأخرة",
-      "hintOn": "إجمالي المتأخرات: {total}",
-      "hintOff": "قريبًا بعد تفعيل AP"
-    },
-    "arAlertsSection": "تنبيهات مستحقات العملاء والموردين",
-    "topArOverdue": {
-      "sectionTitle": "أهم فواتير العملاء المتأخرة",
-      "tableTitle": "Top overdue client invoices",
-      "emptyTitle": "لا توجد فواتير عملاء متأخرة",
-      "emptyHint": "كل الفواتير الحالية ضمن المدة أو مسددة بالكامل"
-    },
-    "topArDueSoon": {
-      "sectionTitle": "أهم فواتير العملاء المستحقة قريبًا",
-      "tableTitle": "Top due soon client invoices",
-      "emptyTitle": "لا توجد فواتير مستحقة قريبًا",
-      "emptyHint": "لا توجد فواتير خلال نافذة 7 أيام القادمة"
-    },
-    "topExpenseTypesToday": {
-      "sectionTitle": "أعلى أنواع المصروفات (اليوم)",
-      "tableTitle": "أعلى أنواع المصروفات اليوم"
-    },
-    "empty": {
-      "noApprovedToday": {
-        "title": "لا توجد مصروفات معتمدة اليوم",
-        "hint": "لا توجد بيانات للعرض"
+    "finance": {
+      "actionRequired": "المالية – إجراءات مطلوبة",
+      "pendingTooLong": {
+        "title": "مصروفات معلقة لفترة طويلة",
+        "hintOn": "تحتاج مراجعة/اعتماد",
+        "hintOff": "✓ لا توجد مصروفات معلقة متأخرة"
+      },
+      "openAdvances": {
+        "title": "سلف مفتوحة",
+        "hintOn": "السلف تحتاج تسوية",
+        "hintOff": "✓ لا توجد سلف مفتوحة"
+      },
+      "expensesTodayApproved": {
+        "title": "مصروفات اليوم (معتمدة)",
+        "hint": "إجمالي المعتمد اليوم"
+      },
+      "arDueSoon": {
+        "title": "فواتير عملاء مستحقة قريبًا",
+        "hintOn": "إجمالي المستحقات: {total}",
+        "hintOff": "لا توجد فواتير ضمن 7 أيام"
+      },
+      "arOverdue": {
+        "title": "فواتير عملاء متأخرة",
+        "hintOn": "إجمالي المتأخرات: {total}",
+        "hintOff": "لا توجد فواتير متأخرة"
+      },
+      "apDueSoon": {
+        "title": "مستحقات موردين قريبًا",
+        "hintOn": "إجمالي المستحقات: {total}",
+        "hintOff": "قريبًا بعد تفعيل AP"
+      },
+      "apOverdue": {
+        "title": "مستحقات موردين متأخرة",
+        "hintOn": "إجمالي المتأخرات: {total}",
+        "hintOff": "قريبًا بعد تفعيل AP"
+      },
+      "arAlertsSection": "تنبيهات مستحقات العملاء والموردين",
+      "topArOverdue": {
+        "sectionTitle": "أهم فواتير العملاء المتأخرة",
+        "tableTitle": "Top overdue client invoices",
+        "emptyTitle": "لا توجد فواتير عملاء متأخرة",
+        "emptyHint": "كل الفواتير الحالية ضمن المدة أو مسددة بالكامل"
+      },
+      "topArDueSoon": {
+        "sectionTitle": "أهم فواتير العملاء المستحقة قريبًا",
+        "tableTitle": "Top due soon client invoices",
+        "emptyTitle": "لا توجد فواتير مستحقة قريبًا",
+        "emptyHint": "لا توجد فواتير خلال نافذة 7 أيام القادمة"
+      },
+      "topExpenseTypesToday": {
+        "sectionTitle": "أعلى أنواع المصروفات (اليوم)",
+        "tableTitle": "أعلى أنواع المصروفات اليوم"
+      },
+      "empty": {
+        "noApprovedToday": {
+          "title": "لا توجد مصروفات معتمدة اليوم",
+          "hint": "لا توجد بيانات للعرض"
+        }
       }
-    }
-  },
-"alerts": {
-  "title": "التنبيهات المركزية",
-  "total": "إجمالي التنبيهات",
-  "totalHint": "كل التنبيهات الحالية",
-  "danger": "تنبيهات حرجة",
-  "dangerHint": "عناصر تحتاج تدخل سريع",
-  "warn": "تنبيهات تحذيرية",
-  "warnHint": "عناصر قريبة أو تحتاج متابعة",
-  "info": "تنبيهات معلوماتية",
-  "infoHint": "معلومات فقط",
-  "latestTableTitle": "آخر التنبيهات",
-  "emptyTitle": "لا توجد تنبيهات حالية",
-  "emptyHint": "النظام لا يحتوي على تنبيهات مفتوحة الآن",
-  "columns": {
-    "severity": "الأولوية",
-    "area": "القسم",
-    "title": "العنوان",
-    "reference": "المرجع",
-    "createdAt": "التاريخ"
-  },
-  
-  "severity": {
-    "danger": "حرج",
-    "warn": "تحذير",
-    "info": "معلومة"
-  }
-},
-  "maintenance": {
-    "actionRequired": "الصيانة – إجراءات مطلوبة",
-    "openWorkOrders": {
-      "title": "أوامر عمل مفتوحة",
-      "hintOn": "أوامر عمل في OPEN / IN_PROGRESS",
-      "hintOff": "✓ لا توجد أوامر عمل مفتوحة"
     },
-    "qaNeeds": {
-      "title": "QA يحتاج إجراء",
-      "hintOn": "أوامر مكتملة بدون تقرير بعدي",
-      "hintOff": "✓ الجودة سليمة"
-    },
-    "qaFailed": {
-      "title": "QA فشل",
-      "hintOn": "تقارير اختبار طريق فاشلة",
-      "hintOff": "✓ لا توجد حالات فشل"
-    },
-    "partsMismatch": {
-      "title": "عدم تطابق قطع",
-      "hintOn": "اختلاف بين المصروف والمركّب",
-      "hintOff": "✓ لا توجد اختلافات"
-    },
-    "supervisorNote": "ملاحظة: عرض Work Orders التفصيلي للأدمن/المحاسب — للمشرف هتفتح صفحة Requests كبديل.",
-    "kpisToday": "مؤشرات الصيانة (اليوم)",
-    "completedToday": {
-      "title": "مكتملة اليوم",
-      "sub": "أوامر عمل مكتملة"
-    },
-    "partsCostToday": {
-      "title": "تكلفة قطع اليوم",
-      "sub": "إجمالي أذونات الصرف"
-    },
-    "cashCostToday": {
-      "title": "تكلفة نقدية اليوم",
-      "sub": "مصروفات نقدية مرتبطة"
-    },
-    "totalCostToday": {
-      "title": "إجمالي التكلفة اليوم",
-      "sub": "قطع + نقدي"
-    },
-    "recentWorkOrders": {
-      "sectionTitle": "أوامر العمل الأخيرة",
-      "openList": "فتح القائمة",
-      "tableTitle": "أوامر عمل صيانة (الأحدث)"
-    },
-    "empty": {
-      "noWorkOrders": {
-        "title": "لا توجد أوامر عمل",
-        "hint": "لم يتم العثور على أوامر عمل حديثة."
+    "alerts": {
+      "title": "التنبيهات المركزية",
+      "total": "إجمالي التنبيهات",
+      "totalHint": "كل التنبيهات الحالية",
+      "danger": "تنبيهات حرجة",
+      "dangerHint": "عناصر تحتاج تدخل سريع",
+      "warn": "تنبيهات تحذيرية",
+      "warnHint": "عناصر قريبة أو تحتاج متابعة",
+      "info": "تنبيهات معلوماتية",
+      "infoHint": "معلومات فقط",
+      "latestTableTitle": "آخر التنبيهات",
+      "emptyTitle": "لا توجد تنبيهات حالية",
+      "emptyHint": "النظام لا يحتوي على تنبيهات مفتوحة الآن",
+      "columns": {
+        "severity": "الأولوية",
+        "area": "القسم",
+        "title": "العنوان",
+        "reference": "المرجع",
+        "createdAt": "التاريخ"
+      },
+      "severity": {
+        "danger": "حرج",
+        "warn": "تحذير",
+        "info": "معلومة"
       }
+    },
+    "maintenance": {
+      "actionRequired": "الصيانة – إجراءات مطلوبة",
+      "openWorkOrders": {
+        "title": "أوامر عمل مفتوحة",
+        "hintOn": "أوامر عمل في OPEN / IN_PROGRESS",
+        "hintOff": "✓ لا توجد أوامر عمل مفتوحة"
+      },
+      "qaNeeds": {
+        "title": "QA يحتاج إجراء",
+        "hintOn": "أوامر مكتملة بدون تقرير بعدي",
+        "hintOff": "✓ الجودة سليمة"
+      },
+      "qaFailed": {
+        "title": "QA فشل",
+        "hintOn": "تقارير اختبار طريق فاشلة",
+        "hintOff": "✓ لا توجد حالات فشل"
+      },
+      "partsMismatch": {
+        "title": "عدم تطابق قطع",
+        "hintOn": "اختلاف بين المصروف والمركّب",
+        "hintOff": "✓ لا توجد اختلافات"
+      },
+      "supervisorNote": "ملاحظة: عرض Work Orders التفصيلي للأدمن/المحاسب — للمشرف هتفتح صفحة Requests كبديل.",
+      "kpisToday": "مؤشرات الصيانة (اليوم)",
+      "completedToday": {
+        "title": "مكتملة اليوم",
+        "sub": "أوامر عمل مكتملة"
+      },
+      "partsCostToday": {
+        "title": "تكلفة قطع اليوم",
+        "sub": "إجمالي أذونات الصرف"
+      },
+      "cashCostToday": {
+        "title": "تكلفة نقدية اليوم",
+        "sub": "مصروفات نقدية مرتبطة"
+      },
+      "totalCostToday": {
+        "title": "إجمالي التكلفة اليوم",
+        "sub": "قطع + نقدي"
+      },
+      "recentWorkOrders": {
+        "sectionTitle": "أوامر العمل الأخيرة",
+        "openList": "فتح القائمة",
+        "tableTitle": "أوامر عمل صيانة (الأحدث)"
+      },
+      "empty": {
+        "noWorkOrders": {
+          "title": "لا توجد أوامر عمل",
+          "hint": "لم يتم العثور على أوامر عمل حديثة."
+        }
+      }
+    },
+    "dev": {
+      "title": "تبويب المطور",
+      "hint": "مخصص لتشخيصات التطوير."
     }
   },
-
-  "dev": {
-    "title": "تبويب المطور",
-    "hint": "مخصص لتشخيصات التطوير."
-  }
-},
-
- "alertsPage": {
-  "title": "مركز التنبيهات",
-  "subtitle": "متابعة كل تنبيهات النظام من مكان واحد",
-  "tableTitle": "كل التنبيهات",
-  "filteredCount": "عدد النتائج:",
-  "clearFilters": "مسح الفلاتر",
-  "read": "تمت القراءة",
-  "unread": "غير مقروء",
-  "unreadHint": "التنبيهات التي لم يتم فتحها بعد",
-  "status": "الحالة",
-  "markAllRead": "تحديد الكل كمقروء",
-  "filters": {
-    "all": "الكل",
-    "severity": "الأولوية",
-    "area": "القسم",
-    "type": "نوع التنبيه",
-    "readStatus": "حالة القراءة"
+  "alertsPage": {
+    "title": "مركز التنبيهات",
+    "subtitle": "متابعة كل تنبيهات النظام من مكان واحد",
+    "tableTitle": "كل التنبيهات",
+    "filteredCount": "عدد النتائج:",
+    "clearFilters": "مسح الفلاتر",
+    "read": "تمت القراءة",
+    "unread": "غير مقروء",
+    "unreadHint": "التنبيهات التي لم يتم فتحها بعد",
+    "status": "الحالة",
+    "markAllRead": "تحديد الكل كمقروء",
+    "filters": {
+      "all": "الكل",
+      "severity": "الأولوية",
+      "area": "القسم",
+      "type": "نوع التنبيه",
+      "readStatus": "حالة القراءة"
+    },
+    "types": {
+      "tripFinanceClosePending": "رحلة تحتاج إغلاق مالي",
+      "arOverdue": "فاتورة عميل متأخرة",
+      "arDueSoon": "فاتورة عميل مستحقة قريبًا",
+      "expensePendingTooLong": "مصروف معلق لفترة طويلة",
+      "advanceOpenTooLong": "سلفة مفتوحة لفترة طويلة",
+      "maintenanceOpenWorkOrder": "أمر عمل مفتوح",
+      "maintenanceQaNeeds": "أمر عمل يحتاج QA",
+      "maintenanceQaFailed": "QA فشل",
+      "maintenancePartsMismatch": "عدم تطابق قطع",
+      "vehicleLicenseExpired": "رخصة مركبة منتهية",
+      "vehicleLicenseExpiring": "رخصة مركبة تقترب من الانتهاء",
+      "driverLicenseExpired": "رخصة سائق منتهية",
+      "driverLicenseExpiring": "رخصة سائق تقترب من الانتهاء"
+    }
   },
-  "types": {
-    "tripFinanceClosePending": "رحلة تحتاج إغلاق مالي",
-    "arOverdue": "فاتورة عميل متأخرة",
-    "arDueSoon": "فاتورة عميل مستحقة قريبًا",
-    "expensePendingTooLong": "مصروف معلق لفترة طويلة",
-    "advanceOpenTooLong": "سلفة مفتوحة لفترة طويلة",
-    "maintenanceOpenWorkOrder": "أمر عمل مفتوح",
-    "maintenanceQaNeeds": "أمر عمل يحتاج QA",
-    "maintenanceQaFailed": "QA فشل",
-    "maintenancePartsMismatch": "عدم تطابق قطع",
-    "vehicleLicenseExpired": "رخصة مركبة منتهية",
-    "vehicleLicenseExpiring": "رخصة مركبة تقترب من الانتهاء",
-    "driverLicenseExpired": "رخصة سائق منتهية",
-    "driverLicenseExpiring": "رخصة سائق تقترب من الانتهاء"
-  }
-},
-"dashboardAssistant": {
-  "title": "المساعد الذكي داخل الداشبورد",
-  "newChat": "محادثة جديدة",
-  "currentContext": "السياق الحالي:",
-  "quickInsights": "Insights سريعة",
-  "assistant": "المساعد",
-  "you": "أنت",
-  "executeNow": "تنفيذ الآن",
-  "analyzing": "جاري التحليل...",
-  "suggestedFollowups": "متابعة مقترحة",
-  "placeholder": "اكتب سؤالك هنا...",
-  "send": "إرسال",
-  "error": "حدث خطأ أثناء الاتصال بالمساعد الذكي.",
-  "status": {
-    "needsMoreInfo": "يحتاج بيانات إضافية",
-    "readyToExecute": "جاهز للتنفيذ",
-    "executed": "تم التنفيذ",
-    "executionFailed": "فشل التنفيذ"
+  "dashboardAssistant": {
+    "title": "المساعد الذكي داخل الداشبورد",
+    "newChat": "محادثة جديدة",
+    "currentContext": "السياق الحالي:",
+    "quickInsights": "Insights سريعة",
+    "assistant": "المساعد",
+    "you": "أنت",
+    "executeNow": "تنفيذ الآن",
+    "analyzing": "جاري التحليل...",
+    "suggestedFollowups": "متابعة مقترحة",
+    "placeholder": "اكتب سؤالك هنا...",
+    "send": "إرسال",
+    "error": "حدث خطأ أثناء الاتصال بالمساعد الذكي.",
+    "status": {
+      "needsMoreInfo": "يحتاج بيانات إضافية",
+      "readyToExecute": "جاهز للتنفيذ",
+      "executed": "تم التنفيذ",
+      "executionFailed": "فشل التنفيذ"
+    },
+    "welcome": {
+      "finance": "مرحبًا، اسألني عن المصروفات والموردين وحالات الاعتماد.",
+      "ar": "مرحبًا، اسألني عن مديونية العملاء والمتأخرات وأعلى العملاء مديونية.",
+      "maintenance": "مرحبًا، اسألني عن أوامر العمل المفتوحة وتكلفة الصيانة.",
+      "inventory": "مرحبًا، اسألني عن الأصناف منخفضة المخزون وأكثر الأصناف صرفًا.",
+      "trips": "مرحبًا، اسألني عن الرحلات النشطة والإغلاق المالي وأعلى العملاء أو المركبات."
+    },
+    "examples": {
+      "finance": "أمثلة: كم إجمالي المصروفات هذا الشهر؟ / اعرض أعلى 5 موردين مصروفات / ما أعلى نوع مصروف؟",
+      "ar": "أمثلة: كم إجمالي مستحقات العملاء؟ / اعرض أعلى 5 عملاء مديونية / الأول",
+      "maintenance": "أمثلة: كم عدد أوامر العمل المفتوحة؟ / اعرض أعلى 5 مركبات تكلفة صيانة / الأولى",
+      "inventory": "أمثلة: ما الأصناف القريبة من النفاد؟ / اعرض أعلى 5 أصناف صرفًا / الأول",
+      "trips": "أمثلة: اعرض الرحلات النشطة / اعرض أعلى 5 عملاء حسب الرحلات / الأول / رحلاته"
+    }
   },
-  "welcome": {
-    "finance": "مرحبًا، اسألني عن المصروفات والموردين وحالات الاعتماد.",
-    "ar": "مرحبًا، اسألني عن مديونية العملاء والمتأخرات وأعلى العملاء مديونية.",
-    "maintenance": "مرحبًا، اسألني عن أوامر العمل المفتوحة وتكلفة الصيانة.",
-    "inventory": "مرحبًا، اسألني عن الأصناف منخفضة المخزون وأكثر الأصناف صرفًا.",
-    "trips": "مرحبًا، اسألني عن الرحلات النشطة والإغلاق المالي وأعلى العملاء أو المركبات."
+  "dashboardInsights": {
+    "emptyTitle": "لا توجد Insights متاحة حاليًا",
+    "loadError": "تعذر تحميل الـ insights حاليًا.",
+    "groups": {
+      "error": "عناصر حرجة",
+      "warning": "تحتاج متابعة",
+      "info": "معلومات سريعة"
+    },
+    "titles": {
+      "finance": "Insights المالية",
+      "ar": "Insights حسابات العملاء",
+      "maintenance": "Insights الصيانة",
+      "inventory": "Insights المخزون",
+      "trips": "Insights الرحلات"
+    },
+    "subtitles": {
+      "finance": "ملخص سريع لأهم مؤشرات المصروفات والموردين والاعتمادات.",
+      "ar": "أهم مؤشرات المديونية والمتأخرات والعملاء الأعلى رصيدًا.",
+      "maintenance": "مؤشرات أوامر العمل المفتوحة وتكلفة الصيانة.",
+      "inventory": "أهم التنبيهات حول الأصناف المنخفضة وأكثر الأصناف صرفًا.",
+      "trips": "ملخص للرحلات النشطة والإغلاق المالي وأهم أنماط التشغيل."
+    }
   },
-  "examples": {
-    "finance": "أمثلة: كم إجمالي المصروفات هذا الشهر؟ / اعرض أعلى 5 موردين مصروفات / ما أعلى نوع مصروف؟",
-    "ar": "أمثلة: كم إجمالي مستحقات العملاء؟ / اعرض أعلى 5 عملاء مديونية / الأول",
-    "maintenance": "أمثلة: كم عدد أوامر العمل المفتوحة؟ / اعرض أعلى 5 مركبات تكلفة صيانة / الأولى",
-    "inventory": "أمثلة: ما الأصناف القريبة من النفاد؟ / اعرض أعلى 5 أصناف صرفًا / الأول",
-    "trips": "أمثلة: اعرض الرحلات النشطة / اعرض أعلى 5 عملاء حسب الرحلات / الأول / رحلاته"
-  }
-},
-"dashboardInsights": {
-  "emptyTitle": "لا توجد Insights متاحة حاليًا",
-  "loadError": "تعذر تحميل الـ insights حاليًا.",
-  "groups": {
-    "error": "عناصر حرجة",
-    "warning": "تحتاج متابعة",
-    "info": "معلومات سريعة"
-  },
-  "titles": {
-    "finance": "Insights المالية",
-    "ar": "Insights حسابات العملاء",
-    "maintenance": "Insights الصيانة",
-    "inventory": "Insights المخزون",
-    "trips": "Insights الرحلات"
-  },
-  "subtitles": {
-    "finance": "ملخص سريع لأهم مؤشرات المصروفات والموردين والاعتمادات.",
-    "ar": "أهم مؤشرات المديونية والمتأخرات والعملاء الأعلى رصيدًا.",
-    "maintenance": "مؤشرات أوامر العمل المفتوحة وتكلفة الصيانة.",
-    "inventory": "أهم التنبيهات حول الأصناف المنخفضة وأكثر الأصناف صرفًا.",
-    "trips": "ملخص للرحلات النشطة والإغلاق المالي وأهم أنماط التشغيل."
-  }
-},
- "users": {
+  "users": {
     "title": "المستخدمون",
     "subtitle": "إدارة المستخدمين (للأدمن فقط)",
     "mustLogin": "يجب تسجيل الدخول أولاً.",
@@ -491,7 +477,6 @@
       "createFailed": "فشل إنشاء المستخدم"
     }
   },
-
   "vehicles": {
     "title": "المركبات",
     "subtitle": "إدارة الأسطول",
@@ -557,7 +542,6 @@
       "MAINTENANCE": "صيانة"
     }
   },
-
   "maintenanceRequests": {
     "title": "طلبات الصيانة",
     "checkingSession": "جارٍ التحقق من الجلسة…",
@@ -616,137 +600,132 @@
       "createFailed": "فشل إنشاء الطلب"
     }
   },
-
   "maintenanceRequestDetails": {
-  "title": "تفاصيل الطلب",
-  "breadcrumb": "الصيانة / الطلبات",
-  "back": "رجوع",
-  "refresh": "تحديث",
-  "notFound": "غير موجود",
-  "sections": {
+    "title": "تفاصيل الطلب",
+    "breadcrumb": "الصيانة / الطلبات",
+    "back": "رجوع",
+    "refresh": "تحديث",
+    "notFound": "غير موجود",
+    "sections": {
+      "vehicle": "المركبة",
+      "problemTitle": "عنوان العطل",
+      "description": "الوصف",
+      "requested": "بيانات البلاغ",
+      "reviewed": "المراجعة",
+      "system": "النظام",
+      "actions": "الإجراءات",
+      "attachments": "المرفقات"
+    },
+    "labels": {
+      "at": "وقت",
+      "by": "بواسطة",
+      "created": "تاريخ الإنشاء",
+      "updated": "آخر تحديث",
+      "rejectionReason": "سبب الرفض"
+    },
+    "actions": {
+      "approveCreateWO": "قبول + إنشاء أمر عمل",
+      "reject": "رفض",
+      "upload": "+ رفع",
+      "delete": "حذف"
+    },
+    "attachments": {
+      "noAttachments": "لا توجد مرفقات",
+      "openFile": "فتح الملف",
+      "uploadHint": "• رفع الملفات يدعم صور/فيديو (حتى 8 ملفات) — حسب إعدادات السيرفر."
+    },
+    "toast": {
+      "loadFailed": "فشل تحميل الطلب",
+      "attachmentsFailed": "فشل تحميل المرفقات",
+      "uploaded": "تم الرفع",
+      "uploadFailed": "فشل الرفع",
+      "deleted": "تم الحذف",
+      "deleteFailed": "فشل الحذف",
+      "approved": "تم القبول",
+      "rejected": "تم الرفض",
+      "approveFailed": "فشل القبول",
+      "rejectFailed": "فشل الرفض"
+    },
+    "modals": {
+      "rejectTitle": "رفض الطلب",
+      "rejectCta": "جارٍ الرفض…"
+    }
+  },
+  "woDetails": {
+    "breadcrumb": "الصيانة / أوامر العمل / تفاصيل",
+    "title": "تفاصيل أمر العمل",
+    "wo": "أمر عمل",
+    "type": "النوع",
+    "vendor": "المورد/الورشة",
+    "opened": "تاريخ الفتح",
+    "started": "تاريخ البدء",
+    "completedAt": "تاريخ الإغلاق",
+    "odometer": "عداد",
+    "notes": "ملاحظات",
     "vehicle": "المركبة",
-    "problemTitle": "عنوان العطل",
-    "description": "الوصف",
-    "requested": "بيانات البلاغ",
-    "reviewed": "المراجعة",
-    "system": "النظام",
-    "actions": "الإجراءات",
-    "attachments": "المرفقات"
+    "report": "التقرير",
+    "reportStatus": "حالة التقرير",
+    "parts": "قطع الغيار",
+    "labor": "عمالة",
+    "service": "خدمة",
+    "cashApproved": "مصروفات معتمدة",
+    "mismatches": "فروقات القطع",
+    "grandTotal": "الإجمالي",
+    "completeWo": "إكمال أمر العمل",
+    "completing": "جاري الإكمال...",
+    "tabIssues": "الصرف",
+    "tabInstallations": "التركيبات",
+    "tabQa": "فحص QA",
+    "reconTitle": "مطابقة الصرف والتركيب",
+    "reconMatched": "مطابق",
+    "reconIssuedNotInstalled": "مصروف ولم يُركب",
+    "reconInstalledNotIssued": "مركّب ولم يُصرف",
+    "part": "القطعة",
+    "issuedQty": "كمية الصرف",
+    "installedQty": "كمية التركيب",
+    "issuedCost": "تكلفة الصرف",
+    "matched": "مطابق",
+    "issuedGtInstalled": "مصروف أكثر من المركّب",
+    "installedGtIssued": "مركّب أكثر من المصروف",
+    "noReconData": "لا توجد بيانات للمطابقة",
+    "issuesTitle": "الصرف (Issues)",
+    "createIssue": "إنشاء صرف",
+    "currentIssueId": "رقم الصرف الحالي",
+    "partIdUuid": "Part ID (UUID)",
+    "uuidPlaceholder": "uuid",
+    "qty": "الكمية",
+    "unitCost": "سعر الوحدة",
+    "total": "الإجمالي",
+    "issue": "Issue",
+    "notesOpt": "ملاحظات (اختياري)",
+    "addLine": "إضافة سطر",
+    "issuedLinesFromReport": "سطور الصرف من التقرير",
+    "noIssuedLines": "لا توجد سطور صرف",
+    "installationsTitle": "التركيبات",
+    "qtyInstalled": "الكمية المركبة",
+    "odometerOpt": "عداد (اختياري)",
+    "addInstallation": "إضافة تركيب",
+    "installationsApiList": "قائمة التركيبات (API)",
+    "installationsRuntimeList": "قائمة التركيبات (Runtime)",
+    "installedAt": "تاريخ التركيب",
+    "noInstallations": "لا توجد تركيبات",
+    "noRuntimeInstallations": "لا توجد تركيبات (Runtime)",
+    "qaTitle": "QA",
+    "qaEndpoint": "POST /maintenance/work-orders/:id/post-report",
+    "roadTestResult": "نتيجة اختبار الطريق",
+    "pass": "PASS",
+    "fail": "FAIL",
+    "remarks": "ملاحظات",
+    "remarksPlaceholder": "اكتب ملاحظات الفحص...",
+    "saveQa": "حفظ QA",
+    "onlyAdminAccountantQa": "متاح فقط للإدارة/الحسابات",
+    "failedToLoad": "فشل تحميل تفاصيل أمر العمل",
+    "installationsLoadFailed": "فشل تحميل التركيبات",
+    "hintMismatch": "يجب حل فروقات القطع أولاً",
+    "hintNeedsQa": "التقرير يحتاج QA",
+    "hintQaFailed": "QA فشل",
+    "hintReady": "جاهز للإكمال"
   },
-  "labels": {
-    "at": "وقت",
-    "by": "بواسطة",
-    "created": "تاريخ الإنشاء",
-    "updated": "آخر تحديث",
-    "rejectionReason": "سبب الرفض"
-  },
-  "actions": {
-    "approveCreateWO": "قبول + إنشاء أمر عمل",
-    "reject": "رفض",
-    "upload": "+ رفع",
-    "delete": "حذف"
-  },
-  "attachments": {
-    "noAttachments": "لا توجد مرفقات",
-    "openFile": "فتح الملف",
-    "uploadHint": "• رفع الملفات يدعم صور/فيديو (حتى 8 ملفات) — حسب إعدادات السيرفر."
-  },
-  "toast": {
-    "loadFailed": "فشل تحميل الطلب",
-    "attachmentsFailed": "فشل تحميل المرفقات",
-    "uploaded": "تم الرفع",
-    "uploadFailed": "فشل الرفع",
-    "deleted": "تم الحذف",
-    "deleteFailed": "فشل الحذف",
-    "approved": "تم القبول",
-    "rejected": "تم الرفض",
-    "approveFailed": "فشل القبول",
-    "rejectFailed": "فشل الرفض"
-  },
-  "modals": {
-    "rejectTitle": "رفض الطلب",
-    "rejectCta": "جارٍ الرفض…"
-  }
-},
-
-"woDetails": {
-  "breadcrumb": "الصيانة / أوامر العمل / تفاصيل",
-  "title": "تفاصيل أمر العمل",
-  "wo": "أمر عمل",
-  "type": "النوع",
-  "vendor": "المورد/الورشة",
-  "opened": "تاريخ الفتح",
-  "started": "تاريخ البدء",
-  "completedAt": "تاريخ الإغلاق",
-  "odometer": "عداد",
-  "notes": "ملاحظات",
-  "vehicle": "المركبة",
-  "report": "التقرير",
-  "reportStatus": "حالة التقرير",
-  "parts": "قطع الغيار",
-  "labor": "عمالة",
-  "service": "خدمة",
-  "cashApproved": "مصروفات معتمدة",
-  "mismatches": "فروقات القطع",
-  "grandTotal": "الإجمالي",
-  "completeWo": "إكمال أمر العمل",
-  "completing": "جاري الإكمال...",
-  "tabIssues": "الصرف",
-  "tabInstallations": "التركيبات",
-  "tabQa": "فحص QA",
-  "reconTitle": "مطابقة الصرف والتركيب",
-  "reconMatched": "مطابق",
-  "reconIssuedNotInstalled": "مصروف ولم يُركب",
-  "reconInstalledNotIssued": "مركّب ولم يُصرف",
-  "part": "القطعة",
-  "issuedQty": "كمية الصرف",
-  "installedQty": "كمية التركيب",
-  "issuedCost": "تكلفة الصرف",
-  "matched": "مطابق",
-  "issuedGtInstalled": "مصروف أكثر من المركّب",
-  "installedGtIssued": "مركّب أكثر من المصروف",
-  "noReconData": "لا توجد بيانات للمطابقة",
-  "issuesTitle": "الصرف (Issues)",
-  "createIssue": "إنشاء صرف",
-  "currentIssueId": "رقم الصرف الحالي",
-  "partIdUuid": "Part ID (UUID)",
-  "uuidPlaceholder": "uuid",
-  "qty": "الكمية",
-  "unitCost": "سعر الوحدة",
-  "total": "الإجمالي",
-  "issue": "Issue",
-  "notesOpt": "ملاحظات (اختياري)",
-  "addLine": "إضافة سطر",
-  "issuedLinesFromReport": "سطور الصرف من التقرير",
-  "noIssuedLines": "لا توجد سطور صرف",
-  "installationsTitle": "التركيبات",
-  "qtyInstalled": "الكمية المركبة",
-  "odometerOpt": "عداد (اختياري)",
-  "addInstallation": "إضافة تركيب",
-  "installationsApiList": "قائمة التركيبات (API)",
-  "installationsRuntimeList": "قائمة التركيبات (Runtime)",
-  "installedAt": "تاريخ التركيب",
-  "noInstallations": "لا توجد تركيبات",
-  "noRuntimeInstallations": "لا توجد تركيبات (Runtime)",
-  "qaTitle": "QA",
-  "qaEndpoint": "POST /maintenance/work-orders/:id/post-report",
-  "roadTestResult": "نتيجة اختبار الطريق",
-  "pass": "PASS",
-  "fail": "FAIL",
-  "remarks": "ملاحظات",
-  "remarksPlaceholder": "اكتب ملاحظات الفحص...",
-  "saveQa": "حفظ QA",
-  "onlyAdminAccountantQa": "متاح فقط للإدارة/الحسابات",
-  "failedToLoad": "فشل تحميل تفاصيل أمر العمل",
-  "installationsLoadFailed": "فشل تحميل التركيبات",
-  "hintMismatch": "يجب حل فروقات القطع أولاً",
-  "hintNeedsQa": "التقرير يحتاج QA",
-  "hintQaFailed": "QA فشل",
-  "hintReady": "جاهز للإكمال"
-
-  },
-  
-
   "workOrders": {
     "title": "أوامر العمل",
     "breadcrumb": "الصيانة",
@@ -796,7 +775,6 @@
       "cardsSendStatusInUrl": "معلومة: كروت الداشبورد بتبعت status في الـ URL — الصفحة دي بتقرأه وتفلتر صح."
     }
   },
-
   "workOrderDetails": {
     "title": "تفاصيل أمر العمل",
     "breadcrumb": "الصيانة / أوامر العمل",
@@ -909,167 +887,98 @@
       "okToClose": "✅ جاهز للإغلاق."
     }
   },
-"sites": {
-  "title": "المواقع",
-  "subtitle": "إدارة مواقع العملاء",
-  "filters": {
-    "searchPlaceholder": "بحث في المواقع…",
-    "allClients": "كل العملاء"
-  },
-  "actions": {
-    "add": "+ إضافة موقع"
-  },
-  "table": {
-    "name": "الاسم",
-    "client": "العميل",
-    "address": "العنوان",
-    "status": "الحالة",
-    "created": "تاريخ الإنشاء",
-    "actions": "إجراءات"
-  },
-  "empty": "لا توجد مواقع.",
-  "modal": {
-    "createTitle": "إنشاء موقع",
-    "editTitle": "تعديل موقع",
-    "cancel": "إلغاء",
-    "save": "حفظ"
-  },
-  "fields": {
-    "name": "اسم الموقع",
-    "client": "العميل",
-    "address": "العنوان"
-  },
-  "placeholders": {
-    "name": "اسم الموقع",
-    "address": "عنوان الموقع",
-    "noClient": "اختر العميل"
-  },
-  "toast": {
-    "nameRequired": "اسم الموقع مطلوب",
-    "clientRequired": "العميل مطلوب",
-    "created": "تم إضافة الموقع",
-    "updated": "تم تحديث الموقع",
-    "saveFailed": "فشل الحفظ",
-    "toggled": "تم تغيير حالة الموقع",
-    "toggleFailed": "فشل تغيير الحالة"
-  },
-  "errors": {
-    "loadFailed": "فشل تحميل المواقع"
-  }
-},
-"clients": {
-  "title": "العملاء",
-  "subtitle": "إدارة العملاء",
-  "subtitleList": "قائمة العملاء",
-
-  "actions": {
-    "add": "إضافة عميل",
-    "viewDetails": "عرض التفاصيل",
-    "edit": "تعديل",
-    "toggle": "تفعيل / تعطيل",
-    "addContract": "إضافة عقد"
-  },
-
-  "filters": {
-    "searchPlaceholder": "ابحث باسم العميل أو الهاتف..."
-  },
-
-  "table": {
-    "name": "اسم العميل",
-    "email": "البريد الإلكتروني",
-    "phone": "الهاتف",
-    "status": "الحالة",
-    "actions": "إجراءات"
-  },
-
-  "empty": "لا يوجد عملاء",
-  "emptyHint": "قم بإضافة أول عميل للبدء",
-
-  "confirm": {
-    "disableDesc": "هل تريد إيقاف هذا العميل؟",
-    "enableDesc": "هل تريد تفعيل هذا العميل؟"
-  },
-
-  "toast": {
-    "created": "تم إنشاء العميل",
-    "updated": "تم تحديث بيانات العميل",
-    "toggled": "تم تحديث حالة العميل"
-  },
-
-  "errors": {
-    "loadFailed": "فشل تحميل العملاء",
-    "saveFailed": "فشل حفظ بيانات العميل",
-    "toggleFailed": "فشل تحديث الحالة",
-    "nameRequired": "اسم العميل مطلوب"
-  },
-
-  "form": {
-    "sections": {
-      "basic": "البيانات الأساسية",
-      "contact": "بيانات المسؤول",
-      "notes": "ملاحظات"
+  "sites": {
+    "title": "المواقع",
+    "subtitle": "إدارة مواقع العملاء",
+    "filters": {
+      "searchPlaceholder": "بحث في المواقع…",
+      "allClients": "كل العملاء"
     },
-
-    "name": "اسم العميل",
-    "email": "البريد الإلكتروني",
-    "phone": "رقم الهاتف",
-    "hqAddress": "عنوان المقر",
-    "contactName": "اسم المسؤول",
-    "contactPhone": "هاتف المسؤول",
-    "contactEmail": "بريد المسؤول",
-    "taxNo": "الرقم الضريبي",
-    "notes": "ملاحظات",
-    "status": "الحالة",
-
-    "placeholders": {
-      "name": "مثال: شركة النور",
-      "email": "example@company.com",
-      "phone": "01000000000",
-      "hqAddress": "القاهرة - مدينة نصر",
-      "contactName": "اسم المسؤول",
-      "contactPhone": "01000000000",
-      "contactEmail": "contact@company.com",
-      "taxNo": "123456789",
-      "notes": "أدخل أي ملاحظات..."
-    }
-  },
-
-  "new": {
-    "title": "إضافة عميل",
-    "subtitle": "إدخال بيانات عميل جديد",
     "actions": {
-      "create": "إنشاء العميل",
-      "cancel": "إلغاء"
+      "add": "+ إضافة موقع"
+    },
+    "table": {
+      "name": "الاسم",
+      "client": "العميل",
+      "address": "العنوان",
+      "status": "الحالة",
+      "created": "تاريخ الإنشاء",
+      "actions": "إجراءات"
+    },
+    "empty": "لا توجد مواقع.",
+    "modal": {
+      "createTitle": "إنشاء موقع",
+      "editTitle": "تعديل موقع",
+      "cancel": "إلغاء",
+      "save": "حفظ"
+    },
+    "fields": {
+      "name": "اسم الموقع",
+      "client": "العميل",
+      "address": "العنوان"
+    },
+    "placeholders": {
+      "name": "اسم الموقع",
+      "address": "عنوان الموقع",
+      "noClient": "اختر العميل"
     },
     "toast": {
-      "created": "تم إنشاء العميل بنجاح"
+      "nameRequired": "اسم الموقع مطلوب",
+      "clientRequired": "العميل مطلوب",
+      "created": "تم إضافة الموقع",
+      "updated": "تم تحديث الموقع",
+      "saveFailed": "فشل الحفظ",
+      "toggled": "تم تغيير حالة الموقع",
+      "toggleFailed": "فشل تغيير الحالة"
     },
     "errors": {
-      "createFailed": "فشل إنشاء العميل"
+      "loadFailed": "فشل تحميل المواقع"
     }
   },
-
-  "edit": {
-    "title": "تعديل العميل",
-    "subtitle": "تحديث بيانات العميل"
-  },
-
-  "details": {
-    "title": "تفاصيل العميل",
-    "subtitle": "عرض بيانات العميل ونشاطه",
-
+  "clients": {
+    "title": "العملاء",
+    "subtitle": "إدارة العملاء",
+    "subtitleList": "قائمة العملاء",
     "actions": {
-      "backToList": "العودة إلى قائمة العملاء"
+      "add": "إضافة عميل",
+      "viewDetails": "عرض التفاصيل",
+      "edit": "تعديل",
+      "toggle": "تفعيل / تعطيل",
+      "addContract": "إضافة عقد"
     },
-
     "filters": {
-      "month": "الشهر",
-      "monthHint": "الصيغة: YYYY-MM",
-      "thisMonth": "الشهر الحالي"
+      "searchPlaceholder": "ابحث باسم العميل أو الهاتف..."
     },
-
-    "profile": {
-      "title": "بيانات العميل",
+    "table": {
+      "name": "اسم العميل",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "status": "الحالة",
+      "actions": "إجراءات"
+    },
+    "empty": "لا يوجد عملاء",
+    "emptyHint": "قم بإضافة أول عميل للبدء",
+    "confirm": {
+      "disableDesc": "هل تريد إيقاف هذا العميل؟",
+      "enableDesc": "هل تريد تفعيل هذا العميل؟"
+    },
+    "toast": {
+      "created": "تم إنشاء العميل",
+      "updated": "تم تحديث بيانات العميل",
+      "toggled": "تم تحديث حالة العميل"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل العملاء",
+      "saveFailed": "فشل حفظ بيانات العميل",
+      "toggleFailed": "فشل تحديث الحالة",
+      "nameRequired": "اسم العميل مطلوب"
+    },
+    "form": {
+      "sections": {
+        "basic": "البيانات الأساسية",
+        "contact": "بيانات المسؤول",
+        "notes": "ملاحظات"
+      },
       "name": "اسم العميل",
       "email": "البريد الإلكتروني",
       "phone": "رقم الهاتف",
@@ -1080,99 +989,144 @@
       "taxNo": "الرقم الضريبي",
       "notes": "ملاحظات",
       "status": "الحالة",
-      "createdAt": "تاريخ الإنشاء"
-    },
-
-    "kpi": {
-      "totalInvoiced": "إجمالي الفواتير",
-      "totalPaid": "إجمالي التحصيلات",
-      "balance": "الرصيد",
-      "monthlyTripRevenue": "إيراد الرحلات هذا الشهر",
-      "totalTripsThisMonth": "إجمالي الرحلات هذا الشهر",
-      "activeSites": "المواقع النشطة",
-      "totalSites": "إجمالي المواقع",
-      "hintInvoices": "إجمالي الفواتير (باستثناء الملغاة)",
-      "hintPayments": "إجمالي التحصيلات (باستثناء الملغاة)",
-      "hintBalance": "الفواتير - التحصيلات"
-    },
-
-    "summary": {
-      "title": "ملخص النشاط",
-      "contracts": "إجمالي العقود",
-      "month": "الشهر",
-      "activeSites": "المواقع النشطة",
-      "sites": "إجمالي المواقع"
-    },
-
-    "sites": {
-      "title": "المواقع",
-      "subtitle": "المواقع وعدد الرحلات خلال الشهر ({month})",
-      "empty": "لا توجد مواقع",
-      "emptyHint": "هذا العميل لا يحتوي على مواقع حالياً.",
-      "table": {
-        "name": "الموقع",
-        "address": "العنوان",
-        "city": "المدينة",
-        "tripsThisMonth": "عدد الرحلات هذا الشهر",
-        "status": "الحالة"
+      "placeholders": {
+        "name": "مثال: شركة النور",
+        "email": "example@company.com",
+        "phone": "01000000000",
+        "hqAddress": "القاهرة - مدينة نصر",
+        "contactName": "اسم المسؤول",
+        "contactPhone": "01000000000",
+        "contactEmail": "contact@company.com",
+        "taxNo": "123456789",
+        "notes": "أدخل أي ملاحظات..."
       }
     },
-
-    "contracts": {
-      "title": "العقود",
-      "subtitle": "العقود المرتبطة بهذا العميل",
-      "empty": "لا توجد عقود",
-      "emptyHint": "لم يتم إضافة أي عقود لهذا العميل حتى الآن.",
-      "table": {
-        "contractNo": "رقم العقد",
-        "startDate": "البداية",
-        "endDate": "النهاية",
-        "billingCycle": "دورة الفاتورة",
-        "value": "القيمة",
+    "new": {
+      "title": "إضافة عميل",
+      "subtitle": "إدخال بيانات عميل جديد",
+      "actions": {
+        "create": "إنشاء العميل",
+        "cancel": "إلغاء"
+      },
+      "toast": {
+        "created": "تم إنشاء العميل بنجاح"
+      },
+      "errors": {
+        "createFailed": "فشل إنشاء العميل"
+      }
+    },
+    "edit": {
+      "title": "تعديل العميل",
+      "subtitle": "تحديث بيانات العميل"
+    },
+    "details": {
+      "title": "تفاصيل العميل",
+      "subtitle": "عرض بيانات العميل ونشاطه",
+      "actions": {
+        "backToList": "العودة إلى قائمة العملاء"
+      },
+      "filters": {
+        "month": "الشهر",
+        "monthHint": "الصيغة: YYYY-MM",
+        "thisMonth": "الشهر الحالي"
+      },
+      "profile": {
+        "title": "بيانات العميل",
+        "name": "اسم العميل",
+        "email": "البريد الإلكتروني",
+        "phone": "رقم الهاتف",
+        "hqAddress": "عنوان المقر",
+        "contactName": "اسم المسؤول",
+        "contactPhone": "هاتف المسؤول",
+        "contactEmail": "بريد المسؤول",
+        "taxNo": "الرقم الضريبي",
+        "notes": "ملاحظات",
         "status": "الحالة",
-        "actions": "الإجراءات"
+        "createdAt": "تاريخ الإنشاء"
+      },
+      "kpi": {
+        "totalInvoiced": "إجمالي الفواتير",
+        "totalPaid": "إجمالي التحصيلات",
+        "balance": "الرصيد",
+        "monthlyTripRevenue": "إيراد الرحلات هذا الشهر",
+        "totalTripsThisMonth": "إجمالي الرحلات هذا الشهر",
+        "activeSites": "المواقع النشطة",
+        "totalSites": "إجمالي المواقع",
+        "hintInvoices": "إجمالي الفواتير (باستثناء الملغاة)",
+        "hintPayments": "إجمالي التحصيلات (باستثناء الملغاة)",
+        "hintBalance": "الفواتير - التحصيلات"
+      },
+      "summary": {
+        "title": "ملخص النشاط",
+        "contracts": "إجمالي العقود",
+        "month": "الشهر",
+        "activeSites": "المواقع النشطة",
+        "sites": "إجمالي المواقع"
+      },
+      "sites": {
+        "title": "المواقع",
+        "subtitle": "المواقع وعدد الرحلات خلال الشهر ({month})",
+        "empty": "لا توجد مواقع",
+        "emptyHint": "هذا العميل لا يحتوي على مواقع حالياً.",
+        "table": {
+          "name": "الموقع",
+          "address": "العنوان",
+          "city": "المدينة",
+          "tripsThisMonth": "عدد الرحلات هذا الشهر",
+          "status": "الحالة"
+        }
+      },
+      "contracts": {
+        "title": "العقود",
+        "subtitle": "العقود المرتبطة بهذا العميل",
+        "empty": "لا توجد عقود",
+        "emptyHint": "لم يتم إضافة أي عقود لهذا العميل حتى الآن.",
+        "table": {
+          "contractNo": "رقم العقد",
+          "startDate": "البداية",
+          "endDate": "النهاية",
+          "billingCycle": "دورة الفاتورة",
+          "value": "القيمة",
+          "status": "الحالة",
+          "actions": "الإجراءات"
+        }
+      },
+      "invoices": {
+        "title": "الفواتير",
+        "subtitle": "آخر فواتير العميل",
+        "empty": "لا توجد فواتير",
+        "emptyHint": "لا توجد فواتير مسجلة لهذا العميل.",
+        "table": {
+          "invoiceNo": "رقم الفاتورة",
+          "issueDate": "تاريخ الإصدار",
+          "dueDate": "تاريخ الاستحقاق",
+          "status": "الحالة",
+          "amount": "القيمة"
+        }
+      },
+      "payments": {
+        "title": "التحصيلات",
+        "subtitle": "آخر تحصيلات العميل",
+        "empty": "لا توجد تحصيلات",
+        "emptyHint": "لا توجد تحصيلات مسجلة لهذا العميل.",
+        "table": {
+          "paymentDate": "تاريخ التحصيل",
+          "amount": "المبلغ",
+          "method": "طريقة السداد",
+          "status": "الحالة",
+          "reference": "المرجع"
+        }
+      },
+      "errors": {
+        "loadFailed": "فشل تحميل تفاصيل العميل"
       }
     },
-
-    "invoices": {
-      "title": "الفواتير",
-      "subtitle": "آخر فواتير العميل",
-      "empty": "لا توجد فواتير",
-      "emptyHint": "لا توجد فواتير مسجلة لهذا العميل.",
-      "table": {
-        "invoiceNo": "رقم الفاتورة",
-        "issueDate": "تاريخ الإصدار",
-        "dueDate": "تاريخ الاستحقاق",
-        "status": "الحالة",
-        "amount": "القيمة"
-      }
-    },
-
-    "payments": {
-      "title": "التحصيلات",
-      "subtitle": "آخر تحصيلات العميل",
-      "empty": "لا توجد تحصيلات",
-      "emptyHint": "لا توجد تحصيلات مسجلة لهذا العميل.",
-      "table": {
-        "paymentDate": "تاريخ التحصيل",
-        "amount": "المبلغ",
-        "method": "طريقة السداد",
-        "status": "الحالة",
-        "reference": "المرجع"
-      }
-    },
-
-    "errors": {
-      "loadFailed": "فشل تحميل تفاصيل العميل"
+    "ar": {
+      "ledger": "كشف حساب",
+      "invoices": "الفواتير",
+      "payments": "التحصيلات"
     }
   },
-
-  "ar": {
-    "ledger": "كشف حساب",
-    "invoices": "الفواتير",
-    "payments": "التحصيلات"
-  }
-},
   "financeDashboard": {
     "title": "لوحة المالية",
     "roleLabel": "الدور",
@@ -1210,8 +1164,8 @@
       "showingFirst20Pending": "عرض أول 20 مصروف متأخر",
       "showingFirst20Adv": "عرض أول 20 سلفة متأخرة",
       "allData": "كل البيانات",
-  "pageOnly": "الصفحة الحالية فقط",
-  "openFromListNote": "إجمالي المفتوح محسوب من السلف المفتوحة"
+      "pageOnly": "الصفحة الحالية فقط",
+      "openFromListNote": "إجمالي المفتوح محسوب من السلف المفتوحة"
     },
     "tables": {
       "pending": {
@@ -1259,7 +1213,6 @@
       "tipPrivileged": "معلومة: الأدمن والمحاسب يرون كل السجلات."
     }
   },
-
   "financeExpenses": {
     "title": "المصروفات",
     "viewOnly": "عرض فقط",
@@ -1311,7 +1264,6 @@
       "appealed": "تم التظلم"
     }
   },
-
   "financeAdvances": {
     "title": "السلف النقدية",
     "subtitle": "عرض السلف الخاصة بك",
@@ -1360,7 +1312,7 @@
     "errors": {
       "loadFailed": "فشل تحميل السلف"
     },
-     "kpi": {
+    "kpi": {
       "totalAmount": "إجمالي المبالغ",
       "pageOnly": "على نتائج الصفحة الحالية",
       "open": "مفتوحة",
@@ -1369,226 +1321,231 @@
       "allData": "كل البيانات"
     },
     "modal": {
-  "issueTitle": "صرف عهدة نقدية",
-  "supervisor": "المشرف",
-  "selectSupervisor": "اختر مشرف",
-  "amount": "المبلغ",
-  "amountPh": "اكتب المبلغ"
-  }
-},
-"financePurchases": {
-  "title": "المشتريات",
-  "viewOnly": "عرض فقط",
-  "tabs": {
-    "all": "الكل",
-    "draft": "Draft",
-    "posted": "Posted",
-    "submitted": "Submitted"
+      "issueTitle": "صرف عهدة نقدية",
+      "supervisor": "المشرف",
+      "selectSupervisor": "اختر مشرف",
+      "amount": "المبلغ",
+      "amountPh": "اكتب المبلغ"
+    }
   },
-  "filters": {
-    "searchPh": "المورد / الفاتورة / المعرّف / المخزن"
-  },
-  "kpi": {
-    "submittedCount": "عدد Submitted (هذه الصفحة)",
-    "submittedSum": "إجمالي Submitted (هذه الصفحة)",
-    "postedCount": "عدد Posted (هذه الصفحة)",
-    "postedSum": "إجمالي Posted (هذه الصفحة)"
-  },
-  "table": {
-    "title": "المشتريات (Receipts)",
-    "id": "ID",
-    "warehouse": "المخزن",
-    "supplier": "المورد",
-    "invoice": "الفاتورة",
-    "items": "Items",
-    "total": "الإجمالي",
-    "status": "الحالة",
-    "createdAt": "تاريخ الإنشاء"
-  },
-  "actions": {
-    "post": "Post"
-  },
-  "meta": {
-    "postedAt": "تم الترحيل"
-  },
-  "empty": {
-    "title": "لا توجد مشتريات",
-    "hint": "جرّب تغيير التبويب أو البحث."
-  },
-  "confirm": {
-    "postTitle": "تأكيد الترحيل (Post)",
-    "postDesc": "سيتم إدخال القطع للمخزن وإنشاء مصروف (COMPANY) بحالة Pending للمراجعة."
-  },
-  "toast": {
-    "postedOk": "تم Post بنجاح"
-  },
-  "errors": {
-    "loadFailed": "فشل تحميل المشتريات",
-    "postFailed": "فشل ترحيل الإضافة",
-    "detailsLoadFailed": "فشل تحميل تفاصيل الإضافة"
-  },
-  "details": {
-    "title": "تفاصيل الشراء",
-    "id": "المعرّف",
-    "kpi": {
-      "items": "عدد العناصر",
-      "itemsSum": "مجموع أسعار العناصر",
-      "total": "إجمالي الفاتورة",
-      "cashExpense": "المصروف المرتبط"
+  "financePurchases": {
+    "title": "المشتريات",
+    "viewOnly": "عرض فقط",
+    "tabs": {
+      "all": "الكل",
+      "draft": "Draft",
+      "posted": "Posted",
+      "submitted": "Submitted"
     },
-    "fields": {
+    "filters": {
+      "searchPh": "المورد / الفاتورة / المعرّف / المخزن"
+    },
+    "kpi": {
+      "submittedCount": "عدد Submitted (هذه الصفحة)",
+      "submittedSum": "إجمالي Submitted (هذه الصفحة)",
+      "postedCount": "عدد Posted (هذه الصفحة)",
+      "postedSum": "إجمالي Posted (هذه الصفحة)"
+    },
+    "table": {
+      "title": "المشتريات (Receipts)",
+      "id": "ID",
       "warehouse": "المخزن",
       "supplier": "المورد",
       "invoice": "الفاتورة",
-      "createdAt": "تاريخ الإنشاء",
-      "postedAt": "تاريخ الترحيل",
-      "notes": "ملاحظات"
+      "items": "Items",
+      "total": "الإجمالي",
+      "status": "الحالة",
+      "createdAt": "تاريخ الإنشاء"
     },
-    "table": {
-      "title": "العناصر",
-      "part": "القطعة",
-      "internalSerial": "السيريال الداخلي",
-      "manufacturerSerial": "سيريال المصنع",
-      "unitCost": "سعر الوحدة",
-      "notes": "ملاحظات"
+    "actions": {
+      "post": "Post"
+    },
+    "meta": {
+      "postedAt": "تم الترحيل"
     },
     "empty": {
-      "title": "لا توجد عناصر",
-      "hint": "لم يتم إضافة عناصر لهذه الفاتورة."
+      "title": "لا توجد مشتريات",
+      "hint": "جرّب تغيير التبويب أو البحث."
     },
-    "actions": { "submit": "Submit", "post": "Post" },
-"confirm": {
-  "submitTitle": "تأكيد الإرسال (Submit)",
-  "submitDesc": "سيتم إرسال الإضافة للمحاسبة للمراجعة والترحيل.",
-  "submit": "إرسال للمراجعة",
-  "post": "ترحيل (اعتماد)"
-},
-"toast": { "submittedOk": "تم Submit بنجاح", "postedOk": "تم Post بنجاح" },
-"errors": { "submitFailed": "فشل Submit" }
-}
-  },
-
-  "financeExpenseDetails": {
-  "title": "تفاصيل المصروف",
-  "meta": {
-    "id": "المعرّف:"
-  },
-  "tabs": {
-    "overview": "نظرة عامة",
-    "audit": "سجل التعديلات",
-    "actions": "إجراءات"
-  },
-  "confirm": {
-      "approve": "هل أنت متأكد من اعتماد هذا المصروف؟"
+    "confirm": {
+      "postTitle": "تأكيد الترحيل (Post)",
+      "postDesc": "سيتم إدخال القطع للمخزن وإنشاء مصروف (COMPANY) بحالة Pending للمراجعة."
     },
-  "common": {
-    "confirm": "تأكيد",
-    "cancel": "إلغاء"
-  },
-  "overview": {
-    "createdAt": "تاريخ الإنشاء",
-    "type": "نوع المصروف",
-    "amount": "المبلغ",
-    "context": "السياق",
-    "trip": "الرحلة",
-    "vehicle": "المركبة",
-    "workOrder": "أمر العمل",
-    "creator": "المنشئ",
-    "notes": "ملاحظات",
-    "advance": "العُهدة",
-    "companyFields": "بيانات المورد/الفاتورة",
-    "vendor": "المورد",
-    "invoiceNo": "رقم الفاتورة",
-    "invoiceDate": "تاريخ الفاتورة",
-    "cashAdvanceId": "معرّف العُهدة",
-    "resolution": "النتيجة",
-    "approvedAt": "تاريخ الاعتماد",
-    "rejectedAt": "تاريخ الرفض",
-    "resolvedAt": "تاريخ الحسم"
-  },
-  "audit": {
-    "title": "سجل التغييرات",
-    "noRecords": "لا توجد سجلات.",
-    "actor": "المنفّذ",
-    "showDiff": "عرض الفروقات",
-    "before": "قبل",
-    "after": "بعد"
-  },
-  "actions": {
-    "available": "الإجراءات المتاحة",
-    "title": "إجراءات المصروف",
-    "metaRole": "الدور",
-    "metaStatus": "الحالة",
-    "hint": "الإجراءات المتاحة تعتمد على الدور وحالة المصروف.",
-    "none": "لا توجد إجراءات اعتماد/رفض متاحة حالياً.",
-    "approve": "اعتماد",
-    "reject": "رفض",
-    "appeal": "تظلم",
-    "resolveApprove": "حسم التظلم: اعتماد",
-    "resolveReject": "حسم التظلم: رفض",
-    "reopen": "إعادة فتح (REJECTED → PENDING)"
-  },
-  "hints": {
-    "endpoints": "ملاحظة: الإجراءات مرتبطة بمسارات: approve / reject / appeal / resolve-appeal / reopen."
-  }
-
-},
-  "financeARSection": {
-  "clients": {
-    "title": "عملاء الحسابات المدينة (AR)",
-    "subtitle": "إدارة عملاء الفواتير الآجلة",
-    "add": "+ إضافة عميل AR",
-    "name": "اسم العميل",
-    "phone": "الهاتف",
-    "email": "البريد الإلكتروني",
-    "creditLimit": "حد الائتمان",
-    "active": "نشط",
-    "created": "تاريخ الإنشاء",
-    "empty": "لا يوجد عملاء AR",
-    "createdOk": "تم إنشاء العميل بنجاح",
-    "updatedOk": "تم تحديث العميل بنجاح",
-    "saveFailed": "فشل الحفظ"
-  },
-  "invoices": {
-    "title": "فواتير AR",
-    "create": "+ إنشاء فاتورة",
-    "client": "العميل",
-    "issueDate": "تاريخ الإصدار",
-    "dueDate": "تاريخ الاستحقاق",
-    "amount": "المبلغ",
-    "status": "الحالة",
-    "notes": "ملاحظات",
-    "empty": "لا توجد فواتير",
-    "statusTypes": {
-      "DRAFT": "مسودة",
-      "ISSUED": "صادرة",
-      "PARTIAL": "مدفوعة جزئياً",
-      "PAID": "مدفوعة",
-      "OVERDUE": "متأخرة"
+    "toast": {
+      "postedOk": "تم Post بنجاح"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل المشتريات",
+      "postFailed": "فشل ترحيل الإضافة",
+      "detailsLoadFailed": "فشل تحميل تفاصيل الإضافة"
+    },
+    "details": {
+      "title": "تفاصيل الشراء",
+      "id": "المعرّف",
+      "kpi": {
+        "items": "عدد العناصر",
+        "itemsSum": "مجموع أسعار العناصر",
+        "total": "إجمالي الفاتورة",
+        "cashExpense": "المصروف المرتبط"
+      },
+      "fields": {
+        "warehouse": "المخزن",
+        "supplier": "المورد",
+        "invoice": "الفاتورة",
+        "createdAt": "تاريخ الإنشاء",
+        "postedAt": "تاريخ الترحيل",
+        "notes": "ملاحظات"
+      },
+      "table": {
+        "title": "العناصر",
+        "part": "القطعة",
+        "internalSerial": "السيريال الداخلي",
+        "manufacturerSerial": "سيريال المصنع",
+        "unitCost": "سعر الوحدة",
+        "notes": "ملاحظات"
+      },
+      "empty": {
+        "title": "لا توجد عناصر",
+        "hint": "لم يتم إضافة عناصر لهذه الفاتورة."
+      },
+      "actions": {
+        "submit": "Submit",
+        "post": "Post"
+      },
+      "confirm": {
+        "submitTitle": "تأكيد الإرسال (Submit)",
+        "submitDesc": "سيتم إرسال الإضافة للمحاسبة للمراجعة والترحيل.",
+        "submit": "إرسال للمراجعة",
+        "post": "ترحيل (اعتماد)"
+      },
+      "toast": {
+        "submittedOk": "تم Submit بنجاح",
+        "postedOk": "تم Post بنجاح"
+      },
+      "errors": {
+        "submitFailed": "فشل Submit"
+      }
     }
   },
-  "payments": {
-    "title": "مدفوعات AR",
-    "add": "+ تسجيل دفعة",
-    "invoice": "الفاتورة",
-    "amount": "المبلغ",
-    "paymentDate": "تاريخ الدفع",
-    "method": "طريقة الدفع",
-    "reference": "المرجع",
-    "empty": "لا توجد مدفوعات"
+  "financeExpenseDetails": {
+    "title": "تفاصيل المصروف",
+    "meta": {
+      "id": "المعرّف:"
+    },
+    "tabs": {
+      "overview": "نظرة عامة",
+      "audit": "سجل التعديلات",
+      "actions": "إجراءات"
+    },
+    "confirm": {
+      "approve": "هل أنت متأكد من اعتماد هذا المصروف؟"
+    },
+    "common": {
+      "confirm": "تأكيد",
+      "cancel": "إلغاء"
+    },
+    "overview": {
+      "createdAt": "تاريخ الإنشاء",
+      "type": "نوع المصروف",
+      "amount": "المبلغ",
+      "context": "السياق",
+      "trip": "الرحلة",
+      "vehicle": "المركبة",
+      "workOrder": "أمر العمل",
+      "creator": "المنشئ",
+      "notes": "ملاحظات",
+      "advance": "العُهدة",
+      "companyFields": "بيانات المورد/الفاتورة",
+      "vendor": "المورد",
+      "invoiceNo": "رقم الفاتورة",
+      "invoiceDate": "تاريخ الفاتورة",
+      "cashAdvanceId": "معرّف العُهدة",
+      "resolution": "النتيجة",
+      "approvedAt": "تاريخ الاعتماد",
+      "rejectedAt": "تاريخ الرفض",
+      "resolvedAt": "تاريخ الحسم"
+    },
+    "audit": {
+      "title": "سجل التغييرات",
+      "noRecords": "لا توجد سجلات.",
+      "actor": "المنفّذ",
+      "showDiff": "عرض الفروقات",
+      "before": "قبل",
+      "after": "بعد"
+    },
+    "actions": {
+      "available": "الإجراءات المتاحة",
+      "title": "إجراءات المصروف",
+      "metaRole": "الدور",
+      "metaStatus": "الحالة",
+      "hint": "الإجراءات المتاحة تعتمد على الدور وحالة المصروف.",
+      "none": "لا توجد إجراءات اعتماد/رفض متاحة حالياً.",
+      "approve": "اعتماد",
+      "reject": "رفض",
+      "appeal": "تظلم",
+      "resolveApprove": "حسم التظلم: اعتماد",
+      "resolveReject": "حسم التظلم: رفض",
+      "reopen": "إعادة فتح (REJECTED → PENDING)"
+    },
+    "hints": {
+      "endpoints": "ملاحظة: الإجراءات مرتبطة بمسارات: approve / reject / appeal / resolve-appeal / reopen."
+    }
   },
-  "ledger": {
-    "title": "كشف حساب العميل",
-    "client": "العميل",
-    "date": "التاريخ",
-    "description": "الوصف",
-    "debit": "مدين",
-    "credit": "دائن",
-    "balance": "الرصيد",
-    "empty": "لا توجد حركات"
-  }
-},
-
+  "financeARSection": {
+    "clients": {
+      "title": "عملاء الحسابات المدينة (AR)",
+      "subtitle": "إدارة عملاء الفواتير الآجلة",
+      "add": "+ إضافة عميل AR",
+      "name": "اسم العميل",
+      "phone": "الهاتف",
+      "email": "البريد الإلكتروني",
+      "creditLimit": "حد الائتمان",
+      "active": "نشط",
+      "created": "تاريخ الإنشاء",
+      "empty": "لا يوجد عملاء AR",
+      "createdOk": "تم إنشاء العميل بنجاح",
+      "updatedOk": "تم تحديث العميل بنجاح",
+      "saveFailed": "فشل الحفظ"
+    },
+    "invoices": {
+      "title": "فواتير AR",
+      "create": "+ إنشاء فاتورة",
+      "client": "العميل",
+      "issueDate": "تاريخ الإصدار",
+      "dueDate": "تاريخ الاستحقاق",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "notes": "ملاحظات",
+      "empty": "لا توجد فواتير",
+      "statusTypes": {
+        "DRAFT": "مسودة",
+        "ISSUED": "صادرة",
+        "PARTIAL": "مدفوعة جزئياً",
+        "PAID": "مدفوعة",
+        "OVERDUE": "متأخرة"
+      }
+    },
+    "payments": {
+      "title": "مدفوعات AR",
+      "add": "+ تسجيل دفعة",
+      "invoice": "الفاتورة",
+      "amount": "المبلغ",
+      "paymentDate": "تاريخ الدفع",
+      "method": "طريقة الدفع",
+      "reference": "المرجع",
+      "empty": "لا توجد مدفوعات"
+    },
+    "ledger": {
+      "title": "كشف حساب العميل",
+      "client": "العميل",
+      "date": "التاريخ",
+      "description": "الوصف",
+      "debit": "مدين",
+      "credit": "دائن",
+      "balance": "الرصيد",
+      "empty": "لا توجد حركات"
+    }
+  },
   "trips": {
     "title": "الرحلات",
     "subtitle": "قائمة الرحلات + الدخول للتفاصيل",
@@ -1645,7 +1602,6 @@
       "actions": "إجراءات"
     }
   },
-
   "tripModals": {
     "assignTitle": "تعيين رحلة",
     "createTitle": "إنشاء رحلة",
@@ -1670,7 +1626,6 @@
     "selectClient": "اختر عميل",
     "selectSite": "اختر موقع"
   },
-
   "tripFinance": {
     "title": "مالية الرحلة",
     "tripId": "رقم الرحلة",
@@ -1729,7 +1684,6 @@
       "closeFailed": "فشل إغلاق مالية الرحلة"
     }
   },
-
   "tripDetails": {
     "title": "تفاصيل الرحلة",
     "actions": {
@@ -1763,7 +1717,6 @@
       "loadFailed": "فشل تحميل تفاصيل الرحلة"
     }
   },
-
   "financeNewExpense": {
     "title": "إنشاء مصروف",
     "notAllowedBanner": "غير مسموح لك بإنشاء مصروف على هذه الصفحة.",
@@ -1803,7 +1756,6 @@
       "woInvalid": "أمر الصيانة غير صحيح"
     }
   },
-
   "financeAdvanceDetails": {
     "title": "تفاصيل العُهدة",
     "tabs": {
@@ -1859,9 +1811,9 @@
       "endpoints": "المسارات: submit-review / close / reopen."
     },
     "meta": {
-  "id": "المعرّف:",
-  "source": "المصدر:"
-},
+      "id": "المعرّف:",
+      "source": "المصدر:"
+    },
     "errors": {
       "loadFailed": "فشل تحميل العُهدة",
       "forbiddenNotYours": "غير مسموح: هذه العُهدة ليست خاصة بك.",
@@ -1870,7 +1822,6 @@
       "reopenFailed": "فشل إعادة فتح العُهدة"
     }
   },
-
   "inventory": {
     "requestsTitle": "طلبات المخزن",
     "requestsSubtitle": "عرض طلبات الصرف والحجز ومتابعة حالتها",
@@ -1905,7 +1856,6 @@
     "colManufacturerSerial": "سيريال المصنع",
     "colItemStatus": "حالة القطعة"
   },
-
   "issues": {
     "title": "أذون الصرف",
     "subtitle": "إدارة وإصدار أذون الصرف من المخزن",
@@ -1952,7 +1902,6 @@
     "colUnitCost": "سعر الوحدة",
     "colTotalCost": "الإجمالي"
   },
-
   "receipts": {
     "title": "الإضافة المخزنية (Receipts)",
     "subtitle": "تسجيل مشتريات قطع الغيار وربطها بالمصروفات",
@@ -2009,7 +1958,6 @@
     "cashExpenseStatus": "حالة الاعتماد",
     "cashExpenseType": "نوع المصروف"
   },
-
   "partItems": {
     "title": "السيريالات (Part Items)",
     "subtitle": "بحث وتتبع السيريالات حسب المخزن/القطعة/الحالة",
@@ -2026,7 +1974,6 @@
     "colLastMovedAt": "آخر حركة",
     "colIds": "IDs"
   },
-
   "directIssue": {
     "title": "صرف مباشر (بدون طلب)",
     "subtitle": "اختيار سيريالات IN_STOCK وإصدار إذن صرف Draft",
@@ -2055,26 +2002,155 @@
     "createdOk": "تم إنشاء إذن صرف Draft للصرف المباشر"
   },
   "partsCatalog": {
-  "add": "+ إضافة للكتالوج",
-  "modalTitle": "إضافة قطعة للكتالوج",
-  "partNumber": "كود القطعة (part_number)",
-  "partNumberPh": "مثال: FILT-OIL-001",
-  "suggest": "اقتراح",
-  "name": "اسم القطعة",
-  "namePh": "مثال: فلتر زيت",
-  "brand": "البراند",
-  "brandPh": "مثال: MANN",
-  "category": "التصنيف",
-  "categoryPh": "مثال: Filters",
-  "unit": "الوحدة",
-  "unitPh": "مثال: pcs",
-  "minStock": "حد أدنى للمخزون",
-  "minStockPh": "مثال: 5",
-  "save": "حفظ في الكتالوج",
-  "savedOk": "تمت إضافة القطعة للكتالوج ✅",
-  "errPartNumber": "كود القطعة (part_number) مطلوب",
-  "errName": "اسم القطعة مطلوب",
-  "errMinStock": "min_stock لازم يكون رقم >= 0",
-  "errPartNumberExists": "هذا الكود موجود بالفعل (part_number already exists)"
-}
+    "add": "+ إضافة للكتالوج",
+    "modalTitle": "إضافة قطعة للكتالوج",
+    "partNumber": "كود القطعة (part_number)",
+    "partNumberPh": "مثال: FILT-OIL-001",
+    "suggest": "اقتراح",
+    "name": "اسم القطعة",
+    "namePh": "مثال: فلتر زيت",
+    "brand": "البراند",
+    "brandPh": "مثال: MANN",
+    "category": "التصنيف",
+    "categoryPh": "مثال: Filters",
+    "unit": "الوحدة",
+    "unitPh": "مثال: pcs",
+    "minStock": "حد أدنى للمخزون",
+    "minStockPh": "مثال: 5",
+    "save": "حفظ في الكتالوج",
+    "savedOk": "تمت إضافة القطعة للكتالوج ✅",
+    "errPartNumber": "كود القطعة (part_number) مطلوب",
+    "errName": "اسم القطعة مطلوب",
+    "errMinStock": "min_stock لازم يكون رقم >= 0",
+    "errPartNumberExists": "هذا الكود موجود بالفعل (part_number already exists)"
+  },
+  "contracts": {
+    "title": "العقود",
+    "subtitle": "إدارة العقود المبرمة مع العملاء",
+    "subtitleByClient": "عرض العقود الخاصة بالعميل المحدد",
+    "actions": {
+      "add": "إضافة عقد",
+      "back": "رجوع",
+      "view": "عرض",
+      "edit": "تعديل",
+      "cancel": "إلغاء",
+      "save": "حفظ التعديلات",
+      "saveContract": "حفظ العقد",
+      "addPricingRule": "إضافة قاعدة تسعير",
+      "viewAllPricingRules": "عرض الكل"
+    },
+    "kpi": {
+      "totalContracts": "إجمالي العقود",
+      "activeContracts": "العقود النشطة",
+      "inactiveContracts": "العقود غير النشطة",
+      "expiredContracts": "العقود المنتهية",
+      "draftOrCancelled": "المسودات / الملغاة",
+      "totalRules": "إجمالي القواعد",
+      "activeRules": "القواعد النشطة",
+      "inactiveRules": "القواعد غير النشطة",
+      "contractValue": "قيمة العقد"
+    },
+    "table": {
+      "contractNo": "رقم العقد",
+      "client": "العميل",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "billingCycle": "دورة الفاتورة",
+      "contractValue": "قيمة العقد",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "form": {
+      "clientId": "معرف العميل",
+      "contractNo": "رقم العقد",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "billingCycle": "دورة الفاتورة",
+      "contractValue": "قيمة العقد",
+      "currency": "العملة",
+      "status": "الحالة",
+      "notes": "ملاحظات"
+    },
+    "placeholders": {
+      "clientId": "client_id",
+      "contractNo": "CNT-2026-001",
+      "contractValue": "0",
+      "currency": "EGP",
+      "notes": "ملاحظات إضافية عن العقد"
+    },
+    "details": {
+      "title": "تفاصيل العقد",
+      "subtitle": "عرض بيانات العقد وقواعد التسعير المرتبطة به",
+      "contractTitle": "العقد {contractNo}",
+      "dataTitle": "بيانات العقد",
+      "quickActions": "إجراءات سريعة",
+      "pricingRulesTitle": "قواعد التسعير المرتبطة بالعقد",
+      "pricingRulesSubtitle": "كل قواعد التسعير المعرفة على هذا العقد"
+    },
+    "new": {
+      "title": "إضافة عقد جديد",
+      "subtitle": "إنشاء عقد جديد للعميل"
+    },
+    "edit": {
+      "title": "تعديل العقد",
+      "subtitle": "تحديث بيانات العقد"
+    },
+    "pricingRules": {
+      "client": "العميل",
+      "route": "المسار",
+      "vehicleClass": "فئة السيارة",
+      "cargoType": "نوع المنقول",
+      "tripType": "نوع الرحلة",
+      "basePrice": "السعر الأساسي",
+      "priority": "الأولوية",
+      "effectivePeriod": "الفترة",
+      "status": "الحالة",
+      "actions": "الإجراءات",
+      "enable": "تفعيل",
+      "disable": "تعطيل",
+      "emptyTitle": "لا توجد قواعد تسعير",
+      "emptyHint": "لم يتم إضافة أي قواعد تسعير لهذا العقد حتى الآن."
+    },
+    "status": {
+      "ACTIVE": "نشط",
+      "INACTIVE": "غير نشط",
+      "EXPIRED": "منتهي",
+      "DRAFT": "مسودة",
+      "CANCELLED": "ملغي"
+    },
+    "billingCycleOptions": {
+      "DAILY": "يومي",
+      "WEEKLY": "أسبوعي",
+      "MONTHLY": "شهري"
+    },
+    "quickStatusActions": {
+      "setActive": "تعيين نشط",
+      "setInactive": "تعيين غير نشط",
+      "setExpired": "تعيين منتهي",
+      "setDraft": "تعيين مسودة",
+      "setCancelled": "تعيين ملغي"
+    },
+    "empty": {
+      "title": "لا توجد عقود",
+      "hint": "لم يتم العثور على بيانات عقود حالياً.",
+      "notFound": "العقد غير موجود"
+    },
+    "toast": {
+      "created": "تم إنشاء العقد بنجاح",
+      "updated": "تم تحديث العقد بنجاح",
+      "statusUpdated": "تم تحديث حالة العقد",
+      "pricingRuleStatusUpdated": "تم تحديث حالة قاعدة التسعير"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل العقود",
+      "loadDetailsFailed": "فشل تحميل بيانات العقد",
+      "loadPricingRulesFailed": "فشل تحميل قواعد التسعير",
+      "createFailed": "فشل إنشاء العقد",
+      "updateFailed": "فشل تحديث العقد",
+      "statusFailed": "فشل تحديث الحالة",
+      "pricingRuleStatusFailed": "فشل تحديث حالة القاعدة",
+      "clientRequired": "العميل مطلوب",
+      "startDateRequired": "تاريخ البداية مطلوب"
+    }
+  }
 }

@@ -53,50 +53,44 @@
     "dev": "Dev"
   },
   "sidebar": {
-  "appName": "Logistics",
-  "dashboard": "Dashboard",
-  "trips": "Trips",
-  "contracts": "Contracts",
-"contractPricing": "Contract Pricing",
-
-  "finance": "Finance",
-  "financeOverview": "Overview",
-  "financeExpenses": "Expenses",
-  "financeAdvances": "Advances",
-  "financePurchases": "Purchases",
-
-  "financeAR": "Accounts Receivable (AR)",
-  "financeARClients": "AR Clients",
-  "financeARInvoices": "AR Invoices",
-  "financeARPayments": "AR Payments",
-  "financeARLedger": "AR Ledger",
-
-  "clients": "Clients",
-  "sites": "Sites",
-  "vehicles": "Vehicles",
-  "drivers": "Drivers",
-  "cash": "Cash",
-
-  "maintenance": "Maintenance",
-  "maintenanceRequests": "Requests",
-  "maintenanceWorkOrders": "Work Orders",
-
-  "inventory": "Inventory",
-  "inventoryRequests": "Requests",
-  "inventoryIssues": "Issues",
-  "inventoryReceipts": "Receipts",
-  "inventoryPartItems": "Part Items",
-
-  "users": "Users",
-  "supervisors": "Supervisors",
-   "vendors": "Vendors"
-},
-"notifications": {
-  "open": "Open notifications",
-  "title": "Notifications",
-  "subtitle": "Latest important alerts",
-  "empty": "No current alerts"
-},
+    "appName": "Logistics",
+    "dashboard": "Dashboard",
+    "trips": "Trips",
+    "contracts": "Contracts",
+    "contractPricing": "Contract Pricing",
+    "finance": "Finance",
+    "financeOverview": "Overview",
+    "financeExpenses": "Expenses",
+    "financeAdvances": "Advances",
+    "financePurchases": "Purchases",
+    "financeAR": "Accounts Receivable (AR)",
+    "financeARClients": "AR Clients",
+    "financeARInvoices": "AR Invoices",
+    "financeARPayments": "AR Payments",
+    "financeARLedger": "AR Ledger",
+    "clients": "Clients",
+    "sites": "Sites",
+    "vehicles": "Vehicles",
+    "drivers": "Drivers",
+    "cash": "Cash",
+    "maintenance": "Maintenance",
+    "maintenanceRequests": "Requests",
+    "maintenanceWorkOrders": "Work Orders",
+    "inventory": "Inventory",
+    "inventoryRequests": "Requests",
+    "inventoryIssues": "Issues",
+    "inventoryReceipts": "Receipts",
+    "inventoryPartItems": "Part Items",
+    "users": "Users",
+    "supervisors": "Supervisors",
+    "vendors": "Vendors"
+  },
+  "notifications": {
+    "open": "Open notifications",
+    "title": "Notifications",
+    "subtitle": "Latest important alerts",
+    "empty": "No current alerts"
+  },
   "dashboard": {
     "title": "Dashboard",
     "columns": {
@@ -196,31 +190,31 @@
       }
     },
     "alerts": {
-  "title": "Central Alerts",
-  "total": "Total alerts",
-  "totalHint": "All current alerts",
-  "danger": "Critical alerts",
-  "dangerHint": "Items requiring urgent action",
-  "warn": "Warning alerts",
-  "warnHint": "Items that need follow-up",
-  "info": "Info alerts",
-  "infoHint": "Informational items only",
-  "latestTableTitle": "Latest alerts",
-  "emptyTitle": "No current alerts",
-  "emptyHint": "The system currently has no open alerts",
-  "columns": {
-    "severity": "Priority",
-    "area": "Area",
-    "title": "Title",
-    "reference": "Reference",
-    "createdAt": "Date"
-  },
-  "severity": {
-    "danger": "Critical",
-    "warn": "Warning",
-    "info": "Info"
-  }
-},
+      "title": "Central Alerts",
+      "total": "Total alerts",
+      "totalHint": "All current alerts",
+      "danger": "Critical alerts",
+      "dangerHint": "Items requiring urgent action",
+      "warn": "Warning alerts",
+      "warnHint": "Items that need follow-up",
+      "info": "Info alerts",
+      "infoHint": "Informational items only",
+      "latestTableTitle": "Latest alerts",
+      "emptyTitle": "No current alerts",
+      "emptyHint": "The system currently has no open alerts",
+      "columns": {
+        "severity": "Priority",
+        "area": "Area",
+        "title": "Title",
+        "reference": "Reference",
+        "createdAt": "Date"
+      },
+      "severity": {
+        "danger": "Critical",
+        "warn": "Warning",
+        "info": "Info"
+      }
+    },
     "maintenance": {
       "actionRequired": "Maintenance – Action Required",
       "openWorkOrders": {
@@ -279,96 +273,96 @@
     }
   },
   "alertsPage": {
-  "title": "Alerts Center",
-  "subtitle": "Monitor all system alerts from one place",
-  "tableTitle": "All Alerts",
-  "filteredCount": "Filtered results:",
-  "clearFilters": "Clear filters",
-  "read": "Read",
-  "unread": "Unread",
-  "unreadHint": "Alerts that have not been opened yet",
-  "status": "Status",
-  "markAllRead": "Mark all as read",
-  "filters": {
-    "all": "All",
-    "severity": "Severity",
-    "area": "Area",
-    "type": "Alert type",
-    "readStatus": "Read status"
+    "title": "Alerts Center",
+    "subtitle": "Monitor all system alerts from one place",
+    "tableTitle": "All Alerts",
+    "filteredCount": "Filtered results:",
+    "clearFilters": "Clear filters",
+    "read": "Read",
+    "unread": "Unread",
+    "unreadHint": "Alerts that have not been opened yet",
+    "status": "Status",
+    "markAllRead": "Mark all as read",
+    "filters": {
+      "all": "All",
+      "severity": "Severity",
+      "area": "Area",
+      "type": "Alert type",
+      "readStatus": "Read status"
+    },
+    "types": {
+      "tripFinanceClosePending": "Trip needs financial close",
+      "arOverdue": "Overdue client invoice",
+      "arDueSoon": "Client invoice due soon",
+      "expensePendingTooLong": "Expense pending too long",
+      "advanceOpenTooLong": "Advance open too long",
+      "maintenanceOpenWorkOrder": "Open work order",
+      "maintenanceQaNeeds": "Work order needs QA",
+      "maintenanceQaFailed": "QA failed",
+      "maintenancePartsMismatch": "Parts mismatch",
+      "vehicleLicenseExpired": "Vehicle license expired",
+      "vehicleLicenseExpiring": "Vehicle license expiring soon",
+      "driverLicenseExpired": "Driver license expired",
+      "driverLicenseExpiring": "Driver license expiring soon"
+    }
   },
-  "types": {
-    "tripFinanceClosePending": "Trip needs financial close",
-    "arOverdue": "Overdue client invoice",
-    "arDueSoon": "Client invoice due soon",
-    "expensePendingTooLong": "Expense pending too long",
-    "advanceOpenTooLong": "Advance open too long",
-    "maintenanceOpenWorkOrder": "Open work order",
-    "maintenanceQaNeeds": "Work order needs QA",
-    "maintenanceQaFailed": "QA failed",
-    "maintenancePartsMismatch": "Parts mismatch",
-    "vehicleLicenseExpired": "Vehicle license expired",
-    "vehicleLicenseExpiring": "Vehicle license expiring soon",
-    "driverLicenseExpired": "Driver license expired",
-    "driverLicenseExpiring": "Driver license expiring soon"
-  }
-},
-"dashboardAssistant": {
-  "title": "Dashboard Assistant",
-  "newChat": "New chat",
-  "currentContext": "Current context:",
-  "quickInsights": "Quick insights",
-  "assistant": "Assistant",
-  "you": "You",
-  "executeNow": "Execute now",
-  "analyzing": "Analyzing...",
-  "suggestedFollowups": "Suggested follow-ups",
-  "placeholder": "Type your question here...",
-  "send": "Send",
-  "error": "An error occurred while contacting the assistant.",
-  "status": {
-    "needsMoreInfo": "Needs more information",
-    "readyToExecute": "Ready to execute",
-    "executed": "Executed",
-    "executionFailed": "Execution failed"
+  "dashboardAssistant": {
+    "title": "Dashboard Assistant",
+    "newChat": "New chat",
+    "currentContext": "Current context:",
+    "quickInsights": "Quick insights",
+    "assistant": "Assistant",
+    "you": "You",
+    "executeNow": "Execute now",
+    "analyzing": "Analyzing...",
+    "suggestedFollowups": "Suggested follow-ups",
+    "placeholder": "Type your question here...",
+    "send": "Send",
+    "error": "An error occurred while contacting the assistant.",
+    "status": {
+      "needsMoreInfo": "Needs more information",
+      "readyToExecute": "Ready to execute",
+      "executed": "Executed",
+      "executionFailed": "Execution failed"
+    },
+    "welcome": {
+      "finance": "Hi, ask me about expenses, vendors, and approval statuses.",
+      "ar": "Hi, ask me about customer receivables, overdue balances, and top debtors.",
+      "maintenance": "Hi, ask me about open work orders and maintenance cost.",
+      "inventory": "Hi, ask me about low-stock items and top issued parts.",
+      "trips": "Hi, ask me about active trips, financial close, and top clients or vehicles."
+    },
+    "examples": {
+      "finance": "Examples: What is total expense this month? / Show top 5 vendors by expenses / What is the top expense type?",
+      "ar": "Examples: What is total outstanding receivables? / Show top 5 debtors / the first one",
+      "maintenance": "Examples: How many open work orders? / Show top 5 vehicles by maintenance cost / the first one",
+      "inventory": "Examples: Which items are low in stock? / Show top 5 issued parts / the first one",
+      "trips": "Examples: Show active trips / Show top 5 clients by trips / the first one / its trips"
+    }
   },
-  "welcome": {
-    "finance": "Hi, ask me about expenses, vendors, and approval statuses.",
-    "ar": "Hi, ask me about customer receivables, overdue balances, and top debtors.",
-    "maintenance": "Hi, ask me about open work orders and maintenance cost.",
-    "inventory": "Hi, ask me about low-stock items and top issued parts.",
-    "trips": "Hi, ask me about active trips, financial close, and top clients or vehicles."
+  "dashboardInsights": {
+    "emptyTitle": "No insights available right now",
+    "loadError": "Unable to load insights right now.",
+    "groups": {
+      "error": "Critical items",
+      "warning": "Need attention",
+      "info": "Quick info"
+    },
+    "titles": {
+      "finance": "Finance Insights",
+      "ar": "AR Insights",
+      "maintenance": "Maintenance Insights",
+      "inventory": "Inventory Insights",
+      "trips": "Trips Insights"
+    },
+    "subtitles": {
+      "finance": "A quick summary of key expense, vendor, and approval indicators.",
+      "ar": "Key indicators for receivables, overdue balances, and top debtors.",
+      "maintenance": "Indicators for open work orders and maintenance costs.",
+      "inventory": "Key alerts around low-stock items and top issued parts.",
+      "trips": "A summary of active trips, financial close, and important operating patterns."
+    }
   },
-  "examples": {
-    "finance": "Examples: What is total expense this month? / Show top 5 vendors by expenses / What is the top expense type?",
-    "ar": "Examples: What is total outstanding receivables? / Show top 5 debtors / the first one",
-    "maintenance": "Examples: How many open work orders? / Show top 5 vehicles by maintenance cost / the first one",
-    "inventory": "Examples: Which items are low in stock? / Show top 5 issued parts / the first one",
-    "trips": "Examples: Show active trips / Show top 5 clients by trips / the first one / its trips"
-  }
-},
-"dashboardInsights": {
-  "emptyTitle": "No insights available right now",
-  "loadError": "Unable to load insights right now.",
-  "groups": {
-    "error": "Critical items",
-    "warning": "Need attention",
-    "info": "Quick info"
-  },
-  "titles": {
-    "finance": "Finance Insights",
-    "ar": "AR Insights",
-    "maintenance": "Maintenance Insights",
-    "inventory": "Inventory Insights",
-    "trips": "Trips Insights"
-  },
-  "subtitles": {
-    "finance": "A quick summary of key expense, vendor, and approval indicators.",
-    "ar": "Key indicators for receivables, overdue balances, and top debtors.",
-    "maintenance": "Indicators for open work orders and maintenance costs.",
-    "inventory": "Key alerts around low-stock items and top issued parts.",
-    "trips": "A summary of active trips, financial close, and important operating patterns."
-  }
-},
   "users": {
     "title": "Users",
     "subtitle": "Admin-only user management",
@@ -758,167 +752,98 @@
       "okToClose": "✅ Ready to close."
     }
   },
- "sites": {
-  "title": "Sites",
-  "subtitle": "Manage client sites",
-  "filters": {
-    "searchPlaceholder": "Search sites…",
-    "allClients": "All clients"
-  },
-  "actions": {
-    "add": "+ Add Site"
-  },
-  "table": {
-    "name": "Name",
-    "client": "Client",
-    "address": "Address",
-    "status": "Status",
-    "created": "Created",
-    "actions": "Actions"
-  },
-  "empty": "No sites found.",
-  "modal": {
-    "createTitle": "Create Site",
-    "editTitle": "Edit Site",
-    "cancel": "Cancel",
-    "save": "Save"
-  },
-  "fields": {
-    "name": "Site name",
-    "client": "Client",
-    "address": "Address"
-  },
-  "placeholders": {
-    "name": "Site name",
-    "address": "Site address",
-    "noClient": "Select client"
-  },
-  "toast": {
-    "nameRequired": "Site name is required",
-    "clientRequired": "Client is required",
-    "created": "Site created",
-    "updated": "Site updated",
-    "saveFailed": "Save failed",
-    "toggled": "Site status changed",
-    "toggleFailed": "Toggle failed"
-  },
-  "errors": {
-    "loadFailed": "Failed to load sites"
-  }
-},
-  "clients": {
-  "title": "Clients",
-  "subtitle": "Manage clients",
-  "subtitleList": "Clients list",
-
-  "actions": {
-    "add": "Add client",
-    "viewDetails": "View details",
-    "edit": "Edit",
-    "toggle": "Enable / Disable",
-    "addContract": "Add contract"
-  },
-
-  "filters": {
-    "searchPlaceholder": "Search by client name or phone..."
-  },
-
-  "table": {
-    "name": "Client name",
-    "email": "Email",
-    "phone": "Phone",
-    "status": "Status",
-    "actions": "Actions"
-  },
-
-  "empty": "No clients",
-  "emptyHint": "Add your first client to get started",
-
-  "confirm": {
-    "disableDesc": "Do you want to disable this client?",
-    "enableDesc": "Do you want to enable this client?"
-  },
-
-  "toast": {
-    "created": "Client created",
-    "updated": "Client updated",
-    "toggled": "Client status updated"
-  },
-
-  "errors": {
-    "loadFailed": "Failed to load clients",
-    "saveFailed": "Failed to save client",
-    "toggleFailed": "Failed to update status",
-    "nameRequired": "Client name is required"
-  },
-
-  "form": {
-    "sections": {
-      "basic": "Basic information",
-      "contact": "Primary contact",
-      "notes": "Notes"
+  "sites": {
+    "title": "Sites",
+    "subtitle": "Manage client sites",
+    "filters": {
+      "searchPlaceholder": "Search sites…",
+      "allClients": "All clients"
     },
-
-    "name": "Client name",
-    "email": "Email",
-    "phone": "Phone",
-    "hqAddress": "HQ address",
-    "contactName": "Primary contact name",
-    "contactPhone": "Primary contact phone",
-    "contactEmail": "Primary contact email",
-    "taxNo": "Tax number",
-    "notes": "Notes",
-    "status": "Status",
-
-    "placeholders": {
-      "name": "Example: Arab Contractors",
-      "email": "example@company.com",
-      "phone": "01000000000",
-      "hqAddress": "Cairo - Nasr City",
-      "contactName": "Primary contact name",
-      "contactPhone": "01000000000",
-      "contactEmail": "contact@company.com",
-      "taxNo": "123456789",
-      "notes": "Enter any notes..."
-    }
-  },
-
-  "new": {
-    "title": "Add client",
-    "subtitle": "Create a new client",
     "actions": {
-      "create": "Create client",
-      "cancel": "Cancel"
+      "add": "+ Add Site"
+    },
+    "table": {
+      "name": "Name",
+      "client": "Client",
+      "address": "Address",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "empty": "No sites found.",
+    "modal": {
+      "createTitle": "Create Site",
+      "editTitle": "Edit Site",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "fields": {
+      "name": "Site name",
+      "client": "Client",
+      "address": "Address"
+    },
+    "placeholders": {
+      "name": "Site name",
+      "address": "Site address",
+      "noClient": "Select client"
     },
     "toast": {
-      "created": "Client created successfully"
+      "nameRequired": "Site name is required",
+      "clientRequired": "Client is required",
+      "created": "Site created",
+      "updated": "Site updated",
+      "saveFailed": "Save failed",
+      "toggled": "Site status changed",
+      "toggleFailed": "Toggle failed"
     },
     "errors": {
-      "createFailed": "Failed to create client"
+      "loadFailed": "Failed to load sites"
     }
   },
-
-  "edit": {
-    "title": "Edit client",
-    "subtitle": "Update client details"
-  },
-
-  "details": {
-    "title": "Client details",
-    "subtitle": "View client details and activity",
-
+  "clients": {
+    "title": "Clients",
+    "subtitle": "Manage clients",
+    "subtitleList": "Clients list",
     "actions": {
-      "backToList": "Back to clients list"
+      "add": "Add client",
+      "viewDetails": "View details",
+      "edit": "Edit",
+      "toggle": "Enable / Disable",
+      "addContract": "Add contract"
     },
-
     "filters": {
-      "month": "Month",
-      "monthHint": "Format: YYYY-MM",
-      "thisMonth": "This month"
+      "searchPlaceholder": "Search by client name or phone..."
     },
-
-    "profile": {
-      "title": "Client details",
+    "table": {
+      "name": "Client name",
+      "email": "Email",
+      "phone": "Phone",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "empty": "No clients",
+    "emptyHint": "Add your first client to get started",
+    "confirm": {
+      "disableDesc": "Do you want to disable this client?",
+      "enableDesc": "Do you want to enable this client?"
+    },
+    "toast": {
+      "created": "Client created",
+      "updated": "Client updated",
+      "toggled": "Client status updated"
+    },
+    "errors": {
+      "loadFailed": "Failed to load clients",
+      "saveFailed": "Failed to save client",
+      "toggleFailed": "Failed to update status",
+      "nameRequired": "Client name is required"
+    },
+    "form": {
+      "sections": {
+        "basic": "Basic information",
+        "contact": "Primary contact",
+        "notes": "Notes"
+      },
       "name": "Client name",
       "email": "Email",
       "phone": "Phone",
@@ -929,99 +854,144 @@
       "taxNo": "Tax number",
       "notes": "Notes",
       "status": "Status",
-      "createdAt": "Created at"
-    },
-
-    "kpi": {
-      "totalInvoiced": "Total invoiced",
-      "totalPaid": "Total collected",
-      "balance": "Balance",
-      "monthlyTripRevenue": "Monthly trip revenue",
-      "totalTripsThisMonth": "Trips this month",
-      "activeSites": "Active sites",
-      "totalSites": "Total sites",
-      "hintInvoices": "Total invoices excluding cancelled ones",
-      "hintPayments": "Total collections excluding cancelled ones",
-      "hintBalance": "Invoices minus collections"
-    },
-
-    "summary": {
-      "title": "Activity summary",
-      "contracts": "Total contracts",
-      "month": "Month",
-      "activeSites": "Active sites",
-      "sites": "Total sites"
-    },
-
-    "sites": {
-      "title": "Sites",
-      "subtitle": "Sites and trip count during ({month})",
-      "empty": "No sites",
-      "emptyHint": "This client currently has no sites.",
-      "table": {
-        "name": "Site",
-        "address": "Address",
-        "city": "City",
-        "tripsThisMonth": "Trips this month",
-        "status": "Status"
+      "placeholders": {
+        "name": "Example: Arab Contractors",
+        "email": "example@company.com",
+        "phone": "01000000000",
+        "hqAddress": "Cairo - Nasr City",
+        "contactName": "Primary contact name",
+        "contactPhone": "01000000000",
+        "contactEmail": "contact@company.com",
+        "taxNo": "123456789",
+        "notes": "Enter any notes..."
       }
     },
-
-    "contracts": {
-      "title": "Contracts",
-      "subtitle": "Contracts linked to this client",
-      "empty": "No contracts",
-      "emptyHint": "No contracts have been added for this client yet.",
-      "table": {
-        "contractNo": "Contract no.",
-        "startDate": "Start date",
-        "endDate": "End date",
-        "billingCycle": "Billing cycle",
-        "value": "Value",
+    "new": {
+      "title": "Add client",
+      "subtitle": "Create a new client",
+      "actions": {
+        "create": "Create client",
+        "cancel": "Cancel"
+      },
+      "toast": {
+        "created": "Client created successfully"
+      },
+      "errors": {
+        "createFailed": "Failed to create client"
+      }
+    },
+    "edit": {
+      "title": "Edit client",
+      "subtitle": "Update client details"
+    },
+    "details": {
+      "title": "Client details",
+      "subtitle": "View client details and activity",
+      "actions": {
+        "backToList": "Back to clients list"
+      },
+      "filters": {
+        "month": "Month",
+        "monthHint": "Format: YYYY-MM",
+        "thisMonth": "This month"
+      },
+      "profile": {
+        "title": "Client details",
+        "name": "Client name",
+        "email": "Email",
+        "phone": "Phone",
+        "hqAddress": "HQ address",
+        "contactName": "Primary contact name",
+        "contactPhone": "Primary contact phone",
+        "contactEmail": "Primary contact email",
+        "taxNo": "Tax number",
+        "notes": "Notes",
         "status": "Status",
-        "actions": "Actions"
+        "createdAt": "Created at"
+      },
+      "kpi": {
+        "totalInvoiced": "Total invoiced",
+        "totalPaid": "Total collected",
+        "balance": "Balance",
+        "monthlyTripRevenue": "Monthly trip revenue",
+        "totalTripsThisMonth": "Trips this month",
+        "activeSites": "Active sites",
+        "totalSites": "Total sites",
+        "hintInvoices": "Total invoices excluding cancelled ones",
+        "hintPayments": "Total collections excluding cancelled ones",
+        "hintBalance": "Invoices minus collections"
+      },
+      "summary": {
+        "title": "Activity summary",
+        "contracts": "Total contracts",
+        "month": "Month",
+        "activeSites": "Active sites",
+        "sites": "Total sites"
+      },
+      "sites": {
+        "title": "Sites",
+        "subtitle": "Sites and trip count during ({month})",
+        "empty": "No sites",
+        "emptyHint": "This client currently has no sites.",
+        "table": {
+          "name": "Site",
+          "address": "Address",
+          "city": "City",
+          "tripsThisMonth": "Trips this month",
+          "status": "Status"
+        }
+      },
+      "contracts": {
+        "title": "Contracts",
+        "subtitle": "Contracts linked to this client",
+        "empty": "No contracts",
+        "emptyHint": "No contracts have been added for this client yet.",
+        "table": {
+          "contractNo": "Contract no.",
+          "startDate": "Start date",
+          "endDate": "End date",
+          "billingCycle": "Billing cycle",
+          "value": "Value",
+          "status": "Status",
+          "actions": "Actions"
+        }
+      },
+      "invoices": {
+        "title": "Invoices",
+        "subtitle": "Latest client invoices",
+        "empty": "No invoices",
+        "emptyHint": "No invoices are recorded for this client.",
+        "table": {
+          "invoiceNo": "Invoice no.",
+          "issueDate": "Issue date",
+          "dueDate": "Due date",
+          "status": "Status",
+          "amount": "Amount"
+        }
+      },
+      "payments": {
+        "title": "Payments",
+        "subtitle": "Latest client payments",
+        "empty": "No payments",
+        "emptyHint": "No payments are recorded for this client.",
+        "table": {
+          "paymentDate": "Payment date",
+          "amount": "Amount",
+          "method": "Method",
+          "status": "Status",
+          "reference": "Reference"
+        }
+      },
+      "errors": {
+        "loadFailed": "Failed to load client details"
       }
     },
-
-    "invoices": {
-      "title": "Invoices",
-      "subtitle": "Latest client invoices",
-      "empty": "No invoices",
-      "emptyHint": "No invoices are recorded for this client.",
-      "table": {
-        "invoiceNo": "Invoice no.",
-        "issueDate": "Issue date",
-        "dueDate": "Due date",
-        "status": "Status",
-        "amount": "Amount"
-      }
-    },
-
-    "payments": {
-      "title": "Payments",
-      "subtitle": "Latest client payments",
-      "empty": "No payments",
-      "emptyHint": "No payments are recorded for this client.",
-      "table": {
-        "paymentDate": "Payment date",
-        "amount": "Amount",
-        "method": "Method",
-        "status": "Status",
-        "reference": "Reference"
-      }
-    },
-
-    "errors": {
-      "loadFailed": "Failed to load client details"
+    "ar": {
+      "ledger": "Ledger",
+      "invoices": "Invoices",
+      "payments": "Payments"
     }
   },
-
-  "ar": {
-    "ledger": "Ledger",
-    "invoices": "Invoices",
-    "payments": "Payments"
-  }
-},
   "financeDashboard": {
     "title": "Finance Dashboard",
     "roleLabel": "Role",
@@ -1159,7 +1129,6 @@
       "appealed": "Appealed"
     }
   },
-  
   "financeAdvanceDetails": {
     "title": "Advance Details",
     "tabs": {
@@ -1168,9 +1137,9 @@
       "actions": "Actions"
     },
     "common": {
-    "confirm": "Confirm",
-    "cancel": "Cancel"
-  },
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
     "confirm": {
       "approve": "Are you sure you want to approve this expense?"
     },
@@ -1199,151 +1168,159 @@
     }
   },
   "financePurchases": {
-  "title": "Purchases",
-  "viewOnly": "view only",
-  "tabs": {
-    "all": "All",
-    "draft": "Draft",
-    "posted": "Posted",
-    "submitted": "Submitted"
-  },
-  "filters": {
-    "searchPh": "supplier / invoice / id / warehouse"
-  },
-  "kpi": {
-    "submittedCount": "Submitted Count (this page)",
-    "submittedSum": "Submitted Sum (this page)",
-    "postedCount": "Posted Count (this page)",
-    "postedSum": "Posted Sum (this page)"
-  },
-  "table": {
-    "title": "Purchases (Receipts)",
-    "id": "ID",
-    "warehouse": "Warehouse",
-    "supplier": "Supplier",
-    "invoice": "Invoice",
-    "items": "Items",
-    "total": "Total",
-    "status": "Status",
-    "createdAt": "Created At"
-  },
-  "actions": {
-    "post": "Post"
-  },
-  "meta": {
-    "postedAt": "Posted at"
-  },
-  "empty": {
-    "title": "No purchases found",
-    "hint": "Try changing the tab or search."
-  },
-  "confirm": {
-    "postTitle": "Confirm Post",
-    "postDesc": "This will add items to inventory and create a COMPANY expense in Pending status."
-  },
-  "toast": {
-    "postedOk": "Posted successfully"
-  },
-  "errors": {
-    "loadFailed": "Failed to load purchases",
-    "postFailed": "Failed to post receipt",
-    "detailsLoadFailed": "Failed to load purchase details"
-  },
-  "details": {
-    "title": "Purchase Details",
-    "id": "ID",
-    "kpi": {
-      "items": "Items count",
-      "itemsSum": "Items unit cost sum",
-      "total": "Invoice total",
-      "cashExpense": "Linked expense"
+    "title": "Purchases",
+    "viewOnly": "view only",
+    "tabs": {
+      "all": "All",
+      "draft": "Draft",
+      "posted": "Posted",
+      "submitted": "Submitted"
     },
-    "fields": {
+    "filters": {
+      "searchPh": "supplier / invoice / id / warehouse"
+    },
+    "kpi": {
+      "submittedCount": "Submitted Count (this page)",
+      "submittedSum": "Submitted Sum (this page)",
+      "postedCount": "Posted Count (this page)",
+      "postedSum": "Posted Sum (this page)"
+    },
+    "table": {
+      "title": "Purchases (Receipts)",
+      "id": "ID",
       "warehouse": "Warehouse",
       "supplier": "Supplier",
       "invoice": "Invoice",
-      "createdAt": "Created At",
-      "postedAt": "Posted At",
-      "notes": "Notes"
+      "items": "Items",
+      "total": "Total",
+      "status": "Status",
+      "createdAt": "Created At"
     },
-    "table": {
-      "title": "Items",
-      "part": "Part",
-      "internalSerial": "Internal serial",
-      "manufacturerSerial": "Manufacturer serial",
-      "unitCost": "Unit cost",
-      "notes": "Notes"
+    "actions": {
+      "post": "Post"
+    },
+    "meta": {
+      "postedAt": "Posted at"
     },
     "empty": {
-      "title": "No items",
-      "hint": "No items were added to this receipt."
+      "title": "No purchases found",
+      "hint": "Try changing the tab or search."
     },
-    "actions": { "submit": "Submit", "post": "Post" },
-"confirm": {
-  "submitTitle": "Confirm Submit",
-  "submitDesc": "This will submit the receipt for accounting review and posting.",
-  "submit": "Submit",
-  "post": "Post"
-},
-"toast": { "submittedOk": "Submitted successfully", "postedOk": "Posted successfully" },
-"errors": { "submitFailed": "Failed to submit receipt" }
-  }
-},
-"financeARSection": {
-  "clients": {
-    "title": "Accounts Receivable Clients",
-    "subtitle": "Manage credit customers",
-    "add": "+ Add AR Client",
-    "name": "Client Name",
-    "phone": "Phone",
-    "email": "Email",
-    "creditLimit": "Credit Limit",
-    "active": "Active",
-    "created": "Created At",
-    "empty": "No AR clients found",
-    "createdOk": "Client created successfully",
-    "updatedOk": "Client updated successfully",
-    "saveFailed": "Save failed"
-  },
-  "invoices": {
-    "title": "AR Invoices",
-    "create": "+ Create Invoice",
-    "client": "Client",
-    "issueDate": "Issue Date",
-    "dueDate": "Due Date",
-    "amount": "Amount",
-    "status": "Status",
-    "notes": "Notes",
-    "empty": "No invoices found",
-    "statusTypes": {
-      "DRAFT": "Draft",
-      "ISSUED": "Issued",
-      "PARTIAL": "Partially Paid",
-      "PAID": "Paid",
-      "OVERDUE": "Overdue"
+    "confirm": {
+      "postTitle": "Confirm Post",
+      "postDesc": "This will add items to inventory and create a COMPANY expense in Pending status."
+    },
+    "toast": {
+      "postedOk": "Posted successfully"
+    },
+    "errors": {
+      "loadFailed": "Failed to load purchases",
+      "postFailed": "Failed to post receipt",
+      "detailsLoadFailed": "Failed to load purchase details"
+    },
+    "details": {
+      "title": "Purchase Details",
+      "id": "ID",
+      "kpi": {
+        "items": "Items count",
+        "itemsSum": "Items unit cost sum",
+        "total": "Invoice total",
+        "cashExpense": "Linked expense"
+      },
+      "fields": {
+        "warehouse": "Warehouse",
+        "supplier": "Supplier",
+        "invoice": "Invoice",
+        "createdAt": "Created At",
+        "postedAt": "Posted At",
+        "notes": "Notes"
+      },
+      "table": {
+        "title": "Items",
+        "part": "Part",
+        "internalSerial": "Internal serial",
+        "manufacturerSerial": "Manufacturer serial",
+        "unitCost": "Unit cost",
+        "notes": "Notes"
+      },
+      "empty": {
+        "title": "No items",
+        "hint": "No items were added to this receipt."
+      },
+      "actions": {
+        "submit": "Submit",
+        "post": "Post"
+      },
+      "confirm": {
+        "submitTitle": "Confirm Submit",
+        "submitDesc": "This will submit the receipt for accounting review and posting.",
+        "submit": "Submit",
+        "post": "Post"
+      },
+      "toast": {
+        "submittedOk": "Submitted successfully",
+        "postedOk": "Posted successfully"
+      },
+      "errors": {
+        "submitFailed": "Failed to submit receipt"
+      }
     }
   },
-  "payments": {
-    "title": "AR Payments",
-    "add": "+ Add Payment",
-    "invoice": "Invoice",
-    "amount": "Amount",
-    "paymentDate": "Payment Date",
-    "method": "Payment Method",
-    "reference": "Reference",
-    "empty": "No payments found"
+  "financeARSection": {
+    "clients": {
+      "title": "Accounts Receivable Clients",
+      "subtitle": "Manage credit customers",
+      "add": "+ Add AR Client",
+      "name": "Client Name",
+      "phone": "Phone",
+      "email": "Email",
+      "creditLimit": "Credit Limit",
+      "active": "Active",
+      "created": "Created At",
+      "empty": "No AR clients found",
+      "createdOk": "Client created successfully",
+      "updatedOk": "Client updated successfully",
+      "saveFailed": "Save failed"
+    },
+    "invoices": {
+      "title": "AR Invoices",
+      "create": "+ Create Invoice",
+      "client": "Client",
+      "issueDate": "Issue Date",
+      "dueDate": "Due Date",
+      "amount": "Amount",
+      "status": "Status",
+      "notes": "Notes",
+      "empty": "No invoices found",
+      "statusTypes": {
+        "DRAFT": "Draft",
+        "ISSUED": "Issued",
+        "PARTIAL": "Partially Paid",
+        "PAID": "Paid",
+        "OVERDUE": "Overdue"
+      }
+    },
+    "payments": {
+      "title": "AR Payments",
+      "add": "+ Add Payment",
+      "invoice": "Invoice",
+      "amount": "Amount",
+      "paymentDate": "Payment Date",
+      "method": "Payment Method",
+      "reference": "Reference",
+      "empty": "No payments found"
+    },
+    "ledger": {
+      "title": "Client Ledger",
+      "client": "Client",
+      "date": "Date",
+      "description": "Description",
+      "debit": "Debit",
+      "credit": "Credit",
+      "balance": "Balance",
+      "empty": "No ledger entries"
+    }
   },
-  "ledger": {
-    "title": "Client Ledger",
-    "client": "Client",
-    "date": "Date",
-    "description": "Description",
-    "debit": "Debit",
-    "credit": "Credit",
-    "balance": "Balance",
-    "empty": "No ledger entries"
-  }
-},
   "trips": {
     "title": "Trips",
     "subtitle": "Trips list + drill-down to details",
@@ -1691,5 +1668,141 @@
     "cashExpenseAmount": "Amount",
     "cashExpenseStatus": "Approval Status",
     "cashExpenseType": "Expense Type"
+  },
+  "contracts": {
+    "title": "Contracts",
+    "subtitle": "Manage contracts with clients",
+    "subtitleByClient": "View contracts for the selected client",
+    "actions": {
+      "add": "Add Contract",
+      "back": "Back",
+      "view": "View",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saveContract": "Save Contract",
+      "addPricingRule": "Add Pricing Rule",
+      "viewAllPricingRules": "View All"
+    },
+    "kpi": {
+      "totalContracts": "Total Contracts",
+      "activeContracts": "Active Contracts",
+      "inactiveContracts": "Inactive Contracts",
+      "expiredContracts": "Expired Contracts",
+      "draftOrCancelled": "Draft / Cancelled",
+      "totalRules": "Total Rules",
+      "activeRules": "Active Rules",
+      "inactiveRules": "Inactive Rules",
+      "contractValue": "Contract Value"
+    },
+    "table": {
+      "contractNo": "Contract No.",
+      "client": "Client",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "billingCycle": "Billing Cycle",
+      "contractValue": "Contract Value",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "form": {
+      "clientId": "Client ID",
+      "contractNo": "Contract No.",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "billingCycle": "Billing Cycle",
+      "contractValue": "Contract Value",
+      "currency": "Currency",
+      "status": "Status",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "clientId": "client_id",
+      "contractNo": "CNT-2026-001",
+      "contractValue": "0",
+      "currency": "EGP",
+      "notes": "Additional notes about the contract"
+    },
+    "details": {
+      "title": "Contract Details",
+      "subtitle": "View contract data and linked pricing rules",
+      "contractTitle": "Contract {contractNo}",
+      "dataTitle": "Contract Data",
+      "quickActions": "Quick Actions",
+      "pricingRulesTitle": "Linked Pricing Rules",
+      "pricingRulesSubtitle": "All pricing rules defined for this contract"
+    },
+    "new": {
+      "title": "Add New Contract",
+      "subtitle": "Create a new contract for the client"
+    },
+    "edit": {
+      "title": "Edit Contract",
+      "subtitle": "Update contract details"
+    },
+    "pricingRules": {
+      "client": "Client",
+      "route": "Route",
+      "vehicleClass": "Vehicle Class",
+      "cargoType": "Cargo Type",
+      "tripType": "Trip Type",
+      "basePrice": "Base Price",
+      "priority": "Priority",
+      "effectivePeriod": "Effective Period",
+      "status": "Status",
+      "actions": "Actions",
+      "enable": "Enable",
+      "disable": "Disable",
+      "emptyTitle": "No pricing rules",
+      "emptyHint": "No pricing rules have been added for this contract yet."
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "EXPIRED": "Expired",
+      "DRAFT": "Draft",
+      "CANCELLED": "Cancelled"
+    },
+    "billingCycleOptions": {
+      "DAILY": "Daily",
+      "WEEKLY": "Weekly",
+      "MONTHLY": "Monthly"
+    },
+    "quickStatusActions": {
+      "setActive": "Set Active",
+      "setInactive": "Set Inactive",
+      "setExpired": "Set Expired",
+      "setDraft": "Set Draft",
+      "setCancelled": "Set Cancelled"
+    },
+    "empty": {
+      "title": "No contracts",
+      "hint": "No contract data was found.",
+      "notFound": "Contract not found"
+    },
+    "toast": {
+      "created": "Contract created successfully",
+      "updated": "Contract updated successfully",
+      "statusUpdated": "Contract status updated",
+      "pricingRuleStatusUpdated": "Pricing rule status updated"
+    },
+    "errors": {
+      "loadFailed": "Failed to load contracts",
+      "loadDetailsFailed": "Failed to load contract details",
+      "loadPricingRulesFailed": "Failed to load pricing rules",
+      "createFailed": "Failed to create contract",
+      "updateFailed": "Failed to update contract",
+      "statusFailed": "Failed to update status",
+      "pricingRuleStatusFailed": "Failed to update pricing rule status",
+      "clientRequired": "Client is required",
+      "startDateRequired": "Start date is required"
+    }
+  },
+  "language": {
+    "ar": "Arabic",
+    "en": "English"
+  },
+  "sections": {
+    "opsAction": "Operations Actions"
   }
 }
