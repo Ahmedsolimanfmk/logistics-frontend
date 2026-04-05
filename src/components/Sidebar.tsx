@@ -60,7 +60,7 @@ export function Sidebar() {
       {
         labelKey: "sidebar.finance",
         key: "finance",
-        roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR"],
+        roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR", "SUPER_ADMIN"],
         children: [
           { labelKey: "sidebar.financeOverview", href: "/finance" },
           { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
@@ -73,41 +73,69 @@ export function Sidebar() {
         ],
       },
 
-      { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR"] },
-      { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR"] },
+      { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR", "SUPER_ADMIN"] },
+      { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR", "SUPER_ADMIN"] },
 
       {
         labelKey: "sidebar.contracts",
         href: "/contracts",
-        roles: ["ADMIN", "HR", "ACCOUNTANT"],
+        roles: ["ADMIN", "HR", "ACCOUNTANT", "SUPER_ADMIN"],
       },
       {
         labelKey: "sidebar.contractPricing",
         href: "/contract-pricing",
-        roles: ["ADMIN", "HR", "ACCOUNTANT"],
+        roles: ["ADMIN", "HR", "ACCOUNTANT", "SUPER_ADMIN"],
       },
 
-      { labelKey: "sidebar.vehicles", href: "/vehicles", roles: ["ADMIN", "HR"] },
-      { labelKey: "sidebar.drivers", href: "/drivers", roles: ["ADMIN", "HR"] },
+      {
+        labelKey: "sidebar.masterData",
+        key: "masterData",
+        roles: ["ADMIN", "CONTRACT_MANAGER", "MAINTENANCE_MANAGER", "SUPER_ADMIN"],
+        children: [
+          {
+            labelKey: "sidebar.vehicleClasses",
+            href: "/contract-pricing/vehicle-classes",
+          },
+          {
+            labelKey: "sidebar.cargoTypes",
+            href: "/contract-pricing/cargo-types",
+          },
+          {
+            labelKey: "sidebar.zones",
+            href: "/contract-pricing/zones",
+          },
+          {
+            labelKey: "sidebar.routes",
+            href: "/contract-pricing/routes",
+          },
+        ],
+      },
 
-      { labelKey: "sidebar.cash", href: "/cash", roles: ["FIELD_SUPERVISOR"] },
+      { labelKey: "sidebar.vehicles", href: "/vehicles", roles: ["ADMIN", "HR", "SUPER_ADMIN"] },
+      { labelKey: "sidebar.drivers", href: "/drivers", roles: ["ADMIN", "HR", "SUPER_ADMIN"] },
+
+      { labelKey: "sidebar.cash", href: "/cash", roles: ["FIELD_SUPERVISOR", "SUPER_ADMIN"] },
 
       {
         labelKey: "sidebar.maintenance",
         key: "maintenance",
-        roles: ["ADMIN", "HR", "ACCOUNTANT", "FIELD_SUPERVISOR"],
+        roles: ["ADMIN", "HR", "ACCOUNTANT", "FIELD_SUPERVISOR", "SUPER_ADMIN"],
         children: [
           { labelKey: "sidebar.maintenanceRequests", href: "/maintenance/requests" },
           { labelKey: "sidebar.maintenanceWorkOrders", href: "/maintenance/work-orders" },
         ],
       },
 
-      { labelKey: "sidebar.vendors", href: "/vendors", roles: ["ADMIN", "ACCOUNTANT", "HR"] },
+      {
+        labelKey: "sidebar.vendors",
+        href: "/vendors",
+        roles: ["ADMIN", "ACCOUNTANT", "HR", "SUPER_ADMIN"],
+      },
 
       {
         labelKey: "sidebar.inventory",
         key: "inventory",
-        roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT"],
+        roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT", "SUPER_ADMIN"],
         children: [
           { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
           { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
@@ -116,11 +144,11 @@ export function Sidebar() {
         ],
       },
 
-      { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN"] },
+      { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN", "SUPER_ADMIN"] },
       {
         labelKey: "sidebar.supervisors",
         href: "/supervisors",
-        roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR"],
+        roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR", "SUPER_ADMIN"],
       },
     ],
     []
@@ -140,6 +168,7 @@ export function Sidebar() {
     finance: false,
     maintenance: false,
     inventory: false,
+    masterData: false,
   });
 
   useEffect(() => {
@@ -151,6 +180,18 @@ export function Sidebar() {
     }
     if (pathname?.startsWith("/inventory")) {
       setOpen((p) => ({ ...p, inventory: true }));
+    }
+    if (pathname?.startsWith("/contract-pricing/vehicle-classes")) {
+      setOpen((p) => ({ ...p, masterData: true }));
+    }
+    if (pathname?.startsWith("/contract-pricing/cargo-types")) {
+      setOpen((p) => ({ ...p, masterData: true }));
+    }
+    if (pathname?.startsWith("/contract-pricing/zones")) {
+      setOpen((p) => ({ ...p, masterData: true }));
+    }
+    if (pathname?.startsWith("/contract-pricing/routes")) {
+      setOpen((p) => ({ ...p, masterData: true }));
     }
   }, [pathname]);
 
