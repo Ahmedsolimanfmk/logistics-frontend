@@ -1,15 +1,25 @@
 import { api } from "@/src/lib/api";
 import type {
+  CargoTypePayload,
   CargoTypeRef,
+  CargoTypesFilters,
+  CargoTypesListResponse,
   PricingRule,
   PricingRulePayload,
   PricingRulesFilters,
   PricingRulesListResponse,
   PricingRouteRef,
+  PricingZoneRef,
+  RoutePayload,
+  RoutesFilters,
+  RoutesListResponse,
   VehicleClassPayload,
   VehicleClassRef,
   VehicleClassesFilters,
   VehicleClassesListResponse,
+  ZonePayload,
+  ZonesFilters,
+  ZonesListResponse,
 } from "@/src/types/contract-pricing.types";
 
 function asArray(body: any): any[] {
@@ -64,7 +74,24 @@ function normalizeSimpleList<T>(body: any) {
 
   return { items, total, page, pageSize, pages };
 }
+function normalizeCargoTypesList(body: any): CargoTypesListResponse {
+  const items = asArray(body) as CargoTypeRef[];
+  const { total, page, pageSize, pages } = normalizePagination(body, items.length);
 
+  return { items, total, page, pageSize, pages };
+}
+function normalizeZonesList(body: any): ZonesListResponse {
+  const items = asArray(body) as PricingZoneRef[];
+  const { total, page, pageSize, pages } = normalizePagination(body, items.length);
+
+  return { items, total, page, pageSize, pages };
+}
+function normalizeRoutesList(body: any): RoutesListResponse {
+  const items = asArray(body) as PricingRouteRef[];
+  const { total, page, pageSize, pages } = normalizePagination(body, items.length);
+
+  return { items, total, page, pageSize, pages };
+}
 export const contractPricingService = {
   async listRules(filters: PricingRulesFilters = {}): Promise<PricingRulesListResponse> {
     const params: Record<string, any> = {};
@@ -147,25 +174,118 @@ export const contractPricingService = {
     return normalizeSingle<VehicleClassRef>(res.data ?? res);
   },
 
-  async listCargoTypes(params?: {
-    q?: string;
-    is_active?: boolean | "";
-    page?: number;
-    pageSize?: number;
-  }) {
+    async listCargoTypes(
+    filters: CargoTypesFilters = {}
+  ): Promise<CargoTypesListResponse> {
+    const params: Record<string, any> = {
+      page: filters.page || 1,
+      pageSize: filters.pageSize || 25,
+    };
+
+    if (filters.q) params.q = filters.q;
+    if (filters.is_active !== "" && filters.is_active !== undefined) {
+      params.is_active = filters.is_active;
+    }
+
     const res = await api.get("/contract-pricing/cargo-types", { params });
-    return normalizeSimpleList<CargoTypeRef>(res.data ?? res);
+    return normalizeCargoTypesList(res.data ?? res);
+  },
+  
+  async listZones(
+    filters: ZonesFilters = {}
+  ): Promise<ZonesListResponse> {
+    const params: Record<string, any> = {
+      page: filters.page || 1,
+      pageSize: filters.pageSize || 25,
+    };
+
+    if (filters.q) params.q = filters.q;
+    if (filters.is_active !== "" && filters.is_active !== undefined) {
+      params.is_active = filters.is_active;
+    }
+
+    const res = await api.get("/contract-pricing/zones", { params });
+    return normalizeZonesList(res.data ?? res);
   },
 
-  async listRoutes(params?: {
-    q?: string;
-    client_id?: string;
-    is_active?: boolean | "";
-    page?: number;
-    pageSize?: number;
-  }) {
+  async getZoneById(id: string): Promise<PricingZoneRef> {
+    const res = await api.get(`/contract-pricing/zones/${id}`);
+    return normalizeSingle<PricingZoneRef>(res.data ?? res);
+  },
+
+  async createZone(payload: ZonePayload): Promise<PricingZoneRef> {
+    const res = await api.post("/contract-pricing/zones", payload);
+    return normalizeSingle<PricingZoneRef>(res.data ?? res);
+  },
+
+  async updateZone(id: string, payload: ZonePayload): Promise<PricingZoneRef> {
+    const res = await api.put(`/contract-pricing/zones/${id}`, payload);
+    return normalizeSingle<PricingZoneRef>(res.data ?? res);
+  },
+
+  async toggleZone(id: string): Promise<PricingZoneRef> {
+    const res = await api.patch(`/contract-pricing/zones/${id}/toggle`);
+    return normalizeSingle<PricingZoneRef>(res.data ?? res);
+  },
+
+  async getCargoTypeById(id: string): Promise<CargoTypeRef> {
+    const res = await api.get(`/contract-pricing/cargo-types/${id}`);
+    return normalizeSingle<CargoTypeRef>(res.data ?? res);
+  },
+
+  async createCargoType(payload: CargoTypePayload): Promise<CargoTypeRef> {
+    const res = await api.post("/contract-pricing/cargo-types", payload);
+    return normalizeSingle<CargoTypeRef>(res.data ?? res);
+  },
+
+  async updateCargoType(id: string, payload: CargoTypePayload): Promise<CargoTypeRef> {
+    const res = await api.put(`/contract-pricing/cargo-types/${id}`, payload);
+    return normalizeSingle<CargoTypeRef>(res.data ?? res);
+  },
+
+  async toggleCargoType(id: string): Promise<CargoTypeRef> {
+    const res = await api.patch(`/contract-pricing/cargo-types/${id}/toggle`);
+    return normalizeSingle<CargoTypeRef>(res.data ?? res);
+  },
+    async listRoutes(
+    filters: RoutesFilters = {}
+  ): Promise<RoutesListResponse> {
+    const params: Record<string, any> = {
+      page: filters.page || 1,
+      pageSize: filters.pageSize || 25,
+    };
+
+    if (filters.q) params.q = filters.q;
+    if (filters.client_id) params.client_id = filters.client_id;
+    if (filters.pickup_site_id) params.pickup_site_id = filters.pickup_site_id;
+    if (filters.dropoff_site_id) params.dropoff_site_id = filters.dropoff_site_id;
+
+    if (filters.is_active !== "" && filters.is_active !== undefined) {
+      params.is_active = filters.is_active;
+    }
+
     const res = await api.get("/contract-pricing/routes", { params });
-    return normalizeSimpleList<PricingRouteRef>(res.data ?? res);
+    return normalizeRoutesList(res.data ?? res);
+  },
+
+  async getRouteById(id: string): Promise<PricingRouteRef> {
+    const res = await api.get(`/contract-pricing/routes/${id}`);
+    return normalizeSingle<PricingRouteRef>(res.data ?? res);
+  },
+
+  async createRoute(payload: RoutePayload): Promise<PricingRouteRef> {
+    const res = await api.post("/contract-pricing/routes", payload);
+    return normalizeSingle<PricingRouteRef>(res.data ?? res);
+  },
+
+  async updateRoute(id: string, payload: RoutePayload): Promise<PricingRouteRef> {
+    const res = await api.put(`/contract-pricing/routes/${id}`, payload);
+    return normalizeSingle<PricingRouteRef>(res.data ?? res);
+  },
+
+  async toggleRoute(id: string): Promise<PricingRouteRef> {
+    const res = await api.patch(`/contract-pricing/routes/${id}/toggle`);
+    return normalizeSingle<PricingRouteRef>(res.data ?? res);
   },
 };
 

@@ -21,6 +21,47 @@ export interface PricingRouteRef {
   code?: string | null;
   name?: string | null;
   distance_km?: number | null;
+  client_id?: string | null;
+  pickup_site_id?: string | null;
+  dropoff_site_id?: string | null;
+  origin_label?: string | null;
+  destination_label?: string | null;
+  notes?: string | null;
+  is_active?: boolean;
+
+  clients?: PricingClientRef | null;
+  pickup_site?: PricingSiteRef | null;
+  dropoff_site?: PricingSiteRef | null;
+}
+export interface RoutePayload {
+  code?: string | null;
+  name: string;
+  client_id?: string | null;
+  pickup_site_id?: string | null;
+  dropoff_site_id?: string | null;
+  origin_label?: string | null;
+  destination_label?: string | null;
+  distance_km?: number | null;
+  notes?: string | null;
+  is_active?: boolean;
+}
+
+export interface RoutesFilters {
+  q?: string;
+  client_id?: string;
+  pickup_site_id?: string;
+  dropoff_site_id?: string;
+  is_active?: boolean | "";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface RoutesListResponse {
+  items: PricingRouteRef[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pages: number;
 }
 
 export interface PricingSiteRef {
@@ -32,6 +73,29 @@ export interface PricingZoneRef {
   id: string;
   code?: string | null;
   name?: string | null;
+  is_active?: boolean;
+}
+
+export interface ZonePayload {
+  code?: string | null;
+  name: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+export interface ZonesFilters {
+  q?: string;
+  is_active?: boolean | "";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ZonesListResponse {
+  items: PricingZoneRef[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pages: number;
 }
 
 export interface VehicleClassRef {
@@ -166,6 +230,27 @@ export interface PricingRulePayload {
 
 export interface PricingRulesListResponse {
   items: PricingRule[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pages: number;
+}
+export interface CargoTypePayload {
+  code: string;
+  name: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+export interface CargoTypesFilters {
+  q?: string;
+  is_active?: boolean | "";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CargoTypesListResponse {
+  items: CargoTypeRef[];
   total: number;
   page: number;
   pageSize: number;
