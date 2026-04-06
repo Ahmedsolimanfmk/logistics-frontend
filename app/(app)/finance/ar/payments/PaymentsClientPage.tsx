@@ -8,7 +8,8 @@ import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { useT } from "@/src/i18n/useT";
-import { listArPayments, submitArPayment, approveArPayment, rejectArPayment, type ArPayment } from "@/src/lib/ar.api";
+import { arPaymentsService } from "@/src/services/ar-payments.service";
+import type { ArPayment } from "@/src/types/ar.types";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -16,12 +17,20 @@ function fmtDate(d?: string | null) {
   return Number.isNaN(dt.getTime()) ? String(d) : dt.toLocaleString("ar-EG");
 }
 
+function fmtMoney(v: unknown) {
+  return Number(v || 0).toFixed(2);
+}
+
 export default function PaymentsClientPage() {
   const t = useT();
   const [rows, setRows] = useState<ArPayment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [toast, setToast] = useState<{ open: boolean; message: string; type?: "success" | "error" }>({
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    type?: "success" | "error";
+  }>({
     open: false,
     message: "",
     type: "success",
@@ -39,10 +48,14 @@ export default function PaymentsClientPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await listArPayments();
+      const res = await arPaymentsService.list();
       setRows(res.items || []);
     } catch (e: any) {
-      setToast({ open: true, message: e?.message || "Failed to load payments", type: "error" });
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || "Failed to load payments",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -57,21 +70,41 @@ export default function PaymentsClientPage() {
       {
         key: "id",
         label: "رقم",
-        render: (r: ArPayment) => (
+        render: (r) => (
           <Link className="underline underline-offset-4" href={`/finance/ar/payments/${r.id}`}>
             {String(r.id).slice(0, 8)}
           </Link>
         ),
       },
-      { key: "client", label: "العميل", render: (r: ArPayment) => r.clients?.name || r.client_id },
-      { key: "date", label: "تاريخ الدفع", render: (r: ArPayment) => fmtDate(r.payment_date) },
-      { key: "amount", label: "المبلغ", render: (r: ArPayment) => Number(r.amount || 0).toFixed(2) },
-      { key: "method", label: "الطريقة", render: (r: ArPayment) => r.method || "—" },
-      { key: "status", label: "الحالة", render: (r: ArPayment) => r.status },
+      {
+        key: "client",
+        label: "العميل",
+        render: (r) => r.clients?.name || r.client?.name || r.client_id || "—",
+      },
+      {
+        key: "date",
+        label: "تاريخ الدفع",
+        render: (r) => fmtDate(r.payment_date),
+      },
+      {
+        key: "amount",
+        label: "المبلغ",
+        render: (r) => fmtMoney(r.amount),
+      },
+      {
+        key: "method",
+        label: "الطريقة",
+        render: (r) => r.method || "—",
+      },
+      {
+        key: "status",
+        label: "الحالة",
+        render: (r) => r.status || "—",
+      },
       {
         key: "actions",
         label: "",
-        render: (r: ArPayment) => (
+        render: (r) => (
           <div className="flex gap-2 justify-end">
             {r.status === "DRAFT" && (
               <Button
@@ -84,7 +117,7 @@ export default function PaymentsClientPage() {
                     tone: "info",
                     confirmText: "إرسال",
                     action: async () => {
-                      await submitArPayment(r.id);
+                      await arPaymentsService.submit(r.id);
                       setToast({ open: true, message: "تم الإرسال", type: "success" });
                       await load();
                     },
@@ -107,7 +140,7 @@ export default function PaymentsClientPage() {
                       tone: "warning",
                       confirmText: "اعتماد",
                       action: async () => {
-                        await approveArPayment(r.id);
+                        await arPaymentsService.approve(r.id);
                         setToast({ open: true, message: "تم الاعتماد", type: "success" });
                         await load();
                       },
@@ -128,7 +161,9 @@ export default function PaymentsClientPage() {
                       tone: "danger",
                       confirmText: "رفض",
                       action: async () => {
-                        await rejectArPayment(r.id, "Rejected from UI");
+                        await arPaymentsService.reject(r.id, {
+                          rejection_reason: "Rejected from UI",
+                        });
                         setToast({ open: true, message: "تم الرفض", type: "success" });
                         await load();
                       },
@@ -143,12 +178,15 @@ export default function PaymentsClientPage() {
         ),
       },
     ],
-    [t]
+    []
   );
 
   return (
     <div className="space-y-4">
-      <PageHeader title="مدفوعات العملاء (AR)" subtitle="إنشاء/إرسال/اعتماد المدفوعات ومتابعة تخصيصها على الفواتير." />
+      <PageHeader
+        title="مدفوعات العملاء (AR)"
+        subtitle="إنشاء/إرسال/اعتماد المدفوعات ومتابعة تخصيصها على الفواتير."
+      />
 
       <DataTable
         title="المدفوعات"
@@ -160,7 +198,12 @@ export default function PaymentsClientPage() {
         emptyHint="أنشئ دفعة جديدة أو تأكد من وجود بيانات."
       />
 
-      <Toast open={toast.open} message={toast.message} type={toast.type} onClose={() => setToast((x) => ({ ...x, open: false }))} />
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((x) => ({ ...x, open: false }))}
+      />
 
       <ConfirmDialog
         open={confirm.open}

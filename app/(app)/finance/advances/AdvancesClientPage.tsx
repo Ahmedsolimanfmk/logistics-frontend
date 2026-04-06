@@ -1,22 +1,27 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
+import { Toast } from "@/src/components/Toast";
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
-import { Card } from "@/src/components/ui/Card";
 import { KpiCard } from "@/src/components/ui/KpiCard";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
-import { Toast } from "@/src/components/Toast";
+import { TabsBar } from "@/src/components/ui/TabsBar";
+import { Card } from "@/src/components/ui/Card";
 
 import { cashAdvancesService } from "@/src/services/cash-advances.service";
-import type { CashAdvance } from "@/src/types/cash-advances.types";
-import type { CashExpense } from "@/src/types/cash-expenses.types";
+import type {
+  CashAdvance,
+  CashAdvanceStatus,
+  CashAdvanceSummaryTotals,
+} from "@/src/types/cash-advances.types";
 
 function roleUpper(role: unknown): string {
   return String(role || "").toUpperCase();
@@ -44,7 +49,7 @@ function norm(value: unknown): string {
   return String(value || "").toUpperCase();
 }
 
-function LocalStatusBadge({ status }: { status: string }) {
+function LocalStatusBadge({ status }: { status?: string | null }) {
   const st = norm(status);
   const cls =
     st === "OPEN"
@@ -62,35 +67,41 @@ function LocalStatusBadge({ status }: { status: string }) {
   );
 }
 
-type TabKey = "overview" | "expenses" | "actions";
+type TabKey = CashAdvanceStatus;
 
-export default function AdvanceDetailsPage(): React.ReactElement {
+export default function AdvancesClientPage(): React.ReactElement {
   const t = useT();
-  const params = useParams();
   const router = useRouter();
-
-  const rawId = (params as Record<string, string | string[] | undefined>)?.id;
-  const id = Array.isArray(rawId) ? rawId[0] : rawId;
-  const advanceId =
-    typeof id === "string" && id && id !== "undefined" && id !== "null" ? id : "";
+  const sp = useSearchParams();
 
   const user = useAuth((s) => s.user);
+  const token = useAuth((s) => s.token);
+
   const role = roleUpper(user?.role);
+  const canManage = role === "ADMIN" || role === "ACCOUNTANT";
 
-  const isPrivileged = role === "ADMIN" || role === "ACCOUNTANT";
-  const isSupervisor = role === "FIELD_SUPERVISOR";
+  const status = (sp.get("status") || "OPEN").toUpperCase() as TabKey;
+  const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
+  const q = sp.get("q") || "";
 
-  const [tab, setTab] = useState<TabKey>("overview");
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
-  const [advance, setAdvance] = useState<CashAdvance | null>(null);
-  const [expenses, setExpenses] = useState<CashExpense[]>([]);
+  const [items, setItems] = useState<CashAdvance[]>([]);
+  const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState<CashAdvanceSummaryTotals | null>(null);
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [newSupervisorId, setNewSupervisorId] = useState("");
+  const [newAmount, setNewAmount] = useState("");
 
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
@@ -99,26 +110,50 @@ export default function AdvanceDetailsPage(): React.ReactElement {
     setTimeout(() => setToastOpen(false), 2500);
   }
 
-  async function loadAll() {
-    if (!advanceId) return;
+  const setParam = (key: string, value: string) => {
+    const params = new URLSearchParams(sp.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+
+    if (key !== "page") params.set("page", "1");
+
+    router.push(`/finance/advances?${params.toString()}`);
+  };
+
+  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
+
+  async function load() {
+    if (token === null || !token) return;
 
     setLoading(true);
-    setError(null);
+    setErr(null);
 
     try {
-      const [advanceRes, expensesRes] = await Promise.all([
-        cashAdvancesService.getById(advanceId),
-        cashAdvancesService.getExpenses(advanceId),
+      const [listRes, summaryRes] = await Promise.all([
+        cashAdvancesService.list({
+          status,
+          page,
+          page_size: pageSize,
+          q: q || undefined,
+        }),
+        cashAdvancesService.getSummary({
+          status,
+          q: q || undefined,
+        }),
       ]);
 
-      setAdvance(advanceRes);
-      setExpenses(expensesRes);
+      setItems(listRes.items);
+      setTotal(listRes.total);
+      setSummary(summaryRes.totals);
+
+      showToast("success", t("common.refresh"));
     } catch (e: any) {
       const msg =
-        e?.response?.data?.message || e?.message || t("financeAdvanceDetails.errors.loadFailed");
-      setError(msg);
-      setAdvance(null);
-      setExpenses([]);
+        e?.response?.data?.message || e?.message || t("financeAdvances.errors.loadFailed");
+      setErr(msg);
+      setItems([]);
+      setTotal(0);
+      setSummary(null);
       showToast("error", msg);
     } finally {
       setLoading(false);
@@ -126,468 +161,287 @@ export default function AdvanceDetailsPage(): React.ReactElement {
   }
 
   useEffect(() => {
-    if (!advanceId) {
-      setLoading(false);
-      setAdvance(null);
-      setExpenses([]);
-      setError(t("financeAdvanceDetails.errors.invalidId"));
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qsKey, token]);
+
+  async function submitCreate() {
+    if (!canManage) return;
+
+    const amount = Number(newAmount);
+    if (!newSupervisorId.trim()) {
+      showToast("error", t("financeAdvances.errors.supervisorRequired") || "Supervisor is required");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast("error", t("financeAdvances.errors.amountInvalid") || "Amount must be greater than 0");
       return;
     }
 
-    loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [advanceId]);
-
-  useEffect(() => {
-    if (!advance || !isSupervisor) return;
-
-    if (advance.field_supervisor_id && advance.field_supervisor_id !== user?.id) {
-      setError(t("financeAdvanceDetails.errors.forbiddenNotYours"));
-    }
-  }, [advance, isSupervisor, t, user?.id]);
-
-  const totals = useMemo(() => {
-    const approved = expenses
-      .filter((expense) =>
-        ["APPROVED", "REAPPROVED"].includes(norm(expense.approval_status))
-      )
-      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-
-    const pending = expenses
-      .filter((expense) => norm(expense.approval_status) === "PENDING")
-      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-
-    const rejected = expenses
-      .filter((expense) => norm(expense.approval_status) === "REJECTED")
-      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-
-    const advanceAmount = Number(advance?.amount || 0);
-    const remaining = advanceAmount - approved;
-
-    return { approved, pending, rejected, advanceAmount, remaining };
-  }, [expenses, advance?.amount]);
-
-  const status = norm(advance?.status);
-
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmBusy, setConfirmBusy] = useState(false);
-  const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
-  const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
-  const [confirmTone, setConfirmTone] = useState<"danger" | "warning" | "info">("warning");
-  const [confirmText, setConfirmText] = useState("تأكيد");
-  const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
-
-  function openConfirm(opts: {
-    title?: React.ReactNode;
-    description?: React.ReactNode;
-    tone?: "danger" | "warning" | "info";
-    confirmText?: string;
-    action: () => Promise<void> | void;
-  }) {
-    setConfirmTitle(opts.title ?? "تأكيد");
-    setConfirmDesc(opts.description ?? "");
-    setConfirmTone(opts.tone ?? "warning");
-    setConfirmText(opts.confirmText ?? "تأكيد");
-    setConfirmAction(() => opts.action);
-    setConfirmOpen(true);
-  }
-
-  async function submitReview() {
-    if (!isPrivileged || !advanceId) return;
-
     setBusy(true);
-    setError(null);
     try {
-      await cashAdvancesService.submitReview(advanceId);
-      showToast("success", t("common.saved") || "تم الحفظ");
-      await loadAll();
-      setTab("overview");
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        t("financeAdvanceDetails.errors.submitReviewFailed");
-      setError(msg);
-      showToast("error", msg);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function closeAdvance(
-    settlementType: "FULL" | "PARTIAL" | "ADJUSTED" | "CANCELLED",
-    amount: number,
-    notes?: string
-  ) {
-    if (!isPrivileged || !advanceId) return;
-
-    setBusy(true);
-    setError(null);
-    try {
-      await cashAdvancesService.close(advanceId, {
-        settlement_type: settlementType,
+      await cashAdvancesService.create({
+        field_supervisor_id: newSupervisorId.trim(),
         amount,
-        notes: notes?.trim() || null,
       });
-      showToast("success", t("common.saved") || "تم الحفظ");
-      await loadAll();
-      setTab("overview");
+
+      showToast("success", t("financeAdvances.toast.created") || "Created");
+      setCreateOpen(false);
+      setNewSupervisorId("");
+      setNewAmount("");
+      await load();
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        t("financeAdvanceDetails.errors.closeFailed");
-      setError(msg);
-      showToast("error", msg);
+      showToast(
+        "error",
+        e?.response?.data?.message || e?.message || t("financeAdvances.errors.createFailed")
+      );
     } finally {
       setBusy(false);
     }
   }
 
-  async function reopenAdvance(notes?: string) {
-    if (!isPrivileged || !advanceId) return;
+  const tabs: Array<{ key: TabKey; label: string }> = [
+    { key: "OPEN", label: t("financeAdvances.tabs.OPEN") || "OPEN" },
+    { key: "SETTLED", label: t("financeAdvances.tabs.SETTLED") || "SETTLED" },
+    { key: "CANCELLED", label: t("financeAdvances.tabs.CANCELLED") || "CANCELLED" },
+    { key: "ALL", label: t("financeAdvances.tabs.ALL") || "ALL" },
+  ];
 
-    setBusy(true);
-    setError(null);
-    try {
-      await cashAdvancesService.reopen(advanceId, { notes: notes?.trim() || null });
-      showToast("success", t("common.saved") || "تم الحفظ");
-      await loadAll();
-      setTab("overview");
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        t("financeAdvanceDetails.errors.reopenFailed");
-      setError(msg);
-      showToast("error", msg);
-    } finally {
-      setBusy(false);
+  const kpi = useMemo(() => {
+    if (summary) {
+      return {
+        sumAmount: Number(summary.sumAmount || 0),
+        countAll: Number(summary.countAll || 0),
+        openCount: Number(summary.openCount || 0),
+        settledCount: Number(summary.settledCount || 0),
+        canceledCount: Number(summary.canceledCount || 0),
+      };
     }
-  }
 
-  const tabs = [
-    { key: "overview" as const, label: t("financeAdvanceDetails.tabs.overview") },
-    { key: "expenses" as const, label: t("financeAdvanceDetails.tabs.expenses") },
-    { key: "actions" as const, label: t("financeAdvanceDetails.tabs.actions") },
-  ];
+    return {
+      sumAmount: items.reduce((acc, x) => acc + Number(x.amount || 0), 0),
+      countAll: items.length,
+      openCount: items.filter((x) => norm(x.status) === "OPEN").length,
+      settledCount: items.filter((x) => norm(x.status) === "SETTLED").length,
+      canceledCount: items.filter((x) => ["CANCELLED", "CANCELED"].includes(norm(x.status))).length,
+    };
+  }, [items, summary]);
 
-  const expenseColumns: DataTableColumn<CashExpense>[] = [
-    {
-      key: "amount",
-      label: t("financeAdvanceDetails.expenses.table.amount"),
-      render: (expense) => <span className="font-semibold">{fmtMoney(expense.amount)}</span>,
-    },
-    {
-      key: "type",
-      label: t("financeAdvanceDetails.expenses.table.type"),
-      render: (expense) => expense.expense_type || "—",
-    },
-    {
-      key: "status",
-      label: t("financeAdvanceDetails.expenses.table.status"),
-      render: (expense) => <span className="text-gray-700">{norm(expense.approval_status) || "—"}</span>,
-    },
-    {
-      key: "created",
-      label: t("financeAdvanceDetails.expenses.table.created"),
-      render: (expense) => <span className="text-gray-600">{fmtDate(expense.created_at)}</span>,
-    },
-    {
-      key: "link",
-      label: t("financeAdvanceDetails.expenses.table.link"),
-      headerClassName: "text-left",
-      className: "text-left",
-      render: (expense) => (
-        <Link href={`/finance/expenses/${expense.id}`}>
-          <Button variant="secondary">{t("common.view")}</Button>
-        </Link>
-      ),
-    },
-  ];
+  const columns: DataTableColumn<CashAdvance>[] = useMemo(
+    () => [
+      {
+        key: "id",
+        label: t("financeAdvances.table.id") || "ID",
+        render: (x) => <span className="font-mono text-xs">{shortId(x.id)}</span>,
+      },
+      {
+        key: "supervisor",
+        label: t("financeAdvances.table.supervisor") || "Supervisor",
+        render: (x) =>
+          x.users_cash_advances_field_supervisor_idTousers?.full_name ||
+          x.users_cash_advances_field_supervisor_idTousers?.email ||
+          x.field_supervisor_id ||
+          "—",
+      },
+      {
+        key: "amount",
+        label: t("financeAdvances.table.amount") || "Amount",
+        render: (x) => <span className="font-semibold">{fmtMoney(x.amount)}</span>,
+      },
+      {
+        key: "status",
+        label: t("financeAdvances.table.status") || "Status",
+        render: (x) => <LocalStatusBadge status={x.status} />,
+      },
+      {
+        key: "created_at",
+        label: t("financeAdvances.table.created") || "Created",
+        render: (x) => <span className="text-slate-600">{fmtDate(x.created_at)}</span>,
+      },
+      {
+        key: "actions",
+        label: t("financeAdvances.table.actions") || "Actions",
+        render: (x) => (
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/finance/advances/${x.id}`}>
+              <Button variant="secondary">{t("common.view")}</Button>
+            </Link>
+          </div>
+        ),
+      },
+    ],
+    [t]
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-        <PageHeader
-          title={
-            <div className="flex items-center gap-2">
-              <span>{t("financeAdvanceDetails.title")}</span>
-              {advance?.status ? <LocalStatusBadge status={String(advance.status)} /> : null}
-            </div>
-          }
-          subtitle={
-            <div className="text-sm text-gray-600">
-              {t("financeAdvanceDetails.labels.id")}:{" "}
-              <span className="font-mono text-gray-900">{advanceId || "—"}</span>
-            </div>
-          }
-          actions={
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={() => router.back()}>
-                {t("financeAdvanceDetails.buttons.back") || t("common.back")}
+    <div className="space-y-4" dir="rtl">
+      <PageHeader
+        title={t("financeAdvances.title") || "Cash Advances"}
+        subtitle={
+          <span className="text-slate-500">
+            {t("common.role")}:{" "}
+            <span className="font-semibold text-[rgb(var(--trex-fg))]">{role || "—"}</span>
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/finance">
+              <Button variant="secondary">{t("sidebar.finance")}</Button>
+            </Link>
+            {canManage ? (
+              <Button variant="primary" onClick={() => setCreateOpen(true)}>
+                {t("financeAdvances.actions.new") || t("common.add") || "Add"}
               </Button>
-              <Link href="/finance/advances">
-                <Button variant="secondary">
-                  {t("financeAdvanceDetails.buttons.list") || t("common.list")}
+            ) : null}
+            <Button onClick={load} disabled={loading} isLoading={loading} variant="secondary">
+              {loading ? t("common.loading") : t("common.refresh")}
+            </Button>
+          </div>
+        }
+      />
+
+      <TabsBar<TabKey> tabs={tabs} value={status} onChange={(k) => setParam("status", k)} />
+
+      <Card>
+        <FiltersBar
+          left={
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+              <div>
+                <div className="text-xs text-slate-500 mb-1">{t("common.search")}</div>
+                <input
+                  value={q}
+                  onChange={(e) => setParam("q", e.target.value)}
+                  placeholder={t("financeAdvances.filters.searchPlaceholder") || "Search"}
+                  className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
+                />
+              </div>
+
+              <div className="flex items-end">
+                <div className="text-xs text-slate-500">
+                  {t("common.total")}:{" "}
+                  <span className="font-semibold text-[rgb(var(--trex-fg))]">{total}</span>
+                  {" — "}
+                  {t("common.page")}{" "}
+                  <span className="font-semibold text-[rgb(var(--trex-fg))]">
+                    {page}/{totalPages}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-end justify-start gap-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-500">{t("common.rows")}</span>
+                  <select
+                    value={String(pageSize)}
+                    onChange={(e) => setParam("pageSize", e.target.value)}
+                    className="rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-2 py-2 outline-none text-sm"
+                  >
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                  </select>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setParam("q", "");
+                    setParam("status", "OPEN");
+                    setParam("pageSize", "25");
+                  }}
+                >
+                  {t("common.reset")}
                 </Button>
-              </Link>
-              <Button
-                variant="secondary"
-                onClick={loadAll}
-                disabled={loading || busy}
-                isLoading={loading || busy}
-              >
-                {t("financeAdvanceDetails.buttons.refresh") || t("common.refresh")}
-              </Button>
+              </div>
             </div>
           }
         />
+      </Card>
 
-        {error ? (
-          <Card className="border-red-500/20">
-            <div className="text-sm text-red-600">⚠️ {error}</div>
-          </Card>
-        ) : null}
-
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((tabItem) => {
-            const active = tab === tabItem.key;
-            return (
-              <button
-                key={tabItem.key}
-                onClick={() => setTab(tabItem.key)}
-                className={[
-                  "px-3 py-2 rounded-xl text-sm border transition",
-                  active
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
-                ].join(" ")}
-              >
-                {tabItem.label}
-              </button>
-            );
-          })}
+      {!loading && !err ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiCard label={t("financeAdvances.kpi.totalAmount") || "Total Amount"} value={fmtMoney(kpi.sumAmount)} />
+          <KpiCard label={t("financeAdvances.kpi.countAll") || "Count All"} value={kpi.countAll} />
+          <KpiCard label={t("financeAdvances.kpi.openCount") || "Open"} value={kpi.openCount} />
+          <KpiCard label={t("financeAdvances.kpi.settledCount") || "Settled"} value={kpi.settledCount} />
         </div>
+      ) : null}
 
-        {loading ? (
-          <Card>
-            <div className="text-sm text-gray-600">{t("common.loading")}</div>
-          </Card>
-        ) : tab === "overview" ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.advanceAmount")}
-                value={fmtMoney(totals.advanceAmount)}
-              />
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.approvedUsed")}
-                value={fmtMoney(totals.approved)}
-              />
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.remaining")}
-                value={fmtMoney(totals.remaining)}
-              />
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.pending")}
-                value={fmtMoney(totals.pending)}
-              />
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.rejected")}
-                value={fmtMoney(totals.rejected)}
+      {err ? (
+        <Card className="border-red-500/20">
+          <div className="text-sm text-red-600">⚠️ {err}</div>
+        </Card>
+      ) : null}
+
+      <DataTable<CashAdvance>
+        title={t("financeAdvances.title") || "Cash Advances"}
+        columns={columns}
+        rows={items}
+        loading={loading}
+        total={total}
+        page={page}
+        pages={totalPages}
+        onPrev={page <= 1 ? undefined : () => setParam("page", String(page - 1))}
+        onNext={page >= totalPages ? undefined : () => setParam("page", String(page + 1))}
+        emptyTitle={t("financeAdvances.empty") || "No advances"}
+        emptyHint={t("common.tryAdjustFilters") || "جرّب تغيير الفلاتر أو البحث."}
+        onRowClick={(row) => router.push(`/finance/advances/${row.id}`)}
+      />
+
+      <ConfirmDialog
+        open={createOpen}
+        title={t("financeAdvances.actions.new") || "Create advance"}
+        description={
+          <div className="space-y-3">
+            <div>
+              <div className="text-sm text-slate-600 mb-1">
+                {t("financeAdvances.fields.supervisorId") || "Field supervisor ID"}
+              </div>
+              <input
+                value={newSupervisorId}
+                onChange={(e) => setNewSupervisorId(e.target.value)}
+                className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
+                placeholder="uuid"
+                disabled={busy}
               />
             </div>
 
-            <Card title={t("financeAdvanceDetails.tabs.overview")}>
-              <div className="space-y-2">
-                <div className="text-xs text-gray-600">
-                  {t("financeAdvanceDetails.labels.supervisor")}
-                </div>
-                <div className="text-sm text-gray-900">
-                  {advance?.users_cash_advances_field_supervisor_idTousers?.full_name ||
-                    advance?.users_cash_advances_field_supervisor_idTousers?.email ||
-                    advance?.field_supervisor_id ||
-                    "—"}
-                </div>
-
-                <div className="mt-2 text-xs text-gray-600">
-                  {t("financeAdvanceDetails.labels.createdAt")}
-                </div>
-                <div className="text-sm text-gray-900">{fmtDate(advance?.created_at)}</div>
-
-                <div className="mt-2 text-xs text-gray-600">
-                  {t("financeAdvanceDetails.labels.notes")}
-                </div>
-                <div className="text-sm text-gray-900 whitespace-pre-wrap">
-                  {advance?.settlement_notes || "—"}
-                </div>
+            <div>
+              <div className="text-sm text-slate-600 mb-1">
+                {t("financeAdvances.fields.amount") || "Amount"}
               </div>
-            </Card>
-          </>
-        ) : tab === "expenses" ? (
-          <>
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold text-gray-900">
-                {t("financeAdvanceDetails.expenses.title")}
-              </div>
-              <Link href="/finance/expenses/new">
-                <Button variant="primary">{t("financeAdvanceDetails.buttons.newExpense")}</Button>
-              </Link>
+              <input
+                type="number"
+                value={newAmount}
+                onChange={(e) => setNewAmount(e.target.value)}
+                className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
+                placeholder="0"
+                disabled={busy}
+              />
             </div>
+          </div>
+        }
+        confirmText={t("common.save") || "Save"}
+        cancelText={t("common.cancel") || "Cancel"}
+        tone="info"
+        isLoading={busy}
+        dir="rtl"
+        onClose={() => {
+          if (busy) return;
+          setCreateOpen(false);
+        }}
+        onConfirm={submitCreate}
+      />
 
-            <DataTable<CashExpense>
-              title={t("financeAdvanceDetails.expenses.title")}
-              subtitle={
-                <span className="text-gray-600">
-                  {t("financeAdvanceDetails.labels.id")}:{" "}
-                  <span className="font-mono">{shortId(advanceId)}</span>
-                </span>
-              }
-              columns={expenseColumns}
-              rows={expenses}
-              loading={loading}
-              emptyTitle={t("financeAdvanceDetails.expenses.empty") || "لا يوجد مصروفات"}
-              emptyHint={t("common.tryAdjustFilters") || "يمكنك إضافة مصروف جديد من الزر بالأعلى."}
-              onRowClick={(row) => router.push(`/finance/expenses/${row.id}`)}
-            />
-          </>
-        ) : (
-          <Card title={t("financeAdvanceDetails.actions.title")}>
-            <div className="space-y-3">
-              <div className="text-sm text-gray-900">
-                <span className="font-semibold">{t("financeAdvanceDetails.actions.title")}</span>{" "}
-                <span className="text-xs text-gray-600">
-                  ({t("financeAdvanceDetails.actions.role")}: {role || "—"} /{" "}
-                  {t("financeAdvanceDetails.actions.status")}: {status || "—"})
-                </span>
-              </div>
-
-              {!isPrivileged ? (
-                <div className="text-sm text-gray-600">
-                  {t("financeAdvanceDetails.actions.notAvailable")}
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {status === "OPEN" ? (
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() =>
-                        openConfirm({
-                          title: t("financeAdvanceDetails.actions.submitReview"),
-                          description:
-                            t("financeAdvanceDetails.confirm.submitReview") ||
-                            "إرسال العهدة للمراجعة؟",
-                          tone: "warning",
-                          action: submitReview,
-                        })
-                      }
-                    >
-                      {t("financeAdvanceDetails.actions.submitReview")}
-                    </Button>
-                  ) : null}
-
-                  {status !== "SETTLED" ? (
-                    <Button
-                      variant="primary"
-                      disabled={busy}
-                      onClick={() =>
-                        openConfirm({
-                          title: t("financeAdvanceDetails.actions.close"),
-                          description:
-                            t("financeAdvanceDetails.confirm.close") ||
-                            "هل تريد إغلاق العهدة الآن؟",
-                          tone: "info",
-                          action: async () => {
-                            const notes =
-                              window.prompt(
-                                t("financeAdvanceDetails.prompts.closeNotesOptional")
-                              ) || "";
-
-                            let settlementType: "FULL" | "PARTIAL" | "ADJUSTED" | "CANCELLED" =
-                              "FULL";
-                            let amount = Number(Math.max(totals.remaining, 0).toFixed(2));
-
-                            if (totals.remaining < 0) {
-                              settlementType = "PARTIAL";
-                              amount = Number(Math.abs(totals.remaining).toFixed(2));
-                            }
-
-                            await closeAdvance(settlementType, amount, notes);
-                          },
-                        })
-                      }
-                    >
-                      {t("financeAdvanceDetails.actions.close")}
-                    </Button>
-                  ) : null}
-
-                  {status === "SETTLED" ? (
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() =>
-                        openConfirm({
-                          title: t("financeAdvanceDetails.actions.reopen"),
-                          description:
-                            t("financeAdvanceDetails.confirm.reopen") ||
-                            "هل تريد إعادة فتح العهدة؟",
-                          tone: "warning",
-                          action: async () => {
-                            const notes =
-                              window.prompt(
-                                t("financeAdvanceDetails.prompts.reopenNotesOptional")
-                              ) || "";
-                            await reopenAdvance(notes);
-                          },
-                        })
-                      }
-                    >
-                      {t("financeAdvanceDetails.actions.reopen")}
-                    </Button>
-                  ) : null}
-                </div>
-              )}
-
-              <div className="text-xs text-gray-600">{t("financeAdvanceDetails.hints.endpoints")}</div>
-            </div>
-          </Card>
-        )}
-
-        <ConfirmDialog
-          open={confirmOpen}
-          title={confirmTitle}
-          description={confirmDesc}
-          confirmText={confirmText}
-          cancelText={t("common.cancel") || "إلغاء"}
-          tone={confirmTone}
-          isLoading={confirmBusy}
-          dir="rtl"
-          onClose={() => {
-            if (confirmBusy) return;
-            setConfirmOpen(false);
-          }}
-          onConfirm={async () => {
-            if (!confirmAction) return;
-            setConfirmBusy(true);
-            try {
-              await confirmAction();
-            } finally {
-              setConfirmBusy(false);
-              setConfirmOpen(false);
-            }
-          }}
-        />
-
-        <Toast
-          open={toastOpen}
-          message={toastMsg}
-          type={toastType}
-          dir="rtl"
-          onClose={() => setToastOpen(false)}
-        />
-      </div>
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        dir="rtl"
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
-import { api } from "@/src/lib/api";
-import { useAuth } from "@/src/store/auth";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-// ✅ Design System
 import { Toast } from "@/src/components/Toast";
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
@@ -17,11 +15,14 @@ import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { TabsBar } from "@/src/components/ui/TabsBar";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
-function roleUpper(r: any) {
+import { cashExpensesService } from "@/src/services/cash-expenses.service";
+import { cashAdvancesService } from "@/src/services/cash-advances.service";
+
+function roleUpper(r: unknown) {
   return String(r || "").toUpperCase();
 }
 
-function fmtMoney(n: any) {
+function fmtMoney(n: unknown) {
   const v = Number(n || 0);
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
@@ -42,8 +43,7 @@ function daysBetween(a?: string | null, b?: string | null) {
   return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
-// ✅ Local small badge for payment_source (until we add SourceBadge component)
-function PaymentSourceBadge({ source }: { source: any }) {
+function PaymentSourceBadge({ source }: { source: unknown }) {
   const s = String(source || "").toUpperCase();
   const cls =
     s === "COMPANY"
@@ -69,15 +69,12 @@ export default function FinanceClientPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // Lists
   const [pendingExpenses, setPendingExpenses] = useState<any[]>([]);
   const [advances, setAdvances] = useState<any[]>([]);
 
-  // Summaries
   const [expensesSummary, setExpensesSummary] = useState<any | null>(null);
   const [advancesSummary, setAdvancesSummary] = useState<any | null>(null);
 
-  // Toast
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -88,7 +85,6 @@ export default function FinanceClientPage() {
     setToastOpen(true);
   }
 
-  // thresholds
   const PENDING_DAYS = 7;
   const ADVANCE_OPEN_DAYS = 14;
 
@@ -98,29 +94,26 @@ export default function FinanceClientPage() {
 
     try {
       const [expRes, expSumRes, advRes, advSumRes] = await Promise.all([
-        api.get("/cash/cash-expenses", {
-          params: { status: "PENDING", page: 1, page_size: 200 },
+        cashExpensesService.list({
+          status: "PENDING",
+          page: 1,
+          page_size: 200,
         }),
-        api.get("/cash/cash-expenses/summary", {
-          params: { status: "PENDING" },
+        cashExpensesService.getSummary({
+          status: "PENDING",
         }),
-        api.get("/cash/cash-advances"),
-        api.get("/cash/cash-advances/summary"),
+        cashAdvancesService.list({
+          page: 1,
+          page_size: 200,
+        }),
+        cashAdvancesService.getSummary(),
       ]);
 
-      const expData = (expRes as any)?.data ?? expRes;
-      const expItems = Array.isArray(expData) ? expData : expData?.items || [];
-      setPendingExpenses(Array.isArray(expItems) ? expItems : []);
+      setPendingExpenses(expRes.items || []);
+      setExpensesSummary(expSumRes.totals || null);
 
-      const expSumData = (expSumRes as any)?.data ?? expSumRes;
-      setExpensesSummary(expSumData?.totals || null);
-
-      const advData = (advRes as any)?.data ?? advRes;
-      const advItems = Array.isArray(advData) ? advData : advData?.items || [];
-      setAdvances(Array.isArray(advItems) ? advItems : []);
-
-      const advSumData = (advSumRes as any)?.data ?? advSumRes;
-      setAdvancesSummary(advSumData?.totals || null);
+      setAdvances(advRes.items || []);
+      setAdvancesSummary(advSumRes.totals || null);
 
       showToast("success", t("common.refresh"));
     } catch (e: any) {
@@ -143,13 +136,11 @@ export default function FinanceClientPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // open tab from URL
   useEffect(() => {
     const v = String(sp.get("tab") || "").toLowerCase();
     if (v === "pending" || v === "advances" || v === "alerts") setTab(v as TabKey);
   }, [sp]);
 
-  // visibility (role scoping)
   const visiblePending = useMemo(() => {
     if (!isSupervisor) return pendingExpenses;
     return pendingExpenses.filter((x) => x.created_by === user?.id);
@@ -163,11 +154,10 @@ export default function FinanceClientPage() {
   const openAdvances = useMemo(() => {
     return visibleAdvances.filter((a) => {
       const st = String(a.status || "").toUpperCase();
-      return st === "OPEN" || st === "IN_REVIEW";
+      return st === "OPEN";
     });
   }, [visibleAdvances]);
 
-  // KPIs
   const kpis = useMemo(() => {
     const pendingCount =
       expensesSummary?.countAll != null
@@ -184,10 +174,7 @@ export default function FinanceClientPage() {
         ? Number(advancesSummary.openCount || 0)
         : openAdvances.length;
 
-    const openTotal =
-      advancesSummary?.sumOpen != null
-        ? Number(advancesSummary.sumOpen || 0)
-        : openAdvances.reduce((s, x) => s + Number(x.amount || 0), 0);
+    const openTotal = openAdvances.reduce((s, x) => s + Number(x.amount || 0), 0);
 
     const overduePendingCount = visiblePending.filter(
       (x) => daysBetween(x.created_at) >= PENDING_DAYS
@@ -204,8 +191,12 @@ export default function FinanceClientPage() {
       openTotal,
       overduePendingCount,
       overdueAdvCount,
-      pendingFrom: expensesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly"),
-      advancesFrom: advancesSummary ? t("financeDashboard.meta.allData") : t("financeDashboard.meta.pageOnly"),
+      pendingFrom: expensesSummary
+        ? t("financeDashboard.meta.allData")
+        : t("financeDashboard.meta.pageOnly"),
+      advancesFrom: advancesSummary
+        ? t("financeDashboard.meta.allData")
+        : t("financeDashboard.meta.pageOnly"),
     };
   }, [expensesSummary, advancesSummary, visiblePending, openAdvances, t]);
 
@@ -229,7 +220,6 @@ export default function FinanceClientPage() {
     { key: "alerts" as const, label: t("financeDashboard.tabs.alerts") },
   ];
 
-  // Columns (DataTable)
   const pendingColumns: DataTableColumn<any>[] = useMemo(
     () => [
       {
@@ -293,8 +283,6 @@ export default function FinanceClientPage() {
           const sup =
             a?.users_cash_advances_field_supervisor_idTousers?.full_name ||
             a?.users_cash_advances_field_supervisor_idTousers?.email ||
-            a?.supervisors?.full_name ||
-            a?.supervisor?.full_name ||
             a?.supervisor_name ||
             a.field_supervisor_id ||
             "—";
@@ -412,8 +400,6 @@ export default function FinanceClientPage() {
           const sup =
             a?.users_cash_advances_field_supervisor_idTousers?.full_name ||
             a?.users_cash_advances_field_supervisor_idTousers?.email ||
-            a?.supervisors?.full_name ||
-            a?.supervisor?.full_name ||
             a?.supervisor_name ||
             a.field_supervisor_id ||
             "—";
@@ -476,15 +462,11 @@ export default function FinanceClientPage() {
       />
 
       {err ? (
-        <Card
-          title={t("financeDashboard.errors.loadFailed")}
-          className="border-red-500/20"
-        >
+        <Card title={t("financeDashboard.errors.loadFailed")} className="border-red-500/20">
           <div className="text-sm text-red-600">{err}</div>
         </Card>
       ) : null}
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
         <KpiCard
           label={t("financeDashboard.kpis.pendingCount")}
@@ -516,10 +498,8 @@ export default function FinanceClientPage() {
         />
       </div>
 
-      {/* Tabs */}
       <TabsBar<TabKey> tabs={tabs} value={tab} onChange={setTab} />
 
-      {/* Content */}
       {loading ? (
         <Card title={t("common.loading")}>
           <div className="text-sm text-slate-600">{t("common.loading")}</div>
@@ -580,7 +560,9 @@ export default function FinanceClientPage() {
             title={
               <div className="flex items-center gap-2">
                 <span>{t("financeDashboard.sections.alertsHeader")}</span>
-                <span className="text-xs text-slate-500">{t("financeDashboard.sections.alertsHint")}</span>
+                <span className="text-xs text-slate-500">
+                  {t("financeDashboard.sections.alertsHint")}
+                </span>
               </div>
             }
           >

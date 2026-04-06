@@ -530,6 +530,19 @@ export default function NewCashExpensePage() {
             </div>
 
             <div>
+              <div className={labelCls}>
+                {t("financeNewExpense.fields.linkVehicle") || "المركبة"}
+              </div>
+              <input
+                className={inputCls}
+                placeholder={t("financeNewExpense.fields.linkVehicle") || "معرف المركبة"}
+                value={form.vehicle_id}
+                onChange={(e) => setForm((prev) => ({ ...prev, vehicle_id: e.target.value }))}
+                disabled={loading}
+              />
+            </div>
+
+            <div>
               <div className={labelCls}>{t("financeNewExpense.fields.notes")}</div>
               <textarea
                 rows={3}

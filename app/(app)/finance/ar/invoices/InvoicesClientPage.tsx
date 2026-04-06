@@ -7,7 +7,8 @@ import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { useT } from "@/src/i18n/useT";
-import { listArInvoices, submitArInvoice, approveArInvoice, rejectArInvoice, type ArInvoice } from "@/src/lib/ar.api";
+import { arInvoicesService } from "@/src/services/ar-invoices.service";
+import type { ArInvoice } from "@/src/types/ar.types";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -15,16 +16,25 @@ function fmtDate(d?: string | null) {
   return Number.isNaN(dt.getTime()) ? String(d) : dt.toLocaleString("ar-EG");
 }
 
+function fmtMoney(v: unknown) {
+  return Number(v || 0).toFixed(2);
+}
+
 export default function InvoicesClientPage() {
   const t = useT();
   const [rows, setRows] = useState<ArInvoice[]>([]);
   const [loading, setLoading] = useState(false);
 
-const [toast, setToast] = useState<{ open: boolean; message: string; type?: "success" | "error" }>({
-  open: false,
-  message: "",
-  type: "success",
-});
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    type?: "success" | "error";
+  }>({
+    open: false,
+    message: "",
+    type: "success",
+  });
+
   const [confirm, setConfirm] = useState<{
     open: boolean;
     title: string;
@@ -37,11 +47,14 @@ const [toast, setToast] = useState<{ open: boolean; message: string; type?: "suc
   async function load() {
     setLoading(true);
     try {
-      const res = await listArInvoices();
+      const res = await arInvoicesService.list();
       setRows(res.items || []);
     } catch (e: any) {
-      setToast({ open: true, message: e?.message || "Failed to load invoices", type: "error" });
-      
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || "Failed to load invoices",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -53,96 +66,122 @@ const [toast, setToast] = useState<{ open: boolean; message: string; type?: "suc
 
   const cols: DataTableColumn<ArInvoice>[] = useMemo(
     () => [
-      { key: "invoice_no", label: "رقم الفاتورة", render: (r) => r.invoice_no || "—" },
-      { key: "client", label: "العميل", render: (r) => r.clients?.name || r.client_id },
-      { key: "issue", label: "تاريخ الإصدار", render: (r) => fmtDate(r.issue_date) },
-      { key: "due", label: "الاستحقاق", render: (r) => fmtDate(r.due_date) },
-      { key: "total", label: "الإجمالي", render: (r) => Number(r.total_amount || 0).toFixed(2) },
-      { key: "status", label: "الحالة", render: (r) => r.status },
+      {
+        key: "invoice_no",
+        label: "رقم الفاتورة",
+        render: (r) => r.invoice_no || "—",
+      },
+      {
+        key: "client",
+        label: "العميل",
+        render: (r) => r.clients?.name || r.client_id || "—",
+      },
+      {
+        key: "issue",
+        label: "تاريخ الإصدار",
+        render: (r) => fmtDate(r.issue_date),
+      },
+      {
+        key: "due",
+        label: "الاستحقاق",
+        render: (r) => fmtDate(r.due_date),
+      },
+      {
+        key: "total",
+        label: "الإجمالي",
+        render: (r) => fmtMoney(r.total_amount),
+      },
+      {
+        key: "status",
+        label: "الحالة",
+        render: (r) => r.status || "—",
+      },
       {
         key: "actions",
         label: "",
-        render: (r) => {
-          return (
-            <div className="flex gap-2 justify-end">
-              {r.status === "DRAFT" && (
+        render: (r) => (
+          <div className="flex gap-2 justify-end">
+            {r.status === "DRAFT" && (
+              <Button
+                className="h-9 px-3 py-2 text-sm"
+                onClick={() =>
+                  setConfirm({
+                    open: true,
+                    title: "إرسال الفاتورة؟",
+                    desc: `سيتم تحويل الفاتورة ${r.invoice_no} إلى SUBMITTED`,
+                    tone: "info",
+                    confirmText: "إرسال",
+                    action: async () => {
+                      await arInvoicesService.submit(r.id);
+                      setToast({ open: true, message: "تم الإرسال", type: "success" });
+                      await load();
+                    },
+                  })
+                }
+              >
+                إرسال
+              </Button>
+            )}
+
+            {r.status === "SUBMITTED" && (
+              <>
                 <Button
-                   className="h-9 px-3 py-2 text-sm"
+                  className="h-9 px-3 py-2 text-sm"
                   onClick={() =>
                     setConfirm({
                       open: true,
-                      title: "إرسال الفاتورة؟",
-                      desc: `سيتم تحويل الفاتورة ${r.invoice_no} إلى SUBMITTED`,
-                      tone: "info",
-                      confirmText: "إرسال",
+                      title: "اعتماد الفاتورة؟",
+                      desc: `سيتم اعتماد الفاتورة ${r.invoice_no}`,
+                      tone: "warning",
+                      confirmText: "اعتماد",
                       action: async () => {
-                        await submitArInvoice(r.id);
-                        setToast({ open: true, message: "تم الإرسال", type: "success" });
+                        await arInvoicesService.approve(r.id);
+                        setToast({ open: true, message: "تم الاعتماد", type: "success" });
                         await load();
                       },
                     })
                   }
                 >
-                  إرسال
+                  اعتماد
                 </Button>
-              )}
 
-              {r.status === "SUBMITTED" && (
-                <>
-                  <Button
-                    className="h-9 px-3 py-2 text-sm"
-                    onClick={() =>
-                      setConfirm({
-                        open: true,
-                        title: "اعتماد الفاتورة؟",
-                        desc: `سيتم اعتماد الفاتورة ${r.invoice_no}`,
-                        tone: "warning",
-                        confirmText: "اعتماد",
-                        action: async () => {
-                          await approveArInvoice(r.id);
-                          setToast({ open: true, message: "تم الإرسال", type: "success" });
-                          await load();
-                        },
-                      })
-                    }
-                  >
-                    اعتماد
-                  </Button>
-
-                  <Button
-                     className="h-9 px-3 py-2 text-sm"
-                    variant="danger"
-                    onClick={() =>
-                      setConfirm({
-                        open: true,
-                        title: "رفض الفاتورة؟",
-                        desc: "سيتم رفض الفاتورة (REJECTED).",
-                        tone: "danger",
-                        confirmText: "رفض",
-                        action: async () => {
-                          // TODO: لو عايز تدخل سبب الرفض من UI، نعمل Dialog input
-                          await rejectArInvoice(r.id, "Rejected from UI");
-                          setToast({ open: true, message: "تم الإرسال", type: "success" });
-                          await load();
-                        },
-                      })
-                    }
-                  >
-                    رفض
-                  </Button>
-                </>
-              )}
-            </div>
-          );
-        },
+                <Button
+                  className="h-9 px-3 py-2 text-sm"
+                  variant="danger"
+                  onClick={() =>
+                    setConfirm({
+                      open: true,
+                      title: "رفض الفاتورة؟",
+                      desc: "سيتم رفض الفاتورة (REJECTED).",
+                      tone: "danger",
+                      confirmText: "رفض",
+                      action: async () => {
+                        await arInvoicesService.reject(r.id, {
+                          rejection_reason: "Rejected from UI",
+                        });
+                        setToast({ open: true, message: "تم الرفض", type: "success" });
+                        await load();
+                      },
+                    })
+                  }
+                >
+                  رفض
+                </Button>
+              </>
+            )}
+          </div>
+        ),
       },
     ],
-    [t]
+    []
   );
 
   return (
     <div className="space-y-4">
-      <PageHeader title="فواتير العملاء (AR)" subtitle="إنشاء/إرسال/اعتماد الفواتير وإدارة حالاتها." />
+      <PageHeader
+        title="فواتير العملاء (AR)"
+        subtitle="إنشاء/إرسال/اعتماد الفواتير وإدارة حالاتها."
+      />
 
       <DataTable
         title="الفواتير"
@@ -154,7 +193,12 @@ const [toast, setToast] = useState<{ open: boolean; message: string; type?: "suc
         emptyHint="أنشئ فاتورة جديدة أو تأكد من وجود بيانات."
       />
 
-      <Toast open={toast.open} message={toast.message} type={toast.type} onClose={() => setToast((x) => ({ ...x, open: false }))} />
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((x) => ({ ...x, open: false }))}
+      />
 
       <ConfirmDialog
         open={confirm.open}

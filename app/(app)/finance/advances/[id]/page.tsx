@@ -1,14 +1,11 @@
-// app/(app)/finance/advances/[id]/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-// ✅ UI System (Light)
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
@@ -17,44 +14,52 @@ import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { Toast } from "@/src/components/Toast";
 
-function roleUpper(r: any) {
-  return String(r || "").toUpperCase();
+import { cashAdvancesService } from "@/src/services/cash-advances.service";
+import type { CashAdvance } from "@/src/types/cash-advances.types";
+import type { CashExpense } from "@/src/types/cash-expenses.types";
+
+function roleUpper(role: unknown): string {
+  return String(role || "").toUpperCase();
 }
 
-function fmtMoney(n: any) {
-  const v = Number(n || 0);
+function fmtMoney(value: unknown): string {
+  const v = Number(value || 0);
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
 
-function fmtDate(d?: string | null) {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
+function fmtDate(value?: string | null): string {
+  if (!value) return "—";
+  const d = new Date(String(value));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString("ar-EG");
 }
 
-function shortId(id: any) {
+function shortId(id: unknown): string {
   const s = String(id ?? "");
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
-function norm(s: any) {
-  return String(s || "").toUpperCase();
+function norm(value: unknown): string {
+  return String(value || "").toUpperCase();
 }
 
-function StatusBadge({ status }: { status: string }) {
+function LocalStatusBadge({ status }: { status: string }) {
   const st = norm(status);
   const cls =
     st === "OPEN"
       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : st === "IN_REVIEW"
-      ? "bg-amber-50 text-amber-700 border-amber-200"
-      : st === "CLOSED"
+      : st === "SETTLED"
       ? "bg-gray-50 text-gray-700 border-gray-200"
+      : ["CANCELLED", "CANCELED"].includes(st)
+      ? "bg-red-50 text-red-700 border-red-200"
       : "bg-gray-50 text-gray-700 border-gray-200";
 
-  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{st || "—"}</span>;
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      {st || "—"}
+    </span>
+  );
 }
 
 type TabKey = "overview" | "expenses" | "actions";
@@ -64,10 +69,10 @@ export default function AdvanceDetailsPage(): React.ReactElement {
   const params = useParams();
   const router = useRouter();
 
-  // ✅ robust id parsing (avoid "undefined" string)
-  const rawId = (params as any)?.id;
+  const rawId = (params as Record<string, string | string[] | undefined>)?.id;
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
-  const advanceId = typeof id === "string" && id && id !== "undefined" && id !== "null" ? id : "";
+  const advanceId =
+    typeof id === "string" && id && id !== "undefined" && id !== "null" ? id : "";
 
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
@@ -80,13 +85,13 @@ export default function AdvanceDetailsPage(): React.ReactElement {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [advance, setAdvance] = useState<any | null>(null);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [advance, setAdvance] = useState<CashAdvance | null>(null);
+  const [expenses, setExpenses] = useState<CashExpense[]>([]);
 
-  // Toast
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
+
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
     setToastMsg(msg);
@@ -101,21 +106,16 @@ export default function AdvanceDetailsPage(): React.ReactElement {
     setError(null);
 
     try {
-      const [aRes, exRes] = await Promise.all([
-        api.get(`/cash/cash-advances/${advanceId}`),
-        api
-          .get(`/cash/cash-advances/${advanceId}/expenses`)
-          .then((r) => r)
-          .catch(() => ({ data: [] } as any)),
+      const [advanceRes, expensesRes] = await Promise.all([
+        cashAdvancesService.getById(advanceId),
+        cashAdvancesService.getExpenses(advanceId),
       ]);
 
-      const a = (aRes as any)?.data ?? aRes;
-      const ex = (exRes as any)?.data ?? exRes;
-
-      setAdvance(a);
-      setExpenses(Array.isArray(ex) ? ex : []);
+      setAdvance(advanceRes);
+      setExpenses(expensesRes);
     } catch (e: any) {
-      const msg = e?.message || t("financeAdvanceDetails.errors.loadFailed");
+      const msg =
+        e?.response?.data?.message || e?.message || t("financeAdvanceDetails.errors.loadFailed");
       setError(msg);
       setAdvance(null);
       setExpenses([]);
@@ -133,31 +133,31 @@ export default function AdvanceDetailsPage(): React.ReactElement {
       setError(t("financeAdvanceDetails.errors.invalidId"));
       return;
     }
+
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [advanceId]);
 
-  // security: supervisor can only see his advance (soft check)
   useEffect(() => {
     if (!advance || !isSupervisor) return;
+
     if (advance.field_supervisor_id && advance.field_supervisor_id !== user?.id) {
       setError(t("financeAdvanceDetails.errors.forbiddenNotYours"));
     }
-  }, [advance, isSupervisor, user?.id, t]);
+  }, [advance, isSupervisor, t, user?.id]);
 
-  // computed totals
   const totals = useMemo(() => {
     const approved = expenses
-      .filter((x) => norm(x.approval_status) === "APPROVED" || norm(x.approval_status) === "REAPPROVED")
-      .reduce((s, x) => s + Number(x.amount || 0), 0);
+      .filter((expense) => ["APPROVED", "REAPPROVED"].includes(norm(expense.approval_status)))
+      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
     const pending = expenses
-      .filter((x) => norm(x.approval_status) === "PENDING")
-      .reduce((s, x) => s + Number(x.amount || 0), 0);
+      .filter((expense) => norm(expense.approval_status) === "PENDING")
+      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
     const rejected = expenses
-      .filter((x) => norm(x.approval_status) === "REJECTED")
-      .reduce((s, x) => s + Number(x.amount || 0), 0);
+      .filter((expense) => norm(expense.approval_status) === "REJECTED")
+      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
     const advanceAmount = Number(advance?.amount || 0);
     const remaining = advanceAmount - approved;
@@ -165,9 +165,8 @@ export default function AdvanceDetailsPage(): React.ReactElement {
     return { approved, pending, rejected, advanceAmount, remaining };
   }, [expenses, advance?.amount]);
 
-  const st = norm(advance?.status);
+  const status = norm(advance?.status);
 
-  // -------- Confirm Dialog (generic) --------
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
@@ -193,15 +192,19 @@ export default function AdvanceDetailsPage(): React.ReactElement {
 
   async function submitReview() {
     if (!isPrivileged || !advanceId) return;
+
     setBusy(true);
     setError(null);
     try {
-      await api.post(`/cash/cash-advances/${advanceId}/submit-review`, {});
+      await cashAdvancesService.submitReview(advanceId);
       showToast("success", t("common.saved") || "تم الحفظ");
       await loadAll();
       setTab("overview");
     } catch (e: any) {
-      const msg = e?.message || t("financeAdvanceDetails.errors.submitReviewFailed");
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeAdvanceDetails.errors.submitReviewFailed");
       setError(msg);
       showToast("error", msg);
     } finally {
@@ -209,19 +212,29 @@ export default function AdvanceDetailsPage(): React.ReactElement {
     }
   }
 
-  async function closeAdvance(notes?: string) {
+  async function closeAdvance(
+    settlementType: "FULL" | "PARTIAL" | "ADJUSTED" | "CANCELLED",
+    amount: number,
+    notes?: string
+  ) {
     if (!isPrivileged || !advanceId) return;
+
     setBusy(true);
     setError(null);
     try {
-      await api.post(`/cash/cash-advances/${advanceId}/close`, {
-        notes: notes?.trim() ? notes.trim() : undefined,
+      await cashAdvancesService.close(advanceId, {
+        settlement_type: settlementType,
+        amount,
+        notes: notes?.trim() || null,
       });
       showToast("success", t("common.saved") || "تم الحفظ");
       await loadAll();
       setTab("overview");
     } catch (e: any) {
-      const msg = e?.message || t("financeAdvanceDetails.errors.closeFailed");
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeAdvanceDetails.errors.closeFailed");
       setError(msg);
       showToast("error", msg);
     } finally {
@@ -229,19 +242,21 @@ export default function AdvanceDetailsPage(): React.ReactElement {
     }
   }
 
-  async function reopen(notes?: string) {
+  async function reopenAdvance(notes?: string) {
     if (!isPrivileged || !advanceId) return;
+
     setBusy(true);
     setError(null);
     try {
-      await api.post(`/cash/cash-advances/${advanceId}/reopen`, {
-        notes: notes?.trim() ? notes.trim() : undefined,
-      });
+      await cashAdvancesService.reopen(advanceId, { notes: notes?.trim() || null });
       showToast("success", t("common.saved") || "تم الحفظ");
       await loadAll();
       setTab("overview");
     } catch (e: any) {
-      const msg = e?.message || t("financeAdvanceDetails.errors.reopenFailed");
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeAdvanceDetails.errors.reopenFailed");
       setError(msg);
       showToast("error", msg);
     } finally {
@@ -255,34 +270,34 @@ export default function AdvanceDetailsPage(): React.ReactElement {
     { key: "actions" as const, label: t("financeAdvanceDetails.tabs.actions") },
   ];
 
-  const expenseColumns: DataTableColumn<any>[] = [
+  const expenseColumns: DataTableColumn<CashExpense>[] = [
     {
       key: "amount",
       label: t("financeAdvanceDetails.expenses.table.amount"),
-      render: (x) => <span className="font-semibold">{fmtMoney(x.amount)}</span>,
+      render: (expense) => <span className="font-semibold">{fmtMoney(expense.amount)}</span>,
     },
     {
       key: "type",
       label: t("financeAdvanceDetails.expenses.table.type"),
-      render: (x) => x.expense_type || "—",
+      render: (expense) => expense.expense_type || "—",
     },
     {
       key: "status",
       label: t("financeAdvanceDetails.expenses.table.status"),
-      render: (x) => <span className="text-gray-700">{norm(x.approval_status) || "—"}</span>,
+      render: (expense) => <span className="text-gray-700">{norm(expense.approval_status) || "—"}</span>,
     },
     {
       key: "created",
       label: t("financeAdvanceDetails.expenses.table.created"),
-      render: (x) => <span className="text-gray-600">{fmtDate(x.created_at)}</span>,
+      render: (expense) => <span className="text-gray-600">{fmtDate(expense.created_at)}</span>,
     },
     {
       key: "link",
       label: t("financeAdvanceDetails.expenses.table.link"),
       headerClassName: "text-left",
       className: "text-left",
-      render: (x) => (
-        <Link href={`/finance/expenses/${x.id}`}>
+      render: (expense) => (
+        <Link href={`/finance/expenses/${expense.id}`}>
           <Button variant="secondary">{t("common.view")}</Button>
         </Link>
       ),
@@ -296,7 +311,7 @@ export default function AdvanceDetailsPage(): React.ReactElement {
           title={
             <div className="flex items-center gap-2">
               <span>{t("financeAdvanceDetails.title")}</span>
-              {advance?.status ? <StatusBadge status={String(advance.status)} /> : null}
+              {advance?.status ? <LocalStatusBadge status={String(advance.status)} /> : null}
             </div>
           }
           subtitle={
@@ -311,9 +326,16 @@ export default function AdvanceDetailsPage(): React.ReactElement {
                 {t("financeAdvanceDetails.buttons.back") || t("common.back")}
               </Button>
               <Link href="/finance/advances">
-                <Button variant="secondary">{t("financeAdvanceDetails.buttons.list") || t("common.list")}</Button>
+                <Button variant="secondary">
+                  {t("financeAdvanceDetails.buttons.list") || t("common.list")}
+                </Button>
               </Link>
-              <Button variant="secondary" onClick={loadAll} disabled={loading || busy} isLoading={loading || busy}>
+              <Button
+                variant="secondary"
+                onClick={loadAll}
+                disabled={loading || busy}
+                isLoading={loading || busy}
+              >
                 {t("financeAdvanceDetails.buttons.refresh") || t("common.refresh")}
               </Button>
             </div>
@@ -326,14 +348,13 @@ export default function AdvanceDetailsPage(): React.ReactElement {
           </Card>
         ) : null}
 
-        {/* Tabs */}
         <div className="flex flex-wrap gap-2">
-          {tabs.map((x) => {
-            const active = tab === x.key;
+          {tabs.map((tabItem) => {
+            const active = tab === tabItem.key;
             return (
               <button
-                key={x.key}
-                onClick={() => setTab(x.key)}
+                key={tabItem.key}
+                onClick={() => setTab(tabItem.key)}
                 className={[
                   "px-3 py-2 rounded-xl text-sm border transition",
                   active
@@ -341,7 +362,7 @@ export default function AdvanceDetailsPage(): React.ReactElement {
                     : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
                 ].join(" ")}
               >
-                {x.label}
+                {tabItem.label}
               </button>
             );
           })}
@@ -353,51 +374,76 @@ export default function AdvanceDetailsPage(): React.ReactElement {
           </Card>
         ) : tab === "overview" ? (
           <>
-            {/* KPI */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <KpiCard label={t("financeAdvanceDetails.kpis.advanceAmount")} value={fmtMoney(totals.advanceAmount)} />
-              <KpiCard label={t("financeAdvanceDetails.kpis.approvedUsed")} value={fmtMoney(totals.approved)} />
-              <KpiCard label={t("financeAdvanceDetails.kpis.remaining")} value={fmtMoney(totals.remaining)} />
-              <KpiCard label={t("financeAdvanceDetails.kpis.pending")} value={fmtMoney(totals.pending)} />
-              <KpiCard label={t("financeAdvanceDetails.kpis.rejected")} value={fmtMoney(totals.rejected)} />
+              <KpiCard
+                label={t("financeAdvanceDetails.kpis.advanceAmount")}
+                value={fmtMoney(totals.advanceAmount)}
+              />
+              <KpiCard
+                label={t("financeAdvanceDetails.kpis.approvedUsed")}
+                value={fmtMoney(totals.approved)}
+              />
+              <KpiCard
+                label={t("financeAdvanceDetails.kpis.remaining")}
+                value={fmtMoney(totals.remaining)}
+              />
+              <KpiCard
+                label={t("financeAdvanceDetails.kpis.pending")}
+                value={fmtMoney(totals.pending)}
+              />
+              <KpiCard
+                label={t("financeAdvanceDetails.kpis.rejected")}
+                value={fmtMoney(totals.rejected)}
+              />
             </div>
 
             <Card title={t("financeAdvanceDetails.tabs.overview")}>
               <div className="space-y-2">
-                <div className="text-xs text-gray-600">{t("financeAdvanceDetails.labels.supervisor")}</div>
+                <div className="text-xs text-gray-600">
+                  {t("financeAdvanceDetails.labels.supervisor")}
+                </div>
                 <div className="text-sm text-gray-900">
-                  {advance?.users_cash_advances_supervisor?.full_name ||
-                    advance?.users_cash_advances_supervisor?.email ||
+                  {advance?.users_cash_advances_field_supervisor_idTousers?.full_name ||
+                    advance?.users_cash_advances_field_supervisor_idTousers?.email ||
                     advance?.field_supervisor_id ||
                     "—"}
                 </div>
 
-                <div className="mt-2 text-xs text-gray-600">{t("financeAdvanceDetails.labels.createdAt")}</div>
+                <div className="mt-2 text-xs text-gray-600">
+                  {t("financeAdvanceDetails.labels.createdAt")}
+                </div>
                 <div className="text-sm text-gray-900">{fmtDate(advance?.created_at)}</div>
 
-                <div className="mt-2 text-xs text-gray-600">{t("financeAdvanceDetails.labels.notes")}</div>
-                <div className="text-sm text-gray-900 whitespace-pre-wrap">{advance?.notes || "—"}</div>
+                <div className="mt-2 text-xs text-gray-600">
+                  {t("financeAdvanceDetails.labels.notes")}
+                </div>
+                <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                  {advance?.settlement_notes || "—"}
+                </div>
               </div>
             </Card>
           </>
         ) : tab === "expenses" ? (
           <>
             <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold text-gray-900">{t("financeAdvanceDetails.expenses.title")}</div>
+              <div className="text-sm font-semibold text-gray-900">
+                {t("financeAdvanceDetails.expenses.title")}
+              </div>
               <Link href="/finance/expenses/new">
                 <Button variant="primary">{t("financeAdvanceDetails.buttons.newExpense")}</Button>
               </Link>
             </div>
 
-            <DataTable<any>
+            <DataTable<CashExpense>
               title={t("financeAdvanceDetails.expenses.title")}
               subtitle={
                 <span className="text-gray-600">
-                  {t("financeAdvanceDetails.labels.id")}: <span className="font-mono">{shortId(advanceId)}</span>
+                  {t("financeAdvanceDetails.labels.id")}:{" "}
+                  <span className="font-mono">{shortId(advanceId)}</span>
                 </span>
               }
               columns={expenseColumns}
-              rows={Array.isArray(expenses) ? expenses : []}
+              rows={expenses}
               loading={loading}
               emptyTitle={t("financeAdvanceDetails.expenses.empty") || "لا يوجد مصروفات"}
               emptyHint={t("common.tryAdjustFilters") || "يمكنك إضافة مصروف جديد من الزر بالأعلى."}
@@ -411,22 +457,26 @@ export default function AdvanceDetailsPage(): React.ReactElement {
                 <span className="font-semibold">{t("financeAdvanceDetails.actions.title")}</span>{" "}
                 <span className="text-xs text-gray-600">
                   ({t("financeAdvanceDetails.actions.role")}: {role || "—"} /{" "}
-                  {t("financeAdvanceDetails.actions.status")}: {st || "—"})
+                  {t("financeAdvanceDetails.actions.status")}: {status || "—"})
                 </span>
               </div>
 
               {!isPrivileged ? (
-                <div className="text-sm text-gray-600">{t("financeAdvanceDetails.actions.notAvailable")}</div>
+                <div className="text-sm text-gray-600">
+                  {t("financeAdvanceDetails.actions.notAvailable")}
+                </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {st === "OPEN" ? (
+                  {status === "OPEN" ? (
                     <Button
                       variant="secondary"
                       disabled={busy}
                       onClick={() =>
                         openConfirm({
                           title: t("financeAdvanceDetails.actions.submitReview"),
-                          description: t("financeAdvanceDetails.confirm.submitReview") || "إرسال العهدة للمراجعة؟",
+                          description:
+                            t("financeAdvanceDetails.confirm.submitReview") ||
+                            "إرسال العهدة للمراجعة؟",
                           tone: "warning",
                           action: submitReview,
                         })
@@ -436,19 +486,31 @@ export default function AdvanceDetailsPage(): React.ReactElement {
                     </Button>
                   ) : null}
 
-                  {st !== "CLOSED" ? (
+                  {status !== "SETTLED" ? (
                     <Button
                       variant="primary"
                       disabled={busy}
                       onClick={() =>
                         openConfirm({
                           title: t("financeAdvanceDetails.actions.close"),
-                          description: t("financeAdvanceDetails.confirm.close") || "هل تريد إغلاق العهدة الآن؟",
+                          description:
+                            t("financeAdvanceDetails.confirm.close") ||
+                            "هل تريد إغلاق العهدة الآن؟",
                           tone: "info",
                           action: async () => {
-                            // اختياري: لو عايز notes خليها prompt، أو هنبدّلها لمودال مستقل بعدين
-                            const notes = window.prompt(t("financeAdvanceDetails.prompts.closeNotesOptional")) || "";
-                            await closeAdvance(notes);
+                            const notes =
+                              window.prompt(t("financeAdvanceDetails.prompts.closeNotesOptional")) || "";
+
+                            let settlementType: "FULL" | "PARTIAL" | "ADJUSTED" | "CANCELLED" =
+                              "FULL";
+                            let amount = Number(Math.max(totals.remaining, 0).toFixed(2));
+
+                            if (totals.remaining < 0) {
+                              settlementType = "PARTIAL";
+                              amount = Number(Math.abs(totals.remaining).toFixed(2));
+                            }
+
+                            await closeAdvance(settlementType, amount, notes);
                           },
                         })
                       }
@@ -457,18 +519,21 @@ export default function AdvanceDetailsPage(): React.ReactElement {
                     </Button>
                   ) : null}
 
-                  {st === "CLOSED" ? (
+                  {status === "SETTLED" ? (
                     <Button
                       variant="secondary"
                       disabled={busy}
                       onClick={() =>
                         openConfirm({
                           title: t("financeAdvanceDetails.actions.reopen"),
-                          description: t("financeAdvanceDetails.confirm.reopen") || "هل تريد إعادة فتح العهدة؟",
+                          description:
+                            t("financeAdvanceDetails.confirm.reopen") ||
+                            "هل تريد إعادة فتح العهدة؟",
                           tone: "warning",
                           action: async () => {
-                            const notes = window.prompt(t("financeAdvanceDetails.prompts.reopenNotesOptional")) || "";
-                            await reopen(notes);
+                            const notes =
+                              window.prompt(t("financeAdvanceDetails.prompts.reopenNotesOptional")) || "";
+                            await reopenAdvance(notes);
                           },
                         })
                       }
@@ -484,7 +549,6 @@ export default function AdvanceDetailsPage(): React.ReactElement {
           </Card>
         )}
 
-        {/* Confirm */}
         <ConfirmDialog
           open={confirmOpen}
           title={confirmTitle}
@@ -510,7 +574,13 @@ export default function AdvanceDetailsPage(): React.ReactElement {
           }}
         />
 
-        <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
+        <Toast
+          open={toastOpen}
+          message={toastMsg}
+          type={toastType}
+          dir="rtl"
+          onClose={() => setToastOpen(false)}
+        />
       </div>
     </div>
   );

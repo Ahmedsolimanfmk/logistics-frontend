@@ -352,6 +352,11 @@ export default function ExpensesClientPage(): React.ReactElement {
             <Link href="/finance">
               <Button variant="secondary">{t("sidebar.finance")}</Button>
             </Link>
+            <Link href="/finance/expenses/new">
+              <Button variant="primary">
+                {t("financeExpenses.actions.new") || t("common.add") || "إضافة"}
+              </Button>
+            </Link>
             <Button onClick={load} disabled={loading} isLoading={loading} variant="secondary">
               {loading ? t("common.loading") : t("common.refresh")}
             </Button>
@@ -500,15 +505,14 @@ export default function ExpensesClientPage(): React.ReactElement {
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
-                placeholder={t("financeExpenses.prompts.rejectReason") || "اكتب سبب الرفض..."}
+                placeholder={t("financeExpenses.prompts.rejectReason") || "اكتب سبب الرفض"}
                 disabled={busy}
               />
-              <div className="text-[11px] text-slate-500 mt-1">الحد الأدنى حرفين.</div>
             </div>
 
             <div>
               <div className="text-sm text-slate-600 mb-1">
-                {t("financeExpenses.prompts.rejectNotes") || "ملاحظات (اختياري)"}
+                {t("financeExpenses.prompts.rejectNotes") || "ملاحظات إضافية"}
               </div>
               <textarea
                 rows={3}

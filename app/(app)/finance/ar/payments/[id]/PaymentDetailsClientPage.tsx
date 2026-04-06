@@ -6,13 +6,9 @@ import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { useT } from "@/src/i18n/useT";
-import {
-  getArPaymentById,
-  getClientLedger,
-  allocateArPayment,
-  deleteArPaymentAllocation,
-  type ArPaymentAllocation,
-} from "@/src/lib/ar.api";
+import { arPaymentsService } from "@/src/services/ar-payments.service";
+import { arLedgerService } from "@/src/services/ar-ledger.service";
+import type { ArPaymentAllocation } from "@/src/types/ar.types";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -20,7 +16,7 @@ function fmtDate(d?: string | null) {
   return Number.isNaN(dt.getTime()) ? String(d) : dt.toLocaleString("ar-EG");
 }
 
-function toNum(v: any) {
+function toNum(v: unknown) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
@@ -32,7 +28,6 @@ export default function PaymentDetailsClientPage({ id }: { id: string }) {
   const [loading, setLoading] = useState(false);
   const [payment, setPayment] = useState<any>(null);
 
-  // ✅ allocations
   const [allocations, setAllocations] = useState<ArPaymentAllocation[]>([]);
   const [totals, setTotals] = useState<{ allocated: number; remaining: number }>({
     allocated: 0,
@@ -58,15 +53,18 @@ export default function PaymentDetailsClientPage({ id }: { id: string }) {
     confirmText?: string;
   }>({ open: false, title: "" });
 
-  // ---------------------------
-  // Allocate UI
-  // ---------------------------
   const [allocOpen, setAllocOpen] = useState(false);
   const [allocLoading, setAllocLoading] = useState(false);
 
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerInvoices, setLedgerInvoices] = useState<
-    Array<{ id: string; invoice_no: string; remaining_amount: number; total_amount: number; status?: any }>
+    Array<{
+      id: string;
+      invoice_no: string;
+      remaining_amount: number;
+      total_amount: number;
+      status?: string | null;
+    }>
   >([]);
 
   const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
@@ -97,14 +95,14 @@ export default function PaymentDetailsClientPage({ id }: { id: string }) {
     if (!paymentId) return;
     setLoading(true);
     try {
-      const res = await getArPaymentById(paymentId);
+      const res = await arPaymentsService.getById(paymentId);
       setPayment(res?.payment ?? null);
-setAllocations(Array.isArray(res?.allocations) ? res.allocations : []);
-setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
+      setAllocations(Array.isArray(res?.allocations) ? res.allocations : []);
+      setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
     } catch (e: any) {
       setToast({
         open: true,
-        message: e?.message || "Failed to load payment details",
+        message: e?.response?.data?.message || e?.message || "Failed to load payment details",
         type: "error",
       });
     } finally {
@@ -118,22 +116,22 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
 
     setLedgerLoading(true);
     try {
-      const ledger = await getClientLedger(String(clientId));
+      const ledger = await arLedgerService.getClientLedger(String(clientId));
       const invs = (ledger?.invoices || [])
-        .filter((x) => toNum((x as any).remaining_amount) > 0)
+        .filter((x) => toNum(x.remaining_amount) > 0)
         .map((x) => ({
-          id: String((x as any).id),
-          invoice_no: String((x as any).invoice_no || (x as any).id),
-          remaining_amount: toNum((x as any).remaining_amount),
-          total_amount: toNum((x as any).total_amount),
-          status: (x as any).status,
+          id: String(x.id),
+          invoice_no: String(x.invoice_no || x.id),
+          remaining_amount: toNum(x.remaining_amount),
+          total_amount: toNum(x.total_amount),
+          status: x.status,
         }));
 
       setLedgerInvoices(invs);
     } catch (e: any) {
       setToast({
         open: true,
-        message: e?.message || "فشل تحميل فواتير العميل",
+        message: e?.response?.data?.message || e?.message || "فشل تحميل فواتير العميل",
         type: "error",
       });
     } finally {
@@ -150,7 +148,7 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
 
     setAllocLoading(true);
     try {
-      await allocateArPayment(paymentId, {
+      await arPaymentsService.allocate(paymentId, {
         invoice_id: String(selectedInvoiceId),
         amount: Number(allocAmount),
       });
@@ -165,7 +163,7 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
     } catch (e: any) {
       setToast({
         open: true,
-        message: e?.message || "فشل تخصيص الدفعة",
+        message: e?.response?.data?.message || e?.message || "فشل تخصيص الدفعة",
         type: "error",
       });
     } finally {
@@ -182,18 +180,20 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
       confirmText: "حذف",
       action: async () => {
         try {
-          await deleteArPaymentAllocation(paymentId, allocationId);
+          await arPaymentsService.deleteAllocation(paymentId, allocationId);
           setToast({ open: true, message: "تم حذف التخصيص بنجاح", type: "success" });
 
-          // refresh details + allocations
           await load();
 
-          // refresh invoice list if form is open (remaining changes)
           if (allocOpen) {
             await loadClientInvoices();
           }
         } catch (e: any) {
-          setToast({ open: true, message: e?.message || "فشل حذف التخصيص", type: "error" });
+          setToast({
+            open: true,
+            message: e?.response?.data?.message || e?.message || "فشل حذف التخصيص",
+            type: "error",
+          });
         }
       },
     });
@@ -208,34 +208,35 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
       {
         key: "invoice_no",
         label: "الفاتورة",
-        render: (r) => (r as any).invoice?.invoice_no || (r as any).ar_invoices?.invoice_no || "—",
+        render: (r) => r.invoice?.invoice_no || "—",
       },
       {
         key: "inv_status",
         label: "حالة الفاتورة",
-        render: (r) => (r as any).invoice?.status || (r as any).ar_invoices?.status || "—",
+        render: (r) => r.invoice?.status || "—",
       },
       {
         key: "inv_total",
         label: "إجمالي الفاتورة",
-        render: (r) =>
-          Number((r as any).invoice?.total_amount ?? (r as any).ar_invoices?.total_amount ?? 0).toFixed(2),
+        render: (r) => Number(r.invoice?.total_amount || 0).toFixed(2),
       },
       {
         key: "amount",
         label: "المخصص",
-        render: (r) => Number((r as any).amount_allocated || 0).toFixed(2),
+        render: (r) => Number(r.amount_allocated || 0).toFixed(2),
       },
-      { key: "created", label: "تاريخ", render: (r) => fmtDate((r as any).created_at) },
-
-      // ✅ actions
+      {
+        key: "created",
+        label: "تاريخ",
+        render: (r) => fmtDate(r.created_at),
+      },
       {
         key: "actions",
         label: "إجراءات",
         headerClassName: "text-left",
         className: "text-left",
         render: (r) => {
-          const allocId = String((r as any).id || "");
+          const allocId = String(r.id || "");
           return (
             <button
               className="px-3 py-1 rounded-xl border border-[rgb(var(--trex-border))] hover:opacity-80"
@@ -252,7 +253,7 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
         },
       },
     ],
-    [t, paymentId, allocOpen]
+    [paymentId, allocOpen]
   );
 
   return (
@@ -261,18 +262,19 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
         title="تفاصيل دفعة AR"
         subtitle={
           payment
-            ? `العميل: ${payment.client?.name || payment.client_id} — المبلغ: ${Number(payment.amount || 0).toFixed(
-                2
-              )} — الحالة: ${payment.status}`
+            ? `العميل: ${payment.client?.name || payment.clients?.name || payment.client_id} — المبلغ: ${Number(
+                payment.amount || 0
+              ).toFixed(2)} — الحالة: ${payment.status}`
             : "تحميل..."
         }
       />
 
-      {/* KPI cards (fixed: no glass/white) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="rounded-2xl border border-[rgb(var(--trex-border))] bg-[rgb(var(--trex-card))] p-4">
           <div className="text-xs opacity-70">إجمالي الدفعة</div>
-          <div className="text-lg font-semibold">{payment ? Number(payment.amount || 0).toFixed(2) : "—"}</div>
+          <div className="text-lg font-semibold">
+            {payment ? Number(payment.amount || 0).toFixed(2) : "—"}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-[rgb(var(--trex-border))] bg-[rgb(var(--trex-card))] p-4">
@@ -286,7 +288,6 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
         </div>
       </div>
 
-      {/* Allocate Payment UI */}
       <div className="rounded-2xl border border-[rgb(var(--trex-border))] bg-[rgb(var(--trex-card))] p-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -386,7 +387,12 @@ setTotals(res?.totals ?? { allocated: 0, remaining: 0 });
         emptyHint="لا توجد تخصيصات بعد. استخدم الفورم بالأعلى لتخصيص مبلغ على فاتورة."
       />
 
-      <Toast open={toast.open} message={toast.message} type={toast.type} onClose={() => setToast((x) => ({ ...x, open: false }))} />
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((x) => ({ ...x, open: false }))}
+      />
 
       <ConfirmDialog
         open={confirm.open}

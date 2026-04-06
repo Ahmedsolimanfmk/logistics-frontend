@@ -54,7 +54,9 @@ function normalizeListResponse(raw: unknown): CashExpenseListResponse {
     items: Array.isArray(record.items) ? record.items : [],
     total: Number(record.total ?? 0),
     page: Number(record.page ?? 1),
-    page_size: Number(record.page_size ?? (Array.isArray(record.items) ? record.items.length : 0)),
+    page_size: Number(
+      record.page_size ?? (Array.isArray(record.items) ? record.items.length : 0)
+    ),
   };
 }
 
@@ -116,7 +118,9 @@ export const cashExpensesService = {
     return normalizeListResponse(res);
   },
 
-  async getSummary(params: Omit<CashExpenseListParams, "page" | "page_size"> = {}): Promise<CashExpenseSummaryResponse> {
+  async getSummary(
+    params: Omit<CashExpenseListParams, "page" | "page_size"> = {}
+  ): Promise<CashExpenseSummaryResponse> {
     const res = await api.get("/cash/cash-expenses/summary", {
       params: compact({
         status: normalizeStatus(params.status),
@@ -191,11 +195,14 @@ export const cashExpensesService = {
   },
 
   async resolveAppeal(id: string, payload: ResolveAppealPayload): Promise<void> {
-    await api.post(`/cash/cash-expenses/${id}/resolve-appeal`, compact({
-      decision: payload.decision,
-      notes: payload.notes ?? undefined,
-      reason: payload.reason ?? undefined,
-    }));
+    await api.post(
+      `/cash/cash-expenses/${id}/resolve-appeal`,
+      compact({
+        decision: payload.decision,
+        notes: payload.notes ?? undefined,
+        reason: payload.reason ?? undefined,
+      })
+    );
   },
 
   async reopen(id: string, payload: ReopenCashExpensePayload = {}): Promise<void> {
