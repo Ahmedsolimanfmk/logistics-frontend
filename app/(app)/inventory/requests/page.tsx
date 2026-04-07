@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useT } from "@/src/i18n/useT";
 
@@ -16,7 +16,16 @@ import type { InventoryRequest } from "@/src/types/inventory-requests.types";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
-  return new Date(d).toLocaleString("ar-EG");
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return String(d);
+  return dt.toLocaleString("ar-EG");
+}
+
+function shortId(v?: string | null) {
+  const s = String(v || "");
+  if (!s) return "—";
+  if (s.length <= 14) return s;
+  return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
 export default function InventoryRequestsPage() {
@@ -44,11 +53,11 @@ export default function InventoryRequestsPage() {
         work_order_id: workOrderId || undefined,
       });
 
-      setRows(data);
+      setRows(Array.isArray(data) ? data : []);
     } catch (e: any) {
       setToast({
         open: true,
-        message: e?.message || t("common.failed"),
+        message: e?.response?.data?.message || e?.message || t("common.failed"),
         type: "error",
       });
     } finally {
@@ -58,28 +67,65 @@ export default function InventoryRequestsPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const summary = useMemo(() => {
+    const approved = rows.filter(
+      (r) => String(r.status || "").toUpperCase() === "APPROVED"
+    ).length;
+    const pending = rows.filter(
+      (r) => String(r.status || "").toUpperCase() === "PENDING"
+    ).length;
+    const rejected = rows.filter(
+      (r) => String(r.status || "").toUpperCase() === "REJECTED"
+    ).length;
+
+    return {
+      total: rows.length,
+      approved,
+      pending,
+      rejected,
+    };
+  }, [rows]);
 
   const columns: DataTableColumn<InventoryRequest>[] = [
     {
       key: "id",
-      label: "ID",
-      render: (r) => r.id,
+      label: "Request",
+      render: (r) => (
+        <div className="space-y-1">
+          <div className="font-mono text-xs">{shortId(r.id)}</div>
+          <div className="text-xs text-slate-500">{r.work_order_id || "—"}</div>
+        </div>
+      ),
     },
     {
       key: "warehouse",
       label: "Warehouse",
-      render: (r) => r.warehouses?.name || "—",
+      render: (r) => (
+        <div className="space-y-1">
+          <div>{r.warehouses?.name || "—"}</div>
+          <div className="font-mono text-xs text-slate-500">
+            {shortId(r.warehouse_id)}
+          </div>
+        </div>
+      ),
     },
     {
       key: "status",
       label: "Status",
-      render: (r) => <StatusBadge status={r.status} />,
+      render: (r) => <StatusBadge status={String(r.status || "")} />,
     },
     {
       key: "lines",
       label: "Lines",
       render: (r) => String(r.lines?.length ?? 0),
+    },
+    {
+      key: "reservations",
+      label: "Reserved",
+      render: (r) => String(r.reservations?.length ?? 0),
     },
     {
       key: "created_at",
@@ -99,10 +145,14 @@ export default function InventoryRequestsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <Toast {...toast} onClose={() => setToast((p) => ({ ...p, open: false }))} />
+      <Toast
+        {...toast}
+        onClose={() => setToast((p) => ({ ...p, open: false }))}
+      />
 
       <PageHeader
         title="Inventory Requests"
+        subtitle={`Total: ${summary.total} • Pending: ${summary.pending} • Approved: ${summary.approved} • Rejected: ${summary.rejected}`}
         actions={
           <>
             <Link href="/inventory/requests/new">
@@ -118,9 +168,24 @@ export default function InventoryRequestsPage() {
       <FiltersBar
         left={
           <>
-            <input value={status} onChange={(e) => setStatus(e.target.value)} placeholder="status" />
-            <input value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} placeholder="warehouse_id" />
-            <input value={workOrderId} onChange={(e) => setWorkOrderId(e.target.value)} placeholder="work_order_id" />
+            <input
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              placeholder="status"
+              className="rounded-xl border border-black/10 px-3 py-2"
+            />
+            <input
+              value={warehouseId}
+              onChange={(e) => setWarehouseId(e.target.value)}
+              placeholder="warehouse_id"
+              className="rounded-xl border border-black/10 px-3 py-2"
+            />
+            <input
+              value={workOrderId}
+              onChange={(e) => setWorkOrderId(e.target.value)}
+              placeholder="work_order_id"
+              className="rounded-xl border border-black/10 px-3 py-2"
+            />
           </>
         }
         right={<Button onClick={load}>Search</Button>}

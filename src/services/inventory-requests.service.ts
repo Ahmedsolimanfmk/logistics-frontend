@@ -17,36 +17,48 @@ function normalizeSingle<T>(body: any): T {
   return (body?.data ?? body?.request ?? body) as T;
 }
 
+function compact(obj: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, value]) => value !== undefined && value !== "")
+  );
+}
+
 export const inventoryRequestsService = {
   async list(filters: InventoryRequestsFilters = {}): Promise<InventoryRequest[]> {
-    const res = await api.get("/inventory/requests", { params: filters });
-    return asArray<InventoryRequest>(res.data ?? res);
+    const res = await api.get("/inventory/requests", {
+      params: compact({
+        status: filters.status,
+        warehouse_id: filters.warehouse_id,
+        work_order_id: filters.work_order_id,
+      }),
+    });
+
+    return asArray<InventoryRequest>(res?.data ?? res);
   },
 
   async getById(id: string): Promise<InventoryRequest> {
     const res = await api.get(`/inventory/requests/${id}`);
-    return normalizeSingle<InventoryRequest>(res.data ?? res);
+    return normalizeSingle<InventoryRequest>(res?.data ?? res);
   },
 
   async create(payload: CreateInventoryRequestPayload): Promise<InventoryRequest> {
     const res = await api.post("/inventory/requests", payload);
-    return normalizeSingle<InventoryRequest>(res.data ?? res);
+    return normalizeSingle<InventoryRequest>(res?.data ?? res);
   },
 
-  async approve(id: string, notes?: string) {
-    return api.post(`/inventory/requests/${id}/approve`, { notes });
+  async approve(id: string): Promise<InventoryRequest> {
+    const res = await api.post(`/inventory/requests/${id}/approve`, {});
+    return normalizeSingle<InventoryRequest>(res?.data ?? res);
   },
 
-  async reject(id: string, reason: string) {
-    return api.post(`/inventory/requests/${id}/reject`, { reason });
+  async reject(id: string, reason: string): Promise<InventoryRequest> {
+    const res = await api.post(`/inventory/requests/${id}/reject`, { reason });
+    return normalizeSingle<InventoryRequest>(res?.data ?? res);
   },
 
-  async unreserve(id: string, notes?: string) {
-    return api.post(`/inventory/requests/${id}/unreserve`, { notes });
-  },
-
-  async createIssue(id: string, notes?: string) {
-    return api.post(`/inventory/issues`, { request_id: id, notes });
+  async unreserve(id: string): Promise<InventoryRequest> {
+    const res = await api.post(`/inventory/requests/${id}/unreserve`, {});
+    return normalizeSingle<InventoryRequest>(res?.data ?? res);
   },
 };
 

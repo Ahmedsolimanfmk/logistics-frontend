@@ -1,28 +1,77 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
+import { receiptsService } from "@/src/services/receipts.service";
 
+// ✅ Design System
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
-import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { Card } from "@/src/components/ui/Card";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
-import { receiptsService } from "@/src/services/receipts.service";
-import type { InventoryReceipt } from "@/src/types/receipts.types";
+import type { InventoryReceipt, ReceiptItem } from "@/src/types/receipts.types";
 
-export default function InventoryReceiptsPage() {
+function shortId(id: any) {
+  const s = String(id ?? "");
+  if (!s) return "—";
+  if (s.length <= 14) return s;
+  return `${s.slice(0, 8)}…${s.slice(-4)}`;
+}
+
+function formatDate(v: any) {
+  if (!v) return "—";
+  const d = new Date(String(v));
+  if (Number.isNaN(d.getTime())) return String(v);
+  return d.toLocaleString("ar-EG");
+}
+
+function formatMoney(v: any) {
+  const n = Number(v ?? 0);
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function Info({
+  label,
+  value,
+  hint,
+}: {
+  label: React.ReactNode;
+  value: any;
+  hint?: any;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-3">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="mt-1 text-sm text-gray-900 break-words">
+        {String(value ?? "—")}
+      </div>
+      {hint ? (
+        <div className="mt-1 text-xs text-gray-500 font-mono break-words">
+          {String(hint ?? "")}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default function ReceiptDetailsPage() {
   const t = useT();
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const id = String(params?.id || "");
 
-  const [rows, setRows] = useState<InventoryReceipt[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const [status, setStatus] = useState("");
-  const [warehouseId, setWarehouseId] = useState("");
-
+  const [submitting, setSubmitting] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [row, setRow] = useState<InventoryReceipt | null>(null);
   const [toast, setToast] = useState({
     open: false,
     message: "",
@@ -30,20 +79,19 @@ export default function InventoryReceiptsPage() {
   });
 
   async function load() {
+    if (!id) return;
+
     setLoading(true);
     try {
-      const result = await receiptsService.list({
-        status: status || undefined,
-        warehouse_id: warehouseId || undefined,
-      });
-
-      setRows(result.items);
+      const data = await receiptsService.getById(id);
+      setRow(data);
     } catch (e: any) {
       setToast({
         open: true,
         message: e?.response?.data?.message || e?.message || t("common.failed"),
         type: "error",
       });
+      setRow(null);
     } finally {
       setLoading(false);
     }
@@ -52,82 +100,188 @@ export default function InventoryReceiptsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [id]);
 
-  const columns: DataTableColumn<InventoryReceipt>[] = [
+  async function submitReceipt() {
+    if (!id) return;
+
+    setSubmitting(true);
+    try {
+      await receiptsService.submit(id);
+      setToast({
+        open: true,
+        message: "Receipt submitted successfully",
+        type: "success",
+      });
+      await load();
+    } catch (e: any) {
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || "Failed to submit receipt",
+        type: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function postReceipt() {
+    if (!id) return;
+
+    setPosting(true);
+    try {
+      await receiptsService.post(id);
+      setToast({
+        open: true,
+        message: "Receipt posted successfully",
+        type: "success",
+      });
+      await load();
+    } catch (e: any) {
+      setToast({
+        open: true,
+        message: e?.response?.data?.message || e?.message || "Failed to post receipt",
+        type: "error",
+      });
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  const items = useMemo<ReceiptItem[]>(() => {
+    return Array.isArray(row?.items) ? row.items : [];
+  }, [row]);
+
+  const columns: DataTableColumn<ReceiptItem>[] = [
     {
-      key: "id",
-      label: "ID",
-      render: (row) => row.id,
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (row) => <StatusBadge status={String(row.status || "")} />,
-    },
-    {
-      key: "supplier",
-      label: "Supplier",
-      render: (row) => row.supplier_name || "—",
-    },
-    {
-      key: "items",
-      label: "Items",
-      render: (row) => String(row.items?.length ?? 0),
-    },
-    {
-      key: "open",
-      label: "Open",
-      render: (row) => (
-        <Link href={`/inventory/receipts/${row.id}`}>
-          <Button variant="secondary">Open</Button>
-        </Link>
+      key: "part",
+      label: "Part",
+      render: (x) => (
+        <div>
+          <div className="text-gray-900 font-semibold">{x?.part?.name || "—"}</div>
+          <div className="text-xs text-gray-500 font-mono">
+            {x?.part?.part_number || shortId(x?.part_id)}
+          </div>
+        </div>
       ),
     },
+    {
+      key: "internal",
+      label: "Internal Serial",
+      render: (x) => (
+        <span className="font-mono text-xs text-gray-800">
+          {x?.internal_serial || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "mfg",
+      label: "Manufacturer Serial",
+      render: (x) => (
+        <span className="font-mono text-xs text-gray-800">
+          {x?.manufacturer_serial || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "cost",
+      label: "Unit Cost",
+      render: (x) => formatMoney(x?.unit_cost),
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      render: (x) => x?.notes || "—",
+    },
   ];
+
+  const statusUpper = String(row?.status || "").toUpperCase();
+  const canSubmit = statusUpper === "DRAFT";
+  const canPost = statusUpper === "SUBMITTED";
 
   return (
     <div className="p-6 space-y-4">
       <Toast
-        {...toast}
-        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((p) => ({ ...p, open: false }))}
       />
 
       <PageHeader
-        title="Receipts"
+        title="تفاصيل الإضافة المخزنية"
+        subtitle={<span className="font-mono text-xs">{id}</span>}
         actions={
           <>
-            <Link href="/inventory/receipts/new">
-              <Button variant="primary">New</Button>
-            </Link>
-            <Button onClick={load} isLoading={loading}>
-              Refresh
+            <Button variant="secondary" onClick={() => router.back()}>
+              {t("common.prev")}
             </Button>
+
+            {canSubmit ? (
+              <Button onClick={submitReceipt} isLoading={submitting}>
+                Submit
+              </Button>
+            ) : null}
+
+            {canPost ? (
+              <Button onClick={postReceipt} isLoading={posting}>
+                Post
+              </Button>
+            ) : null}
           </>
         }
       />
 
-      <FiltersBar
-        left={
-          <>
-            <input
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="rounded-xl border border-black/10 px-3 py-2"
-              placeholder="Status"
-            />
-            <input
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              className="rounded-xl border border-black/10 px-3 py-2"
-              placeholder="Warehouse ID"
-            />
-          </>
-        }
-        right={<Button onClick={load}>Search</Button>}
-      />
+      <Card
+        title="Receipt"
+        right={row?.status ? <StatusBadge status={String(row.status)} /> : null}
+      >
+        {loading ? (
+          <div className="text-sm text-gray-500">{t("common.loading")}</div>
+        ) : !row ? (
+          <div className="text-sm text-gray-500">{t("common.noData")}</div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Info
+                label="المخزن"
+                value={row?.warehouse?.name || "—"}
+                hint={row?.warehouse_id ? shortId(row.warehouse_id) : ""}
+              />
+              <Info
+                label="المورد"
+                value={row?.vendor?.name || "—"}
+                hint={row?.vendor_id ? shortId(row.vendor_id) : row?.invoice_no || ""}
+              />
+            </div>
 
-      <DataTable<InventoryReceipt> columns={columns} rows={rows} loading={loading} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Info label="الحالة" value={row?.status || "—"} />
+              <Info
+                label="تاريخ الفاتورة"
+                value={row?.invoice_date ? String(row.invoice_date).slice(0, 10) : "—"}
+              />
+              <Info label="تاريخ الإنشاء" value={formatDate(row?.created_at)} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Info label="رقم الفاتورة" value={row?.invoice_no || "—"} />
+              <Info label="عدد العناصر" value={items.length} />
+              <Info label="الإجمالي" value={formatMoney(row?.total_amount)} />
+            </div>
+
+            <DataTable
+              title="العناصر"
+              columns={columns}
+              rows={items}
+              loading={false}
+              emptyTitle={t("common.noData")}
+              emptyHint="لا توجد عناصر داخل الإضافة."
+              minWidthClassName="min-w-[1100px]"
+            />
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
