@@ -3,6 +3,7 @@ export type ReceiptStatus =
   | "SUBMITTED"
   | "POSTED"
   | "CANCELLED"
+  | "ALL"
   | string;
 
 export interface ReceiptWarehouse {
@@ -32,29 +33,48 @@ export interface ReceiptItem {
   part?: ReceiptPart | null;
 }
 
+export interface ReceiptLinkedCashExpense {
+  id: string;
+  approval_status?: string | null;
+  amount?: number | null;
+  type?: string | null;
+}
+
 export interface InventoryReceipt {
   id: string;
+
   warehouse_id?: string | null;
   vendor_id?: string | null;
+
   invoice_no?: string | null;
   invoice_date?: string | null;
+
   status?: ReceiptStatus;
+
   total_amount?: number | null;
   notes?: string | null;
+
   created_at?: string | null;
   submitted_at?: string | null;
   posted_at?: string | null;
+
   warehouse?: ReceiptWarehouse | null;
   vendor?: ReceiptVendor | null;
+
   items?: ReceiptItem[] | null;
+
+  cash_expense?: ReceiptLinkedCashExpense | null;
+  cash_expenses?: ReceiptLinkedCashExpense[] | null;
 }
 
 export interface CreateReceiptPayload {
   warehouse_id: string;
   vendor_id: string;
+
   invoice_no?: string | null;
   invoice_date?: string | null;
   notes?: string | null;
+
   items: {
     part_id: string;
     internal_serial: string;
@@ -67,8 +87,21 @@ export interface CreateReceiptPayload {
 export interface ReceiptsFilters {
   status?: string;
   warehouse_id?: string;
+  q?: string;
+  page?: number;
+  page_size?: number;
 }
 
 export interface ReceiptsListResult {
   items: InventoryReceipt[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ReceiptsKpi {
+  postedSum: number;
+  postedCount: number;
+  submittedSum: number;
+  submittedCount: number;
 }
