@@ -185,12 +185,12 @@ export default function PurchasesClientPage(): React.ReactElement {
     {
       key: "warehouse",
       label: t("financePurchases.table.warehouse"),
-      render: (row) => row.warehouses?.name || "—",
+      render: (row) => row.warehouse?.name || "-",
     },
     {
       key: "supplier",
       label: t("financePurchases.table.supplier"),
-      render: (row) => row.supplier_name || "—",
+      render: (row) => row.vendor?.name|| "—",
     },
     {
       key: "invoice",
