@@ -30,6 +30,29 @@ function fmtDate(d?: string | null) {
   return dt.toLocaleString("ar-EG");
 }
 
+function friendlyApproveError(message: string) {
+  const raw = String(message || "");
+
+  const insufficientMatch = raw.match(
+    /Insufficient stock for part_id=([a-f0-9-]+)\. Needed (\d+), available (\d+)\./i
+  );
+
+  if (insufficientMatch) {
+    const [, partId, needed, available] = insufficientMatch;
+    return `لا يوجد مخزون كافٍ للصنف ${partId}. المطلوب ${needed} والمتاح ${available}. أضف مخزون عبر Receipt ثم Post ثم أعد المحاولة.`;
+  }
+
+  if (/Request already has reservations/i.test(raw)) {
+    return "هذا الطلب عليه حجز مخزون بالفعل. لا يمكن تنفيذ الموافقة مرة أخرى قبل إلغاء الحجز.";
+  }
+
+  if (/Stock changed while approving/i.test(raw)) {
+    return "تغيرت حالة المخزون أثناء تنفيذ الموافقة. حدّث الصفحة ثم أعد المحاولة.";
+  }
+
+  return raw || "فشل اعتماد الطلب";
+}
+
 function Info({
   label,
   value,
@@ -101,14 +124,17 @@ export default function InventoryRequestDetailsPage() {
       await inventoryRequestsService.approve(id);
       setToast({
         open: true,
-        message: "Request approved successfully",
+        message: "تم اعتماد الطلب بنجاح",
         type: "success",
       });
       await load();
     } catch (e: any) {
+      const backendMessage =
+        e?.response?.data?.message || e?.message || "Failed to approve request";
+
       setToast({
         open: true,
-        message: e?.response?.data?.message || e?.message || "Failed to approve request",
+        message: friendlyApproveError(backendMessage),
         type: "error",
       });
     } finally {
