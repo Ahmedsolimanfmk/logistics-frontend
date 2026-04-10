@@ -105,7 +105,7 @@ export default function InventoryRequestsPage() {
       label: "Warehouse",
       render: (r) => (
         <div className="space-y-1">
-          <div>{r.warehouses?.name || "—"}</div>
+          <div>{r.warehouse?.name || "—"}</div>
           <div className="font-mono text-xs text-slate-500">
             {shortId(r.warehouse_id)}
           </div>

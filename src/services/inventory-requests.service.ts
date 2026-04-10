@@ -25,9 +25,12 @@ function compact(obj: Record<string, unknown>) {
 
 export const inventoryRequestsService = {
   async list(filters: InventoryRequestsFilters = {}): Promise<InventoryRequest[]> {
+    const rawStatus = String(filters.status || "").trim().toUpperCase();
+    const status = rawStatus && rawStatus !== "ALL" ? rawStatus : undefined;
+
     const res = await api.get("/inventory/requests", {
       params: compact({
-        status: filters.status,
+        status,
         warehouse_id: filters.warehouse_id,
         work_order_id: filters.work_order_id,
       }),

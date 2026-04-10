@@ -171,9 +171,9 @@ export default function InventoryRequestDetailsPage() {
       label: "Part",
       render: (l) => (
         <div className="space-y-1">
-          <div>{l.parts?.name || "—"}</div>
+          <div>{l.part?.name || "—"}</div>
           <div className="text-xs font-mono text-slate-500">
-            {l.parts?.part_number || shortId(l.part_id)}
+            {l.part?.part_number || shortId(l.part_id)}
           </div>
         </div>
       ),
@@ -196,7 +196,7 @@ export default function InventoryRequestDetailsPage() {
       label: "Part",
       render: (r) => (
         <div className="space-y-1">
-          <div>{r.part_items?.parts?.name || "—"}</div>
+          <div>{r.part_items?.part?.name || "—"}</div>
           <div className="text-xs font-mono text-slate-500">
             {shortId(r.part_items?.part_id)}
           </div>
@@ -216,7 +216,7 @@ export default function InventoryRequestDetailsPage() {
     {
       key: "warehouse",
       label: "Warehouse",
-      render: (r) => r.part_items?.warehouses?.name || "—",
+      render: (r) => r.part_items?.warehouse?.name || "—",
     },
     {
       key: "status",
@@ -267,7 +267,11 @@ export default function InventoryRequestDetailsPage() {
             ) : null}
 
             {canUnreserve ? (
-              <Button variant="secondary" onClick={unreserve} isLoading={unreserveLoading}>
+              <Button
+                variant="secondary"
+                onClick={unreserve}
+                isLoading={unreserveLoading}
+              >
                 Unreserve
               </Button>
             ) : null}
@@ -286,7 +290,11 @@ export default function InventoryRequestDetailsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Info label="Warehouse" value={row?.warehouses?.name || "—"} hint={shortId(row?.warehouse_id)} />
+        <Info
+          label="Warehouse"
+          value={row?.warehouse?.name || "—"}
+          hint={shortId(row?.warehouse_id)}
+        />
         <Info label="Work Order" value={row?.work_order_id || "—"} />
         <Info label="Created At" value={fmtDate(row?.created_at)} />
       </div>

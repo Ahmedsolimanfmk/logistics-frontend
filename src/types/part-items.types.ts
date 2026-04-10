@@ -1,4 +1,10 @@
-export type ItemStatus = "IN_STOCK" | "RESERVED" | "ISSUED" | string;
+export type ItemStatus =
+  | "IN_STOCK"
+  | "RESERVED"
+  | "ISSUED"
+  | "INSTALLED"
+  | "SCRAPPED"
+  | string;
 
 export interface PartRef {
   id: string;
@@ -6,6 +12,7 @@ export interface PartRef {
   brand?: string | null;
   category?: string | null;
   unit?: string | null;
+  part_number?: string | null;
 }
 
 export interface WarehouseRef {
@@ -16,7 +23,6 @@ export interface WarehouseRef {
 
 export interface PartItem {
   id: string;
-
   part_id: string;
   warehouse_id: string;
 
@@ -28,10 +34,10 @@ export interface PartItem {
   received_at?: string | null;
   last_moved_at?: string | null;
 
-  parts?: PartRef | null;
-  warehouses?: WarehouseRef | null;
+  part?: PartRef | null;
+  warehouse?: WarehouseRef | null;
 
-  // frontend-friendly flattened fields
+  // flattened for UI convenience
   name?: string | null;
   brand?: string | null;
   category?: string | null;

@@ -24,7 +24,7 @@ export interface InventoryRequestLine {
   part_id: string;
   needed_qty: number;
   notes?: string | null;
-  parts?: InventoryRequestPart | null;
+  part?: InventoryRequestPart | null;
 }
 
 export interface InventoryRequestReservationPartItem {
@@ -33,8 +33,8 @@ export interface InventoryRequestReservationPartItem {
   manufacturer_serial?: string | null;
   part_id?: string | null;
   status?: string | null;
-  parts?: InventoryRequestPart | null;
-  warehouses?: InventoryRequestWarehouse | null;
+  part?: InventoryRequestPart | null;
+  warehouse?: InventoryRequestWarehouse | null;
 }
 
 export interface InventoryReservation {
@@ -52,7 +52,7 @@ export interface InventoryRequest {
   notes?: string | null;
   status?: InventoryRequestStatus;
   created_at?: string | null;
-  warehouses?: InventoryRequestWarehouse | null;
+  warehouse?: InventoryRequestWarehouse | null;
   lines?: InventoryRequestLine[];
   reservations?: InventoryReservation[];
 }
