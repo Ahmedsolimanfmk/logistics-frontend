@@ -47,7 +47,7 @@ export default function PartItemsPage() {
           {items.map((item) => (
             <li key={item.id} className="border p-2 rounded">
               <div className="font-medium">
-                {item.name || item.parts?.name || "Unnamed Part"}
+                {item.name || item.part?.name || "Unnamed Part"}
               </div>
               <div className="text-sm text-gray-500">
                 Serial: {item.internal_serial || "-"}
