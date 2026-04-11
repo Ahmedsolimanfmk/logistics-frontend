@@ -17,11 +17,23 @@ type Warehouse = {
   name?: string | null;
 };
 
+type PartCategory = {
+  id: string;
+  name?: string | null;
+  code?: string | null;
+  is_active?: boolean | null;
+};
+
 type Part = {
   id: string;
   name?: string | null;
   part_number?: string | null;
   brand?: string | null;
+  category?:
+    | PartCategory
+    | null;
+  category_id?: string | null;
+  category_legacy?: string | null;
 };
 
 type DraftLine = {
@@ -43,6 +55,14 @@ function shortId(v?: string | null) {
   if (!s) return "—";
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
+}
+
+function partLabel(part: Part) {
+  const name = part.name || "Unnamed";
+  const partNumber = part.part_number ? ` — ${part.part_number}` : "";
+  const categoryName = part.category?.name || part.category_legacy || "";
+  const category = categoryName ? ` (${categoryName})` : "";
+  return `${name}${partNumber}${category}`;
 }
 
 export default function NewInventoryRequestClient() {
@@ -140,7 +160,11 @@ export default function NewInventoryRequestClient() {
       return;
     }
 
-    if (preparedLines.some((line) => !line.part_id || !Number.isFinite(line.needed_qty) || line.needed_qty <= 0)) {
+    if (
+      preparedLines.some(
+        (line) => !line.part_id || !Number.isFinite(line.needed_qty) || line.needed_qty <= 0
+      )
+    ) {
       setToast({
         open: true,
         message: "Each line must have a valid part and qty > 0",
@@ -188,7 +212,7 @@ export default function NewInventoryRequestClient() {
             <option value="">Select part</option>
             {parts.map((part) => (
               <option key={part.id} value={part.id}>
-                {part.name || "Unnamed"} {part.part_number ? `— ${part.part_number}` : ""}
+                {partLabel(part)}
               </option>
             ))}
           </select>
