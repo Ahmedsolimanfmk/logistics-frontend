@@ -112,7 +112,7 @@ export default function NewReceiptPage() {
         });
       }
     })();
-  }, [t]);
+  }, []);
 
   async function searchParts() {
     setPartsLoading(true);
