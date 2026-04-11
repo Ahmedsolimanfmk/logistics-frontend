@@ -27,9 +27,7 @@ type Part = {
   name: string;
   part_number: string;
   brand?: string | null;
-  category?:
-    | PartCategory
-    | null;
+  category?: PartCategory | null;
   category_id?: string | null;
   category_legacy?: string | null;
 };
@@ -46,9 +44,46 @@ function cn(...v: any[]) {
   return v.filter(Boolean).join(" ");
 }
 
-function genInternalSerial(partId: string, rowIdx: number) {
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `${partId.slice(0, 4)}-${Date.now()}-${rowIdx}-${rand}`;
+function slugToken(v: string, max = 3) {
+  return String(v || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "")
+    .slice(0, max);
+}
+
+function compactPartToken(part?: Part | null) {
+  if (!part) return "PART";
+
+  const pn = String(part.part_number || "").toUpperCase().trim();
+  if (pn) {
+    return (
+      pn
+        .replace(/^PART[-_]?/i, "")
+        .replace(/[^A-Z0-9-]+/g, "")
+        .slice(0, 12) || "PART"
+    );
+  }
+
+  return slugToken(part.name || "PART", 8) || "PART";
+}
+
+function warehouseToken(warehouseName?: string | null) {
+  const words = String(warehouseName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!words.length) return "WH";
+
+  const joined = words.map((w) => slugToken(w, 1)).join("");
+  return (joined || slugToken(String(warehouseName || ""), 3) || "WH").slice(0, 4);
+}
+
+function ymd(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}${m}${d}`;
 }
 
 function partLabel(part: Part) {
@@ -58,6 +93,54 @@ function partLabel(part: Part) {
   const categoryName = part.category?.name || part.category_legacy || "";
   const category = categoryName ? ` (${categoryName})` : "";
   return `${name}${partNumber}${brand}${category}`;
+}
+
+function buildSerialForIndex(params: {
+  items: DraftItem[];
+  parts: Part[];
+  warehouses: Warehouse[];
+  warehouseId: string;
+  rowIndex: number;
+}) {
+  const { items, parts, warehouses, warehouseId, rowIndex } = params;
+  const row = items[rowIndex];
+  const selectedPartId = String(row?.part_id || "").trim();
+
+  if (!selectedPartId) return "";
+
+  const part = parts.find((p) => p.id === selectedPartId);
+  const warehouse = warehouses.find((w) => w.id === warehouseId);
+
+  const partToken = compactPartToken(part);
+  const whToken = warehouseToken(warehouse?.name);
+  const dateToken = ymd();
+
+  let seq = 0;
+  for (let i = 0; i <= rowIndex; i += 1) {
+    if (String(items[i]?.part_id || "").trim() === selectedPartId) {
+      seq += 1;
+    }
+  }
+
+  const seqToken = String(seq || rowIndex + 1).padStart(2, "0");
+  return `${partToken}-${whToken}-${dateToken}-${seqToken}`;
+}
+
+function findDuplicateSerials(items: DraftItem[]) {
+  const counts = new Map<string, number>();
+
+  for (const row of items) {
+    const serial = String(row.internal_serial || "").trim().toUpperCase();
+    if (!serial) continue;
+    counts.set(serial, (counts.get(serial) || 0) + 1);
+  }
+
+  const duplicates = new Set<string>();
+  for (const [serial, count] of counts.entries()) {
+    if (count > 1) duplicates.add(serial);
+  }
+
+  return duplicates;
 }
 
 export default function NewReceiptPage() {
@@ -107,7 +190,10 @@ export default function NewReceiptPage() {
       } catch (e: any) {
         setToast({
           open: true,
-          message: e?.response?.data?.message || e?.message || t("common.failed"),
+          message:
+            e?.response?.data?.message ||
+            e?.message ||
+            t("common.failed"),
           type: "error",
         });
       }
@@ -126,7 +212,10 @@ export default function NewReceiptPage() {
     } catch (e: any) {
       setToast({
         open: true,
-        message: e?.response?.data?.message || e?.message || "Failed to search parts",
+        message:
+          e?.response?.data?.message ||
+          e?.message ||
+          "Failed to search parts",
         type: "error",
       });
     } finally {
@@ -135,8 +224,8 @@ export default function NewReceiptPage() {
   }
 
   const addRow = () =>
-    setItems((p) => [
-      ...p,
+    setItems((prev) => [
+      ...prev,
       {
         part_id: "",
         internal_serial: "",
@@ -147,20 +236,72 @@ export default function NewReceiptPage() {
     ]);
 
   const updateRow = (i: number, patch: Partial<DraftItem>) =>
-    setItems((p) => p.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+    setItems((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
-  const removeRow = (i: number) => setItems((p) => p.filter((_, idx) => idx !== i));
+  const removeRow = (i: number) =>
+    setItems((prev) => prev.filter((_, idx) => idx !== i));
 
   const onPickPart = (i: number, part_id: string) => {
-    updateRow(i, {
-      part_id,
-      internal_serial: part_id ? genInternalSerial(part_id, i) : "",
+    setItems((prev) => {
+      const next = prev.map((r, idx) =>
+        idx === i
+          ? {
+              ...r,
+              part_id,
+            }
+          : r
+      );
+
+      next[i] = {
+        ...next[i],
+        internal_serial: part_id
+          ? buildSerialForIndex({
+              items: next,
+              parts,
+              warehouses,
+              warehouseId,
+              rowIndex: i,
+            })
+          : "",
+      };
+
+      return next;
     });
   };
+
+  const regenerateAllSerials = () => {
+    setItems((prev) =>
+      prev.map((row, index) => ({
+        ...row,
+        internal_serial: row.part_id
+          ? buildSerialForIndex({
+              items: prev,
+              parts,
+              warehouses,
+              warehouseId,
+              rowIndex: index,
+            })
+          : "",
+      }))
+    );
+
+    setToast({
+      open: true,
+      message: "Serials regenerated",
+      type: "success",
+    });
+  };
+
+  const duplicateSerials = useMemo(() => findDuplicateSerials(items), [items]);
 
   const hasItems = useMemo(
     () => items.some((x) => String(x.part_id || "").trim()),
     [items]
+  );
+
+  const selectedWarehouseName = useMemo(
+    () => warehouses.find((w) => w.id === warehouseId)?.name || null,
+    [warehouses, warehouseId]
   );
 
   const onCreate = async () => {
@@ -178,7 +319,8 @@ export default function NewReceiptPage() {
       .map((it) => ({
         part_id: String(it.part_id || "").trim(),
         internal_serial: String(it.internal_serial || "").trim(),
-        manufacturer_serial: String(it.manufacturer_serial || "").trim() || null,
+        manufacturer_serial:
+          String(it.manufacturer_serial || "").trim() || null,
         unit_cost: String(it.unit_cost || "").trim() || null,
         notes: String(it.notes || "").trim() || null,
       }))
@@ -198,6 +340,15 @@ export default function NewReceiptPage() {
       return;
     }
 
+    if (duplicateSerials.size > 0) {
+      setToast({
+        open: true,
+        message: "There are duplicate internal serials in the form",
+        type: "error",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const created = await receiptsService.create({
@@ -212,7 +363,10 @@ export default function NewReceiptPage() {
     } catch (e: any) {
       setToast({
         open: true,
-        message: e?.response?.data?.message || e?.message || "Failed to create receipt",
+        message:
+          e?.response?.data?.message ||
+          e?.message ||
+          "Failed to create receipt",
         type: "error",
       });
     } finally {
@@ -244,13 +398,28 @@ export default function NewReceiptPage() {
     {
       key: "serial",
       label: "Internal Serial",
-      render: (r) => (
-        <input
-          value={items[r.__idx].internal_serial}
-          readOnly
-          className="w-full rounded-xl border border-black/10 px-3 py-2 bg-slate-50"
-        />
-      ),
+      render: (r) => {
+        const value = String(items[r.__idx].internal_serial || "");
+        const isDuplicate = duplicateSerials.has(value.trim().toUpperCase());
+
+        return (
+          <div className="space-y-1">
+            <input
+              value={value}
+              onChange={(e) =>
+                updateRow(r.__idx, { internal_serial: e.target.value })
+              }
+              className={cn(
+                "w-full rounded-xl border px-3 py-2",
+                isDuplicate ? "border-red-400 bg-red-50" : "border-black/10 bg-slate-50"
+              )}
+            />
+            <div className={cn("text-xs", isDuplicate ? "text-red-600" : "text-slate-500")}>
+              {isDuplicate ? "Duplicate serial in form" : "Preview / editable"}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: "mfg",
@@ -258,7 +427,9 @@ export default function NewReceiptPage() {
       render: (r) => (
         <input
           value={items[r.__idx].manufacturer_serial}
-          onChange={(e) => updateRow(r.__idx, { manufacturer_serial: e.target.value })}
+          onChange={(e) =>
+            updateRow(r.__idx, { manufacturer_serial: e.target.value })
+          }
           className="w-full rounded-xl border border-black/10 px-3 py-2"
         />
       ),
@@ -300,7 +471,10 @@ export default function NewReceiptPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <Toast {...toast} onClose={() => setToast((p) => ({ ...p, open: false }))} />
+      <Toast
+        {...toast}
+        onClose={() => setToast((p) => ({ ...p, open: false }))}
+      />
 
       <PageHeader
         title="New Receipt"
@@ -376,6 +550,34 @@ export default function NewReceiptPage() {
             </Button>
           </div>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={regenerateAllSerials}>
+            Regenerate Serials
+          </Button>
+
+          <div className="text-xs text-slate-500">
+            Warehouse token:{" "}
+            <span className="font-mono text-slate-700">
+              {warehouseToken(selectedWarehouseName)}
+            </span>
+          </div>
+
+          <div className="text-xs text-slate-500">
+            Date token:{" "}
+            <span className="font-mono text-slate-700">{ymd()}</span>
+          </div>
+
+          {duplicateSerials.size > 0 ? (
+            <div className="text-xs text-red-600">
+              Duplicate serials detected: {duplicateSerials.size}
+            </div>
+          ) : (
+            <div className="text-xs text-emerald-600">
+              No duplicate serials in form
+            </div>
+          )}
+        </div>
       </Card>
 
       <DataTable
@@ -387,6 +589,9 @@ export default function NewReceiptPage() {
           <>
             <Button variant="secondary" onClick={addRow}>
               Add Row
+            </Button>
+            <Button variant="secondary" onClick={regenerateAllSerials}>
+              Regenerate
             </Button>
             <Button onClick={onCreate} isLoading={loading}>
               Create
