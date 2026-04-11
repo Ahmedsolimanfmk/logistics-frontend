@@ -133,16 +133,21 @@ export function Sidebar() {
       },
 
       {
-        labelKey: "sidebar.inventory",
-        key: "inventory",
-        roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT", "SUPER_ADMIN"],
-        children: [
-          { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
-          { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
-          { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
-          { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
-        ],
-      },
+  labelKey: "sidebar.inventory",
+  key: "inventory",
+  roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT", "SUPER_ADMIN"],
+  children: [
+    { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
+    { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
+    { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
+
+    // 🔥 NEW
+    { labelKey: "sidebar.inventoryParts", href: "/inventory/parts" },
+    { labelKey: "sidebar.inventoryCategories", href: "/inventory/categories" },
+
+    { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
+  ],
+},
 
       { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN", "SUPER_ADMIN"] },
       {
