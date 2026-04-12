@@ -203,6 +203,9 @@ export const receiptsService = {
   async post(id: string): Promise<void> {
     await api.post(`/inventory/receipts/${id}/post`, {});
   },
+  async cancel(id: string): Promise<void> {
+  await api.post(`/inventory/receipts/${id}/cancel`, {});
+}
 
   buildKpi(rows: InventoryReceipt[]): ReceiptsKpi {
     const posted = rows.filter(
