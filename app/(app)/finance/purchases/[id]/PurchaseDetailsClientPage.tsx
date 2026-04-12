@@ -11,7 +11,7 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { Toast } from "@/src/components/Toast";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 
-import { receiptsService } from "@/src/services/receipts.service";
+import receiptsService from "@/src/services/receipts.service";
 import type {
   InventoryReceipt,
   ReceiptBulkLine,
@@ -83,7 +83,7 @@ export default function PurchaseDetailsClientPage() {
   const id = String(params?.id || "");
 
   const [loading, setLoading] = useState(true);
-  const [busyAction, setBusyAction] = useState<"submit" | "post" | null>(null);
+  const [busyAction, setBusyAction] = useState<"submit" | "post" | "cancel" | null>(null);
   const [receipt, setReceipt] = useState<InventoryReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,7 +115,9 @@ export default function PurchaseDetailsClientPage() {
   }
 
   useEffect(() => {
-    if (id) load();
+    if (id) {
+      load();
+    }
   }, [id]);
 
   async function handleSubmit() {
@@ -124,12 +126,12 @@ export default function PurchaseDetailsClientPage() {
     try {
       setBusyAction("submit");
       await receiptsService.submit(receipt.id);
-      showToast("success", "تم إرسال المشتريات للتأكيد");
+      showToast("success", "تم إرسال عملية الشراء للتأكيد");
       await load();
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message || e?.message || "فشل إرسال المشتريات"
+        e?.response?.data?.message || e?.message || "فشل إرسال عملية الشراء"
       );
     } finally {
       setBusyAction(null);
@@ -142,12 +144,30 @@ export default function PurchaseDetailsClientPage() {
     try {
       setBusyAction("post");
       await receiptsService.post(receipt.id);
-      showToast("success", "تم ترحيل المشتريات بنجاح");
+      showToast("success", "تم ترحيل عملية الشراء بنجاح");
       await load();
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message || e?.message || "فشل ترحيل المشتريات"
+        e?.response?.data?.message || e?.message || "فشل ترحيل عملية الشراء"
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleCancel() {
+    if (!receipt?.id) return;
+
+    try {
+      setBusyAction("cancel");
+      await receiptsService.cancel(receipt.id);
+      showToast("success", "تم رفض/إلغاء عملية الشراء");
+      await load();
+    } catch (e: any) {
+      showToast(
+        "error",
+        e?.response?.data?.message || e?.message || "فشل رفض عملية الشراء"
       );
     } finally {
       setBusyAction(null);
@@ -157,19 +177,24 @@ export default function PurchaseDetailsClientPage() {
   const status = receiptStatus(receipt);
   const canSubmit = status === "DRAFT";
   const canPost = status === "SUBMITTED";
+  const canCancel = status === "DRAFT" || status === "SUBMITTED";
 
   const serialItems = useMemo<ReceiptItem[]>(() => {
-    return Array.isArray(receipt?.items) ? receipt!.items! : [];
+    return Array.isArray(receipt?.items) ? receipt.items : [];
   }, [receipt]);
 
   const bulkLines = useMemo<ReceiptBulkLine[]>(() => {
-    return Array.isArray(receipt?.bulk_lines) ? receipt!.bulk_lines! : [];
+    return Array.isArray(receipt?.bulk_lines) ? receipt.bulk_lines : [];
   }, [receipt]);
 
   const displayedTotal = useMemo(() => {
     const apiTotal = numberOrZero(receipt?.total_amount);
     if (apiTotal > 0) return apiTotal;
     return estimateTotalFromReceipt(receipt);
+  }, [receipt]);
+
+  const mainDate = useMemo(() => {
+    return receipt?.invoice_date || receipt?.created_at || null;
   }, [receipt]);
 
   const serialColumns: DataTableColumn<ReceiptItem>[] = [
@@ -277,10 +302,6 @@ export default function PurchaseDetailsClientPage() {
         subtitle={`ID: ${receipt.id}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/finance/purchases">
-              <Button variant="secondary">رجوع</Button>
-            </Link>
-
             {canSubmit ? (
               <Button
                 variant="secondary"
@@ -300,6 +321,20 @@ export default function PurchaseDetailsClientPage() {
                 Post
               </Button>
             ) : null}
+
+            {canCancel ? (
+              <Button
+                variant="danger"
+                onClick={handleCancel}
+                isLoading={busyAction === "cancel"}
+              >
+                Reject
+              </Button>
+            ) : null}
+
+            <Link href="/finance/purchases">
+              <Button variant="secondary">رجوع</Button>
+            </Link>
           </div>
         }
       />
@@ -319,7 +354,7 @@ export default function PurchaseDetailsClientPage() {
           </div>
 
           <div>
-            <b>التاريخ:</b> {fmtDate(receipt.invoice_date)}
+            <b>التاريخ:</b> {fmtDate(mainDate)}
           </div>
 
           <div>

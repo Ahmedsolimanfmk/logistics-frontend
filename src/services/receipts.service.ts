@@ -205,7 +205,7 @@ export const receiptsService = {
   },
   async cancel(id: string): Promise<void> {
   await api.post(`/inventory/receipts/${id}/cancel`, {});
-}
+},
 
   buildKpi(rows: InventoryReceipt[]): ReceiptsKpi {
     const posted = rows.filter(
@@ -214,6 +214,7 @@ export const receiptsService = {
     const submitted = rows.filter(
       (row) => String(row.status || "").toUpperCase() === "SUBMITTED"
     );
+    
 
     return {
       postedSum: posted.reduce((sum, row) => sum + Number(row.total_amount || 0), 0),
