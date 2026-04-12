@@ -33,6 +33,16 @@ export interface ReceiptItem {
   part?: ReceiptPart | null;
 }
 
+export interface ReceiptBulkLine {
+  id?: string;
+  part_id: string;
+  qty: number;
+  unit_cost?: number | string | null;
+  total_cost?: number | string | null;
+  notes?: string | null;
+  part?: ReceiptPart | null;
+}
+
 export interface ReceiptLinkedCashExpense {
   id: string;
   approval_status?: string | null;
@@ -62,6 +72,7 @@ export interface InventoryReceipt {
   vendor?: ReceiptVendor | null;
 
   items?: ReceiptItem[] | null;
+  bulk_lines?: ReceiptBulkLine[] | null;
 
   cash_expense?: ReceiptLinkedCashExpense | null;
   cash_expenses?: ReceiptLinkedCashExpense[] | null;
@@ -75,10 +86,17 @@ export interface CreateReceiptPayload {
   invoice_date?: string | null;
   notes?: string | null;
 
-  items: {
+  items?: {
     part_id: string;
     internal_serial: string;
     manufacturer_serial?: string | null;
+    unit_cost?: string | number | null;
+    notes?: string | null;
+  }[];
+
+  bulk_lines?: {
+    part_id: string;
+    qty: number;
     unit_cost?: string | number | null;
     notes?: string | null;
   }[];

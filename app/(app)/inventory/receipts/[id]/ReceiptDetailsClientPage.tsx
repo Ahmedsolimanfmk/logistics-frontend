@@ -6,14 +6,17 @@ import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
 import { receiptsService } from "@/src/services/receipts.service";
 
-// ✅ Design System
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
-import type { InventoryReceipt, ReceiptItem } from "@/src/types/receipts.types";
+import type {
+  InventoryReceipt,
+  ReceiptItem,
+  ReceiptBulkLine,
+} from "@/src/types/receipts.types";
 
 function shortId(id: any) {
   const s = String(id ?? "");
@@ -99,7 +102,6 @@ export default function ReceiptDetailsPage() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function submitReceipt() {
@@ -152,7 +154,11 @@ export default function ReceiptDetailsPage() {
     return Array.isArray(row?.items) ? row.items : [];
   }, [row]);
 
-  const columns: DataTableColumn<ReceiptItem>[] = [
+  const bulkLines = useMemo<ReceiptBulkLine[]>(() => {
+    return Array.isArray(row?.bulk_lines) ? row.bulk_lines : [];
+  }, [row]);
+
+  const itemColumns: DataTableColumn<ReceiptItem>[] = [
     {
       key: "part",
       label: "Part",
@@ -187,6 +193,41 @@ export default function ReceiptDetailsPage() {
       key: "cost",
       label: "Unit Cost",
       render: (x) => formatMoney(x?.unit_cost),
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      render: (x) => x?.notes || "—",
+    },
+  ];
+
+  const bulkColumns: DataTableColumn<ReceiptBulkLine>[] = [
+    {
+      key: "part",
+      label: "Part",
+      render: (x) => (
+        <div>
+          <div className="text-gray-900 font-semibold">{x?.part?.name || "—"}</div>
+          <div className="text-xs text-gray-500 font-mono">
+            {x?.part?.part_number || shortId(x?.part_id)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "qty",
+      label: "Qty",
+      render: (x) => String(x?.qty ?? 0),
+    },
+    {
+      key: "unit_cost",
+      label: "Unit Cost",
+      render: (x) => formatMoney(x?.unit_cost),
+    },
+    {
+      key: "total_cost",
+      label: "Total Cost",
+      render: (x) => formatMoney(x?.total_cost),
     },
     {
       key: "notes",
@@ -264,21 +305,36 @@ export default function ReceiptDetailsPage() {
               <Info label="تاريخ الإنشاء" value={formatDate(row?.created_at)} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <Info label="رقم الفاتورة" value={row?.invoice_no || "—"} />
-              <Info label="عدد العناصر" value={items.length} />
+              <Info label="عدد العناصر المسلسلة" value={items.length} />
+              <Info label="عدد البنود المجمعة" value={bulkLines.length} />
               <Info label="الإجمالي" value={formatMoney(row?.total_amount)} />
             </div>
 
-            <DataTable
-              title="العناصر"
-              columns={columns}
-              rows={items}
-              loading={false}
-              emptyTitle={t("common.noData")}
-              emptyHint="لا توجد عناصر داخل الإضافة."
-              minWidthClassName="min-w-[1100px]"
-            />
+            {items.length > 0 ? (
+              <DataTable
+                title="Serial Items"
+                columns={itemColumns}
+                rows={items}
+                loading={false}
+                emptyTitle={t("common.noData")}
+                emptyHint="لا توجد عناصر مسلسلة داخل الإضافة."
+                minWidthClassName="min-w-[1100px]"
+              />
+            ) : null}
+
+            {bulkLines.length > 0 ? (
+              <DataTable
+                title="Bulk Items"
+                columns={bulkColumns}
+                rows={bulkLines}
+                loading={false}
+                emptyTitle={t("common.noData")}
+                emptyHint="لا توجد بنود مجمعة داخل الإضافة."
+                minWidthClassName="min-w-[1000px]"
+              />
+            ) : null}
           </div>
         )}
       </Card>
