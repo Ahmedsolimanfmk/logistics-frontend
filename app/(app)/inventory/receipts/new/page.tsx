@@ -193,6 +193,9 @@ export default function NewReceiptPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
 
+  const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [vendorsLoadError, setVendorsLoadError] = useState("");
+
   const [items, setItems] = useState<DraftItem[]>([
     {
       part_id: "",
@@ -227,19 +230,43 @@ export default function NewReceiptPage() {
       try {
         const w = unwrapItems(await apiGet("/inventory/warehouses"));
         setWarehouses(w);
+      } catch (e: any) {
+        setToast({
+          open: true,
+          message: e?.response?.data?.message || e?.message || t("common.failed"),
+          type: "error",
+        });
+      }
+    })();
+  }, [t]);
 
+  useEffect(() => {
+    (async () => {
+      setVendorsLoading(true);
+      setVendorsLoadError("");
+      try {
         const v = unwrapItems(await apiGet("/vendors"));
         setVendors(v);
+      } catch (e: any) {
+        setVendors([]);
+        setVendorsLoadError(
+          e?.response?.data?.message || e?.message || "Failed to load vendors"
+        );
+      } finally {
+        setVendorsLoading(false);
+      }
+    })();
+  }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
         const p = unwrapItems(await apiGet("/inventory/parts"));
         setParts(p);
       } catch (e: any) {
         setToast({
           open: true,
-          message:
-            e?.response?.data?.message ||
-            e?.message ||
-            t("common.failed"),
+          message: e?.response?.data?.message || e?.message || t("common.failed"),
           type: "error",
         });
       }
@@ -258,10 +285,7 @@ export default function NewReceiptPage() {
     } catch (e: any) {
       setToast({
         open: true,
-        message:
-          e?.response?.data?.message ||
-          e?.message ||
-          "Failed to search parts",
+        message: e?.response?.data?.message || e?.message || "Failed to search parts",
         type: "error",
       });
     } finally {
@@ -460,7 +484,7 @@ export default function NewReceiptPage() {
           value={items[r.__idx].notes}
           onChange={(e) => updateRow(r.__idx, { notes: e.target.value })}
           className="w-full rounded-xl border border-black/10 px-3 py-2"
-          placeholder="optional"
+          placeholder={t("common.optional")}
         />
       ),
     },
@@ -526,7 +550,7 @@ export default function NewReceiptPage() {
           value={bulkItems[r.__idx].notes}
           onChange={(e) => updateBulkRow(r.__idx, { notes: e.target.value })}
           className="w-full rounded-xl border border-black/10 px-3 py-2"
-          placeholder="optional"
+          placeholder={t("common.optional")}
         />
       ),
     },
@@ -646,14 +670,14 @@ export default function NewReceiptPage() {
       />
 
       <PageHeader
-        title="New Receipt"
+        title={t("receipts.newTitle")}
         actions={
           <>
             <Button variant="secondary" onClick={() => router.back()}>
-              Back
+              {t("common.back")}
             </Button>
             <Button onClick={onCreate} isLoading={loading}>
-              Create
+              {t("common.save")}
             </Button>
           </>
         }
@@ -666,7 +690,7 @@ export default function NewReceiptPage() {
             onChange={(e) => setWarehouseId(e.target.value)}
             className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
           >
-            <option value="">Warehouse</option>
+            <option value="">{t("financePurchases.table.warehouse")}</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name || w.code || w.id}
@@ -677,9 +701,19 @@ export default function NewReceiptPage() {
           <select
             value={vendorId}
             onChange={(e) => setVendorId(e.target.value)}
-            className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
+            disabled={vendorsLoading}
+            className={cn(
+              "w-full rounded-xl border px-3 py-2",
+              vendorsLoading ? "border-slate-200 bg-slate-100 text-slate-500" : "border-black/10"
+            )}
           >
-            <option value="">Select Vendor</option>
+            <option value="">
+              {vendorsLoading
+                ? t("common.loading")
+                : visibleVendors.length
+                ? t("receipts.supplier")
+                : "لا يوجد موردون"}
+            </option>
             {visibleVendors.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.__label}
@@ -690,7 +724,7 @@ export default function NewReceiptPage() {
           <input
             value={invoiceNo}
             onChange={(e) => setInvoiceNo(e.target.value)}
-            placeholder="Invoice No"
+            placeholder={t("receipts.invoiceNo")}
             className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
           />
 
@@ -701,6 +735,18 @@ export default function NewReceiptPage() {
             className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
           />
         </div>
+
+        {vendorsLoadError ? (
+          <div className="mt-2 text-sm text-red-600">
+            فشل تحميل الموردين: {vendorsLoadError}
+          </div>
+        ) : null}
+
+        {!vendorsLoading && !visibleVendors.length ? (
+          <div className="mt-2 text-sm text-amber-600">
+            لا توجد بيانات موردين من API /vendors
+          </div>
+        ) : null}
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
           <div className="md:col-span-2">
@@ -782,7 +828,7 @@ export default function NewReceiptPage() {
                 Regenerate
               </Button>
               <Button onClick={onCreate} isLoading={loading}>
-                Create
+                {t("common.save")}
               </Button>
             </>
           }
@@ -799,7 +845,7 @@ export default function NewReceiptPage() {
                 Add Row
               </Button>
               <Button onClick={onCreate} isLoading={loading}>
-                Create
+                {t("common.save")}
               </Button>
             </>
           }

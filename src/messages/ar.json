@@ -1956,7 +1956,18 @@
     "cashExpenseNone": "لا يوجد مصروف مرتبط (سيظهر بعد الترحيل)",
     "cashExpenseAmount": "القيمة",
     "cashExpenseStatus": "حالة الاعتماد",
-    "cashExpenseType": "نوع المصروف"
+    "cashExpenseType": "نوع المصروف",
+    "header": "البيانات الأساسية",
+"vendorSelect": "اختر المورد",
+"vendorsEmpty": "لا يوجد موردون",
+"vendorsLoadFailed": "فشل تحميل الموردين",
+"searchParts": "بحث الأصناف",
+"searchPartsPlaceholder": "ابحث برقم القطعة / الاسم / البراند",
+"serialMode": "مسلسل",
+"bulkMode": "مجمع",
+"regenerateSerials": "إعادة توليد السيريالات",
+"serialItems": "العناصر المسلسلة",
+"bulkItems": "العناصر المجمعة"
   },
   "partItems": {
     "title": "السيريالات (Part Items)",

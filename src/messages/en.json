@@ -1667,7 +1667,18 @@
     "cashExpenseNone": "No linked expense (will appear after posting)",
     "cashExpenseAmount": "Amount",
     "cashExpenseStatus": "Approval Status",
-    "cashExpenseType": "Expense Type"
+    "cashExpenseType": "Expense Type",
+    "header": "Header",
+"vendorSelect": "Select vendor",
+"vendorsEmpty": "No vendors",
+"vendorsLoadFailed": "Failed to load vendors",
+"searchParts": "Search parts",
+"searchPartsPlaceholder": "Search by part number / name / brand",
+"serialMode": "Serial",
+"bulkMode": "Bulk",
+"regenerateSerials": "Regenerate Serials",
+"serialItems": "Serial Items",
+"bulkItems": "Bulk Items"
   },
   "contracts": {
     "title": "Contracts",
