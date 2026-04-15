@@ -244,19 +244,20 @@ export default function NewReceiptPage() {
     (async () => {
       setVendorsLoading(true);
       setVendorsLoadError("");
+
       try {
         const v = unwrapItems(await apiGet("/vendors"));
         setVendors(v);
       } catch (e: any) {
         setVendors([]);
         setVendorsLoadError(
-          e?.response?.data?.message || e?.message || "Failed to load vendors"
+          e?.response?.data?.message || e?.message || t("receipts.vendorsLoadFailed")
         );
       } finally {
         setVendorsLoading(false);
       }
     })();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     (async () => {
@@ -285,7 +286,10 @@ export default function NewReceiptPage() {
     } catch (e: any) {
       setToast({
         open: true,
-        message: e?.response?.data?.message || e?.message || "Failed to search parts",
+        message:
+          e?.response?.data?.message ||
+          e?.message ||
+          t("common.failed"),
         type: "error",
       });
     } finally {
@@ -357,7 +361,7 @@ export default function NewReceiptPage() {
 
     setToast({
       open: true,
-      message: "Serials regenerated",
+      message: t("receipts.regenerateSerials"),
       type: "success",
     });
   };
@@ -409,14 +413,14 @@ export default function NewReceiptPage() {
   const serialColumns: DataTableColumn<any>[] = [
     {
       key: "part",
-      label: "Part",
+      label: t("receipts.colPart"),
       render: (r) => (
         <select
           value={items[r.__idx].part_id}
           onChange={(e) => onPickPart(r.__idx, e.target.value)}
           className="w-full rounded-xl border border-black/10 px-3 py-2"
         >
-          <option value="">Select</option>
+          <option value="">{t("common.selected")}</option>
           {parts.map((p) => (
             <option key={p.id} value={p.id}>
               {partLabel(p)}
@@ -427,7 +431,7 @@ export default function NewReceiptPage() {
     },
     {
       key: "serial",
-      label: "Internal Serial",
+      label: t("receipts.colInternalSerial"),
       render: (r) => {
         const value = String(items[r.__idx].internal_serial || "");
         const isDuplicate = duplicateSerials.has(value.trim().toUpperCase());
@@ -453,7 +457,7 @@ export default function NewReceiptPage() {
     },
     {
       key: "mfg",
-      label: "Manufacturer Serial",
+      label: t("receipts.colManufacturerSerial"),
       render: (r) => (
         <input
           value={items[r.__idx].manufacturer_serial}
@@ -466,7 +470,7 @@ export default function NewReceiptPage() {
     },
     {
       key: "cost",
-      label: "Unit Cost",
+      label: t("receipts.colUnitCost"),
       render: (r) => (
         <input
           value={items[r.__idx].unit_cost}
@@ -478,7 +482,7 @@ export default function NewReceiptPage() {
     },
     {
       key: "notes",
-      label: "Notes",
+      label: t("receipts.colNotes"),
       render: (r) => (
         <input
           value={items[r.__idx].notes}
@@ -493,7 +497,7 @@ export default function NewReceiptPage() {
       label: "",
       render: (r) => (
         <Button variant="danger" onClick={() => removeRow(r.__idx)}>
-          Remove
+          {t("receipts.remove")}
         </Button>
       ),
     },
@@ -502,14 +506,14 @@ export default function NewReceiptPage() {
   const bulkColumns: DataTableColumn<any>[] = [
     {
       key: "part",
-      label: "Part",
+      label: t("receipts.colPart"),
       render: (r) => (
         <select
           value={bulkItems[r.__idx].part_id}
           onChange={(e) => updateBulkRow(r.__idx, { part_id: e.target.value })}
           className="w-full rounded-xl border border-black/10 px-3 py-2"
         >
-          <option value="">Select</option>
+          <option value="">{t("common.selected")}</option>
           {parts.map((p) => (
             <option key={p.id} value={p.id}>
               {partLabel(p)}
@@ -532,7 +536,7 @@ export default function NewReceiptPage() {
     },
     {
       key: "cost",
-      label: "Unit Cost",
+      label: t("receipts.colUnitCost"),
       render: (r) => (
         <input
           value={bulkItems[r.__idx].unit_cost}
@@ -544,7 +548,7 @@ export default function NewReceiptPage() {
     },
     {
       key: "notes",
-      label: "Notes",
+      label: t("receipts.colNotes"),
       render: (r) => (
         <input
           value={bulkItems[r.__idx].notes}
@@ -559,7 +563,7 @@ export default function NewReceiptPage() {
       label: "",
       render: (r) => (
         <Button variant="danger" onClick={() => removeBulkRow(r.__idx)}>
-          Remove
+          {t("receipts.remove")}
         </Button>
       ),
     },
@@ -654,7 +658,7 @@ export default function NewReceiptPage() {
         message:
           e?.response?.data?.message ||
           e?.message ||
-          "Failed to create receipt",
+          t("common.failed"),
         type: "error",
       });
     } finally {
@@ -683,21 +687,8 @@ export default function NewReceiptPage() {
         }
       />
 
-      <Card title="Header">
+      <Card title={t("receipts.header")}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <select
-            value={warehouseId}
-            onChange={(e) => setWarehouseId(e.target.value)}
-            className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
-          >
-            <option value="">{t("financePurchases.table.warehouse")}</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name || w.code || w.id}
-              </option>
-            ))}
-          </select>
-
           <select
             value={vendorId}
             onChange={(e) => setVendorId(e.target.value)}
@@ -711,9 +702,10 @@ export default function NewReceiptPage() {
               {vendorsLoading
                 ? t("common.loading")
                 : visibleVendors.length
-                ? t("receipts.supplier")
-                : "لا يوجد موردون"}
+                ? t("receipts.vendorSelect")
+                : t("receipts.vendorsEmpty")}
             </option>
+
             {visibleVendors.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.__label}
@@ -721,12 +713,18 @@ export default function NewReceiptPage() {
             ))}
           </select>
 
-          <input
-            value={invoiceNo}
-            onChange={(e) => setInvoiceNo(e.target.value)}
-            placeholder={t("receipts.invoiceNo")}
+          <select
+            value={warehouseId}
+            onChange={(e) => setWarehouseId(e.target.value)}
             className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
-          />
+          >
+            <option value="">{t("receipts.warehouseSelect")}</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name || w.code || w.id}
+              </option>
+            ))}
+          </select>
 
           <input
             type="date"
@@ -734,34 +732,43 @@ export default function NewReceiptPage() {
             onChange={(e) => setInvoiceDate(e.target.value)}
             className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
           />
+
+          <input
+            value={invoiceNo}
+            onChange={(e) => setInvoiceNo(e.target.value)}
+            placeholder={t("receipts.invoiceNo")}
+            className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
+          />
         </div>
 
         {vendorsLoadError ? (
           <div className="mt-2 text-sm text-red-600">
-            فشل تحميل الموردين: {vendorsLoadError}
+            {t("receipts.vendorsLoadFailed")}: {vendorsLoadError}
           </div>
         ) : null}
 
         {!vendorsLoading && !visibleVendors.length ? (
           <div className="mt-2 text-sm text-amber-600">
-            لا توجد بيانات موردين من API /vendors
+            {t("receipts.vendorsEmpty")}
           </div>
         ) : null}
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
           <div className="md:col-span-2">
-            <div className="mb-1 text-xs text-slate-500">Search parts</div>
+            <div className="mb-1 text-xs text-slate-500">
+              {t("receipts.searchParts")}
+            </div>
             <input
               value={partQuery}
               onChange={(e) => setPartQuery(e.target.value)}
               className="w-full rounded-xl border border-black/10 px-3 py-2"
-              placeholder="Search by part number / name / brand"
+              placeholder={t("receipts.searchPartsPlaceholder")}
             />
           </div>
 
           <div>
             <Button onClick={searchParts} isLoading={partsLoading}>
-              Search Parts
+              {t("receipts.searchParts")}
             </Button>
           </div>
         </div>
@@ -771,32 +778,32 @@ export default function NewReceiptPage() {
             variant={mode === "SERIAL" ? "primary" : "secondary"}
             onClick={() => setMode("SERIAL")}
           >
-            Serial
+            {t("receipts.serialMode")}
           </Button>
 
           <Button
             variant={mode === "BULK" ? "primary" : "secondary"}
             onClick={() => setMode("BULK")}
           >
-            Bulk
+            {t("receipts.bulkMode")}
           </Button>
 
           {mode === "SERIAL" ? (
             <>
               <Button variant="secondary" onClick={regenerateAllSerials}>
-                Regenerate Serials
+                {t("receipts.regenerateSerials")}
               </Button>
+
+              <div className="text-xs text-slate-500">
+                Date token:{" "}
+                <span className="font-mono text-slate-700">{ymd()}</span>
+              </div>
 
               <div className="text-xs text-slate-500">
                 Warehouse token:{" "}
                 <span className="font-mono text-slate-700">
                   {warehouseToken(selectedWarehouseName)}
                 </span>
-              </div>
-
-              <div className="text-xs text-slate-500">
-                Date token:{" "}
-                <span className="font-mono text-slate-700">{ymd()}</span>
               </div>
 
               {duplicateSerials.size > 0 ? (
@@ -815,17 +822,17 @@ export default function NewReceiptPage() {
 
       {mode === "SERIAL" ? (
         <DataTable
-          title="Serial Items"
+          title={t("receipts.serialItems")}
           subtitle={`Rows: ${items.length}`}
           columns={serialColumns}
           rows={serialRows}
           right={
             <>
               <Button variant="secondary" onClick={addRow}>
-                Add Row
+                {t("receipts.addRow")}
               </Button>
               <Button variant="secondary" onClick={regenerateAllSerials}>
-                Regenerate
+                {t("receipts.regenerateSerials")}
               </Button>
               <Button onClick={onCreate} isLoading={loading}>
                 {t("common.save")}
@@ -835,14 +842,14 @@ export default function NewReceiptPage() {
         />
       ) : (
         <DataTable
-          title="Bulk Items"
+          title={t("receipts.bulkItems")}
           subtitle={`Rows: ${bulkItems.length}`}
           columns={bulkColumns}
           rows={bulkRows}
           right={
             <>
               <Button variant="secondary" onClick={addBulkRow}>
-                Add Row
+                {t("receipts.addRow")}
               </Button>
               <Button onClick={onCreate} isLoading={loading}>
                 {t("common.save")}
