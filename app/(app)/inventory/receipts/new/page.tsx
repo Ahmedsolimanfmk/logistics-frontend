@@ -12,8 +12,21 @@ import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 
-type Warehouse = { id: string; name?: string | null };
-type Vendor = { id: string; name?: string | null };
+type Warehouse = {
+  id: string;
+  name?: string | null;
+  code?: string | null;
+};
+
+type Vendor = {
+  id: string;
+  name?: string | null;
+  vendor_name?: string | null;
+  supplier_name?: string | null;
+  company_name?: string | null;
+  display_name?: string | null;
+  code?: string | null;
+};
 
 type PartCategory = {
   id: string;
@@ -36,6 +49,13 @@ type DraftItem = {
   part_id: string;
   internal_serial: string;
   manufacturer_serial: string;
+  unit_cost: string;
+  notes: string;
+};
+
+type BulkItem = {
+  part_id: string;
+  qty: string;
   unit_cost: string;
   notes: string;
 };
@@ -95,6 +115,21 @@ function partLabel(part: Part) {
   return `${name}${partNumber}${brand}${category}`;
 }
 
+function vendorLabel(vendor: Vendor) {
+  const name =
+    vendor.name ||
+    vendor.vendor_name ||
+    vendor.supplier_name ||
+    vendor.company_name ||
+    vendor.display_name ||
+    "";
+
+  const code = vendor.code ? ` — ${vendor.code}` : "";
+  const trimmed = String(name || "").trim();
+
+  return trimmed ? `${trimmed}${code}` : `Vendor ${vendor.id.slice(0, 8)}`;
+}
+
 function buildSerialForIndex(params: {
   items: DraftItem[];
   parts: Part[];
@@ -147,6 +182,8 @@ export default function NewReceiptPage() {
   const t = useT();
   const router = useRouter();
 
+  const [mode, setMode] = useState<"SERIAL" | "BULK">("SERIAL");
+
   const [warehouseId, setWarehouseId] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -161,6 +198,15 @@ export default function NewReceiptPage() {
       part_id: "",
       internal_serial: "",
       manufacturer_serial: "",
+      unit_cost: "",
+      notes: "",
+    },
+  ]);
+
+  const [bulkItems, setBulkItems] = useState<BulkItem[]>([
+    {
+      part_id: "",
+      qty: "",
       unit_cost: "",
       notes: "",
     },
@@ -198,7 +244,7 @@ export default function NewReceiptPage() {
         });
       }
     })();
-  }, []);
+  }, [t]);
 
   async function searchParts() {
     setPartsLoading(true);
@@ -292,11 +338,31 @@ export default function NewReceiptPage() {
     });
   };
 
+  const addBulkRow = () =>
+    setBulkItems((prev) => [
+      ...prev,
+      { part_id: "", qty: "", unit_cost: "", notes: "" },
+    ]);
+
+  const updateBulkRow = (i: number, patch: Partial<BulkItem>) =>
+    setBulkItems((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  const removeBulkRow = (i: number) =>
+    setBulkItems((prev) => prev.filter((_, idx) => idx !== i));
+
   const duplicateSerials = useMemo(() => findDuplicateSerials(items), [items]);
 
-  const hasItems = useMemo(
+  const hasSerialItems = useMemo(
     () => items.some((x) => String(x.part_id || "").trim()),
     [items]
+  );
+
+  const hasBulkItems = useMemo(
+    () =>
+      bulkItems.some(
+        (x) => String(x.part_id || "").trim() && Number(x.qty || 0) > 0
+      ),
+    [bulkItems]
   );
 
   const selectedWarehouseName = useMemo(
@@ -304,79 +370,19 @@ export default function NewReceiptPage() {
     [warehouses, warehouseId]
   );
 
-  const onCreate = async () => {
-    if (!warehouseId) {
-      setToast({ open: true, message: "Warehouse required", type: "error" });
-      return;
-    }
-
-    if (!vendorId) {
-      setToast({ open: true, message: "Vendor required", type: "error" });
-      return;
-    }
-
-    const preparedItems = items
-      .map((it) => ({
-        part_id: String(it.part_id || "").trim(),
-        internal_serial: String(it.internal_serial || "").trim(),
-        manufacturer_serial:
-          String(it.manufacturer_serial || "").trim() || null,
-        unit_cost: String(it.unit_cost || "").trim() || null,
-        notes: String(it.notes || "").trim() || null,
+  const visibleVendors = useMemo(() => {
+    return vendors
+      .map((v) => ({
+        ...v,
+        __label: vendorLabel(v),
       }))
-      .filter((it) => it.part_id);
+      .sort((a, b) => a.__label.localeCompare(b.__label, "ar"));
+  }, [vendors]);
 
-    if (!preparedItems.length || !hasItems) {
-      setToast({ open: true, message: "Items required", type: "error" });
-      return;
-    }
+  const serialRows = items.map((x, i) => ({ ...x, __idx: i }));
+  const bulkRows = bulkItems.map((x, i) => ({ ...x, __idx: i }));
 
-    if (preparedItems.some((it) => !it.part_id || !it.internal_serial)) {
-      setToast({
-        open: true,
-        message: "Each item must have a part and internal serial",
-        type: "error",
-      });
-      return;
-    }
-
-    if (duplicateSerials.size > 0) {
-      setToast({
-        open: true,
-        message: "There are duplicate internal serials in the form",
-        type: "error",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const created = await receiptsService.create({
-        warehouse_id: warehouseId,
-        vendor_id: vendorId,
-        invoice_no: invoiceNo || null,
-        invoice_date: invoiceDate || null,
-        items: preparedItems,
-      });
-
-      router.push(`/inventory/receipts/${created.id}`);
-    } catch (e: any) {
-      setToast({
-        open: true,
-        message:
-          e?.response?.data?.message ||
-          e?.message ||
-          "Failed to create receipt",
-        type: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const rows = items.map((x, i) => ({ ...x, __idx: i }));
-
-  const columns: DataTableColumn<any>[] = [
+  const serialColumns: DataTableColumn<any>[] = [
     {
       key: "part",
       label: "Part",
@@ -469,6 +475,169 @@ export default function NewReceiptPage() {
     },
   ];
 
+  const bulkColumns: DataTableColumn<any>[] = [
+    {
+      key: "part",
+      label: "Part",
+      render: (r) => (
+        <select
+          value={bulkItems[r.__idx].part_id}
+          onChange={(e) => updateBulkRow(r.__idx, { part_id: e.target.value })}
+          className="w-full rounded-xl border border-black/10 px-3 py-2"
+        >
+          <option value="">Select</option>
+          {parts.map((p) => (
+            <option key={p.id} value={p.id}>
+              {partLabel(p)}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    {
+      key: "qty",
+      label: "Qty",
+      render: (r) => (
+        <input
+          value={bulkItems[r.__idx].qty}
+          onChange={(e) => updateBulkRow(r.__idx, { qty: e.target.value })}
+          className="w-full rounded-xl border border-black/10 px-3 py-2"
+          placeholder="1"
+        />
+      ),
+    },
+    {
+      key: "cost",
+      label: "Unit Cost",
+      render: (r) => (
+        <input
+          value={bulkItems[r.__idx].unit_cost}
+          onChange={(e) => updateBulkRow(r.__idx, { unit_cost: e.target.value })}
+          className="w-full rounded-xl border border-black/10 px-3 py-2"
+          placeholder="0.00"
+        />
+      ),
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      render: (r) => (
+        <input
+          value={bulkItems[r.__idx].notes}
+          onChange={(e) => updateBulkRow(r.__idx, { notes: e.target.value })}
+          className="w-full rounded-xl border border-black/10 px-3 py-2"
+          placeholder="optional"
+        />
+      ),
+    },
+    {
+      key: "remove",
+      label: "",
+      render: (r) => (
+        <Button variant="danger" onClick={() => removeBulkRow(r.__idx)}>
+          Remove
+        </Button>
+      ),
+    },
+  ];
+
+  const onCreate = async () => {
+    if (!warehouseId) {
+      setToast({ open: true, message: "Warehouse required", type: "error" });
+      return;
+    }
+
+    if (!vendorId) {
+      setToast({ open: true, message: "Vendor required", type: "error" });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const payload: any = {
+        warehouse_id: warehouseId,
+        vendor_id: vendorId,
+        invoice_no: invoiceNo || null,
+        invoice_date: invoiceDate || null,
+      };
+
+      if (mode === "SERIAL") {
+        const preparedItems = items
+          .map((it) => ({
+            part_id: String(it.part_id || "").trim(),
+            internal_serial: String(it.internal_serial || "").trim(),
+            manufacturer_serial:
+              String(it.manufacturer_serial || "").trim() || null,
+            unit_cost: String(it.unit_cost || "").trim() || null,
+            notes: String(it.notes || "").trim() || null,
+          }))
+          .filter((it) => it.part_id);
+
+        if (!preparedItems.length || !hasSerialItems) {
+          setToast({ open: true, message: "Items required", type: "error" });
+          setLoading(false);
+          return;
+        }
+
+        if (preparedItems.some((it) => !it.part_id || !it.internal_serial)) {
+          setToast({
+            open: true,
+            message: "Each item must have a part and internal serial",
+            type: "error",
+          });
+          setLoading(false);
+          return;
+        }
+
+        if (duplicateSerials.size > 0) {
+          setToast({
+            open: true,
+            message: "There are duplicate internal serials in the form",
+            type: "error",
+          });
+          setLoading(false);
+          return;
+        }
+
+        payload.items = preparedItems;
+      }
+
+      if (mode === "BULK") {
+        const preparedBulk = bulkItems
+          .map((b) => ({
+            part_id: String(b.part_id || "").trim(),
+            qty: Number(b.qty || 0),
+            unit_cost: String(b.unit_cost || "").trim() || null,
+            notes: String(b.notes || "").trim() || null,
+          }))
+          .filter((b) => b.part_id && b.qty > 0);
+
+        if (!preparedBulk.length || !hasBulkItems) {
+          setToast({ open: true, message: "Bulk lines required", type: "error" });
+          setLoading(false);
+          return;
+        }
+
+        payload.bulk_lines = preparedBulk;
+      }
+
+      const created = await receiptsService.create(payload);
+      router.push(`/inventory/receipts/${created.id}`);
+    } catch (e: any) {
+      setToast({
+        open: true,
+        message:
+          e?.response?.data?.message ||
+          e?.message ||
+          "Failed to create receipt",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-4">
       <Toast
@@ -500,7 +669,7 @@ export default function NewReceiptPage() {
             <option value="">Warehouse</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.name}
+                {w.name || w.code || w.id}
               </option>
             ))}
           </select>
@@ -510,10 +679,10 @@ export default function NewReceiptPage() {
             onChange={(e) => setVendorId(e.target.value)}
             className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
           >
-            <option value="">Vendor</option>
-            {vendors.map((v) => (
+            <option value="">Select Vendor</option>
+            {visibleVendors.map((v) => (
               <option key={v.id} value={v.id}>
-                {v.name}
+                {v.__label}
               </option>
             ))}
           </select>
@@ -552,53 +721,90 @@ export default function NewReceiptPage() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={regenerateAllSerials}>
-            Regenerate Serials
+          <Button
+            variant={mode === "SERIAL" ? "primary" : "secondary"}
+            onClick={() => setMode("SERIAL")}
+          >
+            Serial
           </Button>
 
-          <div className="text-xs text-slate-500">
-            Warehouse token:{" "}
-            <span className="font-mono text-slate-700">
-              {warehouseToken(selectedWarehouseName)}
-            </span>
-          </div>
+          <Button
+            variant={mode === "BULK" ? "primary" : "secondary"}
+            onClick={() => setMode("BULK")}
+          >
+            Bulk
+          </Button>
 
-          <div className="text-xs text-slate-500">
-            Date token:{" "}
-            <span className="font-mono text-slate-700">{ymd()}</span>
-          </div>
+          {mode === "SERIAL" ? (
+            <>
+              <Button variant="secondary" onClick={regenerateAllSerials}>
+                Regenerate Serials
+              </Button>
 
-          {duplicateSerials.size > 0 ? (
-            <div className="text-xs text-red-600">
-              Duplicate serials detected: {duplicateSerials.size}
-            </div>
-          ) : (
-            <div className="text-xs text-emerald-600">
-              No duplicate serials in form
-            </div>
-          )}
+              <div className="text-xs text-slate-500">
+                Warehouse token:{" "}
+                <span className="font-mono text-slate-700">
+                  {warehouseToken(selectedWarehouseName)}
+                </span>
+              </div>
+
+              <div className="text-xs text-slate-500">
+                Date token:{" "}
+                <span className="font-mono text-slate-700">{ymd()}</span>
+              </div>
+
+              {duplicateSerials.size > 0 ? (
+                <div className="text-xs text-red-600">
+                  Duplicate serials detected: {duplicateSerials.size}
+                </div>
+              ) : (
+                <div className="text-xs text-emerald-600">
+                  No duplicate serials in form
+                </div>
+              )}
+            </>
+          ) : null}
         </div>
       </Card>
 
-      <DataTable
-        title="Items"
-        subtitle={`Rows: ${items.length}`}
-        columns={columns}
-        rows={rows}
-        right={
-          <>
-            <Button variant="secondary" onClick={addRow}>
-              Add Row
-            </Button>
-            <Button variant="secondary" onClick={regenerateAllSerials}>
-              Regenerate
-            </Button>
-            <Button onClick={onCreate} isLoading={loading}>
-              Create
-            </Button>
-          </>
-        }
-      />
+      {mode === "SERIAL" ? (
+        <DataTable
+          title="Serial Items"
+          subtitle={`Rows: ${items.length}`}
+          columns={serialColumns}
+          rows={serialRows}
+          right={
+            <>
+              <Button variant="secondary" onClick={addRow}>
+                Add Row
+              </Button>
+              <Button variant="secondary" onClick={regenerateAllSerials}>
+                Regenerate
+              </Button>
+              <Button onClick={onCreate} isLoading={loading}>
+                Create
+              </Button>
+            </>
+          }
+        />
+      ) : (
+        <DataTable
+          title="Bulk Items"
+          subtitle={`Rows: ${bulkItems.length}`}
+          columns={bulkColumns}
+          rows={bulkRows}
+          right={
+            <>
+              <Button variant="secondary" onClick={addBulkRow}>
+                Add Row
+              </Button>
+              <Button onClick={onCreate} isLoading={loading}>
+                Create
+              </Button>
+            </>
+          }
+        />
+      )}
     </div>
   );
 }
