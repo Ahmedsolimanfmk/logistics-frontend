@@ -1,83 +1,152 @@
 import { api } from "@/src/lib/api";
-import type { ApiListResponse } from "@/src/types/api.types";
-import type {
-  MaintenanceRequest,
-  MaintenanceRequestsListFilters,
-  VehicleOption,
-  CreateMaintenanceRequestPayload,
-  ApproveMaintenanceRequestPayload,
-  RejectMaintenanceRequestPayload,
-  ApproveMaintenanceRequestResponse,
-} from "@/src/types/maintenance-requests.types";
 
-function normalizeMaintenanceRequestsList(body: any): ApiListResponse<MaintenanceRequest> {
-  const items = Array.isArray(body?.items)
-    ? body.items
-    : Array.isArray(body)
-    ? body
-    : Array.isArray(body?.data?.items)
-    ? body.data.items
-    : [];
+// =====================
+// Types (lightweight)
+// =====================
+export type UUID = string;
 
-  const totalRaw =
-    body?.meta?.total ??
-    body?.total ??
-    body?.count ??
-    body?.data?.total ??
-    body?.data?.count ??
-    items.length;
+export type MaintenanceRequest = {
+  id: UUID;
+  vehicle_id: UUID;
+  problem_title: string;
+  problem_description?: string | null;
+  status: "SUBMITTED" | "APPROVED" | "REJECTED" | string;
+  requested_by: UUID;
+  requested_at: string;
+  created_at: string;
+  updated_at: string;
+};
 
-  return {
-    items,
-    total: Number.isFinite(Number(totalRaw)) ? Number(totalRaw) : items.length,
-    page: Number(body?.meta?.page || body?.data?.meta?.page || 1),
-    pages: Number(body?.meta?.pages || body?.data?.meta?.pages || 1),
-  };
+export type ListParams = {
+  page?: number;
+  limit?: number;
+  status?: string;
+  vehicle_id?: UUID;
+};
+
+export type Paginated<T> = {
+  items: T[];
+  meta: { page: number; limit: number; total: number; pages: number };
+};
+
+export type CreateRequestPayload = {
+  vehicle_id: UUID;
+  problem_title: string;
+  problem_description?: string;
+};
+
+export type ApprovePayload = {
+  vendor_id?: UUID | null;
+  maintenance_mode?: "INTERNAL" | "EXTERNAL";
+  type?: "CORRECTIVE" | "PREVENTIVE";
+  odometer?: number | null;
+  notes?: string;
+};
+
+export type RejectPayload = {
+  reason: string;
+};
+
+export type VehicleOption = { id: UUID; label: string; status: string };
+
+export type Attachment = {
+  id: UUID;
+  request_id: UUID;
+  type: string;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number;
+  storage_path: string;
+  uploaded_by?: UUID | null;
+  created_at: string;
+};
+
+// =====================
+// Helpers
+// =====================
+function qs(params?: Record<string, any>) {
+  if (!params) return "";
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") sp.append(k, String(v));
+  });
+  const s = sp.toString();
+  return s ? `?${s}` : "";
 }
 
-function normalizeVehicleOptions(body: any): VehicleOption[] {
-  if (Array.isArray(body?.items)) return body.items;
-  if (Array.isArray(body)) return body;
-  if (Array.isArray(body?.data?.items)) return body.data.items;
-  return [];
-}
-
+// =====================
+// Service
+// =====================
 export const maintenanceRequestsService = {
-  async list(filters: MaintenanceRequestsListFilters = {}): Promise<ApiListResponse<MaintenanceRequest>> {
-    const params: Record<string, any> = {};
-
-    if (filters.status) params.status = filters.status;
-    if (filters.vehicle_id) params.vehicle_id = filters.vehicle_id;
-    if (filters.q?.trim()) params.q = filters.q.trim();
-    if (typeof filters.page === "number") params.page = filters.page;
-    if (typeof filters.limit === "number") params.limit = filters.limit;
-
-    const res = await api.get("/maintenance/requests", { params });
-    const body = res.data ?? res;
-    return normalizeMaintenanceRequestsList(body);
+  // List
+  async list(params?: ListParams): Promise<Paginated<MaintenanceRequest>> {
+    const res = await api.get(`/maintenance/requests${qs(params)}`);
+    return res.data;
   },
 
-  async listVehicleOptions(): Promise<VehicleOption[]> {
-    const res = await api.get("/maintenance/vehicles/options");
-    const body = res.data ?? res;
-    return normalizeVehicleOptions(body);
+  // Get by id
+  async getById(id: UUID): Promise<{ request: MaintenanceRequest }> {
+    const res = await api.get(`/maintenance/requests/${id}`);
+    return res.data;
   },
 
-  async create(payload: CreateMaintenanceRequestPayload) {
-    const res = await api.post("/maintenance/requests", payload);
-    return res.data ?? res;
+  // Create
+  async create(payload: CreateRequestPayload): Promise<MaintenanceRequest> {
+    const res = await api.post(`/maintenance/requests`, payload);
+    return res.data;
   },
 
-  async approve(
-    id: string,
-    payload: ApproveMaintenanceRequestPayload
-  ): Promise<ApproveMaintenanceRequestResponse> {
+  // Approve
+  async approve(id: UUID, payload: ApprovePayload) {
     const res = await api.post(`/maintenance/requests/${id}/approve`, payload);
-    return (res.data ?? res) as ApproveMaintenanceRequestResponse;
+    return res.data; // { request, work_order }
   },
 
-  async reject(id: string, payload: RejectMaintenanceRequestPayload) {
+  // Reject
+  async reject(id: UUID, payload: RejectPayload) {
     const res = await api.post(`/maintenance/requests/${id}/reject`, payload);
-    return res.data ?? res;
+    return res.data; // { request }
+  },
+
+  // Vehicle options
+  async vehicleOptions(): Promise<{ items: VehicleOption[] }> {
+    const res = await api.get(`/maintenance/vehicles/options`);
+    return res.data;
+  },
+
+  // =====================
+  // Attachments
+  // =====================
+
+  // List
+  async listAttachments(requestId: UUID): Promise<{ items: Attachment[] }> {
+    const res = await api.get(`/maintenance/requests/${requestId}/attachments`);
+    return res.data;
+  },
+
+  // Upload (FormData)
+  async uploadAttachments(requestId: UUID, files: File[], types?: string[]) {
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f));
+    if (types && types.length) {
+      types.forEach((t) => fd.append("types", t));
+    }
+
+    const res = await api.post(
+      `/maintenance/requests/${requestId}/attachments`,
+      fd,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+    return res.data; // { items }
+  },
+
+  // Delete
+  async deleteAttachment(attachmentId: UUID) {
+    const res = await api.delete(`/maintenance/attachments/${attachmentId}`);
+    return res.data;
   },
 };
+
+export default maintenanceRequestsService;
