@@ -126,4 +126,27 @@ export const workOrderDetailsService = {
     const res = await api.post(`/maintenance/work-orders/${id}/complete`, payload);
     return res.data ?? res;
   },
+  async createInventoryRequest(workOrderId: string, payload: any) {
+  const res = await api.post(
+    `/maintenance/work-orders/${workOrderId}/inventory-requests`,
+    payload
+  );
+  return res.data;
+},
+
+async listInventoryRequests(workOrderId: string) {
+  const res = await api.get(
+    `/maintenance/work-orders/${workOrderId}/inventory-requests`
+  );
+  return res.data;
+},
+
+async addInventoryRequestLines(requestId: string, lines: any[]) {
+  const res = await api.post(
+    `/maintenance/inventory-requests/${requestId}/lines`,
+    { lines }
+  );
+  return res.data;
+},
+
 };

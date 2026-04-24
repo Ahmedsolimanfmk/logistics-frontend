@@ -22,6 +22,7 @@ import { Toast } from "@/src/components/Toast";
 
 import { IssueLinesForm } from "@/src/components/maintenance/IssueLinesForm";
 import { InstallationsForm } from "@/src/components/maintenance/InstallationsForm";
+import { InventoryRequestForm } from "@/src/components/maintenance/InventoryRequestForm";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -231,6 +232,25 @@ export default function WorkOrderDetailsPage() {
   await load();
   return result;
 }
+async function handleCreateInventoryRequest(workOrderId: string, payload: any) {
+  const result = await workOrderDetailsService.createInventoryRequest(
+    workOrderId,
+    payload
+  );
+  showToast("تم إنشاء طلب الصرف", "success");
+  await load();
+  return result;
+}
+
+async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
+  const result = await workOrderDetailsService.addInventoryRequestLines(
+    requestId,
+    lines
+  );
+  showToast("تم حفظ قطع طلب الصرف", "success");
+  await load();
+  return result;
+}
 
   if (!token) {
     return (
@@ -309,16 +329,17 @@ export default function WorkOrderDetailsPage() {
 
         {canManage && !isCompleted ? (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <IssueLinesForm
-              workOrderId={id}
-              onCreateIssue={handleCreateIssue}
-              onAddLines={handleAddIssueLines}
-            />
+            <InventoryRequestForm
+  workOrderId={id}
+  onCreateRequest={handleCreateInventoryRequest}
+  onAddLines={handleAddInventoryRequestLines}
+/>
 
             <InstallationsForm
               workOrderId={id}
               onAddInstallations={handleAddInstallations}
             />
+            
           </div>
         ) : null}
 
