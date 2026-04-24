@@ -5,13 +5,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { useAuth } from "@/src/store/auth";
-import { useT } from "@/src/i18n/useT";
-
 import { workOrderDetailsService } from "@/src/services/work-order-details.service";
-import type {
-  ReportResponse,
-  WorkOrder,
-} from "@/src/types/work-order-details.types";
+import type { ReportResponse, WorkOrder } from "@/src/types/work-order-details.types";
 
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
@@ -20,9 +15,8 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { KpiCard } from "@/src/components/ui/KpiCard";
 import { Toast } from "@/src/components/Toast";
 
-import { IssueLinesForm } from "@/src/components/maintenance/IssueLinesForm";
-import { InstallationsForm } from "@/src/components/maintenance/InstallationsForm";
 import { InventoryRequestForm } from "@/src/components/maintenance/InventoryRequestForm";
+import { InstallationsForm } from "@/src/components/maintenance/InstallationsForm";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -41,20 +35,26 @@ function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
 
-function canManageMaintenance(role: any) {
-  const r = roleUpper(role);
-  return r === "ADMIN" || r === "ACCOUNTANT";
+function canManageMaintenance(user: any) {
+  const roles = [
+    roleUpper(user?.role),
+    roleUpper(user?.effective_role),
+    roleUpper(user?.platform_role),
+  ];
+
+  return roles.some((r) =>
+    ["ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "MAINTENANCE_MANAGER"].includes(r)
+  );
 }
 
 export default function WorkOrderDetailsPage() {
-  const t = useT();
   const params = useParams<{ id: string }>();
   const id = String(params?.id || "");
 
   const token = useAuth((s: any) => s.token);
   const user = useAuth((s: any) => s.user);
 
-  const canManage = canManageMaintenance(user?.role);
+  const canManage = canManageMaintenance(user);
 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -154,7 +154,7 @@ export default function WorkOrderDetailsPage() {
     if (!id) return;
 
     if (!canManage) {
-      showToast("غير مسموح إلا للمحاسب أو المدير", "error");
+      showToast("غير مسموح لهذا المستخدم", "error");
       return;
     }
 
@@ -208,49 +208,37 @@ export default function WorkOrderDetailsPage() {
     }
   }
 
-  async function handleCreateIssue(workOrderId: string) {
-    const result = await workOrderDetailsService.createIssue(workOrderId);
-    showToast("تم إنشاء إذن الصرف", "success");
+  async function handleCreateInventoryRequest(workOrderId: string, payload: any) {
+    const result = await workOrderDetailsService.createInventoryRequest(
+      workOrderId,
+      payload
+    );
+
+    showToast("تم إنشاء طلب الصرف", "success");
     await load();
     return result;
   }
 
-  async function handleAddIssueLines(issueId: string, lines: any[]) {
-  const result = await workOrderDetailsService.addIssueLines(issueId, {
-    lines,
-  });
-  showToast("تم حفظ أصناف الصرف", "success");
-  await load();
-  return result;
-}
+  async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
+    const result = await workOrderDetailsService.addInventoryRequestLines(
+      requestId,
+      lines
+    );
+
+    showToast("تم حفظ قطع طلب الصرف", "success");
+    await load();
+    return result;
+  }
 
   async function handleAddInstallations(workOrderId: string, items: any[]) {
-  const result = await workOrderDetailsService.addInstallations(workOrderId, {
-    items,
-  });
-  showToast("تم حفظ التركيبات", "success");
-  await load();
-  return result;
-}
-async function handleCreateInventoryRequest(workOrderId: string, payload: any) {
-  const result = await workOrderDetailsService.createInventoryRequest(
-    workOrderId,
-    payload
-  );
-  showToast("تم إنشاء طلب الصرف", "success");
-  await load();
-  return result;
-}
+    const result = await workOrderDetailsService.addInstallations(workOrderId, {
+      items,
+    });
 
-async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
-  const result = await workOrderDetailsService.addInventoryRequestLines(
-    requestId,
-    lines
-  );
-  showToast("تم حفظ قطع طلب الصرف", "success");
-  await load();
-  return result;
-}
+    showToast("تم حفظ التركيبات", "success");
+    await load();
+    return result;
+  }
 
   if (!token) {
     return (
@@ -307,7 +295,7 @@ async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
               <div className="text-lg font-semibold">
                 أمر شغل #{shortId(workOrder?.id || id)}
               </div>
-              <div className="mt-1 text-xs text-slate-500 font-mono">
+              <div className="mt-1 text-xs font-mono text-slate-500">
                 {workOrder?.id || id}
               </div>
             </div>
@@ -330,17 +318,24 @@ async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
         {canManage && !isCompleted ? (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <InventoryRequestForm
-  workOrderId={id}
-  onCreateRequest={handleCreateInventoryRequest}
-  onAddLines={handleAddInventoryRequestLines}
-/>
+              workOrderId={id}
+              onCreateRequest={handleCreateInventoryRequest}
+              onAddLines={handleAddInventoryRequestLines}
+            />
 
             <InstallationsForm
               workOrderId={id}
               onAddInstallations={handleAddInstallations}
             />
-            
           </div>
+        ) : null}
+
+        {!canManage ? (
+          <Card>
+            <div className="text-sm text-amber-700">
+              هذا المستخدم لا يملك صلاحية إدارة أوامر الشغل.
+            </div>
+          </Card>
         ) : null}
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -353,7 +348,10 @@ async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
 
               <div>
                 <span className="text-slate-500">المورد:</span>{" "}
-                {workOrder?.vendors?.name || workOrder?.vendor_name || "—"}
+                {(workOrder as any)?.vendor?.name ||
+                  workOrder?.vendors?.name ||
+                  workOrder?.vendor_name ||
+                  "—"}
               </div>
 
               <div>
@@ -387,10 +385,13 @@ async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
             <div className="space-y-2 text-sm">
               <div>
                 <span className="text-slate-500">المركبة:</span>{" "}
-                {workOrder?.vehicles?.fleet_no
-                  ? `${workOrder.vehicles.fleet_no} - `
+                {(workOrder as any)?.vehicle?.fleet_no ||
+                workOrder?.vehicles?.fleet_no
+                  ? `${(workOrder as any)?.vehicle?.fleet_no || workOrder?.vehicles?.fleet_no} - `
                   : ""}
-                {workOrder?.vehicles?.plate_no ||
+                {(workOrder as any)?.vehicle?.plate_no ||
+                  workOrder?.vehicles?.plate_no ||
+                  (workOrder as any)?.vehicle?.display_name ||
                   workOrder?.vehicles?.display_name ||
                   "—"}
               </div>
@@ -466,18 +467,14 @@ async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
                       ...x,
                       _status: "مطابق",
                     })),
-                    ...(reconciliation.issued_not_installed || []).map(
-                      (x: any) => ({
-                        ...x,
-                        _status: "مصروف غير مركب",
-                      })
-                    ),
-                    ...(reconciliation.installed_not_issued || []).map(
-                      (x: any) => ({
-                        ...x,
-                        _status: "مركب غير مصروف",
-                      })
-                    ),
+                    ...(reconciliation.issued_not_installed || []).map((x: any) => ({
+                      ...x,
+                      _status: "مصروف غير مركب",
+                    })),
+                    ...(reconciliation.installed_not_issued || []).map((x: any) => ({
+                      ...x,
+                      _status: "مركب غير مصروف",
+                    })),
                   ].map((row: any, idx: number) => (
                     <tr
                       key={`${row.part_id}_${idx}`}
@@ -580,8 +577,8 @@ async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
                         <td className="p-3">{fmtDate(item.installed_at)}</td>
                         <td className="p-3">
                           <div className="font-semibold">
-                            {item?.parts?.name ||
-                              item?.part?.name ||
+                            {item?.part?.name ||
+                              item?.parts?.name ||
                               item?.part_name ||
                               "—"}
                           </div>
@@ -606,7 +603,7 @@ async function handleAddInventoryRequestLines(requestId: string, lines: any[]) {
         <Card title="تقرير ما بعد الصيانة">
           {!canManage ? (
             <div className="text-sm text-slate-500">
-              حفظ التقرير متاح فقط للمدير أو المحاسب.
+              حفظ التقرير متاح فقط للمدير أو المحاسب أو مدير الصيانة.
             </div>
           ) : (
             <div className="space-y-3">
