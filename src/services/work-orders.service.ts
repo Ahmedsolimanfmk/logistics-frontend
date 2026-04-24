@@ -1,51 +1,135 @@
 import { api } from "@/src/lib/api";
-import type { ApiListResponse } from "@/src/types/api.types";
-import type { WorkOrderListItem, WorkOrdersListFilters } from "@/src/types/work-orders.types";
 
-function normalizeWorkOrdersList(body: any): ApiListResponse<WorkOrderListItem> {
-  const items = Array.isArray(body?.items)
-    ? body.items
-    : Array.isArray(body)
-    ? body
-    : Array.isArray(body?.data)
-    ? body.data
-    : Array.isArray(body?.work_orders)
-    ? body.work_orders
-    : Array.isArray(body?.workOrders)
-    ? body.workOrders
-    : Array.isArray(body?.result)
-    ? body.result
-    : Array.isArray(body?.data?.items)
-    ? body.data.items
-    : [];
+export type UUID = string;
 
-  const totalRaw =
-    body?.meta?.total ??
-    body?.total ??
-    body?.count ??
-    body?.data?.total ??
-    body?.data?.count ??
-    items.length;
+// =====================
+// Types
+// =====================
+export type WorkOrder = {
+  id: UUID;
+  request_id: UUID;
+  vehicle_id: UUID;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
 
-  return {
-    items,
-    total: Number.isFinite(Number(totalRaw)) ? Number(totalRaw) : items.length,
-    page: Number(body?.meta?.page || body?.data?.meta?.page || 1),
-    pages: Number(body?.meta?.pages || body?.data?.meta?.pages || 1),
-  };
+export type WorkOrderReport = {
+  id: UUID;
+  work_order_id: UUID;
+  notes?: string;
+  total_cost?: number;
+};
+
+export type IssueLine = {
+  part_id: UUID;
+  qty: number;
+};
+
+export type InstallationLine = {
+  part_id: UUID;
+  qty: number;
+};
+
+// =====================
+// Helpers
+// =====================
+function qs(params?: Record<string, any>) {
+  if (!params) return "";
+  const sp = new URLSearchParams();
+
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") {
+      sp.append(k, String(v));
+    }
+  });
+
+  const s = sp.toString();
+  return s ? `?${s}` : "";
 }
 
+// =====================
+// Service
+// =====================
 export const workOrdersService = {
-  async list(filters: WorkOrdersListFilters = {}): Promise<ApiListResponse<WorkOrderListItem>> {
-    const params: Record<string, any> = {};
+  // =====================
+  // Work Orders
+  // =====================
+  async list(params?: any) {
+    const res = await api.get(`/maintenance/work-orders${qs(params)}`);
+    return res.data;
+  },
 
-    if (typeof filters.page === "number") params.page = filters.page;
-    if (typeof filters.limit === "number") params.limit = filters.limit;
-    if (filters.q?.trim()) params.q = filters.q.trim();
-    if (filters.status?.trim()) params.status = filters.status.trim().toUpperCase();
+  async getById(id: UUID) {
+    const res = await api.get(`/maintenance/work-orders/${id}`);
+    return res.data;
+  },
 
-    const res = await api.get("/maintenance/work-orders", { params });
-    const body = res.data ?? res;
-    return normalizeWorkOrdersList(body);
+  // =====================
+  // Report
+  // =====================
+  async getReport(id: UUID) {
+    const res = await api.get(`/maintenance/work-orders/${id}/report`);
+    return res.data;
+  },
+
+  async saveReport(id: UUID, payload: any) {
+    const res = await api.post(
+      `/maintenance/work-orders/${id}/post-report`,
+      payload
+    );
+    return res.data;
+  },
+
+  // =====================
+  // Complete
+  // =====================
+  async complete(id: UUID) {
+    const res = await api.post(
+      `/maintenance/work-orders/${id}/complete`
+    );
+    return res.data;
+  },
+
+  // =====================
+  // Inventory Issues
+  // =====================
+  async createIssue(workOrderId: UUID) {
+    const res = await api.post(
+      `/maintenance/work-orders/${workOrderId}/issues`
+    );
+    return res.data;
+  },
+
+  async addIssueLines(issueId: UUID, lines: IssueLine[]) {
+    const res = await api.post(
+      `/maintenance/issues/${issueId}/lines`,
+      { lines }
+    );
+    return res.data;
+  },
+
+  // =====================
+  // Installations
+  // =====================
+  async listInstallations(workOrderId: UUID) {
+    const res = await api.get(
+      `/maintenance/work-orders/${workOrderId}/installations`
+    );
+    return res.data;
+  },
+
+  // 🔥 FIXED هنا
+  async addInstallations(
+    workOrderId: UUID,
+    items: InstallationLine[]
+  ) {
+    const res = await api.post(
+      `/maintenance/work-orders/${workOrderId}/installations`,
+      { items } // ✅ الصحيح
+    );
+    return res.data;
   },
 };
+
+export default workOrdersService;

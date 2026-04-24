@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 
-import { workOrdersService } from "@/src/services/work-orders.service";
+import useMaintenanceWorkOrders from "@/src/hooks/maintenance/useMaintenanceWorkOrders";
 import type { WorkOrderListItem } from "@/src/types/work-orders.types";
 
-// UI
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
-import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/src/components/ui/DataTable";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { Toast } from "@/src/components/Toast";
 
@@ -29,14 +31,21 @@ function shortId(id: any) {
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
+function vehicleLabel(row: WorkOrderListItem) {
+  const v = row.vehicles;
+  const fleet = v?.fleet_no ? String(v.fleet_no).trim() : "";
+  const plate = v?.plate_no ? String(v.plate_no).trim() : "";
+  const name = v?.display_name ? String(v.display_name).trim() : "";
+
+  if (fleet && plate) return `${fleet} - ${plate}`;
+  if (fleet) return fleet;
+  if (plate) return plate;
+  if (name) return name;
+  return "—";
+}
+
 export default function WorkOrdersClientPage() {
   const t = useT();
-
-  const tRef = useRef(t);
-  useEffect(() => {
-    tRef.current = t;
-  }, [t]);
-
   const token = useAuth((s: any) => s.token);
 
   useEffect(() => {
@@ -45,135 +54,88 @@ export default function WorkOrdersClientPage() {
     } catch {}
   }, []);
 
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const {
+    items,
+    meta,
+    params,
+    loading,
+    error,
+    setPage,
+    setFilters,
+    refresh,
+  } = useMaintenanceWorkOrders({
+    page: 1,
+    limit: 20,
+  });
 
-  const [items, setItems] = useState<WorkOrderListItem[]>([]);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<string>("");
-
-  const [page, setPage] = useState(1);
-  const limit = 20;
-  const [total, setTotal] = useState<number>(0);
-
+  const [status, setStatus] = useState("");
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
 
-  const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
+  function showToast(message: string, type: "success" | "error" = "success") {
     setToastMsg(message);
     setToastType(type);
     setToastOpen(true);
     setTimeout(() => setToastOpen(false), 2500);
-  }, []);
-
-  const load = useCallback(async () => {
-    if (!token) return;
-
-    setLoading(true);
-    setErr(null);
-
-    try {
-      const res = await workOrdersService.list({
-        page,
-        limit,
-        q: q.trim() || undefined,
-        status: status || undefined,
-      });
-
-      setItems(res.items);
-      setTotal(res.total);
-    } catch (e: any) {
-      setItems([]);
-      setTotal(0);
-      const msg = e?.message || tRef.current("workOrders.list.loading");
-      setErr(msg);
-      showToast(msg, "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [token, page, limit, q, status, showToast]);
+  }
 
   useEffect(() => {
-    if (!token) return;
-    load();
-  }, [token, page, q, status, load]);
+    if (error) {
+      showToast(error, "error");
+    }
+  }, [error]);
 
-  const pages = useMemo(() => {
-    if (!total || total <= 0) return 1;
-    return Math.max(1, Math.ceil(total / limit));
-  }, [total, limit]);
-
-  const filteredLocal = useMemo(() => {
-    const qq = q.trim().toLowerCase();
-    const st = String(status || "").toUpperCase();
-
-    return items.filter((x) => {
-      const stOk = !st || String(x.status || "").toUpperCase() === st;
-      if (!qq) return stOk;
-
-      const hay = [
-        x.id,
-        x.type,
-        x.vendor_name,
-        x.vehicles?.fleet_no,
-        x.vehicles?.plate_no,
-        x.vehicles?.display_name,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return stOk && hay.includes(qq);
-    });
-  }, [items, q, status]);
-
-  const totalShown = useMemo(() => filteredLocal.length, [filteredLocal.length]);
+  const rows = useMemo(() => {
+    return Array.isArray(items) ? (items as WorkOrderListItem[]) : [];
+  }, [items]);
 
   const columns: DataTableColumn<WorkOrderListItem>[] = useMemo(
     () => [
       {
         key: "actions",
-        label: t("workOrders.list.columns.actions"),
+        label: t("workOrders.list.columns.actions") || "الإجراءات",
         render: (row) => (
           <Link href={`/maintenance/work-orders/${encodeURIComponent(row.id)}`}>
-            <Button variant="secondary">{t("workOrders.list.view")}</Button>
+            <Button variant="secondary">
+              {t("workOrders.list.view") || "عرض"}
+            </Button>
           </Link>
         ),
       },
       {
         key: "opened_at",
-        label: t("workOrders.list.columns.opened"),
+        label: t("workOrders.list.columns.opened") || "تاريخ الفتح",
         render: (row) => fmtDate(row.opened_at),
       },
       {
         key: "status",
-        label: t("workOrders.list.columns.status"),
-        render: (row) => (row.status ? <StatusBadge status={row.status} /> : "—"),
+        label: t("workOrders.list.columns.status") || "الحالة",
+        render: (row) =>
+          row.status ? <StatusBadge status={row.status} /> : "—",
       },
       {
         key: "type",
-        label: t("workOrders.list.columns.type"),
+        label: t("workOrders.list.columns.type") || "النوع",
         render: (row) => row.type || "—",
       },
       {
         key: "vendor_name",
-        label: t("workOrders.list.columns.vendor"),
+        label: t("workOrders.list.columns.vendor") || "المورد",
         render: (row) => row.vendor_name || "—",
       },
       {
         key: "vehicle",
-        label: t("workOrders.list.columns.vehicle"),
-        render: (row) => {
-          const v = row.vehicles;
-          const name = (v?.fleet_no ? `${v.fleet_no} - ` : "") + (v?.plate_no || v?.display_name || "—");
-          return (
-            <div>
-              <div>{name}</div>
-              <div className="text-xs font-mono text-gray-500">vehicle_id: {shortId(row.vehicle_id)}</div>
+        label: t("workOrders.list.columns.vehicle") || "المركبة",
+        render: (row) => (
+          <div>
+            <div>{vehicleLabel(row)}</div>
+            <div className="text-xs font-mono text-gray-500">
+              {shortId(row.vehicle_id)}
             </div>
-          );
-        },
+          </div>
+        ),
       },
       {
         key: "id",
@@ -189,22 +151,54 @@ export default function WorkOrdersClientPage() {
     [t]
   );
 
+  async function applyFilters() {
+    await setFilters({
+      q: q.trim() || "",
+      status: status || "",
+    });
+  }
+
+  async function clearFilters() {
+    setQ("");
+    setStatus("");
+    await setFilters({
+      q: "",
+      status: "",
+    });
+  }
+
+  if (!token) {
+    return (
+      <div className="space-y-4 p-4">
+        <Card>
+          <div className="text-sm text-gray-500">
+            {t("common.loadingSession") || "جاري تحميل الجلسة..."}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
       <div className="space-y-4 p-4">
         <PageHeader
-          title={t("workOrders.title")}
-          subtitle={`${t("workOrders.breadcrumb")} / ${t("workOrders.title")}`}
+          title={t("workOrders.title") || "أوامر الشغل"}
+          subtitle={
+            `${t("workOrders.breadcrumb") || "الصيانة"} / ${
+              t("workOrders.title") || "أوامر الشغل"
+            }`
+          }
           actions={
             <Button
               variant="secondary"
-              onClick={() => {
-                load();
-                showToast(t("common.refresh"), "success");
+              onClick={async () => {
+                await refresh();
+                showToast(t("common.refresh") || "تم التحديث", "success");
               }}
               isLoading={loading}
             >
-              {t("workOrders.actions.refresh")}
+              {t("workOrders.actions.refresh") || "تحديث"}
             </Button>
           }
         />
@@ -212,74 +206,99 @@ export default function WorkOrdersClientPage() {
         <Card>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div>
-              <div className="mb-1 text-xs text-gray-500">{t("workOrders.filters.searchTitle")}</div>
+              <div className="mb-1 text-xs text-gray-500">
+                {t("workOrders.filters.searchTitle") || "بحث"}
+              </div>
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 className="trex-input w-full px-3 py-2 text-sm"
-                placeholder={t("workOrders.filters.searchPlaceholder")}
+                placeholder={
+                  t("workOrders.filters.searchPlaceholder") ||
+                  "ابحث برقم الأمر، المركبة، المورد..."
+                }
               />
             </div>
 
             <div>
-              <div className="mb-1 text-xs text-gray-500">{t("workOrders.filters.status")}</div>
+              <div className="mb-1 text-xs text-gray-500">
+                {t("workOrders.filters.status") || "الحالة"}
+              </div>
               <select
                 value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setStatus(e.target.value)}
                 className="trex-input w-full px-3 py-2 text-sm"
               >
-                <option value="">{t("workOrders.status.all")}</option>
-                <option value="OPEN">{t("workOrders.status.open")}</option>
+                <option value="">
+                  {t("workOrders.status.all") || "الكل"}
+                </option>
+                <option value="OPEN">
+                  {t("workOrders.status.open") || "OPEN"}
+                </option>
                 <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">{t("workOrders.status.completed")}</option>
-                <option value="CANCELED">{t("workOrders.status.canceled")}</option>
+                <option value="COMPLETED">
+                  {t("workOrders.status.completed") || "COMPLETED"}
+                </option>
+                <option value="CANCELED">
+                  {t("workOrders.status.canceled") || "CANCELED"}
+                </option>
               </select>
             </div>
 
             <div className="flex items-end gap-2">
               <Button
                 variant="primary"
-                onClick={() => {
-                  setPage(1);
-                }}
+                onClick={applyFilters}
                 isLoading={loading}
               >
-                {t("workOrders.filters.searchBtn")}
+                {t("workOrders.filters.searchBtn") || "تطبيق"}
               </Button>
 
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setQ("");
-                  setStatus("");
-                  setPage(1);
-                }}
-              >
-                {t("common.clear")}
+              <Button variant="ghost" onClick={clearFilters}>
+                {t("common.clear") || "مسح"}
               </Button>
             </div>
           </div>
         </Card>
 
         <DataTable<WorkOrderListItem>
-          title={t("workOrders.list.title")}
-          right={<div className="text-xs text-gray-500">{err ? `⚠ ${err}` : null}</div>}
+          title={t("workOrders.list.title") || "القائمة"}
+          right={
+            <div className="text-xs text-gray-500">
+              {error ? `⚠ ${error}` : null}
+            </div>
+          }
           columns={columns}
-          rows={filteredLocal}
+          rows={rows}
           loading={loading}
-          emptyTitle={err ? err : t("workOrders.list.empty")}
-          emptyHint={err ? t("common.tryAgain") : t("workOrders.filters.searchPlaceholder")}
-          total={totalShown}
-          page={page}
-          pages={pages}
-          onPrev={page > 1 && !loading ? () => setPage((p) => Math.max(1, p - 1)) : undefined}
-          onNext={page < pages && !loading ? () => setPage((p) => p + 1) : undefined}
+          emptyTitle={error ? error : t("workOrders.list.empty") || "لا توجد بيانات"}
+          emptyHint={
+            error
+              ? t("common.tryAgain") || "حاول مرة أخرى"
+              : t("workOrders.filters.searchPlaceholder") || "استخدم الفلاتر للبحث"
+          }
+          total={meta.total}
+          page={meta.page}
+          pages={meta.pages}
+          onPrev={
+            meta.page > 1 && !loading
+              ? () => setPage(meta.page - 1)
+              : undefined
+          }
+          onNext={
+            meta.page < meta.pages && !loading
+              ? () => setPage(meta.page + 1)
+              : undefined
+          }
         />
 
-        <Toast open={toastOpen} message={toastMsg} type={toastType} dir="rtl" onClose={() => setToastOpen(false)} />
+        <Toast
+          open={toastOpen}
+          message={toastMsg}
+          type={toastType}
+          dir="rtl"
+          onClose={() => setToastOpen(false)}
+        />
       </div>
     </div>
   );

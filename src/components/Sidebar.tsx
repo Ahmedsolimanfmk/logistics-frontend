@@ -73,8 +73,16 @@ export function Sidebar() {
         ],
       },
 
-      { labelKey: "sidebar.clients", href: "/clients", roles: ["ADMIN", "HR", "SUPER_ADMIN"] },
-      { labelKey: "sidebar.sites", href: "/sites", roles: ["ADMIN", "HR", "SUPER_ADMIN"] },
+      {
+        labelKey: "sidebar.clients",
+        href: "/clients",
+        roles: ["ADMIN", "HR", "SUPER_ADMIN"],
+      },
+      {
+        labelKey: "sidebar.sites",
+        href: "/sites",
+        roles: ["ADMIN", "HR", "SUPER_ADMIN"],
+      },
 
       {
         labelKey: "sidebar.contracts",
@@ -111,45 +119,91 @@ export function Sidebar() {
         ],
       },
 
-      { labelKey: "sidebar.vehicles", href: "/vehicles", roles: ["ADMIN", "HR", "SUPER_ADMIN"] },
-      { labelKey: "sidebar.drivers", href: "/drivers", roles: ["ADMIN", "HR", "SUPER_ADMIN"] },
+      {
+        labelKey: "sidebar.vehicles",
+        href: "/vehicles",
+        roles: ["ADMIN", "HR", "MAINTENANCE_MANAGER", "SUPER_ADMIN"],
+      },
+      {
+        labelKey: "sidebar.drivers",
+        href: "/drivers",
+        roles: ["ADMIN", "HR", "SUPER_ADMIN"],
+      },
 
-      { labelKey: "sidebar.cash", href: "/cash", roles: ["FIELD_SUPERVISOR", "SUPER_ADMIN"] },
+      {
+        labelKey: "sidebar.cash",
+        href: "/cash",
+        roles: ["FIELD_SUPERVISOR", "SUPER_ADMIN"],
+      },
 
       {
         labelKey: "sidebar.maintenance",
         key: "maintenance",
-        roles: ["ADMIN", "HR", "ACCOUNTANT", "FIELD_SUPERVISOR", "SUPER_ADMIN"],
+        roles: [
+          "ADMIN",
+          "HR",
+          "ACCOUNTANT",
+          "FIELD_SUPERVISOR",
+          "MAINTENANCE_MANAGER",
+          "SUPER_ADMIN",
+        ],
         children: [
-          { labelKey: "sidebar.maintenanceRequests", href: "/maintenance/requests" },
-          { labelKey: "sidebar.maintenanceWorkOrders", href: "/maintenance/work-orders" },
+          {
+            labelKey: "sidebar.maintenanceRequests",
+            href: "/maintenance/requests",
+            roles: [
+              "ADMIN",
+              "HR",
+              "ACCOUNTANT",
+              "FIELD_SUPERVISOR",
+              "MAINTENANCE_MANAGER",
+              "SUPER_ADMIN",
+            ],
+          },
+          {
+            labelKey: "sidebar.maintenanceWorkOrders",
+            href: "/maintenance/work-orders",
+            roles: [
+              "ADMIN",
+              "ACCOUNTANT",
+              "MAINTENANCE_MANAGER",
+              "SUPER_ADMIN",
+            ],
+          },
         ],
       },
 
       {
         labelKey: "sidebar.vendors",
         href: "/vendors",
-        roles: ["ADMIN", "ACCOUNTANT", "HR", "SUPER_ADMIN"],
+        roles: ["ADMIN", "ACCOUNTANT", "HR", "MAINTENANCE_MANAGER", "SUPER_ADMIN"],
       },
 
       {
-  labelKey: "sidebar.inventory",
-  key: "inventory",
-  roles: ["ADMIN", "STOREKEEPER", "ACCOUNTANT", "SUPER_ADMIN"],
-  children: [
-    { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
-    { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
-    { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
+        labelKey: "sidebar.inventory",
+        key: "inventory",
+        roles: [
+          "ADMIN",
+          "STOREKEEPER",
+          "ACCOUNTANT",
+          "MAINTENANCE_MANAGER",
+          "SUPER_ADMIN",
+        ],
+        children: [
+          { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
+          { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
+          { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
+          { labelKey: "sidebar.inventoryParts", href: "/inventory/parts" },
+          { labelKey: "sidebar.inventoryCategories", href: "/inventory/categories" },
+          { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
+        ],
+      },
 
-    // 🔥 NEW
-    { labelKey: "sidebar.inventoryParts", href: "/inventory/parts" },
-    { labelKey: "sidebar.inventoryCategories", href: "/inventory/categories" },
-
-    { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
-  ],
-},
-
-      { labelKey: "sidebar.users", href: "/users", roles: ["ADMIN", "SUPER_ADMIN"] },
+      {
+        labelKey: "sidebar.users",
+        href: "/users",
+        roles: ["ADMIN", "SUPER_ADMIN"],
+      },
       {
         labelKey: "sidebar.supervisors",
         href: "/supervisors",
@@ -167,7 +221,8 @@ export function Sidebar() {
     return allowed.includes(role) || allowed.includes(effectiveRole);
   };
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
 
   const [open, setOpen] = useState<Record<string, boolean>>({
     finance: false,
@@ -186,16 +241,12 @@ export function Sidebar() {
     if (pathname?.startsWith("/inventory")) {
       setOpen((p) => ({ ...p, inventory: true }));
     }
-    if (pathname?.startsWith("/contract-pricing/vehicle-classes")) {
-      setOpen((p) => ({ ...p, masterData: true }));
-    }
-    if (pathname?.startsWith("/contract-pricing/cargo-types")) {
-      setOpen((p) => ({ ...p, masterData: true }));
-    }
-    if (pathname?.startsWith("/contract-pricing/zones")) {
-      setOpen((p) => ({ ...p, masterData: true }));
-    }
-    if (pathname?.startsWith("/contract-pricing/routes")) {
+    if (
+      pathname?.startsWith("/contract-pricing/vehicle-classes") ||
+      pathname?.startsWith("/contract-pricing/cargo-types") ||
+      pathname?.startsWith("/contract-pricing/zones") ||
+      pathname?.startsWith("/contract-pricing/routes")
+    ) {
       setOpen((p) => ({ ...p, masterData: true }));
     }
   }, [pathname]);
@@ -219,7 +270,9 @@ export function Sidebar() {
   return (
     <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] shadow-[0_0_30px_rgba(0,0,0,0.06)]">
       <div className="border-b border-black/10 bg-[rgba(var(--trex-card),0.7)] p-4">
-        <div className="text-lg font-bold tracking-wide">{t("sidebar.appName")}</div>
+        <div className="text-lg font-bold tracking-wide">
+          {t("sidebar.appName")}
+        </div>
         <div className="mt-1 text-xs text-slate-500">
           {user?.full_name || user?.email || "—"} —{" "}
           <span className="text-slate-900">
@@ -240,7 +293,9 @@ export function Sidebar() {
                 <div key={it.key} className="space-y-1">
                   <button
                     type="button"
-                    onClick={() => setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))}
+                    onClick={() =>
+                      setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))
+                    }
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm transition",
                       active
@@ -249,7 +304,14 @@ export function Sidebar() {
                     )}
                   >
                     <span>{t(it.labelKey)}</span>
-                    <span className={cn("text-xs transition", isOpen && "rotate-180")}>▾</span>
+                    <span
+                      className={cn(
+                        "text-xs transition",
+                        isOpen && "rotate-180"
+                      )}
+                    >
+                      ▾
+                    </span>
                   </button>
 
                   {isOpen && (

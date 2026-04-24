@@ -1,7 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import useMaintenanceRequests from "@/src/hooks/maintenance/useMaintenanceRequests";
+
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Card } from "@/src/components/ui/Card";
+import { Button } from "@/src/components/ui/Button";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
+
+import {
+  RequestForm,
+  AttachmentUploader,
+} from "@/src/components/maintenance/maintenance-components";
 
 export default function MaintenanceRequestsPage() {
   const {
@@ -10,113 +22,169 @@ export default function MaintenanceRequestsPage() {
     loading,
     error,
     vehicleOptions,
+    attachmentsByRequest,
     createRequest,
     approveRequest,
     rejectRequest,
     setPage,
+    fetchAttachments,
+    uploadAttachments,
+    deleteAttachment,
   } = useMaintenanceRequests();
 
-  const [form, setForm] = useState({
-    vehicle_id: "",
-    problem_title: "",
-    problem_description: "",
-  });
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  async function handleCreate(e: any) {
-    e.preventDefault();
-    await createRequest(form);
-    setForm({ vehicle_id: "", problem_title: "", problem_description: "" });
+  async function handleApprove(id: string) {
+    setActionLoadingId(id);
+    try {
+      await approveRequest(id, {});
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function handleReject() {
+    if (!rejectId) return;
+
+    setActionLoadingId(rejectId);
+    try {
+      await rejectRequest(rejectId, { reason: "مرفوض" });
+      setRejectId(null);
+    } finally {
+      setActionLoadingId(null);
+    }
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-xl font-bold">طلبات الصيانة</h1>
+    <div className="p-6 space-y-6" dir="rtl">
+      <PageHeader
+        title="طلبات الصيانة"
+        subtitle="إدارة طلبات الصيانة وربطها بأوامر العمل"
+      />
 
-      {/* Create Form */}
-      <form onSubmit={handleCreate} className="space-y-3 border p-4 rounded">
-        <select
-          value={form.vehicle_id}
-          onChange={(e) => setForm({ ...form, vehicle_id: e.target.value })}
-          className="border p-2 w-full"
-        >
-          <option value="">اختر العربية</option>
-          {vehicleOptions.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.label}
-            </option>
-          ))}
-        </select>
-
-        <input
-          placeholder="عنوان المشكلة"
-          value={form.problem_title}
-          onChange={(e) => setForm({ ...form, problem_title: e.target.value })}
-          className="border p-2 w-full"
+      <Card>
+        <RequestForm
+          vehicleOptions={vehicleOptions}
+          onSubmit={async (payload) => {
+            await createRequest(payload);
+          }}
         />
+      </Card>
 
-        <textarea
-          placeholder="وصف المشكلة"
-          value={form.problem_description}
-          onChange={(e) =>
-            setForm({ ...form, problem_description: e.target.value })
-          }
-          className="border p-2 w-full"
-        />
+      {loading && <p className="text-sm text-slate-500">جاري التحميل...</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <button className="bg-blue-600 text-white px-4 py-2 rounded">
-          إنشاء طلب
-        </button>
-      </form>
+      <div className="space-y-4">
+        {items.map((r) => {
+          const status = String(r.status || "").toUpperCase();
+          const isSubmitted = status === "SUBMITTED";
+          const isApproved = status === "APPROVED";
+          const isRejected = status === "REJECTED";
+          const isActing = actionLoadingId === r.id;
 
-      {/* List */}
-      {loading && <p>جاري التحميل...</p>}
-      {error && <p className="text-red-600">{error}</p>}
+          return (
+            <Card key={r.id}>
+              <div className="space-y-4">
+                <div className="flex justify-between items-start gap-3">
+                  <div>
+                    <div className="font-semibold text-lg">
+                      {r.problem_title}
+                    </div>
 
-      <div className="space-y-3">
-        {items.map((r) => (
-          <div key={r.id} className="border p-4 rounded space-y-2">
-            <div className="font-semibold">{r.problem_title}</div>
-            <div className="text-sm text-gray-600">{r.status}</div>
+                    {r.problem_description ? (
+                      <div className="text-sm text-gray-500 mt-1">
+                        {r.problem_description}
+                      </div>
+                    ) : null}
+                  </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => approveRequest(r.id, {})}
-                className="bg-green-600 text-white px-3 py-1 rounded"
-              >
-                اعتماد
-              </button>
+                  <StatusBadge status={r.status} />
+                </div>
 
-              <button
-                onClick={() => rejectRequest(r.id, { reason: "مرفوض" })}
-                className="bg-red-600 text-white px-3 py-1 rounded"
-              >
-                رفض
-              </button>
-            </div>
-          </div>
-        ))}
+                <div className="flex gap-2 flex-wrap">
+                  {isSubmitted ? (
+                    <>
+                      <Button
+                        onClick={() => handleApprove(r.id)}
+                        disabled={isActing}
+                        isLoading={isActing}
+                        variant="primary"
+                      >
+                        اعتماد
+                      </Button>
+
+                      <Button
+                        onClick={() => setRejectId(r.id)}
+                        disabled={isActing}
+                        variant="danger"
+                      >
+                        رفض
+                      </Button>
+                    </>
+                  ) : null}
+
+                  {isApproved ? (
+                    <Link href="/maintenance/work-orders">
+                      <Button variant="secondary">
+                        عرض أوامر العمل
+                      </Button>
+                    </Link>
+                  ) : null}
+
+                  {isRejected ? (
+                    <span className="text-sm text-red-600">
+                      تم رفض هذا الطلب
+                    </span>
+                  ) : null}
+                </div>
+
+                <AttachmentUploader
+                  requestId={r.id}
+                  attachments={attachmentsByRequest[r.id] || []}
+                  onLoad={fetchAttachments}
+                  onUpload={uploadAttachments}
+                  onDelete={deleteAttachment}
+                />
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Pagination */}
-      <div className="flex gap-2">
-        <button
+      <div className="flex justify-between items-center">
+        <Button
           disabled={meta.page <= 1}
           onClick={() => setPage(meta.page - 1)}
-          className="border px-3 py-1"
+          variant="secondary"
         >
           السابق
-        </button>
-        <span>
-          {meta.page} / {meta.pages}
+        </Button>
+
+        <span className="text-sm text-slate-600">
+          {meta.page} / {meta.pages || 1}
         </span>
-        <button
+
+        <Button
           disabled={meta.page >= meta.pages}
           onClick={() => setPage(meta.page + 1)}
-          className="border px-3 py-1"
+          variant="secondary"
         >
           التالي
-        </button>
+        </Button>
       </div>
+
+      <ConfirmDialog
+        open={!!rejectId}
+        title="تأكيد الرفض"
+        description="هل أنت متأكد من رفض طلب الصيانة؟"
+        confirmText="رفض"
+        cancelText="إلغاء"
+        tone="danger"
+        isLoading={!!rejectId && actionLoadingId === rejectId}
+        onClose={() => setRejectId(null)}
+        onConfirm={handleReject}
+      />
     </div>
   );
 }
