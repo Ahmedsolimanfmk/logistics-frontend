@@ -16,7 +16,7 @@ import { KpiCard } from "@/src/components/ui/KpiCard";
 import { Toast } from "@/src/components/Toast";
 
 import { InventoryRequestForm } from "@/src/components/maintenance/InventoryRequestForm";
-import { InstallationsForm } from "@/src/components/maintenance/InstallationsForm";
+import InstallationsForm from "@/src/components/maintenance/InstallationsForm";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
