@@ -170,6 +170,7 @@ export function Sidebar() {
               "SUPER_ADMIN",
             ],
           },
+           { labelKey: "sidebar.maintenanceIssuedParts", href: "/maintenance/issued-parts" },
         ],
       },
 

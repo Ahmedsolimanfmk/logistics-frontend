@@ -82,6 +82,7 @@
     "maintenance": "الصيانة",
     "maintenanceRequests": "طلبات الصيانة",
     "maintenanceWorkOrders": "أوامر العمل",
+    "maintenanceIssuedParts": "القطع المصروفة",
     "inventory": "المخازن",
     "inventoryRequests": "طلبات المخزن",
     "inventoryIssues": "أذون الصرف",
