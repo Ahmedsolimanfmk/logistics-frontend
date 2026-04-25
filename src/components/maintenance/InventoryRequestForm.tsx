@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
 import { PartSelect } from "@/src/components/selectors/PartSelect";
+import { WarehouseSelect } from "@/src/components/selectors/WarehouseSelect";
 
 export function InventoryRequestForm({
   workOrderId,
@@ -41,12 +42,13 @@ export function InventoryRequestForm({
   }
 
   async function handleCreateRequest() {
-    if (!warehouseId.trim()) return;
+    if (!warehouseId) return;
 
     setLoading(true);
+
     try {
       const res = await onCreateRequest(workOrderId, {
-        warehouse_id: warehouseId.trim(),
+        warehouse_id: warehouseId,
         notes: "طلب قطع من أمر شغل",
       });
 
@@ -71,6 +73,7 @@ export function InventoryRequestForm({
     if (payload.length === 0) return;
 
     setLoading(true);
+
     try {
       await onAddLines(requestId, payload);
       setLines([]);
@@ -85,14 +88,10 @@ export function InventoryRequestForm({
         {!requestId ? (
           <>
             <div>
-              <div className="mb-1 text-xs text-slate-500">
-                Warehouse ID مؤقتًا
-              </div>
-              <input
+              <div className="mb-1 text-xs text-slate-500">المخزن</div>
+              <WarehouseSelect
                 value={warehouseId}
-                onChange={(e) => setWarehouseId(e.target.value)}
-                className="trex-input w-full px-3 py-2 text-sm"
-                placeholder="اكتب warehouse_id مؤقتًا"
+                onChange={setWarehouseId}
                 disabled={loading}
               />
             </div>
@@ -100,7 +99,7 @@ export function InventoryRequestForm({
             <Button
               onClick={handleCreateRequest}
               isLoading={loading}
-              disabled={loading || !warehouseId.trim()}
+              disabled={loading || !warehouseId}
               variant="primary"
             >
               إنشاء طلب صرف
