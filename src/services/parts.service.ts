@@ -10,23 +10,27 @@ export type PartOption = {
 
 function qs(params?: Record<string, any>) {
   const sp = new URLSearchParams();
+
   Object.entries(params || {}).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== "") sp.append(k, String(v));
+    if (v !== undefined && v !== null && v !== "") {
+      sp.append(k, String(v));
+    }
   });
+
   const s = sp.toString();
   return s ? `?${s}` : "";
 }
 
 export const partsService = {
   async listOptions(params?: { q?: string; limit?: number }) {
-    const res = await api.get(`/parts${qs({ q: params?.q, limit: params?.limit ?? 20 })}`);
-    const body = res.data;
+    const res = await api.get(
+      `/inventory/parts${qs({
+        q: params?.q,
+        active: 1,
+      })}`
+    );
 
-    const items = Array.isArray(body?.items)
-      ? body.items
-      : Array.isArray(body)
-      ? body
-      : [];
+    const items = Array.isArray(res.data?.items) ? res.data.items : [];
 
     return {
       items: items.map((p: any) => ({
