@@ -6,7 +6,14 @@ import { useParams } from "next/navigation";
 
 import { useAuth } from "@/src/store/auth";
 import { workOrderDetailsService } from "@/src/services/work-order-details.service";
-import type { ReportResponse, WorkOrder } from "@/src/types/work-order-details.types";
+import maintenanceIssuedPartsService, {
+  type IssuedPartRow,
+} from "@/src/services/maintenance-issued-parts.service";
+
+import type {
+  ReportResponse,
+  WorkOrder,
+} from "@/src/types/work-order-details.types";
 
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
@@ -18,16 +25,22 @@ import { Toast } from "@/src/components/Toast";
 import { InventoryRequestForm } from "@/src/components/maintenance/InventoryRequestForm";
 import InstallationsForm from "@/src/components/maintenance/InstallationsForm";
 
-function fmtDate(d?: string | null) {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
+function fmtDate(v?: string | null) {
+  if (!v) return "—";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("ar-EG");
+}
+
+function fmtQty(v: any) {
+  const n = Number(v || 0);
+  return Number.isInteger(n) ? String(n) : n.toFixed(3);
 }
 
 function shortId(id: any) {
   const s = String(id ?? "");
-  if (s.length <= 14) return s || "—";
+  if (!s) return "—";
+  if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
@@ -63,6 +76,7 @@ export default function WorkOrderDetailsPage() {
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [report, setReport] = useState<ReportResponse | null>(null);
   const [installations, setInstallations] = useState<any[]>([]);
+  const [issuedParts, setIssuedParts] = useState<IssuedPartRow[]>([]);
 
   const [qaResult, setQaResult] = useState<"PASS" | "FAIL" | "">("");
   const [qaRemarks, setQaRemarks] = useState("");
@@ -84,32 +98,61 @@ export default function WorkOrderDetailsPage() {
     }, 2500);
   }
 
-  const totals = report?.report_runtime?.totals;
-  const reportStatus = String(report?.report_status || "");
-  const mismatchCounts = totals?.mismatch_counts;
-
-  const mismatchTotal =
-    Number(mismatchCounts?.issued_not_installed || 0) +
-    Number(mismatchCounts?.installed_not_issued || 0);
-
   const isCompleted =
     String(workOrder?.status || "").toUpperCase() === "COMPLETED";
 
-  const canComplete = canManage && !isCompleted && reportStatus === "OK";
+  const totalsFromIssuedParts = useMemo(() => {
+    const issued = issuedParts.reduce(
+      (s, x) => s + Number(x.issued_qty || 0),
+      0
+    );
+    const installed = issuedParts.reduce(
+      (s, x) => s + Number(x.installed_qty || 0),
+      0
+    );
+    const remaining = issuedParts.reduce(
+      (s, x) => s + Number(x.remaining_qty || 0),
+      0
+    );
 
-  const issuedLines = useMemo(() => {
-    return report?.report_runtime?.issued?.lines || [];
-  }, [report]);
+    return { issued, installed, remaining };
+  }, [issuedParts]);
 
-  const runtimeInstallations = useMemo(() => {
-    return report?.report_runtime?.installed?.installations || [];
-  }, [report]);
+  const issuedLinesFromIssuedParts = useMemo(() => {
+    return issuedParts.map((x) => ({
+      issue_id: x.issue_ids?.[0],
+      part_id: x.part_id,
+      part: x.part,
+      qty: x.issued_qty,
+      unit_cost: 0,
+      total_cost: 0,
+      notes: null,
+    }));
+  }, [issuedParts]);
 
-  const reconciliation = report?.report_runtime?.reconciliation || {
-    matched: [],
-    issued_not_installed: [],
-    installed_not_issued: [],
-  };
+  const installationsFromIssuedParts = useMemo(() => {
+    return issuedParts.flatMap((x) => {
+      if (!Array.isArray((x as any).installations)) return [];
+
+      return (x as any).installations.map((ins: any) => ({
+        ...ins,
+        part: x.part,
+        parts: x.part,
+      }));
+    });
+  }, [issuedParts]);
+
+  const canCloseByIssuedParts =
+    issuedParts.length > 0 &&
+    issuedParts.every((x) => Number(x.remaining_qty || 0) <= 0);
+
+  const hasQaReport = Boolean(report?.post_report_db);
+  const qaPass =
+    String(report?.post_report_db?.road_test_result || "").toUpperCase() ===
+    "PASS";
+
+  const canComplete =
+    canManage && !isCompleted && canCloseByIssuedParts && hasQaReport && qaPass;
 
   const load = useCallback(async () => {
     if (!token || !id) return;
@@ -118,12 +161,18 @@ export default function WorkOrderDetailsPage() {
     setError(null);
 
     try {
-      const bundle = await workOrderDetailsService.getBundle(id);
-      const inst = await workOrderDetailsService.listInstallations(id);
+      const [bundle, inst, issued] = await Promise.all([
+        workOrderDetailsService.getBundle(id),
+        workOrderDetailsService.listInstallations(id).catch(() => []),
+        maintenanceIssuedPartsService.list({ work_order_id: id }).catch(() => ({
+          items: [],
+        })),
+      ]);
 
       setWorkOrder(bundle.workOrder);
       setReport(bundle.report);
       setInstallations(Array.isArray(inst) ? inst : []);
+      setIssuedParts(Array.isArray(issued.items) ? issued.items : []);
 
       const db = bundle.report?.post_report_db;
       const result = String(db?.road_test_result || "").toUpperCase();
@@ -186,7 +235,7 @@ export default function WorkOrderDetailsPage() {
 
     if (!canComplete) {
       showToast(
-        "لا يمكن إغلاق أمر الشغل الآن. راجع التقرير والتطابق ونتيجة QA.",
+        "لا يمكن إغلاق أمر الشغل الآن. تأكد من تركيب كل القطع المصروفة ونجاح تقرير QA.",
         "error"
       );
       return;
@@ -309,10 +358,19 @@ export default function WorkOrderDetailsPage() {
         </Card>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <KpiCard label="تكلفة القطع" value={totals?.parts_cost_total ?? 0} />
-          <KpiCard label="تكلفة العمالة" value={totals?.labor_cost ?? 0} />
-          <KpiCard label="تكلفة الخدمة" value={totals?.service_cost ?? 0} />
-          <KpiCard label="الإجمالي" value={totals?.grand_total ?? 0} />
+          <KpiCard label="المصروف" value={fmtQty(totalsFromIssuedParts.issued)} />
+          <KpiCard
+            label="المركب"
+            value={fmtQty(totalsFromIssuedParts.installed)}
+          />
+          <KpiCard
+            label="المتبقي للتركيب"
+            value={fmtQty(totalsFromIssuedParts.remaining)}
+          />
+          <KpiCard
+            label="حالة الإغلاق"
+            value={canComplete ? "جاهز" : isCompleted ? "مغلق" : "غير جاهز"}
+          />
         </div>
 
         {canManage && !isCompleted ? (
@@ -324,11 +382,15 @@ export default function WorkOrderDetailsPage() {
             />
 
             <InstallationsForm
-  workOrderId={id}
-  issuedLines={issuedLines}
-  installedLines={installations.length ? installations : runtimeInstallations}
-  onAddInstallations={handleAddInstallations}
-/>
+              workOrderId={id}
+              issuedLines={issuedLinesFromIssuedParts}
+              installedLines={
+                installationsFromIssuedParts.length
+                  ? installationsFromIssuedParts
+                  : installations
+              }
+              onAddInstallations={handleAddInstallations}
+            />
           </div>
         ) : null}
 
@@ -399,203 +461,100 @@ export default function WorkOrderDetailsPage() {
               </div>
 
               <div>
-                <span className="text-slate-500">حالة التقرير:</span>{" "}
-                <span className="font-semibold">{reportStatus || "—"}</span>
-              </div>
-
-              <div>
-                <span className="text-slate-500">عدم التطابق:</span>{" "}
-                <span
-                  className={
-                    mismatchTotal > 0
-                      ? "font-semibold text-amber-700"
-                      : "font-semibold text-green-700"
-                  }
-                >
-                  {mismatchTotal}
+                <span className="text-slate-500">تقرير QA:</span>{" "}
+                <span className={qaPass ? "font-semibold text-green-700" : ""}>
+                  {report?.post_report_db?.road_test_result || "—"}
                 </span>
               </div>
 
               <div>
-                <span className="text-slate-500">مصروفات معتمدة:</span>{" "}
-                {totals?.maintenance_cash_cost_total ?? 0}
+                <span className="text-slate-500">المتبقي للتركيب:</span>{" "}
+                <span
+                  className={
+                    totalsFromIssuedParts.remaining > 0
+                      ? "font-semibold text-amber-700"
+                      : "font-semibold text-green-700"
+                  }
+                >
+                  {fmtQty(totalsFromIssuedParts.remaining)}
+                </span>
               </div>
             </div>
           </Card>
         </div>
 
-        <Card title="تطابق القطع المصروفة والمركبة">
-          <div className="mb-3 text-xs text-slate-500">
-            مطابق: {reconciliation.matched?.length || 0} | مصروف غير مركب:{" "}
-            {reconciliation.issued_not_installed?.length || 0} | مركب غير مصروف:{" "}
-            {reconciliation.installed_not_issued?.length || 0}
-          </div>
-
+        <Card title="القطع المصروفة والمركبة">
           <div className="overflow-auto rounded-xl border border-black/10">
-            <table className="min-w-[800px] w-full text-sm">
+            <table className="min-w-[1000px] w-full text-sm">
               <thead className="bg-black/[0.03] text-slate-600">
                 <tr>
                   <th className="p-3 text-right">القطعة</th>
+                  <th className="p-3 text-right">المخزن</th>
                   <th className="p-3 text-right">مصروف</th>
                   <th className="p-3 text-right">مركب</th>
-                  <th className="p-3 text-right">التكلفة</th>
+                  <th className="p-3 text-right">متبقي</th>
+                  <th className="p-3 text-right">تاريخ الصرف</th>
+                  <th className="p-3 text-right">آخر تركيب</th>
                   <th className="p-3 text-right">الحالة</th>
                 </tr>
               </thead>
 
               <tbody>
-                {[
-                  ...(reconciliation.matched || []).map((x: any) => ({
-                    ...x,
-                    _status: "مطابق",
-                  })),
-                  ...(reconciliation.issued_not_installed || []).map((x: any) => ({
-                    ...x,
-                    _status: "مصروف غير مركب",
-                  })),
-                  ...(reconciliation.installed_not_issued || []).map((x: any) => ({
-                    ...x,
-                    _status: "مركب غير مصروف",
-                  })),
-                ].length === 0 ? (
+                {issuedParts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-3 text-slate-500">
-                      لا توجد بيانات تطابق.
+                    <td colSpan={8} className="p-3 text-slate-500">
+                      لا توجد قطع مصروفة لهذا أمر الشغل بعد.
                     </td>
                   </tr>
                 ) : (
-                  [
-                    ...(reconciliation.matched || []).map((x: any) => ({
-                      ...x,
-                      _status: "مطابق",
-                    })),
-                    ...(reconciliation.issued_not_installed || []).map((x: any) => ({
-                      ...x,
-                      _status: "مصروف غير مركب",
-                    })),
-                    ...(reconciliation.installed_not_issued || []).map((x: any) => ({
-                      ...x,
-                      _status: "مركب غير مصروف",
-                    })),
-                  ].map((row: any, idx: number) => (
+                  issuedParts.map((row) => (
                     <tr
-                      key={`${row.part_id}_${idx}`}
+                      key={`${row.work_order_id}_${row.part_id}`}
                       className="border-t border-black/10"
                     >
                       <td className="p-3">
                         <div className="font-semibold">
-                          {row?.part?.name || "—"}
+                          {row.part?.name || "—"}
                         </div>
                         <div className="font-mono text-xs text-slate-500">
-                          {shortId(row.part_id)}
+                          {row.part?.part_number || row.part_id}
                         </div>
                       </td>
-                      <td className="p-3">{row.issued_qty ?? "—"}</td>
-                      <td className="p-3">{row.installed_qty ?? "—"}</td>
-                      <td className="p-3">{row.issued_cost ?? "—"}</td>
-                      <td className="p-3">{row._status}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
 
-        <Card title="القطع المصروفة">
-          <div className="overflow-auto rounded-xl border border-black/10">
-            <table className="min-w-[800px] w-full text-sm">
-              <thead className="bg-black/[0.03] text-slate-600">
-                <tr>
-                  <th className="p-3 text-right">القطعة</th>
-                  <th className="p-3 text-right">الكمية</th>
-                  <th className="p-3 text-right">تكلفة الوحدة</th>
-                  <th className="p-3 text-right">الإجمالي</th>
-                  <th className="p-3 text-right">ملاحظات</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {issuedLines.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-3 text-slate-500">
-                      لا توجد قطع مصروفة.
-                    </td>
-                  </tr>
-                ) : (
-                  issuedLines.map((line: any, idx: number) => (
-                    <tr
-                      key={`${line.issue_id}_${line.part_id}_${idx}`}
-                      className="border-t border-black/10"
-                    >
                       <td className="p-3">
-                        <div className="font-semibold">
-                          {line?.part?.name || "—"}
-                        </div>
-                        <div className="font-mono text-xs text-slate-500">
-                          {shortId(line.part_id)}
+                        <div>{row.warehouse?.name || "—"}</div>
+                        <div className="text-xs text-slate-500">
+                          {row.warehouse?.location || ""}
                         </div>
                       </td>
-                      <td className="p-3">{line.qty}</td>
-                      <td className="p-3">{line.unit_cost}</td>
-                      <td className="p-3">{line.total_cost}</td>
-                      <td className="p-3">{line.notes || "—"}</td>
+
+                      <td className="p-3 font-semibold">
+                        {fmtQty(row.issued_qty)}
+                      </td>
+
+                      <td className="p-3 font-semibold text-green-700">
+                        {fmtQty(row.installed_qty)}
+                      </td>
+
+                      <td className="p-3 font-semibold text-amber-700">
+                        {fmtQty(row.remaining_qty)}
+                      </td>
+
+                      <td className="p-3">{fmtDate(row.issued_at)}</td>
+
+                      <td className="p-3">
+                        {fmtDate(row.last_installed_at)}
+                      </td>
+
+                      <td className="p-3">
+                        {row.status === "INSTALLED"
+                          ? "مركبة بالكامل"
+                          : row.status === "PARTIAL"
+                          ? "مركبة جزئيًا"
+                          : "غير مركبة"}
+                      </td>
                     </tr>
                   ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        <Card title="التركيبات">
-          <div className="overflow-auto rounded-xl border border-black/10">
-            <table className="min-w-[800px] w-full text-sm">
-              <thead className="bg-black/[0.03] text-slate-600">
-                <tr>
-                  <th className="p-3 text-right">تاريخ التركيب</th>
-                  <th className="p-3 text-right">القطعة</th>
-                  <th className="p-3 text-right">الكمية</th>
-                  <th className="p-3 text-right">العداد</th>
-                  <th className="p-3 text-right">ملاحظات</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {(installations.length ? installations : runtimeInstallations)
-                  .length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-3 text-slate-500">
-                      لا توجد تركيبات.
-                    </td>
-                  </tr>
-                ) : (
-                  (installations.length ? installations : runtimeInstallations).map(
-                    (item: any, idx: number) => (
-                      <tr
-                        key={`${item.id}_${idx}`}
-                        className="border-t border-black/10"
-                      >
-                        <td className="p-3">{fmtDate(item.installed_at)}</td>
-                        <td className="p-3">
-                          <div className="font-semibold">
-                            {item?.part?.name ||
-                              item?.parts?.name ||
-                              item?.part_name ||
-                              "—"}
-                          </div>
-                          <div className="font-mono text-xs text-slate-500">
-                            {shortId(item.part_id)}
-                          </div>
-                        </td>
-                        <td className="p-3">{item.qty_installed}</td>
-                        <td className="p-3">
-                          {item.odometer_at_install ?? "—"}
-                        </td>
-                        <td className="p-3">{item.notes || "—"}</td>
-                      </tr>
-                    )
-                  )
                 )}
               </tbody>
             </table>
