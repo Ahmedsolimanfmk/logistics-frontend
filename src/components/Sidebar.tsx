@@ -196,6 +196,7 @@ export function Sidebar() {
           { labelKey: "sidebar.inventoryParts", href: "/inventory/parts" },
           { labelKey: "sidebar.inventoryCategories", href: "/inventory/categories" },
           { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
+          { labelKey: "sidebar.inventoryStock", href: "/inventory/stock" },
         ],
       },
 
