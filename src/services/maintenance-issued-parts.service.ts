@@ -27,6 +27,8 @@ export type IssuedPartRow = {
   issued_at?: string | null;
   last_installed_at?: string | null;
   status: "NOT_INSTALLED" | "PARTIAL" | "INSTALLED" | string;
+  installations?: any[];
+  serial_items?: any[];
 };
 
 function qs(params?: Record<string, any>) {
