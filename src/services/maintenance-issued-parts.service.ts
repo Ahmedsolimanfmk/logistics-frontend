@@ -2,33 +2,45 @@ import { api } from "@/src/lib/api";
 
 export type IssuedPartRow = {
   work_order_id: string;
+  issue_ids?: string[];
+  issue_line_ids?: string[];
+
   part_id: string;
+
   part?: {
-    id: string;
+    id?: string;
     name?: string | null;
     part_number?: string | null;
     brand?: string | null;
     unit?: string | null;
   } | null;
+
   warehouse?: {
-    id: string;
+    id?: string;
     name?: string | null;
     location?: string | null;
   } | null;
+
+  work_order?: any;
+
   vehicle?: {
-    id: string;
+    id?: string;
     fleet_no?: string | null;
     plate_no?: string | null;
     display_name?: string | null;
   } | null;
+
   issued_qty: number;
   installed_qty: number;
   remaining_qty: number;
+
   issued_at?: string | null;
   last_installed_at?: string | null;
-  status: "NOT_INSTALLED" | "PARTIAL" | "INSTALLED" | string;
+
   installations?: any[];
   serial_items?: any[];
+
+  status: "NOT_INSTALLED" | "PARTIAL" | "INSTALLED" | string;
 };
 
 function qs(params?: Record<string, any>) {
