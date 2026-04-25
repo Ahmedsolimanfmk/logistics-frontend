@@ -60,6 +60,33 @@ function canManageMaintenance(user: any) {
   );
 }
 
+function extractWorkOrder(bundle: any) {
+  return (
+    bundle?.workOrder ||
+    bundle?.work_order ||
+    bundle?.order ||
+    bundle?.maintenance_work_order ||
+    bundle?.data?.workOrder ||
+    bundle?.data?.work_order ||
+    null
+  );
+}
+
+function extractReport(bundle: any) {
+  return bundle?.report || bundle?.data?.report || bundle || null;
+}
+
+function extractQaDb(report: any) {
+  return (
+    report?.post_report_db ||
+    report?.post_report ||
+    report?.post_maintenance_report ||
+    report?.post_maintenance_reports?.[0] ||
+    report?.data?.post_report_db ||
+    null
+  );
+}
+
 export default function WorkOrderDetailsPage() {
   const params = useParams<{ id: string }>();
   const id = String(params?.id || "");
@@ -74,7 +101,7 @@ export default function WorkOrderDetailsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
-  const [report, setReport] = useState<ReportResponse | null>(null);
+  const [report, setReport] = useState<ReportResponse | any | null>(null);
   const [installations, setInstallations] = useState<any[]>([]);
   const [issuedParts, setIssuedParts] = useState<IssuedPartRow[]>([]);
 
@@ -120,7 +147,7 @@ export default function WorkOrderDetailsPage() {
 
   const issuedLinesFromIssuedParts = useMemo(() => {
     return issuedParts.map((x) => ({
-      issue_id: x.issue_ids?.[0],
+      issue_id: (x as any).issue_ids?.[0],
       part_id: x.part_id,
       part: x.part,
       qty: x.issued_qty,
@@ -131,10 +158,10 @@ export default function WorkOrderDetailsPage() {
   }, [issuedParts]);
 
   const installationsFromIssuedParts = useMemo(() => {
-    return issuedParts.flatMap((x) => {
-      if (!Array.isArray((x as any).installations)) return [];
+    return issuedParts.flatMap((x: any) => {
+      if (!Array.isArray(x.installations)) return [];
 
-      return (x as any).installations.map((ins: any) => ({
+      return x.installations.map((ins: any) => ({
         ...ins,
         part: x.part,
         parts: x.part,
@@ -146,10 +173,16 @@ export default function WorkOrderDetailsPage() {
     issuedParts.length > 0 &&
     issuedParts.every((x) => Number(x.remaining_qty || 0) <= 0);
 
-  const hasQaReport = Boolean(report?.post_report_db);
-  const qaPass =
-    String(report?.post_report_db?.road_test_result || "").toUpperCase() ===
-    "PASS";
+  const currentQaDb = extractQaDb(report);
+
+  const currentQaResult = String(
+    currentQaDb?.road_test_result || qaResult || ""
+  ).toUpperCase();
+
+  const hasQaReport =
+    currentQaResult === "PASS" || currentQaResult === "FAIL";
+
+  const qaPass = currentQaResult === "PASS";
 
   const canComplete =
     canManage && !isCompleted && canCloseByIssuedParts && hasQaReport && qaPass;
@@ -169,16 +202,19 @@ export default function WorkOrderDetailsPage() {
         })),
       ]);
 
-      setWorkOrder(bundle.workOrder);
-      setReport(bundle.report);
+      const nextWorkOrder = extractWorkOrder(bundle);
+      const nextReport = extractReport(bundle);
+      const nextQaDb = extractQaDb(nextReport);
+
+      setWorkOrder(nextWorkOrder);
+      setReport(nextReport);
       setInstallations(Array.isArray(inst) ? inst : []);
       setIssuedParts(Array.isArray(issued.items) ? issued.items : []);
 
-      const db = bundle.report?.post_report_db;
-      const result = String(db?.road_test_result || "").toUpperCase();
+      const result = String(nextQaDb?.road_test_result || "").toUpperCase();
 
       setQaResult(result === "PASS" || result === "FAIL" ? result : "");
-      setQaRemarks(typeof db?.remarks === "string" ? db.remarks : "");
+      setQaRemarks(typeof nextQaDb?.remarks === "string" ? nextQaDb.remarks : "");
     } catch (e: any) {
       const msg =
         e?.response?.data?.message ||
@@ -463,7 +499,7 @@ export default function WorkOrderDetailsPage() {
               <div>
                 <span className="text-slate-500">تقرير QA:</span>{" "}
                 <span className={qaPass ? "font-semibold text-green-700" : ""}>
-                  {report?.post_report_db?.road_test_result || "—"}
+                  {currentQaResult || "—"}
                 </span>
               </div>
 
