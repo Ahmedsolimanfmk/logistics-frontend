@@ -324,9 +324,11 @@ export default function WorkOrderDetailsPage() {
             />
 
             <InstallationsForm
-              workOrderId={id}
-              onAddInstallations={handleAddInstallations}
-            />
+  workOrderId={id}
+  issuedLines={issuedLines}
+  installedLines={installations.length ? installations : runtimeInstallations}
+  onAddInstallations={handleAddInstallations}
+/>
           </div>
         ) : null}
 
