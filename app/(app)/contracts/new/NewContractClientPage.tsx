@@ -4,17 +4,21 @@ import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { clientsService } from "@/src/services/clients.service";
 import { contractsService } from "@/src/services/contracts.service";
 import type {
   BillingCycle,
   ContractPayload,
   ContractStatus,
 } from "@/src/types/contracts.types";
+import type { Client } from "@/src/types/clients.types";
 
 import { Toast } from "@/src/components/Toast";
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
+import { TrexInput } from "@/src/components/ui/TrexInput";
+import { TrexSelect } from "@/src/components/ui/TrexSelect";
 
 type ToastState =
   | {
@@ -40,14 +44,16 @@ export default function NewContractClientPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialValues = useMemo(() => {
-    return {
-      client_id: searchParams.get("client_id") || "",
-    };
-  }, [searchParams]);
+  const initialClientId = useMemo(
+    () => searchParams.get("client_id") || "",
+    [searchParams]
+  );
 
   const [toast, setToast] = useState<ToastState>(null);
   const [saving, setSaving] = useState(false);
+
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [clients, setClients] = useState<Client[]>([]);
 
   const [form, setForm] = useState<ContractPayload>({
     client_id: "",
@@ -66,19 +72,61 @@ export default function NewContractClientPage() {
   });
 
   useEffect(() => {
-    if (initialValues.client_id) {
+    if (initialClientId) {
       setForm((prev) => ({
         ...prev,
-        client_id: initialValues.client_id,
+        client_id: initialClientId,
       }));
     }
-  }, [initialValues]);
+  }, [initialClientId]);
 
-  function setField<K extends keyof ContractPayload>(key: K, value: ContractPayload[K]) {
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadClients() {
+      setClientsLoading(true);
+
+      try {
+        const res = await clientsService.list({
+          page: 1,
+          limit: 200,
+          is_active: true,
+        });
+
+        if (mounted) {
+          setClients(res.items || []);
+        }
+      } catch (error: any) {
+        if (mounted) {
+          setClients([]);
+          setToast({
+            type: "error",
+            message:
+              error?.response?.data?.message ||
+              error?.message ||
+              "فشل تحميل العملاء",
+          });
+        }
+      } finally {
+        if (mounted) setClientsLoading(false);
+      }
+    }
+
+    loadClients();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  function setField<K extends keyof ContractPayload>(
+    key: K,
+    value: ContractPayload[K]
+  ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     if (!form.client_id) {
@@ -91,9 +139,9 @@ export default function NewContractClientPage() {
       return;
     }
 
-    try {
-      setSaving(true);
+    setSaving(true);
 
+    try {
       const created = await contractsService.create({
         ...form,
         contract_no: form.contract_no || null,
@@ -103,9 +151,7 @@ export default function NewContractClientPage() {
         termination_reason: form.termination_reason || null,
         document_url: form.document_url || null,
         contract_value:
-          form.contract_value === null ||
-          form.contract_value === undefined ||
-          form.contract_value === ("" as any)
+          form.contract_value === null || form.contract_value === undefined
             ? null
             : Number(form.contract_value),
         currency: form.currency || "EGP",
@@ -118,19 +164,28 @@ export default function NewContractClientPage() {
     } catch (error: any) {
       setToast({
         type: "error",
-        message: error?.response?.data?.message || "فشل إنشاء العقد",
+        message:
+          error?.response?.data?.message ||
+          error?.message ||
+          "فشل إنشاء العقد",
       });
     } finally {
       setSaving(false);
     }
   }
 
+  const clientOptions = clients.map((client) => ({
+    value: client.id,
+    label: client.name || client.code || client.id,
+  }));
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       <Toast
         open={!!toast}
         type={toast?.type || "success"}
         message={toast?.message || ""}
+        dir="rtl"
         onClose={() => setToast(null)}
       />
 
@@ -139,147 +194,135 @@ export default function NewContractClientPage() {
         subtitle="إنشاء عقد جديد للعميل"
         actions={
           <Link href="/contracts">
-            <Button variant="secondary">رجوع</Button>
+            <Button type="button" variant="secondary">
+              رجوع
+            </Button>
           </Link>
         }
       />
 
-      <Card className="p-6">
+      <Card>
         <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium">معرف العميل</label>
-            <input
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.client_id}
-              onChange={(e) => setField("client_id", e.target.value)}
-              placeholder="client_id"
-            />
-          </div>
+          <TrexSelect
+            labelText="العميل"
+            value={form.client_id}
+            onChange={(value) => setField("client_id", value)}
+            options={clientOptions}
+            loading={clientsLoading}
+            placeholderText="اختر العميل"
+            emptyText="لا يوجد عملاء"
+            disabled={saving}
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">رقم العقد</label>
-            <input
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.contract_no || ""}
-              onChange={(e) => setField("contract_no", e.target.value)}
-              placeholder="CNT-2026-001"
-            />
-          </div>
+          <TrexInput
+            labelText="رقم العقد"
+            value={form.contract_no || ""}
+            onChange={(e) => setField("contract_no", e.target.value)}
+            placeholder="CNT-2026-001"
+            disabled={saving}
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">تاريخ البداية</label>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.start_date}
-              onChange={(e) => setField("start_date", e.target.value)}
-            />
-          </div>
+          <TrexInput
+            labelText="تاريخ البداية"
+            type="date"
+            value={form.start_date}
+            onChange={(e) => setField("start_date", e.target.value)}
+            disabled={saving}
+            required
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">تاريخ النهاية</label>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.end_date || ""}
-              onChange={(e) => setField("end_date", e.target.value || null)}
-            />
-          </div>
+          <TrexInput
+            labelText="تاريخ النهاية"
+            type="date"
+            value={form.end_date || ""}
+            onChange={(e) => setField("end_date", e.target.value || null)}
+            disabled={saving}
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">تاريخ التوقيع</label>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.signed_at || ""}
-              onChange={(e) => setField("signed_at", e.target.value || null)}
-            />
-          </div>
+          <TrexInput
+            labelText="تاريخ التوقيع"
+            type="date"
+            value={form.signed_at || ""}
+            onChange={(e) => setField("signed_at", e.target.value || null)}
+            disabled={saving}
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">الحالة</label>
-            <select
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.status || "ACTIVE"}
-              onChange={(e) => setField("status", e.target.value as ContractStatus)}
-            >
-              {CONTRACT_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
+          <TrexSelect
+            labelText="الحالة"
+            value={form.status || "ACTIVE"}
+            onChange={(value) => setField("status", value as ContractStatus)}
+            options={CONTRACT_STATUSES.map((status) => ({
+              value: status,
+              label: status,
+            }))}
+            disabled={saving}
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">دورة الفاتورة</label>
-            <select
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.billing_cycle || "MONTHLY"}
-              onChange={(e) => setField("billing_cycle", e.target.value as BillingCycle)}
-            >
-              {BILLING_CYCLES.map((cycle) => (
-                <option key={cycle} value={cycle}>
-                  {cycle}
-                </option>
-              ))}
-            </select>
-          </div>
+          <TrexSelect
+            labelText="دورة الفاتورة"
+            value={form.billing_cycle || "MONTHLY"}
+            onChange={(value) => setField("billing_cycle", value as BillingCycle)}
+            options={BILLING_CYCLES.map((cycle) => ({
+              value: cycle,
+              label: cycle,
+            }))}
+            disabled={saving}
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">قيمة العقد</label>
-            <input
-              type="number"
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.contract_value ?? ""}
-              onChange={(e) =>
-                setField(
-                  "contract_value",
-                  e.target.value === "" ? null : Number(e.target.value)
-                )
-              }
-              placeholder="0"
-            />
-          </div>
+          <TrexInput
+            labelText="قيمة العقد"
+            type="number"
+            value={form.contract_value ?? ""}
+            onChange={(e) =>
+              setField(
+                "contract_value",
+                e.target.value === "" ? null : Number(e.target.value)
+              )
+            }
+            placeholder="0"
+            disabled={saving}
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">العملة</label>
-            <input
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.currency || ""}
-              onChange={(e) => setField("currency", e.target.value)}
-              placeholder="EGP"
-            />
-          </div>
+          <TrexInput
+            labelText="العملة"
+            value={form.currency || ""}
+            onChange={(e) => setField("currency", e.target.value)}
+            placeholder="EGP"
+            disabled={saving}
+          />
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">رابط المستند</label>
-            <input
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.document_url || ""}
-              onChange={(e) => setField("document_url", e.target.value)}
-              placeholder="https://..."
-            />
-          </div>
+          <TrexInput
+            labelText="رابط المستند"
+            value={form.document_url || ""}
+            onChange={(e) => setField("document_url", e.target.value)}
+            placeholder="https://..."
+            disabled={saving}
+          />
 
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">ملاحظات</label>
-            <textarea
-              className="min-h-[120px] w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              value={form.notes || ""}
-              onChange={(e) => setField("notes", e.target.value)}
-              placeholder="ملاحظات إضافية عن العقد"
-            />
+            <label className="grid gap-2 text-sm">
+              <span className="text-[rgb(var(--trex-fg))] opacity-80">
+                ملاحظات
+              </span>
+
+              <textarea
+                className="trex-input min-h-[120px] w-full px-3 py-2 text-sm"
+                value={form.notes || ""}
+                onChange={(e) => setField("notes", e.target.value)}
+                placeholder="ملاحظات إضافية عن العقد"
+                disabled={saving}
+              />
+            </label>
           </div>
 
           <div className="md:col-span-2 flex items-center justify-end gap-2">
             <Link href="/contracts">
-              <Button type="button" variant="secondary">
+              <Button type="button" variant="secondary" disabled={saving}>
                 إلغاء
               </Button>
             </Link>
 
-            <Button type="submit" isLoading={saving}>
+            <Button type="submit" isLoading={saving} disabled={saving}>
               حفظ العقد
             </Button>
           </div>

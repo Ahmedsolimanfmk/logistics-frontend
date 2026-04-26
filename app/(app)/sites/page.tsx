@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/src/store/auth";
-import { useRouter } from "next/navigation";
-import { Toast } from "@/src/components/Toast";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/i18n/useT";
+import { useAuth } from "@/src/store/auth";
 
 import { sitesService } from "@/src/services/sites.service";
 import type {
@@ -14,200 +13,328 @@ import type {
   SiteZoneOption,
 } from "@/src/types/sites.types";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Card } from "@/src/components/ui/Card";
+import { Button } from "@/src/components/ui/Button";
+import { FiltersBar } from "@/src/components/ui/FiltersBar";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { Toast } from "@/src/components/Toast";
+import { TrexInput } from "@/src/components/ui/TrexInput";
+import { TrexSelect } from "@/src/components/ui/TrexSelect";
+
+function fmtDate(value?: string | null) {
+  if (!value) return "—";
+  const d = new Date(String(value));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString("ar-EG");
 }
 
-const fmtDate = (d: any) => {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
-};
+function StatusText({ active }: { active?: boolean | null }) {
+  return active === false ? (
+    <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+      غير نشط
+    </span>
+  ) : (
+    <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
+      نشط
+    </span>
+  );
+}
 
-function SiteStatusBadge({ active }: { active?: boolean | null }) {
-  if (active === false) {
-    return (
-      <span className="inline-flex rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
-        غير نشط
-      </span>
-    );
+function SiteModal({
+  open,
+  editing,
+  clients,
+  zones,
+  saving,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  editing: Site | null;
+  clients: SiteClientOption[];
+  zones: SiteZoneOption[];
+  saving: boolean;
+  onClose: () => void;
+  onSubmit: (payload: SitePayload) => Promise<void>;
+}) {
+  const t = useT();
+
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [address, setAddress] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [zoneId, setZoneId] = useState("");
+  const [isActive, setIsActive] = useState("true");
+
+  useEffect(() => {
+    if (!open) return;
+
+    setName(editing?.name || "");
+    setCode(editing?.code || "");
+    setAddress(editing?.address || "");
+    setClientId(editing?.client_id || "");
+    setZoneId(editing?.zone_id || "");
+    setIsActive(editing?.is_active === false ? "false" : "true");
+  }, [open, editing]);
+
+  if (!open) return null;
+
+  const clientOptions = clients.map((client) => ({
+    value: client.id,
+    label: client.name || client.id,
+  }));
+
+  const zoneOptions = zones.map((zone) => ({
+    value: zone.id,
+    label: [zone.name || zone.id, zone.code ? `(${zone.code})` : null]
+      .filter(Boolean)
+      .join(" "),
+  }));
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    await onSubmit({
+      name: name.trim(),
+      code: code.trim() || null,
+      address: address.trim() || null,
+      client_id: clientId,
+      zone_id: zoneId || null,
+      is_active: isActive === "true",
+    });
   }
 
   return (
-    <span className="inline-flex rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-      نشط
-    </span>
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/25 p-4"
+      dir="rtl"
+      onMouseDown={() => {
+        if (!saving) onClose();
+      }}
+    >
+      <div className="w-full max-w-3xl" onMouseDown={(e) => e.stopPropagation()}>
+        <form onSubmit={submit}>
+          <Card
+            title={editing ? t("sites.modal.editTitle") : t("sites.modal.createTitle")}
+            right={
+              <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+                ✕
+              </Button>
+            }
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <TrexInput
+                label="sites.fields.name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t("sites.placeholders.name")}
+                disabled={saving}
+                required
+              />
+
+              <TrexInput
+                labelText="الكود"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="اختياري"
+                disabled={saving}
+              />
+
+              <TrexSelect
+                label="sites.fields.client"
+                value={clientId}
+                onChange={setClientId}
+                options={clientOptions}
+                placeholderText={t("sites.placeholders.noClient")}
+                disabled={saving}
+              />
+
+              <TrexSelect
+                labelText="المنطقة"
+                value={zoneId}
+                onChange={setZoneId}
+                options={zoneOptions}
+                placeholderText="بدون منطقة"
+                disabled={saving}
+              />
+
+              <TrexSelect
+                label="common.status"
+                value={isActive}
+                onChange={setIsActive}
+                options={[
+                  { value: "true", label: t("common.active") },
+                  { value: "false", label: t("common.disabled") },
+                ]}
+                disabled={saving}
+              />
+
+              <div className="md:col-span-2">
+                <TrexInput
+                  label="sites.fields.address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder={t("sites.placeholders.address")}
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <Button type="submit" variant="primary" disabled={saving || !name.trim() || !clientId} isLoading={saving}>
+                {t("sites.modal.save")}
+              </Button>
+
+              <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+                {t("sites.modal.cancel")}
+              </Button>
+            </div>
+          </Card>
+        </form>
+      </div>
+    </div>
   );
 }
 
 export default function SitesPage() {
   const t = useT();
   const router = useRouter();
-  const { token, hasHydrated } = useAuth() as any;
+  const sp = useSearchParams();
+
+  const token = useAuth((s) => s.token);
+  const hasHydrated = useAuth((s) => s.hasHydrated);
+
+  const search = sp.get("search") || "";
+  const clientId = sp.get("client_id") || "";
+  const zoneId = sp.get("zone_id") || "";
+  const status = (sp.get("status") || "all") as "all" | "active" | "inactive";
+  const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(sp.get("limit") || "50", 10) || 50, 1), 200);
 
   const [loading, setLoading] = useState(true);
-  const [clientsLoading, setClientsLoading] = useState(false);
-  const [zonesLoading, setZonesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
-  const [rawItems, setRawItems] = useState<Site[]>([]);
+  const [items, setItems] = useState<Site[]>([]);
   const [clients, setClients] = useState<SiteClientOption[]>([]);
   const [zones, setZones] = useState<SiteZoneOption[]>([]);
 
-  const [search, setSearch] = useState("");
-  const [clientFilter, setClientFilter] = useState("");
-  const [zoneFilter, setZoneFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Site | null>(null);
 
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Site | null>(null);
-
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [code, setCode] = useState("");
-  const [clientId, setClientId] = useState<string>("");
-  const [zoneId, setZoneId] = useState<string>("");
-
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
-    window.setTimeout(() => setToastOpen(false), 2500);
   }
 
-  useEffect(() => {
-    try {
-      (useAuth as any).getState?.().hydrate?.();
-    } catch {}
-  }, []);
+  function setParam(key: string, value: string) {
+    const params = new URLSearchParams(sp.toString());
 
-  useEffect(() => {
-    if (!hasHydrated) return;
-    if (!token) router.push("/login");
-  }, [hasHydrated, token, router]);
+    if (value) params.set(key, value);
+    else params.delete(key);
 
-  async function loadClients() {
-    setClientsLoading(true);
+    if (key !== "page") params.set("page", "1");
+
+    router.push(`/sites?${params.toString()}`);
+  }
+
+  async function loadOptions() {
     try {
-      const items = await sitesService.listClientsOptions();
-      setClients(Array.isArray(items) ? items : []);
-    } catch {
-      setClients([]);
-    } finally {
-      setClientsLoading(false);
+      const [clientsRes, zonesRes] = await Promise.all([
+        sitesService.listClientsOptions(),
+        sitesService.listZonesOptions(),
+      ]);
+
+      setClients(clientsRes || []);
+      setZones(zonesRes || []);
+    } catch (e: any) {
+      showToast("error", e?.message || "فشل تحميل القوائم");
     }
   }
 
-  async function loadZones() {
-    setZonesLoading(true);
-    try {
-      const items = await sitesService.listZonesOptions();
-      setZones(Array.isArray(items) ? items : []);
-    } catch {
-      setZones([]);
-    } finally {
-      setZonesLoading(false);
-    }
-  }
-
-  async function loadSites() {
+  async function load() {
     if (!token) {
+      setItems([]);
+      setTotal(0);
+      setPages(1);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    setErr(null);
 
     try {
       const res = await sitesService.list({
+        page,
+        limit,
         search: search.trim() || undefined,
-        client_id: clientFilter || undefined,
-        zone_id: zoneFilter || undefined,
+        client_id: clientId || undefined,
+        zone_id: zoneId || undefined,
         is_active:
-          statusFilter === "all"
-            ? undefined
-            : statusFilter === "active"
-              ? true
-              : false,
+          status === "all" ? undefined : status === "active" ? true : false,
       });
 
-      setRawItems(Array.isArray(res.items) ? res.items : []);
+      setItems(res.items || []);
+      setTotal(res.total || 0);
+      setPages(res.meta?.pages || 1);
     } catch (e: any) {
-      setErr(e?.message || t("sites.errors.loadFailed"));
-      setRawItems([]);
+      setItems([]);
+      setTotal(0);
+      setPages(1);
+      showToast("error", e?.message || t("sites.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
   }
 
+  const qsKey = useMemo(
+    () => `${search}|${clientId}|${zoneId}|${status}|${page}|${limit}`,
+    [search, clientId, zoneId, status, page, limit]
+  );
+
   useEffect(() => {
     if (!hasHydrated) return;
-    if (!token) return;
+    loadOptions();
+  }, [hasHydrated]);
 
-    loadClients();
-    loadZones();
-    loadSites();
+  useEffect(() => {
+    if (!hasHydrated) return;
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, token]);
-
-  const items = useMemo(() => rawItems, [rawItems]);
-
-  function resetForm() {
-    setEditing(null);
-    setName("");
-    setAddress("");
-    setCode("");
-    setClientId("");
-    setZoneId("");
-  }
+  }, [hasHydrated, token, qsKey]);
 
   function openCreate() {
-    resetForm();
+    setEditing(null);
     setModalOpen(true);
   }
 
   function openEdit(site: Site) {
     setEditing(site);
-    setName(String(site?.name || ""));
-    setAddress(String(site?.address || ""));
-    setCode(String(site?.code || ""));
-    setClientId(String(site?.client_id || site?.client?.id || ""));
-    setZoneId(String(site?.zone_id || site?.zone?.id || ""));
     setModalOpen(true);
   }
 
-  async function submit() {
-    const vName = name.trim();
-    const vClientId = String(clientId || "").trim();
-
-    if (!vName) {
+  async function saveSite(payload: SitePayload) {
+    if (!payload.name.trim()) {
       showToast("error", t("sites.toast.nameRequired"));
       return;
     }
 
-    if (!vClientId) {
+    if (!payload.client_id) {
       showToast("error", t("sites.toast.clientRequired"));
       return;
     }
 
-    const payload: SitePayload = {
-      name: vName,
-      client_id: vClientId,
-      zone_id: zoneId || null,
-      address: address.trim() || null,
-      code: code.trim() || null,
-    };
+    setSaving(true);
 
     try {
-      setSaving(true);
-
       if (editing?.id) {
         await sitesService.update(editing.id, payload);
         showToast("success", t("sites.toast.updated"));
@@ -217,8 +344,8 @@ export default function SitesPage() {
       }
 
       setModalOpen(false);
-      resetForm();
-      await loadSites();
+      setEditing(null);
+      await load();
     } catch (e: any) {
       showToast("error", e?.message || t("sites.toast.saveFailed"));
     } finally {
@@ -226,313 +353,242 @@ export default function SitesPage() {
     }
   }
 
-  async function toggleActive(id: string) {
+  async function toggle(site: Site) {
     try {
-      await sitesService.toggle(id);
+      await sitesService.toggle(site.id);
       showToast("success", t("sites.toast.toggled"));
-      await loadSites();
+      await load();
     } catch (e: any) {
       showToast("error", e?.message || t("sites.toast.toggleFailed"));
     }
   }
 
-  if (!hasHydrated || token === null) {
+  const clientOptions = clients.map((client) => ({
+    value: client.id,
+    label: client.name || client.id,
+  }));
+
+  const zoneOptions = zones.map((zone) => ({
+    value: zone.id,
+    label: [zone.name || zone.id, zone.code ? `(${zone.code})` : null]
+      .filter(Boolean)
+      .join(" "),
+  }));
+
+  const columns: DataTableColumn<Site>[] = useMemo(
+    () => [
+      {
+        key: "name",
+        label: t("sites.table.name"),
+        render: (row) => (
+          <div>
+            <div className="font-medium text-[rgb(var(--trex-fg))]">{row.name}</div>
+            {row.code ? <div className="font-mono text-xs text-slate-500">{row.code}</div> : null}
+          </div>
+        ),
+      },
+      {
+        key: "client",
+        label: t("sites.table.client"),
+        render: (row) => row.client?.name || "—",
+      },
+      {
+        key: "zone",
+        label: "المنطقة",
+        render: (row) => row.zone?.name || row.zone?.code || "—",
+      },
+      {
+        key: "address",
+        label: t("sites.table.address"),
+        render: (row) => row.address || "—",
+      },
+      {
+        key: "status",
+        label: t("sites.table.status"),
+        render: (row) => <StatusText active={row.is_active} />,
+      },
+      {
+        key: "created",
+        label: t("sites.table.created"),
+        render: (row) => <span className="text-slate-600">{fmtDate(row.created_at)}</span>,
+      },
+      {
+        key: "actions",
+        label: t("sites.table.actions"),
+        render: (row) => (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={(e) => {
+                e.stopPropagation();
+                openEdit(row);
+              }}
+            >
+              {t("common.edit")}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggle(row);
+              }}
+            >
+              {t("common.toggle")}
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [t, clients, zones]
+  );
+
+  if (!hasHydrated) {
     return (
-      <div className="min-h-screen bg-white p-6 text-slate-900" dir="rtl">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          {t("common.checkingSession")}
-        </div>
+      <div className="space-y-4" dir="rtl">
+        <Card>
+          <div className="text-sm text-slate-500">{t("common.checkingSession")}</div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900" dir="rtl">
-      <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold">{t("sites.title")}</div>
-            <div className="text-sm text-slate-600">{t("sites.subtitle")}</div>
+    <div className="space-y-4" dir="rtl">
+      <PageHeader
+        title={t("sites.title")}
+        subtitle={t("sites.subtitle")}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="primary" onClick={openCreate}>
+              {t("sites.actions.add")}
+            </Button>
+
+            <Button type="button" variant="secondary" onClick={load} disabled={loading} isLoading={loading}>
+              {t("common.refresh")}
+            </Button>
           </div>
+        }
+      />
 
-          <button
-            onClick={openCreate}
-            className="rounded-xl bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-700"
-          >
-            {t("sites.actions.add")}
-          </button>
-        </div>
+      <Card>
+        <FiltersBar
+          left={
+            <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-5">
+              <div className="md:col-span-2">
+                <TrexInput
+                  label="common.search"
+                  value={search}
+                  onChange={(e) => setParam("search", e.target.value)}
+                  placeholder={t("sites.filters.searchPlaceholder")}
+                />
+              </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("sites.filters.searchPlaceholder")}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none sm:w-72"
-          />
+              <TrexSelect
+                label="sites.fields.client"
+                value={clientId}
+                onChange={(value) => setParam("client_id", value)}
+                options={clientOptions}
+                placeholderText={t("sites.filters.allClients")}
+              />
 
-          <select
-            value={clientFilter}
-            onChange={(e) => setClientFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
-          >
-            <option value="">{t("sites.filters.allClients")}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name || c.id}
-              </option>
-            ))}
-          </select>
+              <TrexSelect
+                labelText="المنطقة"
+                value={zoneId}
+                onChange={(value) => setParam("zone_id", value)}
+                options={zoneOptions}
+                placeholderText="كل المناطق"
+              />
 
-          <select
-            value={zoneFilter}
-            onChange={(e) => setZoneFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
-          >
-            <option value="">كل المناطق</option>
-            {zones.map((z) => (
-              <option key={z.id} value={z.id}>
-                {z.name || z.code || z.id}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as "all" | "active" | "inactive")
-            }
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
-          >
-            <option value="all">{t("common.all")}</option>
-            <option value="active">{t("common.active")}</option>
-            <option value="inactive">{t("common.disabled")}</option>
-          </select>
-
-          <button
-            onClick={loadSites}
-            disabled={loading}
-            className="ml-auto rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
-          >
-            {loading ? t("common.loading") : t("common.refresh")}
-          </button>
-        </div>
-
-        {err ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {err}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-            {t("common.loading")}
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="overflow-auto">
-              <table className="w-full min-w-[1050px] text-sm">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("sites.table.name")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("sites.table.client")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      المنطقة
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("sites.table.address")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("sites.table.status")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("sites.table.created")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("sites.table.actions")}
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {items.map((site) => (
-                    <tr
-                      key={site.id}
-                      className={cn("border-t border-slate-200 hover:bg-slate-50")}
-                    >
-                      <td className="px-4 py-2 font-medium">{site.name || "—"}</td>
-                      <td className="px-4 py-2">{site.client?.name || "—"}</td>
-                      <td className="px-4 py-2">
-                        {site.zone?.name || site.zone?.code || "—"}
-                      </td>
-                      <td className="px-4 py-2">{site.address || "—"}</td>
-                      <td className="px-4 py-2">
-                        <SiteStatusBadge active={site.is_active} />
-                      </td>
-                      <td className="px-4 py-2">{fmtDate(site.created_at)}</td>
-                      <td className="px-4 py-2">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50"
-                            onClick={() => openEdit(site)}
-                          >
-                            {t("common.edit")}
-                          </button>
-                          <button
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50"
-                            onClick={() => toggleActive(site.id)}
-                          >
-                            {t("common.toggle")}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {!items.length ? (
-                    <tr>
-                      <td className="px-4 py-6 text-slate-700" colSpan={7}>
-                        {t("sites.empty")}
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
+              <TrexSelect
+                label="common.status"
+                value={status}
+                onChange={(value) => setParam("status", value)}
+                options={[
+                  { value: "all", label: t("common.all") },
+                  { value: "active", label: t("common.active") },
+                  { value: "inactive", label: t("common.disabled") },
+                ]}
+              />
             </div>
-          </div>
-        )}
+          }
+          right={
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+              <span>
+                {t("common.total")}:{" "}
+                <b className="text-[rgb(var(--trex-fg))]">{total}</b>
+              </span>
 
-        {modalOpen ? (
-          <div
-            className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-3"
-            onClick={() => {
-              if (saving) return;
-              setModalOpen(false);
-            }}
-          >
-            <div
-              className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 text-slate-900"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold">
-                  {editing ? t("sites.modal.editTitle") : t("sites.modal.createTitle")}
-                </h3>
-                <button
-                  onClick={() => {
-                    if (saving) return;
-                    setModalOpen(false);
-                  }}
-                  className="rounded-lg border border-slate-200 px-3 py-1 hover:bg-slate-50"
-                >
-                  ✕
-                </button>
-              </div>
+              <span>
+                {t("common.page")}:{" "}
+                <b className="text-[rgb(var(--trex-fg))]">
+                  {page}/{pages}
+                </b>
+              </span>
 
-              <div className="mt-4 grid gap-3">
-                <label className="grid gap-2 text-sm">
-                  {t("sites.fields.name")}
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none"
-                    placeholder={t("sites.placeholders.name")}
-                    disabled={saving}
-                  />
-                </label>
+              <TrexSelect
+                value={String(limit)}
+                onChange={(value) => setParam("limit", value)}
+                options={[
+                  { value: "25", label: "25" },
+                  { value: "50", label: "50" },
+                  { value: "100", label: "100" },
+                  { value: "200", label: "200" },
+                ]}
+                placeholderText={t("common.rows")}
+              />
 
-                <label className="grid gap-2 text-sm">
-                  {t("sites.fields.client")}
-                  <select
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none"
-                    disabled={saving || clientsLoading}
-                  >
-                    <option value="">
-                      {clientsLoading ? t("common.loading") : t("sites.placeholders.noClient")}
-                    </option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name || c.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-2 text-sm">
-                  المنطقة
-                  <select
-                    value={zoneId}
-                    onChange={(e) => setZoneId(e.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none"
-                    disabled={saving || zonesLoading}
-                  >
-                    <option value="">
-                      {zonesLoading ? t("common.loading") : "بدون منطقة"}
-                    </option>
-                    {zones.map((z) => (
-                      <option key={z.id} value={z.id}>
-                        {z.name || z.code || z.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-2 text-sm">
-                  كود الموقع
-                  <input
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none"
-                    placeholder="مثال: SITE-001"
-                    disabled={saving}
-                  />
-                </label>
-
-                <label className="grid gap-2 text-sm">
-                  {t("sites.fields.address")}
-                  <input
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none"
-                    placeholder={t("sites.placeholders.address")}
-                    disabled={saving}
-                  />
-                </label>
-              </div>
-
-              <div className="mt-5 flex items-center justify-end gap-2">
-                <button
-                  onClick={() => setModalOpen(false)}
-                  disabled={saving}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
-                >
-                  {t("sites.modal.cancel")}
-                </button>
-                <button
-                  onClick={submit}
-                  disabled={saving}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  {saving ? t("common.saving") : t("sites.modal.save")}
-                </button>
-              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => router.push("/sites?page=1&limit=50")}
+              >
+                {t("common.reset")}
+              </Button>
             </div>
-          </div>
-        ) : null}
-
-        <Toast
-          open={toastOpen}
-          message={toastMsg}
-          type={toastType}
-          onClose={() => setToastOpen(false)}
+          }
         />
-      </div>
+      </Card>
+
+      <DataTable<Site>
+        title={t("sites.table.name")}
+        columns={columns}
+        rows={items}
+        loading={loading}
+        total={total}
+        page={page}
+        pages={pages}
+        onPrev={page <= 1 ? undefined : () => setParam("page", String(page - 1))}
+        onNext={page >= pages ? undefined : () => setParam("page", String(page + 1))}
+        emptyTitle={t("sites.empty")}
+        emptyHint=""
+        onRowClick={(row) => openEdit(row)}
+      />
+
+      <SiteModal
+        open={modalOpen}
+        editing={editing}
+        clients={clients}
+        zones={zones}
+        saving={saving}
+        onClose={() => {
+          if (!saving) {
+            setModalOpen(false);
+            setEditing(null);
+          }
+        }}
+        onSubmit={saveSite}
+      />
+
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        dir="rtl"
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { Toast } from "@/src/components/Toast";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 
-import receiptsService from "@/src/services/receipts.service";
+import { receiptsService } from "@/src/services/receipts.service";
 import type {
   InventoryReceipt,
   ReceiptBulkLine,
@@ -21,6 +21,7 @@ import type {
 function fmtMoney(value: unknown): string {
   const n = Number(value || 0);
   if (!Number.isFinite(n)) return "0.00";
+
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -29,8 +30,10 @@ function fmtMoney(value: unknown): string {
 
 function fmtDate(value?: string | null): string {
   if (!value) return "—";
+
   const d = new Date(String(value));
   if (Number.isNaN(d.getTime())) return String(value);
+
   return d.toLocaleString("ar-EG");
 }
 
@@ -78,12 +81,39 @@ function infoValue(value: unknown): string {
   return String(value);
 }
 
+function InfoBox({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-black/10 bg-[rgba(var(--trex-surface),0.72)] p-3">
+      <div className="text-xs text-slate-500">{label}</div>
+      <div
+        className={[
+          "mt-1 text-sm font-medium text-[rgb(var(--trex-fg))]",
+          mono ? "font-mono" : "",
+        ].join(" ")}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
 export default function PurchaseDetailsClientPage() {
   const params = useParams();
   const id = String(params?.id || "");
 
   const [loading, setLoading] = useState(true);
-  const [busyAction, setBusyAction] = useState<"submit" | "post" | "cancel" | null>(null);
+  const [busyAction, setBusyAction] = useState<
+    "submit" | "post" | "cancel" | null
+  >(null);
+
   const [receipt, setReceipt] = useState<InventoryReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,14 +128,20 @@ export default function PurchaseDetailsClientPage() {
   }
 
   async function load() {
+    if (!id) return;
+
     try {
       setLoading(true);
       setError(null);
+
       const data = await receiptsService.getById(id);
       setReceipt(data);
     } catch (e: any) {
       const msg =
-        e?.response?.data?.message || e?.message || "فشل تحميل بيانات المشتريات";
+        e?.response?.data?.message ||
+        e?.message ||
+        "فشل تحميل بيانات المشتريات";
+
       setError(msg);
       showToast("error", msg);
       setReceipt(null);
@@ -115,9 +151,8 @@ export default function PurchaseDetailsClientPage() {
   }
 
   useEffect(() => {
-    if (id) {
-      load();
-    }
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function handleSubmit() {
@@ -126,7 +161,7 @@ export default function PurchaseDetailsClientPage() {
     try {
       setBusyAction("submit");
       await receiptsService.submit(receipt.id);
-      showToast("success", "تم إرسال عملية الشراء للتأكيد");
+      showToast("success", "تم إرسال عملية الشراء للمراجعة");
       await load();
     } catch (e: any) {
       showToast(
@@ -162,12 +197,12 @@ export default function PurchaseDetailsClientPage() {
     try {
       setBusyAction("cancel");
       await receiptsService.cancel(receipt.id);
-      showToast("success", "تم رفض/إلغاء عملية الشراء");
+      showToast("success", "تم إلغاء عملية الشراء");
       await load();
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message || e?.message || "فشل رفض عملية الشراء"
+        e?.response?.data?.message || e?.message || "فشل إلغاء عملية الشراء"
       );
     } finally {
       setBusyAction(null);
@@ -203,10 +238,10 @@ export default function PurchaseDetailsClientPage() {
       label: "الصنف",
       render: (row) => (
         <div className="space-y-0.5">
-          <div className="font-medium text-gray-900">
+          <div className="font-medium text-[rgb(var(--trex-fg))]">
             {row.part?.name || "—"}
           </div>
-          <div className="text-xs text-gray-500 font-mono">
+          <div className="text-xs text-slate-500 font-mono">
             {row.part?.part_number || shortId(row.part_id)}
           </div>
         </div>
@@ -214,7 +249,7 @@ export default function PurchaseDetailsClientPage() {
     },
     {
       key: "internal_serial",
-      label: "Internal Serial",
+      label: "السيريال الداخلي",
       render: (row) => (
         <span className="font-mono text-xs">
           {infoValue(row.internal_serial)}
@@ -223,7 +258,7 @@ export default function PurchaseDetailsClientPage() {
     },
     {
       key: "manufacturer_serial",
-      label: "Manufacturer Serial",
+      label: "سيريال المصنع",
       render: (row) => (
         <span className="font-mono text-xs">
           {infoValue(row.manufacturer_serial)}
@@ -248,10 +283,10 @@ export default function PurchaseDetailsClientPage() {
       label: "الصنف",
       render: (row) => (
         <div className="space-y-0.5">
-          <div className="font-medium text-gray-900">
+          <div className="font-medium text-[rgb(var(--trex-fg))]">
             {row.part?.name || "—"}
           </div>
-          <div className="text-xs text-gray-500 font-mono">
+          <div className="text-xs text-slate-500 font-mono">
             {row.part?.part_number || shortId(row.part_id)}
           </div>
         </div>
@@ -273,6 +308,7 @@ export default function PurchaseDetailsClientPage() {
       render: (row) => {
         const explicitTotal = numberOrZero(row.total_cost);
         if (explicitTotal > 0) return fmtMoney(explicitTotal);
+
         return fmtMoney(numberOrZero(row.qty) * numberOrZero(row.unit_cost));
       },
     },
@@ -284,15 +320,33 @@ export default function PurchaseDetailsClientPage() {
   ];
 
   if (loading) {
-    return <div className="p-6">جار التحميل...</div>;
+    return (
+      <div className="p-6">
+        <Card>
+          <div className="text-sm text-slate-500">جار التحميل...</div>
+        </Card>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="p-6 text-red-600">⚠️ {error}</div>;
+    return (
+      <div className="p-6">
+        <Card>
+          <div className="text-sm text-red-600">⚠️ {error}</div>
+        </Card>
+      </div>
+    );
   }
 
   if (!receipt) {
-    return <div className="p-6">لا يوجد بيانات</div>;
+    return (
+      <div className="p-6">
+        <Card>
+          <div className="text-sm text-slate-500">لا يوجد بيانات</div>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -304,82 +358,73 @@ export default function PurchaseDetailsClientPage() {
           <div className="flex flex-wrap items-center gap-2">
             {canSubmit ? (
               <Button
+                type="button"
                 variant="secondary"
                 onClick={handleSubmit}
                 isLoading={busyAction === "submit"}
               >
-                Submit
+                إرسال للمراجعة
               </Button>
             ) : null}
 
             {canPost ? (
               <Button
+                type="button"
                 variant="primary"
                 onClick={handlePost}
                 isLoading={busyAction === "post"}
               >
-                Post
+                ترحيل
               </Button>
             ) : null}
 
             {canCancel ? (
               <Button
+                type="button"
                 variant="danger"
                 onClick={handleCancel}
                 isLoading={busyAction === "cancel"}
               >
-                Reject
+                إلغاء
               </Button>
             ) : null}
 
             <Link href="/finance/purchases">
-              <Button variant="secondary">رجوع</Button>
+              <Button type="button" variant="secondary">
+                رجوع
+              </Button>
             </Link>
           </div>
         }
       />
 
-      <Card>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <b>المخزن:</b> {receipt.warehouse?.name || "—"}
-          </div>
+      <Card title="بيانات الإضافة المخزنية">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <InfoBox label="المخزن" value={receipt.warehouse?.name || "—"} />
 
-          <div>
-            <b>المورد:</b> {receipt.vendor?.name || "—"}
-          </div>
+         <InfoBox
+  label="المورد"
+  value={receipt.vendor?.name || "—"}
+/>
 
-          <div>
-            <b>رقم الفاتورة:</b> {receipt.invoice_no || "—"}
-          </div>
+          <InfoBox label="رقم الفاتورة" value={receipt.invoice_no || "—"} />
 
-          <div>
-            <b>التاريخ:</b> {fmtDate(mainDate)}
-          </div>
+          <InfoBox label="التاريخ" value={fmtDate(mainDate)} />
 
-          <div>
-            <b>الإجمالي:</b> {fmtMoney(displayedTotal)}
-          </div>
+          <InfoBox label="الإجمالي" value={fmtMoney(displayedTotal)} />
 
-          <div>
-            <b>الحالة:</b> <StatusBadge status={receipt.status || "DRAFT"} />
-          </div>
+          <InfoBox
+            label="الحالة"
+            value={<StatusBadge status={receipt.status || "DRAFT"} />}
+          />
 
-          <div>
-            <b>عدد العناصر المسلسلة:</b> {serialItems.length}
-          </div>
+          <InfoBox label="عدد السيريالات" value={serialItems.length} />
 
-          <div>
-            <b>عدد البنود المجمعة:</b> {bulkLines.length}
-          </div>
+          <InfoBox label="عدد البنود المجمعة" value={bulkLines.length} />
 
-          <div>
-            <b>تاريخ الإنشاء:</b> {fmtDate(receipt.created_at)}
-          </div>
+          <InfoBox label="تاريخ الإنشاء" value={fmtDate(receipt.created_at)} />
 
-          <div>
-            <b>معرّف العملية:</b> {shortId(receipt.id)}
-          </div>
+          <InfoBox label="معرّف العملية" value={shortId(receipt.id)} mono />
         </div>
       </Card>
 
@@ -400,14 +445,16 @@ export default function PurchaseDetailsClientPage() {
           columns={bulkColumns}
           rows={bulkLines}
           loading={false}
-          emptyTitle="لا توجد بنود bulk"
+          emptyTitle="لا توجد بنود مجمعة"
           emptyHint=""
         />
       ) : null}
 
       {serialItems.length === 0 && bulkLines.length === 0 ? (
         <Card>
-          <div className="text-sm text-gray-600">لا توجد أصناف داخل هذه العملية</div>
+          <div className="text-sm text-slate-500">
+            لا توجد أصناف داخل هذه العملية
+          </div>
         </Card>
       ) : null}
 

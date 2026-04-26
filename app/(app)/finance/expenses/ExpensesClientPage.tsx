@@ -30,7 +30,9 @@ function roleUpper(role: unknown): string {
 
 function fmtMoney(value: unknown): string {
   const v = Number(value || 0);
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(v);
 }
 
 function fmtDate(value?: string | null): string {
@@ -65,7 +67,10 @@ export default function ExpensesClientPage(): React.ReactElement {
 
   const status = (sp.get("status") || "PENDING").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
+  const pageSize = Math.min(
+    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
+    200
+  );
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
@@ -73,7 +78,8 @@ export default function ExpensesClientPage(): React.ReactElement {
 
   const [items, setItems] = useState<CashExpense[]>([]);
   const [total, setTotal] = useState(0);
-  const [summary, setSummary] = useState<CashExpenseSummaryTotals | null>(null);
+  const [summary, setSummary] =
+    useState<CashExpenseSummaryTotals | null>(null);
 
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
@@ -81,27 +87,39 @@ export default function ExpensesClientPage(): React.ReactElement {
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
 
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [activeId, setActiveId] = useState("");
+
+  const [approveNotes, setApproveNotes] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectNotes, setRejectNotes] = useState("");
+
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
-    setTimeout(() => setToastOpen(false), 2500);
   }
 
-  const setParam = (key: string, value: string) => {
+  function setParam(key: string, value: string) {
     const params = new URLSearchParams(sp.toString());
+
     if (value) params.set(key, value);
     else params.delete(key);
 
     if (key !== "page") params.set("page", "1");
 
     router.push(`/finance/expenses?${params.toString()}`);
-  };
+  }
 
-  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
+  const qsKey = useMemo(
+    () => `${status}|${page}|${pageSize}|${q}`,
+    [status, page, pageSize, q]
+  );
 
   async function load() {
-    if (token === null || !token) return;
+    if (!token) return;
 
     setLoading(true);
     setErr(null);
@@ -120,14 +138,15 @@ export default function ExpensesClientPage(): React.ReactElement {
         }),
       ]);
 
-      setItems(listRes.items);
-      setTotal(listRes.total);
-      setSummary(summaryRes.totals);
-
-      showToast("success", t("common.refresh"));
+      setItems(listRes.items || []);
+      setTotal(listRes.total || 0);
+      setSummary(summaryRes.totals || null);
     } catch (e: any) {
       const msg =
-        e?.response?.data?.message || e?.message || t("financeExpenses.errors.loadFailed");
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeExpenses.errors.loadFailed");
+
       setErr(msg);
       setItems([]);
       setTotal(0);
@@ -143,17 +162,9 @@ export default function ExpensesClientPage(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qsKey, token]);
 
-  const [approveOpen, setApproveOpen] = useState(false);
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [activeId, setActiveId] = useState<string>("");
-
-  const [approveNotes, setApproveNotes] = useState("");
-  const [rejectReason, setRejectReason] = useState("");
-  const [rejectNotes, setRejectNotes] = useState("");
-
   function openApprove(expenseId: string) {
     if (!canReview) return;
+
     setActiveId(expenseId);
     setApproveNotes("");
     setApproveOpen(true);
@@ -161,6 +172,7 @@ export default function ExpensesClientPage(): React.ReactElement {
 
   function openReject(expenseId: string) {
     if (!canReview) return;
+
     setActiveId(expenseId);
     setRejectReason("");
     setRejectNotes("");
@@ -173,16 +185,19 @@ export default function ExpensesClientPage(): React.ReactElement {
     setBusy(true);
     try {
       await cashExpensesService.approve(activeId, {
-        notes: approveNotes || null,
+        notes: approveNotes.trim() || null,
       });
-      showToast("success", t("common.save") || t("common.saved") || "تم الحفظ");
+
+      showToast("success", "تم اعتماد المصروف");
       setApproveOpen(false);
       setActiveId("");
       await load();
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message || e?.message || t("financeExpenses.errors.approveFailed")
+        e?.response?.data?.message ||
+          e?.message ||
+          t("financeExpenses.errors.approveFailed")
       );
     } finally {
       setBusy(false);
@@ -196,7 +211,10 @@ export default function ExpensesClientPage(): React.ReactElement {
     const notes = rejectNotes.trim();
 
     if (reason.length < 2) {
-      showToast("error", t("financeExpenses.prompts.rejectReason") || "سبب الرفض مطلوب");
+      showToast(
+        "error",
+        t("financeExpenses.prompts.rejectReason") || "سبب الرفض مطلوب"
+      );
       return;
     }
 
@@ -206,14 +224,17 @@ export default function ExpensesClientPage(): React.ReactElement {
         reason,
         notes: notes || null,
       });
-      showToast("success", t("common.save") || t("common.saved") || "تم الحفظ");
+
+      showToast("success", "تم رفض المصروف");
       setRejectOpen(false);
       setActiveId("");
       await load();
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message || e?.message || t("financeExpenses.errors.rejectFailed")
+        e?.response?.data?.message ||
+          e?.message ||
+          t("financeExpenses.errors.rejectFailed")
       );
     } finally {
       setBusy(false);
@@ -240,15 +261,19 @@ export default function ExpensesClientPage(): React.ReactElement {
     }
 
     const sumAll = items.reduce((acc, x) => acc + Number(x.amount || 0), 0);
+
     const sumApproved = items
       .filter((x) => ["APPROVED", "REAPPROVED"].includes(expenseStatus(x)))
       .reduce((acc, x) => acc + Number(x.amount || 0), 0);
+
     const sumPending = items
       .filter((x) => expenseStatus(x) === "PENDING")
       .reduce((acc, x) => acc + Number(x.amount || 0), 0);
+
     const sumRejected = items
       .filter((x) => expenseStatus(x) === "REJECTED")
       .reduce((acc, x) => acc + Number(x.amount || 0), 0);
+
     const sumAppealed = items
       .filter((x) => expenseStatus(x) === "APPEALED")
       .reduce((acc, x) => acc + Number(x.amount || 0), 0);
@@ -266,12 +291,16 @@ export default function ExpensesClientPage(): React.ReactElement {
       {
         key: "id",
         label: t("financeExpenses.table.id"),
-        render: (x) => <span className="font-mono text-xs">{shortId(x.id)}</span>,
+        render: (x) => (
+          <span className="font-mono text-xs">{shortId(x.id)}</span>
+        ),
       },
       {
         key: "amount",
         label: t("financeExpenses.table.amount"),
-        render: (x) => <span className="font-semibold">{fmtMoney(x.amount)}</span>,
+        render: (x) => (
+          <span className="font-semibold">{fmtMoney(x.amount)}</span>
+        ),
       },
       {
         key: "type",
@@ -287,7 +316,11 @@ export default function ExpensesClientPage(): React.ReactElement {
         key: "trip",
         label: t("financeExpenses.table.trip"),
         render: (x) =>
-          x.trip_id ? <span className="font-mono text-xs">{shortId(x.trip_id)}</span> : "—",
+          x.trip_id ? (
+            <span className="font-mono text-xs">{shortId(x.trip_id)}</span>
+          ) : (
+            "—"
+          ),
       },
       {
         key: "vehicle",
@@ -297,7 +330,9 @@ export default function ExpensesClientPage(): React.ReactElement {
       {
         key: "created",
         label: t("financeExpenses.table.created"),
-        render: (x) => <span className="text-slate-600">{fmtDate(x.created_at)}</span>,
+        render: (x) => (
+          <span className="text-slate-600">{fmtDate(x.created_at)}</span>
+        ),
       },
       {
         key: "actions",
@@ -308,15 +343,26 @@ export default function ExpensesClientPage(): React.ReactElement {
           return (
             <div className="flex flex-wrap items-center gap-2 justify-start">
               <Link href={`/finance/expenses/${x.id}`}>
-                <Button variant="secondary">{t("common.view")}</Button>
+                <Button type="button" variant="secondary">
+                  {t("common.view")}
+                </Button>
               </Link>
 
               {canReview && st === "PENDING" ? (
                 <>
-                  <Button variant="primary" onClick={() => openApprove(x.id)}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => openApprove(x.id)}
+                  >
                     {t("financeExpenses.actions.approve")}
                   </Button>
-                  <Button variant="danger" onClick={() => openReject(x.id)}>
+
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={() => openReject(x.id)}
+                  >
                     {t("financeExpenses.actions.reject")}
                   </Button>
                 </>
@@ -325,7 +371,9 @@ export default function ExpensesClientPage(): React.ReactElement {
               {st === "REJECTED" && x.rejection_reason ? (
                 <span className="text-xs text-slate-500">
                   {t("financeExpenses.table.reason")}:{" "}
-                  <span className="text-[rgb(var(--trex-fg))]">{String(x.rejection_reason)}</span>
+                  <span className="text-[rgb(var(--trex-fg))]">
+                    {String(x.rejection_reason)}
+                  </span>
                 </span>
               ) : null}
             </div>
@@ -343,47 +391,70 @@ export default function ExpensesClientPage(): React.ReactElement {
         subtitle={
           <span className="text-slate-500">
             {t("common.role")}:{" "}
-            <span className="font-semibold text-[rgb(var(--trex-fg))]">{role || "—"}</span>
-            {!canReview ? <span className="ms-2">({t("financeExpenses.viewOnly")})</span> : null}
+            <span className="font-semibold text-[rgb(var(--trex-fg))]">
+              {role || "—"}
+            </span>
+            {!canReview ? (
+              <span className="ms-2">({t("financeExpenses.viewOnly")})</span>
+            ) : null}
           </span>
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/finance">
-              <Button variant="secondary">{t("sidebar.finance")}</Button>
-            </Link>
-            <Link href="/finance/expenses/new">
-              <Button variant="primary">
-                {t("financeExpenses.actions.new") || t("common.add") || "إضافة"}
+              <Button type="button" variant="secondary">
+                {t("sidebar.finance")}
               </Button>
             </Link>
-            <Button onClick={load} disabled={loading} isLoading={loading} variant="secondary">
+
+            <Link href="/finance/expenses/new">
+              <Button type="button" variant="primary">
+                + إنشاء مصروف
+              </Button>
+            </Link>
+
+            <Button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              isLoading={loading}
+              variant="secondary"
+            >
               {loading ? t("common.loading") : t("common.refresh")}
             </Button>
           </div>
         }
       />
 
-      <TabsBar<TabKey> tabs={tabs} value={status} onChange={(k) => setParam("status", k)} />
+      <TabsBar<TabKey>
+        tabs={tabs}
+        value={status}
+        onChange={(k) => setParam("status", k)}
+      />
 
       <Card>
         <FiltersBar
           left={
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
               <div>
-                <div className="text-xs text-slate-500 mb-1">{t("common.search")}</div>
+                <div className="text-xs text-slate-500 mb-1">
+                  {t("common.search")}
+                </div>
+
                 <input
                   value={q}
                   onChange={(e) => setParam("q", e.target.value)}
                   placeholder={t("financeExpenses.filters.searchPlaceholder")}
-                  className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
+                  className="trex-input w-full px-3 py-2 text-sm"
                 />
               </div>
 
               <div className="flex items-end">
                 <div className="text-xs text-slate-500">
                   {t("common.total")}:{" "}
-                  <span className="font-semibold text-[rgb(var(--trex-fg))]">{total}</span>
+                  <span className="font-semibold text-[rgb(var(--trex-fg))]">
+                    {total}
+                  </span>
                   {" — "}
                   {t("common.page")}{" "}
                   <span className="font-semibold text-[rgb(var(--trex-fg))]">
@@ -395,10 +466,11 @@ export default function ExpensesClientPage(): React.ReactElement {
               <div className="flex items-end justify-start gap-2">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-slate-500">{t("common.rows")}</span>
+
                   <select
                     value={String(pageSize)}
                     onChange={(e) => setParam("pageSize", e.target.value)}
-                    className="rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-2 py-2 outline-none text-sm"
+                    className="trex-input px-2 py-2 text-sm"
                   >
                     <option value="10">10</option>
                     <option value="25">25</option>
@@ -409,11 +481,14 @@ export default function ExpensesClientPage(): React.ReactElement {
                 </div>
 
                 <Button
+                  type="button"
                   variant="ghost"
                   onClick={() => {
-                    setParam("q", "");
-                    setParam("status", "PENDING");
-                    setParam("pageSize", "25");
+                    const params = new URLSearchParams();
+                    params.set("status", "PENDING");
+                    params.set("page", "1");
+                    params.set("pageSize", "25");
+                    router.push(`/finance/expenses?${params.toString()}`);
                   }}
                 >
                   {t("common.reset")}
@@ -426,11 +501,26 @@ export default function ExpensesClientPage(): React.ReactElement {
 
       {!loading && !err ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <KpiCard label={t("financeExpenses.kpi.total")} value={fmtMoney(kpi.sumAll)} />
-          <KpiCard label={t("financeExpenses.kpi.approved")} value={fmtMoney(kpi.sumApproved)} />
-          <KpiCard label={t("financeExpenses.kpi.pending")} value={fmtMoney(kpi.sumPending)} />
-          <KpiCard label={t("financeExpenses.kpi.rejected")} value={fmtMoney(kpi.sumRejected)} />
-          <KpiCard label={t("financeExpenses.kpi.appealed")} value={fmtMoney(kpi.sumAppealed)} />
+          <KpiCard
+            label={t("financeExpenses.kpi.total")}
+            value={fmtMoney(kpi.sumAll)}
+          />
+          <KpiCard
+            label={t("financeExpenses.kpi.approved")}
+            value={fmtMoney(kpi.sumApproved)}
+          />
+          <KpiCard
+            label={t("financeExpenses.kpi.pending")}
+            value={fmtMoney(kpi.sumPending)}
+          />
+          <KpiCard
+            label={t("financeExpenses.kpi.rejected")}
+            value={fmtMoney(kpi.sumRejected)}
+          />
+          <KpiCard
+            label={t("financeExpenses.kpi.appealed")}
+            value={fmtMoney(kpi.sumAppealed)}
+          />
         </div>
       ) : null}
 
@@ -448,14 +538,22 @@ export default function ExpensesClientPage(): React.ReactElement {
         total={total}
         page={page}
         pages={totalPages}
-        onPrev={page <= 1 ? undefined : () => setParam("page", String(page - 1))}
-        onNext={page >= totalPages ? undefined : () => setParam("page", String(page + 1))}
+        onPrev={
+          page <= 1 ? undefined : () => setParam("page", String(page - 1))
+        }
+        onNext={
+          page >= totalPages
+            ? undefined
+            : () => setParam("page", String(page + 1))
+        }
         emptyTitle={t("financeExpenses.empty") || "لا يوجد مصروفات"}
-        emptyHint={t("common.tryAdjustFilters") || "جرّب تغيير الفلاتر أو البحث."}
+        emptyHint="جرّب تغيير الفلاتر أو البحث."
         footer={
           <div className="text-xs text-slate-500">
-            {t("common.total")}:{" "}
-            <span className="font-semibold text-[rgb(var(--trex-fg))]">{fmtMoney(pageTotal)}</span>
+            إجمالي الصفحة:{" "}
+            <span className="font-semibold text-[rgb(var(--trex-fg))]">
+              {fmtMoney(pageTotal)}
+            </span>
           </div>
         }
         onRowClick={(row) => router.push(`/finance/expenses/${row.id}`)}
@@ -467,13 +565,15 @@ export default function ExpensesClientPage(): React.ReactElement {
         description={
           <div className="space-y-2">
             <div className="text-sm text-slate-600">
-              {t("financeExpenses.prompts.approveNotes") || "ملاحظات (اختياري)"}
+              {t("financeExpenses.prompts.approveNotes") ||
+                "ملاحظات (اختياري)"}
             </div>
+
             <textarea
               rows={3}
               value={approveNotes}
               onChange={(e) => setApproveNotes(e.target.value)}
-              className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
+              className="trex-input w-full px-3 py-2 text-sm"
               placeholder={t("common.optional") || "اختياري"}
               disabled={busy}
             />
@@ -501,11 +601,15 @@ export default function ExpensesClientPage(): React.ReactElement {
               <div className="text-sm text-slate-600 mb-1">
                 {t("financeExpenses.prompts.rejectReason") || "سبب الرفض *"}
               </div>
+
               <input
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
-                placeholder={t("financeExpenses.prompts.rejectReason") || "اكتب سبب الرفض"}
+                className="trex-input w-full px-3 py-2 text-sm"
+                placeholder={
+                  t("financeExpenses.prompts.rejectReason") ||
+                  "اكتب سبب الرفض"
+                }
                 disabled={busy}
               />
             </div>
@@ -514,11 +618,12 @@ export default function ExpensesClientPage(): React.ReactElement {
               <div className="text-sm text-slate-600 mb-1">
                 {t("financeExpenses.prompts.rejectNotes") || "ملاحظات إضافية"}
               </div>
+
               <textarea
                 rows={3}
                 value={rejectNotes}
                 onChange={(e) => setRejectNotes(e.target.value)}
-                className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
+                className="trex-input w-full px-3 py-2 text-sm"
                 placeholder={t("common.optional") || "اختياري"}
                 disabled={busy}
               />

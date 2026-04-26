@@ -15,6 +15,7 @@ import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { TabsBar } from "@/src/components/ui/TabsBar";
 import { Card } from "@/src/components/ui/Card";
+import { TrexInput } from "@/src/components/ui/TrexInput";
 
 import { cashAdvancesService } from "@/src/services/cash-advances.service";
 import type {
@@ -82,7 +83,10 @@ export default function AdvancesClientPage(): React.ReactElement {
 
   const status = (sp.get("status") || "OPEN").toUpperCase() as TabKey;
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1), 200);
+  const pageSize = Math.min(
+    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 1),
+    200
+  );
   const q = sp.get("q") || "";
 
   const [loading, setLoading] = useState(true);
@@ -92,11 +96,11 @@ export default function AdvancesClientPage(): React.ReactElement {
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<CashAdvanceSummaryTotals | null>(null);
 
+  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
-
-  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -107,23 +111,26 @@ export default function AdvancesClientPage(): React.ReactElement {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
-    setTimeout(() => setToastOpen(false), 2500);
   }
 
-  const setParam = (key: string, value: string) => {
+  function setParam(key: string, value: string) {
     const params = new URLSearchParams(sp.toString());
+
     if (value) params.set(key, value);
     else params.delete(key);
 
     if (key !== "page") params.set("page", "1");
 
     router.push(`/finance/advances?${params.toString()}`);
-  };
+  }
 
-  const qsKey = useMemo(() => `${status}|${page}|${pageSize}|${q}`, [status, page, pageSize, q]);
+  const qsKey = useMemo(
+    () => `${status}|${page}|${pageSize}|${q}`,
+    [status, page, pageSize, q]
+  );
 
   async function load() {
-    if (token === null || !token) return;
+    if (!token) return;
 
     setLoading(true);
     setErr(null);
@@ -142,14 +149,16 @@ export default function AdvancesClientPage(): React.ReactElement {
         }),
       ]);
 
-      setItems(listRes.items);
-      setTotal(listRes.total);
-      setSummary(summaryRes.totals);
-
-      showToast("success", t("common.refresh"));
+      setItems(listRes.items || []);
+      setTotal(listRes.total || 0);
+      setSummary(summaryRes.totals || null);
     } catch (e: any) {
       const msg =
-        e?.response?.data?.message || e?.message || t("financeAdvances.errors.loadFailed");
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeAdvances.errors.loadFailed") ||
+        "فشل تحميل السلف";
+
       setErr(msg);
       setItems([]);
       setTotal(0);
@@ -169,23 +178,26 @@ export default function AdvancesClientPage(): React.ReactElement {
     if (!canManage) return;
 
     const amount = Number(newAmount);
+
     if (!newSupervisorId.trim()) {
-      showToast("error", t("financeAdvances.errors.supervisorRequired") || "Supervisor is required");
+      showToast("error", "معرّف المشرف مطلوب");
       return;
     }
+
     if (!Number.isFinite(amount) || amount <= 0) {
-      showToast("error", t("financeAdvances.errors.amountInvalid") || "Amount must be greater than 0");
+      showToast("error", "المبلغ يجب أن يكون أكبر من صفر");
       return;
     }
 
     setBusy(true);
+
     try {
       await cashAdvancesService.create({
         field_supervisor_id: newSupervisorId.trim(),
         amount,
       });
 
-      showToast("success", t("financeAdvances.toast.created") || "Created");
+      showToast("success", "تم إنشاء العُهدة");
       setCreateOpen(false);
       setNewSupervisorId("");
       setNewAmount("");
@@ -193,7 +205,7 @@ export default function AdvancesClientPage(): React.ReactElement {
     } catch (e: any) {
       showToast(
         "error",
-        e?.response?.data?.message || e?.message || t("financeAdvances.errors.createFailed")
+        e?.response?.data?.message || e?.message || "فشل إنشاء العُهدة"
       );
     } finally {
       setBusy(false);
@@ -201,10 +213,10 @@ export default function AdvancesClientPage(): React.ReactElement {
   }
 
   const tabs: Array<{ key: TabKey; label: string }> = [
-    { key: "OPEN", label: t("financeAdvances.tabs.OPEN") || "OPEN" },
-    { key: "SETTLED", label: t("financeAdvances.tabs.SETTLED") || "SETTLED" },
-    { key: "CANCELLED", label: t("financeAdvances.tabs.CANCELLED") || "CANCELLED" },
-    { key: "ALL", label: t("financeAdvances.tabs.ALL") || "ALL" },
+    { key: "OPEN", label: t("financeAdvances.filters.open") || "مفتوحة" },
+    { key: "SETTLED", label: t("financeAdvances.filters.settled") || "تمت التسوية" },
+    { key: "CANCELED", label: t("financeAdvances.filters.canceled") || "ملغاة" },
+    { key: "ALL", label: t("common.all") || "الكل" },
   ];
 
   const kpi = useMemo(() => {
@@ -223,7 +235,9 @@ export default function AdvancesClientPage(): React.ReactElement {
       countAll: items.length,
       openCount: items.filter((x) => norm(x.status) === "OPEN").length,
       settledCount: items.filter((x) => norm(x.status) === "SETTLED").length,
-      canceledCount: items.filter((x) => ["CANCELLED", "CANCELED"].includes(norm(x.status))).length,
+      canceledCount: items.filter((x) =>
+        ["CANCELLED", "CANCELED"].includes(norm(x.status))
+      ).length,
     };
   }, [items, summary]);
 
@@ -236,7 +250,7 @@ export default function AdvancesClientPage(): React.ReactElement {
       },
       {
         key: "supervisor",
-        label: t("financeAdvances.table.supervisor") || "Supervisor",
+        label: t("financeAdvances.table.supervisor") || "المشرف",
         render: (x) =>
           x.users_cash_advances_field_supervisor_idTousers?.full_name ||
           x.users_cash_advances_field_supervisor_idTousers?.email ||
@@ -245,26 +259,28 @@ export default function AdvancesClientPage(): React.ReactElement {
       },
       {
         key: "amount",
-        label: t("financeAdvances.table.amount") || "Amount",
+        label: t("financeAdvances.table.amount") || "المبلغ",
         render: (x) => <span className="font-semibold">{fmtMoney(x.amount)}</span>,
       },
       {
         key: "status",
-        label: t("financeAdvances.table.status") || "Status",
+        label: t("financeAdvances.table.status") || "الحالة",
         render: (x) => <LocalStatusBadge status={x.status} />,
       },
       {
         key: "created_at",
-        label: t("financeAdvances.table.created") || "Created",
+        label: t("financeAdvances.table.created") || "تاريخ الإنشاء",
         render: (x) => <span className="text-slate-600">{fmtDate(x.created_at)}</span>,
       },
       {
         key: "actions",
-        label: t("financeAdvances.table.actions") || "Actions",
+        label: t("financeAdvances.table.actions") || "إجراءات",
         render: (x) => (
           <div className="flex flex-wrap gap-2">
             <Link href={`/finance/advances/${x.id}`}>
-              <Button variant="secondary">{t("common.view")}</Button>
+              <Button type="button" variant="secondary">
+                {t("common.view")}
+              </Button>
             </Link>
           </div>
         ),
@@ -276,50 +292,71 @@ export default function AdvancesClientPage(): React.ReactElement {
   return (
     <div className="space-y-4" dir="rtl">
       <PageHeader
-        title={t("financeAdvances.title") || "Cash Advances"}
+        title={t("financeAdvances.title") || "السلف النقدية"}
         subtitle={
           <span className="text-slate-500">
             {t("common.role")}:{" "}
-            <span className="font-semibold text-[rgb(var(--trex-fg))]">{role || "—"}</span>
+            <span className="font-semibold text-[rgb(var(--trex-fg))]">
+              {role || "—"}
+            </span>
           </span>
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/finance">
-              <Button variant="secondary">{t("sidebar.finance")}</Button>
+              <Button type="button" variant="secondary">
+                {t("sidebar.finance")}
+              </Button>
             </Link>
+
             {canManage ? (
-              <Button variant="primary" onClick={() => setCreateOpen(true)}>
-                {t("financeAdvances.actions.new") || t("common.add") || "Add"}
+              <Button type="button" variant="primary" onClick={() => setCreateOpen(true)}>
+                {t("financeAdvances.actions.issue") || "+ صرف عهدة"}
               </Button>
             ) : null}
-            <Button onClick={load} disabled={loading} isLoading={loading} variant="secondary">
+
+            <Button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              isLoading={loading}
+              variant="secondary"
+            >
               {loading ? t("common.loading") : t("common.refresh")}
             </Button>
           </div>
         }
       />
 
-      <TabsBar<TabKey> tabs={tabs} value={status} onChange={(k) => setParam("status", k)} />
+      <TabsBar<TabKey>
+        tabs={tabs}
+        value={status}
+        onChange={(k) => setParam("status", k)}
+      />
 
       <Card>
         <FiltersBar
           left={
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
               <div>
-                <div className="text-xs text-slate-500 mb-1">{t("common.search")}</div>
+                <div className="text-xs text-slate-500 mb-1">
+                  {t("common.search")}
+                </div>
+
                 <input
                   value={q}
                   onChange={(e) => setParam("q", e.target.value)}
-                  placeholder={t("financeAdvances.filters.searchPlaceholder") || "Search"}
-                  className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
+                  placeholder={t("financeAdvances.filters.searchPlaceholder") || "بحث..."}
+                  className="trex-input w-full px-3 py-2 text-sm"
                 />
               </div>
 
               <div className="flex items-end">
                 <div className="text-xs text-slate-500">
                   {t("common.total")}:{" "}
-                  <span className="font-semibold text-[rgb(var(--trex-fg))]">{total}</span>
+                  <span className="font-semibold text-[rgb(var(--trex-fg))]">
+                    {total}
+                  </span>
                   {" — "}
                   {t("common.page")}{" "}
                   <span className="font-semibold text-[rgb(var(--trex-fg))]">
@@ -331,10 +368,11 @@ export default function AdvancesClientPage(): React.ReactElement {
               <div className="flex items-end justify-start gap-2">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-slate-500">{t("common.rows")}</span>
+
                   <select
                     value={String(pageSize)}
                     onChange={(e) => setParam("pageSize", e.target.value)}
-                    className="rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-2 py-2 outline-none text-sm"
+                    className="trex-input px-2 py-2 text-sm"
                   >
                     <option value="10">10</option>
                     <option value="25">25</option>
@@ -345,11 +383,14 @@ export default function AdvancesClientPage(): React.ReactElement {
                 </div>
 
                 <Button
+                  type="button"
                   variant="ghost"
                   onClick={() => {
-                    setParam("q", "");
-                    setParam("status", "OPEN");
-                    setParam("pageSize", "25");
+                    const params = new URLSearchParams();
+                    params.set("status", "OPEN");
+                    params.set("page", "1");
+                    params.set("pageSize", "25");
+                    router.push(`/finance/advances?${params.toString()}`);
                   }}
                 >
                   {t("common.reset")}
@@ -362,10 +403,20 @@ export default function AdvancesClientPage(): React.ReactElement {
 
       {!loading && !err ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiCard label={t("financeAdvances.kpi.totalAmount") || "Total Amount"} value={fmtMoney(kpi.sumAmount)} />
-          <KpiCard label={t("financeAdvances.kpi.countAll") || "Count All"} value={kpi.countAll} />
-          <KpiCard label={t("financeAdvances.kpi.openCount") || "Open"} value={kpi.openCount} />
-          <KpiCard label={t("financeAdvances.kpi.settledCount") || "Settled"} value={kpi.settledCount} />
+          <KpiCard
+            label={t("financeAdvances.kpi.totalAmount") || "إجمالي المبالغ"}
+            value={fmtMoney(kpi.sumAmount)}
+          />
+          <KpiCard label="العدد" value={String(kpi.countAll)} />
+          <KpiCard
+            label={t("financeAdvances.kpi.open") || "مفتوحة"
+            }
+            value={String(kpi.openCount)}
+          />
+          <KpiCard
+            label={t("financeAdvances.kpi.settled") || "مقفولة"}
+            value={String(kpi.settledCount)}
+          />
         </div>
       ) : null}
 
@@ -376,7 +427,7 @@ export default function AdvancesClientPage(): React.ReactElement {
       ) : null}
 
       <DataTable<CashAdvance>
-        title={t("financeAdvances.title") || "Cash Advances"}
+        title={t("financeAdvances.title") || "السلف النقدية"}
         columns={columns}
         rows={items}
         loading={loading}
@@ -384,47 +435,39 @@ export default function AdvancesClientPage(): React.ReactElement {
         page={page}
         pages={totalPages}
         onPrev={page <= 1 ? undefined : () => setParam("page", String(page - 1))}
-        onNext={page >= totalPages ? undefined : () => setParam("page", String(page + 1))}
-        emptyTitle={t("financeAdvances.empty") || "No advances"}
-        emptyHint={t("common.tryAdjustFilters") || "جرّب تغيير الفلاتر أو البحث."}
+        onNext={
+          page >= totalPages ? undefined : () => setParam("page", String(page + 1))
+        }
+        emptyTitle={t("financeAdvances.empty") || "لا توجد سلف"}
+        emptyHint="جرّب تغيير الفلاتر أو البحث."
         onRowClick={(row) => router.push(`/finance/advances/${row.id}`)}
       />
 
       <ConfirmDialog
         open={createOpen}
-        title={t("financeAdvances.actions.new") || "Create advance"}
+        title={t("financeAdvances.modal.issueTitle") || "صرف عهدة نقدية"}
         description={
           <div className="space-y-3">
-            <div>
-              <div className="text-sm text-slate-600 mb-1">
-                {t("financeAdvances.fields.supervisorId") || "Field supervisor ID"}
-              </div>
-              <input
-                value={newSupervisorId}
-                onChange={(e) => setNewSupervisorId(e.target.value)}
-                className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
-                placeholder="uuid"
-                disabled={busy}
-              />
-            </div>
+            <TrexInput
+              label={t("financeAdvances.modal.supervisor") || "المشرف"}
+              value={newSupervisorId}
+              onChange={(e) => setNewSupervisorId(e.target.value)}
+              placeholder="Supervisor UUID"
+              disabled={busy}
+            />
 
-            <div>
-              <div className="text-sm text-slate-600 mb-1">
-                {t("financeAdvances.fields.amount") || "Amount"}
-              </div>
-              <input
-                type="number"
-                value={newAmount}
-                onChange={(e) => setNewAmount(e.target.value)}
-                className="w-full rounded-xl border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-2 outline-none text-sm"
-                placeholder="0"
-                disabled={busy}
-              />
-            </div>
+            <TrexInput
+              label={t("financeAdvances.modal.amount") || "المبلغ"}
+              type="number"
+              value={newAmount}
+              onChange={(e) => setNewAmount(e.target.value)}
+              placeholder="0"
+              disabled={busy}
+            />
           </div>
         }
-        confirmText={t("common.save") || "Save"}
-        cancelText={t("common.cancel") || "Cancel"}
+        confirmText={t("common.save") || "حفظ"}
+        cancelText={t("common.cancel") || "إلغاء"}
         tone="info"
         isLoading={busy}
         dir="rtl"

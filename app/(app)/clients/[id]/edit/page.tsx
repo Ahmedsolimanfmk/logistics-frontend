@@ -1,94 +1,21 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useT } from "@/src/i18n/useT";
-import { useAuth } from "@/src/store/auth";
 
 import { clientsService } from "@/src/services/clients.service";
-import type { ClientPayload } from "@/src/types/clients.types";
+import { useT } from "@/src/i18n/useT";
 
 import { PageHeader } from "@/src/components/ui/PageHeader";
-import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
+import { Button } from "@/src/components/ui/Button";
 import { Toast } from "@/src/components/Toast";
-
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
-
-type FormState = {
-  name: string;
-  phone: string;
-  email: string;
-  hq_address: string;
-  contact_name: string;
-  contact_phone: string;
-  contact_email: string;
-  tax_no: string;
-  notes: string;
-  is_active: boolean;
-};
-
-function emptyToNull(v: string) {
-  const x = v.trim();
-  return x ? x : null;
-}
-
-function toPayload(form: FormState): ClientPayload {
-  return {
-    name: form.name.trim(),
-    phone: emptyToNull(form.phone),
-    email: emptyToNull(form.email),
-    hq_address: emptyToNull(form.hq_address),
-    contact_name: emptyToNull(form.contact_name),
-    contact_phone: emptyToNull(form.contact_phone),
-    contact_email: emptyToNull(form.contact_email),
-    tax_no: emptyToNull(form.tax_no),
-    notes: emptyToNull(form.notes),
-    is_active: form.is_active,
-  };
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  required = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="block">
-      <div className="mb-1 text-xs font-medium text-slate-500">
-        {label} {required ? <span className="text-red-500">*</span> : null}
-      </div>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={cn(
-          "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-          "focus:ring-2 focus:ring-slate-200"
-        )}
-      />
-    </label>
-  );
-}
+import { TrexInput } from "@/src/components/ui/TrexInput";
+import { TrexSelect } from "@/src/components/ui/TrexSelect";
 
 export default function EditClientPage() {
   const t = useT();
   const router = useRouter();
-  const token = useAuth((s) => s.token);
   const params = useParams();
 
   const id = String(params?.id || "");
@@ -96,234 +23,291 @@ export default function EditClientPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [form, setForm] = useState<FormState>({
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  const [form, setForm] = useState({
     name: "",
-    phone: "",
     email: "",
+    phone: "",
     hq_address: "",
     contact_name: "",
     contact_phone: "",
     contact_email: "",
     tax_no: "",
     notes: "",
-    is_active: true,
+    is_active: "true",
   });
 
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  function showToast(type: "success" | "error", message: string) {
+    setToastType(type);
+    setToastMsg(message);
+    setToastOpen(true);
+  }
 
-  const canSubmit = useMemo(() => form.name.trim().length > 0, [form.name]);
+  function patch(key: keyof typeof form, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function load() {
+    if (!id) return;
+
+    setLoading(true);
+
+    try {
+      const client = await clientsService.getById(id);
+
+      setForm({
+        name: String(client.name || ""),
+        email: String(client.email || client.billing_email || ""),
+        phone: String(client.phone || ""),
+        hq_address: String(client.hq_address || ""),
+        contact_name: String(
+          client.contact_name || client.primary_contact_name || ""
+        ),
+        contact_phone: String(
+          client.contact_phone || client.primary_contact_phone || ""
+        ),
+        contact_email: String(
+          client.contact_email || client.primary_contact_email || ""
+        ),
+        tax_no: String(client.tax_no ||  ""),
+        notes: String(client.notes || ""),
+        is_active: client.is_active === false ? "false" : "true",
+      });
+    } catch (err: any) {
+      showToast(
+        "error",
+        err?.response?.data?.message ||
+          err?.message ||
+          t("clients.details.errors.loadFailed") ||
+          "فشل تحميل بيانات العميل"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      if (!token || !id) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-      setLoading(true);
-      try {
-        const client = await clientsService.getById(id);
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
-        setForm({
-          name: client?.name || "",
-          phone: client?.phone || "",
-          email: client?.email || "",
-          hq_address: client?.hq_address || "",
-          contact_name: client?.contact_name || "",
-          contact_phone: client?.contact_phone || "",
-          contact_email: client?.contact_email || "",
-          tax_no: client?.tax_no || "",
-          notes: client?.notes || "",
-          is_active: Boolean(client?.is_active),
-        });
-      } catch (e: any) {
-        setToast({
-          type: "error",
-          msg: e?.response?.data?.message || e?.message || t("clients.errors.loadFailed") || "فشل تحميل بيانات العميل",
-        });
-      } finally {
-        setLoading(false);
-      }
+    const name = form.name.trim();
+
+    if (!name) {
+      showToast("error", t("clients.errors.nameRequired") || "اسم العميل مطلوب");
+      return;
     }
 
-    load();
-  }, [token, id, t]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!id || !canSubmit || saving) return;
-
     setSaving(true);
+
     try {
-      await clientsService.update(id, toPayload(form));
-      setToast({
-        type: "success",
-        msg: t("clients.toast.updated") || "تم تحديث العميل بنجاح",
+      await clientsService.update(id, {
+        name,
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        hq_address: form.hq_address.trim() || null,
+        contact_name: form.contact_name.trim() || null,
+        contact_phone: form.contact_phone.trim() || null,
+        contact_email: form.contact_email.trim() || null,
+        tax_no: form.tax_no.trim() || null,
+        notes: form.notes.trim() || null,
+        is_active: form.is_active === "true",
       });
+
+      showToast("success", t("clients.toast.updated") || "تم تحديث العميل");
       router.push(`/clients/${id}`);
-    } catch (e: any) {
-      setToast({
-        type: "error",
-        msg: e?.response?.data?.message || e?.message || t("clients.errors.updateFailed") || "فشل تحديث العميل",
-      });
+    } catch (err: any) {
+      showToast(
+        "error",
+        err?.response?.data?.message ||
+          err?.message ||
+          t("clients.errors.saveFailed") ||
+          "فشل حفظ العميل"
+      );
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <div className="p-6">{t("common.loading") || "جارٍ التحميل..."}</div>;
+    return (
+      <div className="space-y-4" dir="rtl">
+        <Card>
+          <div className="text-sm text-slate-500">{t("common.loading")}</div>
+        </Card>
+
+        <Toast
+          open={toastOpen}
+          message={toastMsg}
+          type={toastType}
+          dir="rtl"
+          onClose={() => setToastOpen(false)}
+        />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen space-y-6">
+    <div className="space-y-4" dir="rtl">
       <PageHeader
         title={t("clients.edit.title") || "تعديل العميل"}
         subtitle={t("clients.edit.subtitle") || "تحديث بيانات العميل"}
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/clients/${id}`}>
-              <Button variant="secondary">{t("common.back") || "رجوع"}</Button>
-            </Link>
-          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.push(`/clients/${id}`)}
+            disabled={saving}
+          >
+            {t("common.back")}
+          </Button>
         }
       />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="p-5">
-          <h2 className="mb-4 text-lg font-semibold">
-            {t("clients.form.sections.basic") || "البيانات الأساسية"}
-          </h2>
-
+      <form onSubmit={submit}>
+        <Card title={t("clients.form.sections.basic") || "البيانات الأساسية"}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field
-              label={t("clients.form.name") || "اسم العميل"}
+            <TrexInput
+              label="clients.form.name"
               value={form.name}
-              onChange={(v) => setForm((s) => ({ ...s, name: v }))}
-              placeholder={t("clients.form.placeholders.name") || "أدخل اسم العميل"}
+              onChange={(e) => patch("name", e.target.value)}
+              placeholder={t("clients.form.placeholders.name")}
+              disabled={saving}
               required
             />
 
-            <Field
-              label={t("clients.form.phone") || "الهاتف"}
-              value={form.phone}
-              onChange={(v) => setForm((s) => ({ ...s, phone: v }))}
-              placeholder={t("clients.form.placeholders.phone") || "أدخل رقم الهاتف"}
+            <TrexSelect
+              label="clients.form.status"
+              value={form.is_active}
+              onChange={(value) => patch("is_active", value)}
+              disabled={saving}
+              options={[
+                { value: "true", label: t("common.active") },
+                { value: "false", label: t("common.disabled") },
+              ]}
             />
 
-            <Field
-              label={t("clients.form.email") || "البريد الإلكتروني"}
+            <TrexInput
+              label="clients.form.email"
+              type="email"
               value={form.email}
-              onChange={(v) => setForm((s) => ({ ...s, email: v }))}
-              placeholder={t("clients.form.placeholders.email") || "name@example.com"}
-              type="email"
+              onChange={(e) => patch("email", e.target.value)}
+              placeholder={t("clients.form.placeholders.email")}
+              disabled={saving}
             />
 
-            <Field
-              label={t("clients.form.hqAddress") || "العنوان الرئيسي"}
-              value={form.hq_address}
-              onChange={(v) => setForm((s) => ({ ...s, hq_address: v }))}
-              placeholder={t("clients.form.placeholders.hqAddress") || "أدخل العنوان الرئيسي"}
+            <TrexInput
+              label="clients.form.phone"
+              value={form.phone}
+              onChange={(e) => patch("phone", e.target.value)}
+              placeholder={t("clients.form.placeholders.phone")}
+              disabled={saving}
             />
 
-            <Field
-              label={t("clients.form.taxNo") || "الرقم الضريبي"}
-              value={form.tax_no}
-              onChange={(v) => setForm((s) => ({ ...s, tax_no: v }))}
-              placeholder={t("clients.form.placeholders.taxNo") || "أدخل الرقم الضريبي"}
-            />
-
-            <label className="block">
-              <div className="mb-1 text-xs font-medium text-slate-500">
-                {t("clients.form.status") || "الحالة"}
-              </div>
-              <select
-                value={form.is_active ? "active" : "inactive"}
-                onChange={(e) =>
-                  setForm((s) => ({
-                    ...s,
-                    is_active: e.target.value === "active",
-                  }))
-                }
-                className={cn(
-                  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                  "focus:ring-2 focus:ring-slate-200"
-                )}
-              >
-                <option value="active">{t("common.active") || "نشط"}</option>
-                <option value="inactive">{t("common.disabled") || "غير نشط"}</option>
-              </select>
-            </label>
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="mb-4 text-lg font-semibold">
-            {t("clients.form.sections.contact") || "بيانات المسؤول"}
-          </h2>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Field
-              label={t("clients.form.contactName") || "اسم المسؤول"}
-              value={form.contact_name}
-              onChange={(v) => setForm((s) => ({ ...s, contact_name: v }))}
-              placeholder={t("clients.form.placeholders.contactName") || "أدخل اسم المسؤول"}
-            />
-
-            <Field
-              label={t("clients.form.contactPhone") || "هاتف المسؤول"}
-              value={form.contact_phone}
-              onChange={(v) => setForm((s) => ({ ...s, contact_phone: v }))}
-              placeholder={t("clients.form.placeholders.contactPhone") || "أدخل هاتف المسؤول"}
-            />
-
-            <Field
-              label={t("clients.form.contactEmail") || "بريد المسؤول"}
-              value={form.contact_email}
-              onChange={(v) => setForm((s) => ({ ...s, contact_email: v }))}
-              placeholder={t("clients.form.placeholders.contactEmail") || "contact@example.com"}
-              type="email"
-            />
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="mb-4 text-lg font-semibold">
-            {t("clients.form.sections.notes") || "ملاحظات"}
-          </h2>
-
-          <label className="block">
-            <div className="mb-1 text-xs font-medium text-slate-500">
-              {t("clients.form.notes") || "ملاحظات"}
+            <div className="md:col-span-2">
+              <TrexInput
+                label="clients.form.hqAddress"
+                value={form.hq_address}
+                onChange={(e) => patch("hq_address", e.target.value)}
+                placeholder={t("clients.form.placeholders.hqAddress")}
+                disabled={saving}
+              />
             </div>
-            <textarea
-              value={form.notes}
-              onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
-              rows={5}
-              placeholder={t("clients.form.placeholders.notes") || "أدخل أي ملاحظات إضافية"}
-              className={cn(
-                "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
+
+            <TrexInput
+              label="clients.form.taxNo"
+              value={form.tax_no}
+              onChange={(e) => patch("tax_no", e.target.value)}
+              placeholder={t("clients.form.placeholders.taxNo")}
+              disabled={saving}
             />
-          </label>
+          </div>
         </Card>
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={!canSubmit || saving}>
-            {saving
-              ? t("common.saving") || "جارٍ الحفظ..."
-              : t("common.save") || "حفظ"}
+        <div className="mt-4">
+          <Card title={t("clients.form.sections.contact") || "بيانات التواصل"}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <TrexInput
+                label="clients.form.contactName"
+                value={form.contact_name}
+                onChange={(e) => patch("contact_name", e.target.value)}
+                placeholder={t("clients.form.placeholders.contactName")}
+                disabled={saving}
+              />
+
+              <TrexInput
+                label="clients.form.contactPhone"
+                value={form.contact_phone}
+                onChange={(e) => patch("contact_phone", e.target.value)}
+                placeholder={t("clients.form.placeholders.contactPhone")}
+                disabled={saving}
+              />
+
+              <TrexInput
+                label="clients.form.contactEmail"
+                type="email"
+                value={form.contact_email}
+                onChange={(e) => patch("contact_email", e.target.value)}
+                placeholder={t("clients.form.placeholders.contactEmail")}
+                disabled={saving}
+              />
+            </div>
+          </Card>
+        </div>
+
+        <div className="mt-4">
+          <Card title={t("clients.form.sections.notes") || "ملاحظات"}>
+            <label className="grid gap-2 text-sm">
+              <span className="text-[rgb(var(--trex-fg))] opacity-80">
+                {t("clients.form.notes")}
+              </span>
+
+              <textarea
+                rows={4}
+                className="trex-input w-full px-3 py-2 text-sm"
+                value={form.notes}
+                onChange={(e) => patch("notes", e.target.value)}
+                placeholder={t("clients.form.placeholders.notes")}
+                disabled={saving}
+              />
+            </label>
+          </Card>
+        </div>
+
+        <div className="mt-4 flex items-center gap-2">
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={saving}
+            isLoading={saving}
+          >
+            {saving ? t("common.saving") : t("common.save")}
           </Button>
 
-          <Link href={`/clients/${id}`}>
-            <Button type="button" variant="secondary">
-              {t("common.cancel") || "إلغاء"}
-            </Button>
-          </Link>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.push(`/clients/${id}`)}
+            disabled={saving}
+          >
+            {t("common.cancel")}
+          </Button>
         </div>
       </form>
 
-      {toast && (
-        <Toast open type={toast.type} message={toast.msg} onClose={() => setToast(null)} />
-      )}
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        dir="rtl"
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

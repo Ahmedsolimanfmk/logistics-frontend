@@ -22,9 +22,13 @@ function roleUpper(role: unknown): string {
   return String(role || "").toUpperCase();
 }
 
+function norm(value: unknown): string {
+  return String(value || "").toUpperCase();
+}
+
 function fmtMoney(value: unknown): string {
-  const v = Number(value || 0);
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
+  const n = Number(value || 0);
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
 }
 
 function fmtDate(value?: string | null): string {
@@ -36,24 +40,21 @@ function fmtDate(value?: string | null): string {
 
 function shortId(id: unknown): string {
   const s = String(id ?? "");
-  if (s.length <= 14) return s;
+  if (s.length <= 14) return s || "—";
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
 
-function norm(value: unknown): string {
-  return String(value || "").toUpperCase();
-}
-
-function LocalStatusBadge({ status }: { status: string }) {
+function LocalStatusBadge({ status }: { status?: string | null }) {
   const st = norm(status);
+
   const cls =
     st === "OPEN"
       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
       : st === "SETTLED"
-      ? "bg-gray-50 text-gray-700 border-gray-200"
+      ? "bg-slate-50 text-slate-700 border-slate-200"
       : ["CANCELLED", "CANCELED"].includes(st)
       ? "bg-red-50 text-red-700 border-red-200"
-      : "bg-gray-50 text-gray-700 border-gray-200";
+      : "bg-slate-50 text-slate-700 border-slate-200";
 
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
@@ -92,11 +93,18 @@ export default function AdvanceDetailsPage(): React.ReactElement {
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
+  const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
+  const [confirmTone, setConfirmTone] = useState<"danger" | "warning" | "info">("warning");
+  const [confirmText, setConfirmText] = useState("تأكيد");
+  const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
+
   function showToast(type: "success" | "error", msg: string) {
     setToastType(type);
     setToastMsg(msg);
     setToastOpen(true);
-    setTimeout(() => setToastOpen(false), 2500);
   }
 
   async function loadAll() {
@@ -115,7 +123,10 @@ export default function AdvanceDetailsPage(): React.ReactElement {
       setExpenses(expensesRes);
     } catch (e: any) {
       const msg =
-        e?.response?.data?.message || e?.message || t("financeAdvanceDetails.errors.loadFailed");
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financeAdvanceDetails.errors.loadFailed");
+
       setError(msg);
       setAdvance(null);
       setExpenses([]);
@@ -130,7 +141,7 @@ export default function AdvanceDetailsPage(): React.ReactElement {
       setLoading(false);
       setAdvance(null);
       setExpenses([]);
-      setError(t("financeAdvanceDetails.errors.invalidId"));
+      setError("Invalid advance id");
       return;
     }
 
@@ -167,14 +178,6 @@ export default function AdvanceDetailsPage(): React.ReactElement {
 
   const status = norm(advance?.status);
 
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmBusy, setConfirmBusy] = useState(false);
-  const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("تأكيد");
-  const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
-  const [confirmTone, setConfirmTone] = useState<"danger" | "warning" | "info">("warning");
-  const [confirmText, setConfirmText] = useState("تأكيد");
-  const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
-
   function openConfirm(opts: {
     title?: React.ReactNode;
     description?: React.ReactNode;
@@ -195,9 +198,10 @@ export default function AdvanceDetailsPage(): React.ReactElement {
 
     setBusy(true);
     setError(null);
+
     try {
       await cashAdvancesService.submitReview(advanceId);
-      showToast("success", t("common.saved") || "تم الحفظ");
+      showToast("success", "تم إرسال العهدة للمراجعة");
       await loadAll();
       setTab("overview");
     } catch (e: any) {
@@ -205,6 +209,7 @@ export default function AdvanceDetailsPage(): React.ReactElement {
         e?.response?.data?.message ||
         e?.message ||
         t("financeAdvanceDetails.errors.submitReviewFailed");
+
       setError(msg);
       showToast("error", msg);
     } finally {
@@ -221,13 +226,15 @@ export default function AdvanceDetailsPage(): React.ReactElement {
 
     setBusy(true);
     setError(null);
+
     try {
       await cashAdvancesService.close(advanceId, {
         settlement_type: settlementType,
         amount,
         notes: notes?.trim() || null,
       });
-      showToast("success", t("common.saved") || "تم الحفظ");
+
+      showToast("success", "تم إغلاق العهدة");
       await loadAll();
       setTab("overview");
     } catch (e: any) {
@@ -235,6 +242,7 @@ export default function AdvanceDetailsPage(): React.ReactElement {
         e?.response?.data?.message ||
         e?.message ||
         t("financeAdvanceDetails.errors.closeFailed");
+
       setError(msg);
       showToast("error", msg);
     } finally {
@@ -247,9 +255,13 @@ export default function AdvanceDetailsPage(): React.ReactElement {
 
     setBusy(true);
     setError(null);
+
     try {
-      await cashAdvancesService.reopen(advanceId, { notes: notes?.trim() || null });
-      showToast("success", t("common.saved") || "تم الحفظ");
+      await cashAdvancesService.reopen(advanceId, {
+        notes: notes?.trim() || null,
+      });
+
+      showToast("success", "تم إعادة فتح العهدة");
       await loadAll();
       setTab("overview");
     } catch (e: any) {
@@ -257,6 +269,7 @@ export default function AdvanceDetailsPage(): React.ReactElement {
         e?.response?.data?.message ||
         e?.message ||
         t("financeAdvanceDetails.errors.reopenFailed");
+
       setError(msg);
       showToast("error", msg);
     } finally {
@@ -265,323 +278,289 @@ export default function AdvanceDetailsPage(): React.ReactElement {
   }
 
   const tabs = [
-    { key: "overview" as const, label: t("financeAdvanceDetails.tabs.overview") },
-    { key: "expenses" as const, label: t("financeAdvanceDetails.tabs.expenses") },
-    { key: "actions" as const, label: t("financeAdvanceDetails.tabs.actions") },
+    { key: "overview" as const, label: t("financeAdvanceDetails.tabs.overview") || "نظرة عامة" },
+    { key: "expenses" as const, label: t("financeAdvanceDetails.tabs.expenses") || "المصروفات" },
+    { key: "actions" as const, label: t("financeAdvanceDetails.tabs.actions") || "إجراءات" },
   ];
 
   const expenseColumns: DataTableColumn<CashExpense>[] = [
     {
       key: "amount",
-      label: t("financeAdvanceDetails.expenses.table.amount"),
+      label: t("financeAdvanceDetails.expenses.table.amount") || "المبلغ",
       render: (expense) => <span className="font-semibold">{fmtMoney(expense.amount)}</span>,
     },
     {
       key: "type",
-      label: t("financeAdvanceDetails.expenses.table.type"),
+      label: t("financeAdvanceDetails.expenses.table.type") || "النوع",
       render: (expense) => expense.expense_type || "—",
     },
     {
       key: "status",
-      label: t("financeAdvanceDetails.expenses.table.status"),
-      render: (expense) => <span className="text-gray-700">{norm(expense.approval_status) || "—"}</span>,
+      label: t("financeAdvanceDetails.expenses.table.status") || "الحالة",
+      render: (expense) => (
+        <span className="text-slate-700">{norm(expense.approval_status) || "—"}</span>
+      ),
     },
     {
       key: "created",
-      label: t("financeAdvanceDetails.expenses.table.created"),
-      render: (expense) => <span className="text-gray-600">{fmtDate(expense.created_at)}</span>,
+      label: t("financeAdvanceDetails.expenses.table.created") || "تاريخ الإنشاء",
+      render: (expense) => <span className="text-slate-600">{fmtDate(expense.created_at)}</span>,
     },
     {
       key: "link",
-      label: t("financeAdvanceDetails.expenses.table.link"),
-      headerClassName: "text-left",
-      className: "text-left",
+      label: t("financeAdvanceDetails.expenses.table.link") || "الرابط",
       render: (expense) => (
         <Link href={`/finance/expenses/${expense.id}`}>
-          <Button variant="secondary">{t("common.view")}</Button>
+          <Button type="button" variant="secondary">
+            {t("common.view")}
+          </Button>
         </Link>
       ),
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-        <PageHeader
-          title={
-            <div className="flex items-center gap-2">
-              <span>{t("financeAdvanceDetails.title")}</span>
-              {advance?.status ? <LocalStatusBadge status={String(advance.status)} /> : null}
-            </div>
-          }
-          subtitle={
-            <div className="text-sm text-gray-600">
-              {t("financeAdvanceDetails.labels.id")}:{" "}
-              <span className="font-mono text-gray-900">{advanceId || "—"}</span>
-            </div>
-          }
-          actions={
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={() => router.back()}>
-                {t("financeAdvanceDetails.buttons.back") || t("common.back")}
+    <div className="space-y-4" dir="rtl">
+      <PageHeader
+        title={
+          <div className="flex items-center gap-2">
+            <span>{t("financeAdvanceDetails.title")}</span>
+            {advance?.status ? <LocalStatusBadge status={advance.status} /> : null}
+          </div>
+        }
+        subtitle={
+          <div className="text-sm text-slate-500">
+            {t("financeAdvanceDetails.labels.id") || "المعرّف"}:{" "}
+            <span className="font-mono text-[rgb(var(--trex-fg))]">{advanceId || "—"}</span>
+          </div>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
+              {t("financeAdvanceDetails.buttons.back") || t("common.back")}
+            </Button>
+
+            <Link href="/finance/advances">
+              <Button type="button" variant="secondary">
+                {t("financeAdvanceDetails.buttons.list") || t("common.list")}
               </Button>
-              <Link href="/finance/advances">
-                <Button variant="secondary">
-                  {t("financeAdvanceDetails.buttons.list") || t("common.list")}
-                </Button>
-              </Link>
-              <Button
-                variant="secondary"
-                onClick={loadAll}
-                disabled={loading || busy}
-                isLoading={loading || busy}
-              >
-                {t("financeAdvanceDetails.buttons.refresh") || t("common.refresh")}
-              </Button>
-            </div>
-          }
-        />
+            </Link>
 
-        {error ? (
-          <Card className="border-red-500/20">
-            <div className="text-sm text-red-600">⚠️ {error}</div>
-          </Card>
-        ) : null}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={loadAll}
+              disabled={loading || busy}
+              isLoading={loading || busy}
+            >
+              {t("financeAdvanceDetails.buttons.refresh") || t("common.refresh")}
+            </Button>
+          </div>
+        }
+      />
 
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((tabItem) => {
-            const active = tab === tabItem.key;
-            return (
-              <button
-                key={tabItem.key}
-                onClick={() => setTab(tabItem.key)}
-                className={[
-                  "px-3 py-2 rounded-xl text-sm border transition",
-                  active
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
-                ].join(" ")}
-              >
-                {tabItem.label}
-              </button>
-            );
-          })}
-        </div>
+      {error ? (
+        <Card className="border-red-500/20">
+          <div className="text-sm text-red-600">⚠️ {error}</div>
+        </Card>
+      ) : null}
 
-        {loading ? (
-          <Card>
-            <div className="text-sm text-gray-600">{t("common.loading")}</div>
-          </Card>
-        ) : tab === "overview" ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.advanceAmount")}
-                value={fmtMoney(totals.advanceAmount)}
-              />
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.approvedUsed")}
-                value={fmtMoney(totals.approved)}
-              />
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.remaining")}
-                value={fmtMoney(totals.remaining)}
-              />
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.pending")}
-                value={fmtMoney(totals.pending)}
-              />
-              <KpiCard
-                label={t("financeAdvanceDetails.kpis.rejected")}
-                value={fmtMoney(totals.rejected)}
-              />
-            </div>
+      <div className="flex flex-wrap gap-2">
+        {tabs.map((tabItem) => {
+          const active = tab === tabItem.key;
 
-            <Card title={t("financeAdvanceDetails.tabs.overview")}>
-              <div className="space-y-2">
-                <div className="text-xs text-gray-600">
-                  {t("financeAdvanceDetails.labels.supervisor")}
-                </div>
-                <div className="text-sm text-gray-900">
+          return (
+            <button
+              key={tabItem.key}
+              type="button"
+              onClick={() => setTab(tabItem.key)}
+              className={[
+                "px-3 py-2 rounded-xl text-sm border transition",
+                active
+                  ? "bg-[rgb(var(--trex-fg))] text-[rgb(var(--trex-bg))] border-[rgb(var(--trex-fg))]"
+                  : "bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] border-black/10 hover:bg-black/5",
+              ].join(" ")}
+            >
+              {tabItem.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {loading ? (
+        <Card>
+          <div className="text-sm text-slate-500">{t("common.loading")}</div>
+        </Card>
+      ) : tab === "overview" ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <KpiCard label="قيمة العهدة" value={fmtMoney(totals.advanceAmount)} />
+            <KpiCard label="المعتمد المصروف" value={fmtMoney(totals.approved)} />
+            <KpiCard label="المتبقي" value={fmtMoney(totals.remaining)} />
+            <KpiCard label="قيد الانتظار" value={fmtMoney(totals.pending)} />
+            <KpiCard label="مرفوض" value={fmtMoney(totals.rejected)} />
+          </div>
+
+          <Card title="نظرة عامة">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="text-xs text-slate-500">المشرف</div>
+                <div className="mt-1 font-medium">
                   {advance?.users_cash_advances_field_supervisor_idTousers?.full_name ||
                     advance?.users_cash_advances_field_supervisor_idTousers?.email ||
                     advance?.field_supervisor_id ||
                     "—"}
                 </div>
+              </div>
 
-                <div className="mt-2 text-xs text-gray-600">
-                  {t("financeAdvanceDetails.labels.createdAt")}
-                </div>
-                <div className="text-sm text-gray-900">{fmtDate(advance?.created_at)}</div>
+              <div>
+                <div className="text-xs text-slate-500">تاريخ الإنشاء</div>
+                <div className="mt-1 font-medium">{fmtDate(advance?.created_at)}</div>
+              </div>
 
-                <div className="mt-2 text-xs text-gray-600">
-                  {t("financeAdvanceDetails.labels.notes")}
-                </div>
-                <div className="text-sm text-gray-900 whitespace-pre-wrap">
+              <div>
+                <div className="text-xs text-slate-500">تاريخ التسوية</div>
+                <div className="mt-1 font-medium">{fmtDate(advance?.settled_at)}</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-slate-500">ملاحظات التسوية</div>
+                <div className="mt-1 font-medium whitespace-pre-wrap">
                   {advance?.settlement_notes || "—"}
                 </div>
               </div>
-            </Card>
-          </>
-        ) : tab === "expenses" ? (
-          <>
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold text-gray-900">
-                {t("financeAdvanceDetails.expenses.title")}
-              </div>
-              <Link href="/finance/expenses/new">
-                <Button variant="primary">{t("financeAdvanceDetails.buttons.newExpense")}</Button>
-              </Link>
-            </div>
-
-            <DataTable<CashExpense>
-              title={t("financeAdvanceDetails.expenses.title")}
-              subtitle={
-                <span className="text-gray-600">
-                  {t("financeAdvanceDetails.labels.id")}:{" "}
-                  <span className="font-mono">{shortId(advanceId)}</span>
-                </span>
-              }
-              columns={expenseColumns}
-              rows={expenses}
-              loading={loading}
-              emptyTitle={t("financeAdvanceDetails.expenses.empty") || "لا يوجد مصروفات"}
-              emptyHint={t("common.tryAdjustFilters") || "يمكنك إضافة مصروف جديد من الزر بالأعلى."}
-              onRowClick={(row) => router.push(`/finance/expenses/${row.id}`)}
-            />
-          </>
-        ) : (
-          <Card title={t("financeAdvanceDetails.actions.title")}>
-            <div className="space-y-3">
-              <div className="text-sm text-gray-900">
-                <span className="font-semibold">{t("financeAdvanceDetails.actions.title")}</span>{" "}
-                <span className="text-xs text-gray-600">
-                  ({t("financeAdvanceDetails.actions.role")}: {role || "—"} /{" "}
-                  {t("financeAdvanceDetails.actions.status")}: {status || "—"})
-                </span>
-              </div>
-
-              {!isPrivileged ? (
-                <div className="text-sm text-gray-600">
-                  {t("financeAdvanceDetails.actions.notAvailable")}
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {status === "OPEN" ? (
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() =>
-                        openConfirm({
-                          title: t("financeAdvanceDetails.actions.submitReview"),
-                          description:
-                            t("financeAdvanceDetails.confirm.submitReview") ||
-                            "إرسال العهدة للمراجعة؟",
-                          tone: "warning",
-                          action: submitReview,
-                        })
-                      }
-                    >
-                      {t("financeAdvanceDetails.actions.submitReview")}
-                    </Button>
-                  ) : null}
-
-                  {status !== "SETTLED" ? (
-                    <Button
-                      variant="primary"
-                      disabled={busy}
-                      onClick={() =>
-                        openConfirm({
-                          title: t("financeAdvanceDetails.actions.close"),
-                          description:
-                            t("financeAdvanceDetails.confirm.close") ||
-                            "هل تريد إغلاق العهدة الآن؟",
-                          tone: "info",
-                          action: async () => {
-                            const notes =
-                              window.prompt(t("financeAdvanceDetails.prompts.closeNotesOptional")) || "";
-
-                            let settlementType: "FULL" | "PARTIAL" | "ADJUSTED" | "CANCELLED" =
-                              "FULL";
-                            let amount = Number(Math.max(totals.remaining, 0).toFixed(2));
-
-                            if (totals.remaining < 0) {
-                              settlementType = "PARTIAL";
-                              amount = Number(Math.abs(totals.remaining).toFixed(2));
-                            }
-
-                            await closeAdvance(settlementType, amount, notes);
-                          },
-                        })
-                      }
-                    >
-                      {t("financeAdvanceDetails.actions.close")}
-                    </Button>
-                  ) : null}
-
-                  {status === "SETTLED" ? (
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() =>
-                        openConfirm({
-                          title: t("financeAdvanceDetails.actions.reopen"),
-                          description:
-                            t("financeAdvanceDetails.confirm.reopen") ||
-                            "هل تريد إعادة فتح العهدة؟",
-                          tone: "warning",
-                          action: async () => {
-                            const notes =
-                              window.prompt(t("financeAdvanceDetails.prompts.reopenNotesOptional")) || "";
-                            await reopenAdvance(notes);
-                          },
-                        })
-                      }
-                    >
-                      {t("financeAdvanceDetails.actions.reopen")}
-                    </Button>
-                  ) : null}
-                </div>
-              )}
-
-              <div className="text-xs text-gray-600">{t("financeAdvanceDetails.hints.endpoints")}</div>
             </div>
           </Card>
-        )}
+        </>
+      ) : tab === "expenses" ? (
+        <DataTable<CashExpense>
+          title="المصروفات المرتبطة بهذه العهدة"
+          columns={expenseColumns}
+          rows={expenses}
+          loading={loading}
+          emptyTitle="لا توجد مصروفات"
+          emptyHint="يمكنك إضافة مصروف جديد من صفحة المصروفات."
+          onRowClick={(row) => router.push(`/finance/expenses/${row.id}`)}
+        />
+      ) : (
+        <Card title="الإجراءات">
+          <div className="space-y-3">
+            <div className="text-sm">
+              الدور: <b>{role || "—"}</b> — الحالة: <b>{status || "—"}</b>
+            </div>
 
-        <ConfirmDialog
-          open={confirmOpen}
-          title={confirmTitle}
-          description={confirmDesc}
-          confirmText={confirmText}
-          cancelText={t("common.cancel") || "إلغاء"}
-          tone={confirmTone}
-          isLoading={confirmBusy}
-          dir="rtl"
-          onClose={() => {
-            if (confirmBusy) return;
+            {!isPrivileged ? (
+              <div className="text-sm text-slate-500">
+                لا توجد إجراءات متاحة لهذا الدور.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {status === "OPEN" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() =>
+                      openConfirm({
+                        title: "إرسال للمراجعة",
+                        description: "هل تريد إرسال العهدة للمراجعة؟",
+                        action: submitReview,
+                      })
+                    }
+                  >
+                    إرسال للمراجعة
+                  </Button>
+                ) : null}
+
+                {status !== "SETTLED" ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={busy}
+                    onClick={() =>
+                      openConfirm({
+                        title: "إغلاق العهدة",
+                        description: "هل تريد إغلاق العهدة الآن؟",
+                        tone: "info",
+                        action: async () => {
+                          const notes = window.prompt("ملاحظة/مرجع إغلاق (اختياري):") || "";
+
+                          let settlementType: "FULL" | "PARTIAL" | "ADJUSTED" | "CANCELLED" =
+                            "FULL";
+                          let amount = Number(Math.max(totals.remaining, 0).toFixed(2));
+
+                          if (totals.remaining < 0) {
+                            settlementType = "PARTIAL";
+                            amount = Number(Math.abs(totals.remaining).toFixed(2));
+                          }
+
+                          await closeAdvance(settlementType, amount, notes);
+                        },
+                      })
+                    }
+                  >
+                    إغلاق العهدة
+                  </Button>
+                ) : null}
+
+                {status === "SETTLED" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() =>
+                      openConfirm({
+                        title: "إعادة فتح العهدة",
+                        description: "هل تريد إعادة فتح العهدة؟",
+                        action: async () => {
+                          const notes = window.prompt("ملاحظة (اختياري):") || "";
+                          await reopenAdvance(notes);
+                        },
+                      })
+                    }
+                  >
+                    إعادة فتح
+                  </Button>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmTitle}
+        description={confirmDesc}
+        confirmText={confirmText}
+        cancelText={t("common.cancel") || "إلغاء"}
+        tone={confirmTone}
+        isLoading={confirmBusy}
+        dir="rtl"
+        onClose={() => {
+          if (confirmBusy) return;
+          setConfirmOpen(false);
+        }}
+        onConfirm={async () => {
+          if (!confirmAction) return;
+
+          setConfirmBusy(true);
+          try {
+            await confirmAction();
+          } finally {
+            setConfirmBusy(false);
             setConfirmOpen(false);
-          }}
-          onConfirm={async () => {
-            if (!confirmAction) return;
-            setConfirmBusy(true);
-            try {
-              await confirmAction();
-            } finally {
-              setConfirmBusy(false);
-              setConfirmOpen(false);
-            }
-          }}
-        />
+          }
+        }}
+      />
 
-        <Toast
-          open={toastOpen}
-          message={toastMsg}
-          type={toastType}
-          dir="rtl"
-          onClose={() => setToastOpen(false)}
-        />
-      </div>
+      <Toast
+        open={toastOpen}
+        message={toastMsg}
+        type={toastType}
+        dir="rtl"
+        onClose={() => setToastOpen(false)}
+      />
     </div>
   );
 }

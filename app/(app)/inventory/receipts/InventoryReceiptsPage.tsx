@@ -6,14 +6,16 @@ import { useT } from "@/src/i18n/useT";
 import { Toast } from "@/src/components/Toast";
 import { apiGet, unwrapItems } from "@/src/lib/api";
 import { receiptsService } from "@/src/services/receipts.service";
+import { useVendorOptions } from "@/src/hooks/master-data/useVendorOptions";
 
 import { Button } from "@/src/components/ui/Button";
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
 import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
+import { TrexInput } from "@/src/components/ui/TrexInput";
+import { TrexSelect } from "@/src/components/ui/TrexSelect";
 
 type Warehouse = { id: string; name?: string | null };
-type Vendor = { id: string; name?: string | null };
 
 type PartCategory = {
   id: string;
@@ -150,9 +152,15 @@ function findDuplicateSerials(items: DraftItem[]) {
   return duplicates;
 }
 
-export default function NewReceiptPage() {
+export default function InventoryReceiptsPage() {
   const t = useT();
   const router = useRouter();
+
+  const {
+    options: vendorOptions,
+    loading: vendorsLoading,
+    error: vendorsError,
+  } = useVendorOptions();
 
   const [mode, setMode] = useState<"SERIAL" | "BULK">("SERIAL");
 
@@ -162,7 +170,6 @@ export default function NewReceiptPage() {
   const [invoiceDate, setInvoiceDate] = useState("");
 
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
 
   const [items, setItems] = useState<DraftItem[]>([
@@ -195,28 +202,52 @@ export default function NewReceiptPage() {
   });
 
   useEffect(() => {
-    (async () => {
+    async function loadMasterData() {
       try {
         const w = unwrapItems(await apiGet("/inventory/warehouses"));
-        setWarehouses(w);
-
-        const v = unwrapItems(await apiGet("/vendors"));
-        setVendors(v);
+        setWarehouses(Array.isArray(w) ? w : []);
 
         const p = unwrapItems(await apiGet("/inventory/parts"));
-        setParts(p);
+        setParts(Array.isArray(p) ? p : []);
       } catch (e: any) {
         setToast({
           open: true,
-          message:
-            e?.response?.data?.message ||
-            e?.message ||
-            t("common.failed"),
+          message: e?.response?.data?.message || e?.message || t("common.failed"),
           type: "error",
         });
       }
-    })();
-  }, []);
+    }
+
+    loadMasterData();
+  }, [t]);
+
+  useEffect(() => {
+    if (vendorsError) {
+      setToast({
+        open: true,
+        message: vendorsError,
+        type: "error",
+      });
+    }
+  }, [vendorsError]);
+
+  const warehouseOptions = useMemo(
+    () =>
+      warehouses.map((w) => ({
+        value: w.id,
+        label: w.name || w.id,
+      })),
+    [warehouses]
+  );
+
+  const partOptions = useMemo(
+    () =>
+      parts.map((p) => ({
+        value: p.id,
+        label: partLabel(p),
+      })),
+    [parts]
+  );
 
   async function searchParts() {
     setPartsLoading(true);
@@ -226,14 +257,11 @@ export default function NewReceiptPage() {
           q: partQuery.trim() || undefined,
         })
       );
-      setParts(p);
+      setParts(Array.isArray(p) ? p : []);
     } catch (e: any) {
       setToast({
         open: true,
-        message:
-          e?.response?.data?.message ||
-          e?.message ||
-          "Failed to search parts",
+        message: e?.response?.data?.message || e?.message || "Failed to search parts",
         type: "error",
       });
     } finally {
@@ -348,40 +376,31 @@ export default function NewReceiptPage() {
   const serialColumns: DataTableColumn<any>[] = [
     {
       key: "part",
-      label: "Part",
+      label: t("receipts.colPart"),
       render: (r) => (
-        <select
+        <TrexSelect
           value={items[r.__idx].part_id}
-          onChange={(e) => onPickPart(r.__idx, e.target.value)}
-          className="w-full rounded-xl border border-black/10 px-3 py-2"
-        >
-          <option value="">Select</option>
-          {parts.map((p) => (
-            <option key={p.id} value={p.id}>
-              {partLabel(p)}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => onPickPart(r.__idx, value)}
+          options={partOptions}
+          placeholderText="اختر القطعة"
+        />
       ),
     },
     {
       key: "serial",
-      label: "Internal Serial",
+      label: t("receipts.colInternalSerial"),
       render: (r) => {
         const value = String(items[r.__idx].internal_serial || "");
         const isDuplicate = duplicateSerials.has(value.trim().toUpperCase());
 
         return (
           <div className="space-y-1">
-            <input
+            <TrexInput
               value={value}
               onChange={(e) =>
                 updateRow(r.__idx, { internal_serial: e.target.value })
               }
-              className={cn(
-                "w-full rounded-xl border px-3 py-2",
-                isDuplicate ? "border-red-400 bg-red-50" : "border-black/10 bg-slate-50"
-              )}
+              className={isDuplicate ? "border-red-400 bg-red-50" : "bg-slate-50"}
             />
             <div className={cn("text-xs", isDuplicate ? "text-red-600" : "text-slate-500")}>
               {isDuplicate ? "Duplicate serial in form" : "Preview / editable"}
@@ -392,38 +411,35 @@ export default function NewReceiptPage() {
     },
     {
       key: "mfg",
-      label: "Manufacturer Serial",
+      label: t("receipts.colManufacturerSerial"),
       render: (r) => (
-        <input
+        <TrexInput
           value={items[r.__idx].manufacturer_serial}
           onChange={(e) =>
             updateRow(r.__idx, { manufacturer_serial: e.target.value })
           }
-          className="w-full rounded-xl border border-black/10 px-3 py-2"
         />
       ),
     },
     {
       key: "cost",
-      label: "Unit Cost",
+      label: t("receipts.colUnitCost"),
       render: (r) => (
-        <input
+        <TrexInput
           value={items[r.__idx].unit_cost}
           onChange={(e) => updateRow(r.__idx, { unit_cost: e.target.value })}
-          className="w-full rounded-xl border border-black/10 px-3 py-2"
           placeholder="0.00"
         />
       ),
     },
     {
       key: "notes",
-      label: "Notes",
+      label: t("receipts.colNotes"),
       render: (r) => (
-        <input
+        <TrexInput
           value={items[r.__idx].notes}
           onChange={(e) => updateRow(r.__idx, { notes: e.target.value })}
-          className="w-full rounded-xl border border-black/10 px-3 py-2"
-          placeholder="optional"
+          placeholder={t("common.optional")}
         />
       ),
     },
@@ -432,7 +448,7 @@ export default function NewReceiptPage() {
       label: "",
       render: (r) => (
         <Button variant="danger" onClick={() => removeRow(r.__idx)}>
-          Remove
+          {t("receipts.remove")}
         </Button>
       ),
     },
@@ -441,55 +457,46 @@ export default function NewReceiptPage() {
   const bulkColumns: DataTableColumn<any>[] = [
     {
       key: "part",
-      label: "Part",
+      label: t("receipts.colPart"),
       render: (r) => (
-        <select
+        <TrexSelect
           value={bulkItems[r.__idx].part_id}
-          onChange={(e) => updateBulkRow(r.__idx, { part_id: e.target.value })}
-          className="w-full rounded-xl border border-black/10 px-3 py-2"
-        >
-          <option value="">Select</option>
-          {parts.map((p) => (
-            <option key={p.id} value={p.id}>
-              {partLabel(p)}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => updateBulkRow(r.__idx, { part_id: value })}
+          options={partOptions}
+          placeholderText="اختر القطعة"
+        />
       ),
     },
     {
       key: "qty",
       label: "Qty",
       render: (r) => (
-        <input
+        <TrexInput
           value={bulkItems[r.__idx].qty}
           onChange={(e) => updateBulkRow(r.__idx, { qty: e.target.value })}
-          className="w-full rounded-xl border border-black/10 px-3 py-2"
           placeholder="1"
         />
       ),
     },
     {
       key: "cost",
-      label: "Unit Cost",
+      label: t("receipts.colUnitCost"),
       render: (r) => (
-        <input
+        <TrexInput
           value={bulkItems[r.__idx].unit_cost}
           onChange={(e) => updateBulkRow(r.__idx, { unit_cost: e.target.value })}
-          className="w-full rounded-xl border border-black/10 px-3 py-2"
           placeholder="0.00"
         />
       ),
     },
     {
       key: "notes",
-      label: "Notes",
+      label: t("receipts.colNotes"),
       render: (r) => (
-        <input
+        <TrexInput
           value={bulkItems[r.__idx].notes}
           onChange={(e) => updateBulkRow(r.__idx, { notes: e.target.value })}
-          className="w-full rounded-xl border border-black/10 px-3 py-2"
-          placeholder="optional"
+          placeholder={t("common.optional")}
         />
       ),
     },
@@ -498,7 +505,7 @@ export default function NewReceiptPage() {
       label: "",
       render: (r) => (
         <Button variant="danger" onClick={() => removeBulkRow(r.__idx)}>
-          Remove
+          {t("receipts.remove")}
         </Button>
       ),
     },
@@ -506,7 +513,7 @@ export default function NewReceiptPage() {
 
   const onCreate = async () => {
     if (!warehouseId) {
-      setToast({ open: true, message: "Warehouse required", type: "error" });
+      setToast({ open: true, message: t("receipts.errWarehouse"), type: "error" });
       return;
     }
 
@@ -538,7 +545,7 @@ export default function NewReceiptPage() {
           .filter((it) => it.part_id);
 
         if (!preparedItems.length || !hasSerialItems) {
-          setToast({ open: true, message: "Items required", type: "error" });
+          setToast({ open: true, message: t("receipts.errItems"), type: "error" });
           setLoading(false);
           return;
         }
@@ -609,76 +616,68 @@ export default function NewReceiptPage() {
       />
 
       <PageHeader
-        title="New Receipt"
+        title={t("receipts.newTitle")}
+        subtitle={t("receipts.newSubtitle")}
         actions={
           <>
             <Button variant="secondary" onClick={() => router.back()}>
-              Back
+              {t("common.back")}
             </Button>
             <Button onClick={onCreate} isLoading={loading}>
-              Create
+              {t("receipts.createDraft")}
             </Button>
           </>
         }
       />
 
-      <Card title="Header">
+      <Card title={t("receipts.header")}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <select
+          <TrexSelect
+            label="receipts.warehouse"
             value={warehouseId}
-            onChange={(e) => setWarehouseId(e.target.value)}
-            className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
-          >
-            <option value="">Warehouse</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={vendorId}
-            onChange={(e) => setVendorId(e.target.value)}
-            className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
-          >
-            <option value="">Vendor</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
-
-          <input
-            value={invoiceNo}
-            onChange={(e) => setInvoiceNo(e.target.value)}
-            placeholder="Invoice No"
-            className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
+            onChange={setWarehouseId}
+            options={warehouseOptions}
+            placeholderText="اختر المخزن"
           />
 
-          <input
+          <TrexSelect
+            label="receipts.vendorSelect"
+            value={vendorId}
+            onChange={setVendorId}
+            options={vendorOptions}
+            loading={vendorsLoading}
+            emptyText={t("receipts.vendorsEmpty")}
+            placeholderText="اختر المورد"
+          />
+
+          <TrexInput
+            label="receipts.invoiceNo"
+            value={invoiceNo}
+            onChange={(e) => setInvoiceNo(e.target.value)}
+            placeholder={t("receipts.invoiceNoPh")}
+          />
+
+          <TrexInput
+            label="receipts.invoiceDate"
             type="date"
             value={invoiceDate}
             onChange={(e) => setInvoiceDate(e.target.value)}
-            className={cn("w-full rounded-xl border border-black/10 px-3 py-2")}
           />
         </div>
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
           <div className="md:col-span-2">
-            <div className="mb-1 text-xs text-slate-500">Search parts</div>
-            <input
+            <TrexInput
+              label="receipts.searchParts"
               value={partQuery}
               onChange={(e) => setPartQuery(e.target.value)}
-              className="w-full rounded-xl border border-black/10 px-3 py-2"
-              placeholder="Search by part number / name / brand"
+              placeholder={t("receipts.searchPartsPlaceholder")}
             />
           </div>
 
           <div>
             <Button onClick={searchParts} isLoading={partsLoading}>
-              Search Parts
+              {t("receipts.searchParts")}
             </Button>
           </div>
         </div>
@@ -688,20 +687,20 @@ export default function NewReceiptPage() {
             variant={mode === "SERIAL" ? "primary" : "secondary"}
             onClick={() => setMode("SERIAL")}
           >
-            Serial
+            {t("receipts.serialMode")}
           </Button>
 
           <Button
             variant={mode === "BULK" ? "primary" : "secondary"}
             onClick={() => setMode("BULK")}
           >
-            Bulk
+            {t("receipts.bulkMode")}
           </Button>
 
           {mode === "SERIAL" ? (
             <>
               <Button variant="secondary" onClick={regenerateAllSerials}>
-                Regenerate Serials
+                {t("receipts.regenerateSerials")}
               </Button>
 
               <div className="text-xs text-slate-500">
@@ -732,37 +731,37 @@ export default function NewReceiptPage() {
 
       {mode === "SERIAL" ? (
         <DataTable
-          title="Serial Items"
+          title={t("receipts.serialItems")}
           subtitle={`Rows: ${items.length}`}
           columns={serialColumns}
           rows={serialRows}
           right={
             <>
               <Button variant="secondary" onClick={addRow}>
-                Add Row
+                {t("receipts.addRow")}
               </Button>
               <Button variant="secondary" onClick={regenerateAllSerials}>
-                Regenerate
+                {t("receipts.regenerateSerials")}
               </Button>
               <Button onClick={onCreate} isLoading={loading}>
-                Create
+                {t("receipts.createDraft")}
               </Button>
             </>
           }
         />
       ) : (
         <DataTable
-          title="Bulk Items"
+          title={t("receipts.bulkItems")}
           subtitle={`Rows: ${bulkItems.length}`}
           columns={bulkColumns}
           rows={bulkRows}
           right={
             <>
               <Button variant="secondary" onClick={addBulkRow}>
-                Add Row
+                {t("receipts.addRow")}
               </Button>
               <Button onClick={onCreate} isLoading={loading}>
-                Create
+                {t("receipts.createDraft")}
               </Button>
             </>
           }

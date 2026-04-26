@@ -26,7 +26,9 @@ function roleUpper(role: unknown): string {
 
 function fmtMoney(value: unknown): string {
   const v = Number(value || 0);
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(v);
 }
 
 function fmtDate(value?: string | null): string {
@@ -58,18 +60,26 @@ export default function PurchasesClientPage(): React.ReactElement {
   const status = (sp.get("status") || "ALL").toUpperCase() as ReceiptStatus;
   const q = sp.get("q") || "";
   const page = Math.max(parseInt(sp.get("page") || "1", 10) || 1, 1);
-  const pageSize = Math.min(Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 10), 200);
+  const pageSize = Math.min(
+    Math.max(parseInt(sp.get("pageSize") || "25", 10) || 25, 10),
+    200
+  );
 
   const setParam = (key: string, value: string) => {
     const params = new URLSearchParams(sp.toString());
+
     if (value) params.set(key, value);
     else params.delete(key);
 
     if (key !== "page") params.set("page", "1");
+
     router.push(`/finance/purchases?${params.toString()}`);
   };
 
-  const qsKey = useMemo(() => `${status}|${q}|${page}|${pageSize}`, [status, q, page, pageSize]);
+  const qsKey = useMemo(
+    () => `${status}|${q}|${page}|${pageSize}`,
+    [status, q, page, pageSize]
+  );
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -83,17 +93,17 @@ export default function PurchasesClientPage(): React.ReactElement {
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
 
-  function showToast(type: "success" | "error", msg: string) {
-    setToastType(type);
-    setToastMsg(msg);
-    setToastOpen(true);
-  }
-
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState<React.ReactNode>("");
   const [confirmDesc, setConfirmDesc] = useState<React.ReactNode>("");
   const [confirmAction, setConfirmAction] = useState<null | (() => Promise<void> | void)>(null);
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToastType(type);
+    setToastMsg(msg);
+    setToastOpen(true);
+  }
 
   function openConfirm(opts: {
     title: React.ReactNode;
@@ -126,12 +136,15 @@ export default function PurchasesClientPage(): React.ReactElement {
         }),
       ]);
 
-      setRows(pagedResult.items);
-      setTotal(pagedResult.total);
-      setAllRowsForKpi(fullResult);
+      setRows(pagedResult.items || []);
+      setTotal(pagedResult.total || 0);
+      setAllRowsForKpi(fullResult || []);
     } catch (e: any) {
       const msg =
-        e?.response?.data?.message || e?.message || t("financePurchases.errors.loadFailed");
+        e?.response?.data?.message ||
+        e?.message ||
+        t("financePurchases.errors.loadFailed");
+
       setErr(msg);
       setRows([]);
       setTotal(0);
@@ -147,7 +160,10 @@ export default function PurchasesClientPage(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qsKey]);
 
-  const kpi = useMemo(() => receiptsService.buildKpi(allRowsForKpi), [allRowsForKpi]);
+  const kpi = useMemo(
+    () => receiptsService.buildKpi(allRowsForKpi),
+    [allRowsForKpi]
+  );
 
   async function postReceipt(receiptId: string) {
     if (!canPost) return;
@@ -158,6 +174,7 @@ export default function PurchasesClientPage(): React.ReactElement {
       action: async () => {
         setConfirmBusy(true);
         setBusy(true);
+
         try {
           await receiptsService.post(receiptId);
           showToast("success", t("financePurchases.toast.postedOk"));
@@ -165,7 +182,9 @@ export default function PurchasesClientPage(): React.ReactElement {
         } catch (e: any) {
           showToast(
             "error",
-            e?.response?.data?.message || e?.message || t("financePurchases.errors.postFailed")
+            e?.response?.data?.message ||
+              e?.message ||
+              t("financePurchases.errors.postFailed")
           );
         } finally {
           setBusy(false);
@@ -180,17 +199,19 @@ export default function PurchasesClientPage(): React.ReactElement {
     {
       key: "id",
       label: t("financePurchases.table.id"),
-      render: (row) => <span className="font-mono text-xs">{shortId(row.id)}</span>,
+      render: (row) => (
+        <span className="font-mono text-xs">{shortId(row.id)}</span>
+      ),
     },
     {
       key: "warehouse",
       label: t("financePurchases.table.warehouse"),
-      render: (row) => row.warehouse?.name || "-",
+      render: (row) => row.warehouse?.name || "—",
     },
     {
       key: "supplier",
       label: t("financePurchases.table.supplier"),
-      render: (row) => row.vendor?.name|| "—",
+      render: (row) => row.vendor?.name || "—",
     },
     {
       key: "invoice",
@@ -198,19 +219,32 @@ export default function PurchasesClientPage(): React.ReactElement {
       render: (row) => (
         <div className="space-y-0.5">
           <div className="text-sm">{row.invoice_no || "—"}</div>
-          <div className="text-xs text-gray-500">{fmtDate(row.invoice_date)}</div>
+          <div className="text-xs text-gray-500">
+            {fmtDate(row.invoice_date)}
+          </div>
         </div>
       ),
     },
     {
       key: "items",
       label: t("financePurchases.table.items"),
-      render: (row) => <span className="text-sm">{Array.isArray(row.items) ? row.items.length : 0}</span>,
+      render: (row) => {
+        const serialCount = Array.isArray(row.items) ? row.items.length : 0;
+        const bulkCount = Array.isArray(row.bulk_lines) ? row.bulk_lines.length : 0;
+
+        return (
+          <span className="text-sm">
+            {serialCount + bulkCount}
+          </span>
+        );
+      },
     },
     {
       key: "total",
       label: t("financePurchases.table.total"),
-      render: (row) => <span className="font-semibold">{fmtMoney(row.total_amount)}</span>,
+      render: (row) => (
+        <span className="font-semibold">{fmtMoney(row.total_amount)}</span>
+      ),
     },
     {
       key: "status",
@@ -220,7 +254,9 @@ export default function PurchasesClientPage(): React.ReactElement {
     {
       key: "created",
       label: t("financePurchases.table.createdAt"),
-      render: (row) => <span className="text-gray-600">{fmtDate(row.created_at)}</span>,
+      render: (row) => (
+        <span className="text-gray-600">{fmtDate(row.created_at)}</span>
+      ),
     },
     {
       key: "actions",
@@ -233,11 +269,21 @@ export default function PurchasesClientPage(): React.ReactElement {
         return (
           <div className="flex flex-wrap justify-end gap-2">
             <Link href={`/finance/purchases/${row.id}`}>
-              <Button variant="secondary">{t("common.view")}</Button>
+              <Button type="button" variant="secondary">
+                {t("common.view")}
+              </Button>
             </Link>
 
             {canPost && st === "SUBMITTED" ? (
-              <Button variant="primary" onClick={() => postReceipt(row.id)} disabled={busy}>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  postReceipt(row.id);
+                }}
+                disabled={busy}
+              >
                 {t("financePurchases.actions.post")}
               </Button>
             ) : null}
@@ -266,16 +312,30 @@ export default function PurchasesClientPage(): React.ReactElement {
         title={t("financePurchases.title")}
         subtitle={
           <span className="text-sm text-gray-600">
-            {t("common.role")}: <span className="font-semibold text-gray-900">{role || "—"}</span>{" "}
-            {!canPost ? <span className="text-gray-500">({t("financePurchases.viewOnly")})</span> : null}
+            {t("common.role")}:{" "}
+            <span className="font-semibold text-gray-900">{role || "—"}</span>{" "}
+            {!canPost ? (
+              <span className="text-gray-500">
+                ({t("financePurchases.viewOnly")})
+              </span>
+            ) : null}
           </span>
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/finance">
-              <Button variant="secondary">{t("sidebar.finance")}</Button>
+              <Button type="button" variant="secondary">
+                {t("sidebar.finance")}
+              </Button>
             </Link>
-            <Button variant="secondary" onClick={load} disabled={loading || busy} isLoading={loading || busy}>
+
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={load}
+              disabled={loading || busy}
+              isLoading={loading || busy}
+            >
               {t("common.refresh")}
             </Button>
           </div>
@@ -286,7 +346,10 @@ export default function PurchasesClientPage(): React.ReactElement {
         <TabsBar
           value={status}
           onChange={(value) => setParam("status", String(value))}
-          tabs={tabs.map((tab) => ({ key: tab.key, label: tab.label }))}
+          tabs={tabs.map((tab) => ({
+            key: tab.key,
+            label: tab.label,
+          }))}
         />
       </Card>
 
@@ -295,19 +358,23 @@ export default function PurchasesClientPage(): React.ReactElement {
           left={
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
               <div>
-                <div className="text-xs text-gray-600 mb-1">{t("common.search")}</div>
+                <div className="text-xs text-gray-600 mb-1">
+                  {t("common.search")}
+                </div>
+
                 <input
                   value={q}
                   onChange={(e) => setParam("q", e.target.value)}
                   placeholder={t("financePurchases.filters.searchPh")}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none"
+                  className="trex-input w-full px-3 py-2 outline-none"
                 />
               </div>
 
               <div className="flex items-end">
                 <div className="text-xs text-gray-500">
-                  {t("common.total")}: <span className="font-semibold text-gray-900">{total}</span> —{" "}
-                  {t("common.page")}{" "}
+                  {t("common.total")}:{" "}
+                  <span className="font-semibold text-gray-900">{total}</span>{" "}
+                  — {t("common.page")}{" "}
                   <span className="font-semibold text-gray-900">
                     {page}/{totalPages}
                   </span>
@@ -317,10 +384,11 @@ export default function PurchasesClientPage(): React.ReactElement {
               <div className="flex items-end justify-start gap-2">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-gray-600">{t("common.rows")}</span>
+
                   <select
                     value={String(pageSize)}
                     onChange={(e) => setParam("pageSize", e.target.value)}
-                    className="rounded-xl border border-gray-200 bg-white px-2 py-2 outline-none"
+                    className="trex-input px-2 py-2 outline-none"
                   >
                     <option value="10">10</option>
                     <option value="25">25</option>
@@ -331,6 +399,7 @@ export default function PurchasesClientPage(): React.ReactElement {
                 </div>
 
                 <Button
+                  type="button"
                   variant="ghost"
                   onClick={() => {
                     setParam("q", "");
@@ -348,10 +417,22 @@ export default function PurchasesClientPage(): React.ReactElement {
 
       {!loading && !err ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiCard label={t("financePurchases.kpi.postedSum")} value={fmtMoney(kpi.postedSum)} />
-          <KpiCard label={t("financePurchases.kpi.postedCount")} value={String(kpi.postedCount)} />
-          <KpiCard label={t("financePurchases.kpi.submittedSum")} value={fmtMoney(kpi.submittedSum)} />
-          <KpiCard label={t("financePurchases.kpi.submittedCount")} value={String(kpi.submittedCount)} />
+          <KpiCard
+            label={t("financePurchases.kpi.postedSum")}
+            value={fmtMoney(kpi.postedSum)}
+          />
+          <KpiCard
+            label={t("financePurchases.kpi.postedCount")}
+            value={String(kpi.postedCount)}
+          />
+          <KpiCard
+            label={t("financePurchases.kpi.submittedSum")}
+            value={fmtMoney(kpi.submittedSum)}
+          />
+          <KpiCard
+            label={t("financePurchases.kpi.submittedCount")}
+            value={String(kpi.submittedCount)}
+          />
         </div>
       ) : null}
 
@@ -366,7 +447,11 @@ export default function PurchasesClientPage(): React.ReactElement {
         page={page}
         pages={totalPages}
         onPrev={page <= 1 ? undefined : () => setParam("page", String(page - 1))}
-        onNext={page >= totalPages ? undefined : () => setParam("page", String(page + 1))}
+        onNext={
+          page >= totalPages
+            ? undefined
+            : () => setParam("page", String(page + 1))
+        }
         emptyTitle={t("financePurchases.empty.title")}
         emptyHint={t("financePurchases.empty.hint")}
         onRowClick={(row) => router.push(`/finance/purchases/${row.id}`)}
