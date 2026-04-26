@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // =====================
-// Runtime API base (safe + lazy)
+// Runtime API base
 // =====================
 function cleanBase(v: any): string {
   const s = String(v || "").trim();
@@ -11,22 +11,19 @@ function cleanBase(v: any): string {
 }
 
 function getRuntimeApiBase(): string {
-  // runtime env.js
   if (typeof window !== "undefined") {
     const rt = cleanBase((window as any).__ENV__?.NEXT_PUBLIC_API_BASE);
     if (rt) return rt;
   }
 
-  // build-time env
   const envBase = cleanBase(process.env.NEXT_PUBLIC_API_BASE);
   if (envBase) return envBase;
 
-  // local fallback
   return "http://localhost:3000";
 }
 
 // =====================
-// Auth helpers
+// Auth / Company helpers
 // =====================
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -37,8 +34,38 @@ function getStoredToken(): string | null {
   }
 }
 
+function getStoredCompanyId(): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const direct =
+      localStorage.getItem("company_id") ||
+      localStorage.getItem("companyId") ||
+      localStorage.getItem("active_company_id");
+
+    if (direct) return direct;
+
+    const userRaw = localStorage.getItem("user");
+    if (userRaw) {
+      const user = JSON.parse(userRaw);
+      return (
+        user?.company_id ||
+        user?.companyId ||
+        user?.active_company_id ||
+        user?.company?.id ||
+        null
+      );
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function clearStoredAuth() {
   if (typeof window === "undefined") return;
+
   try {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -68,18 +95,20 @@ api.interceptors.request.use((config) => {
   if (base) config.baseURL = base;
 
   const token = getStoredToken();
-  if (token) {
-    const h: any = config.headers || {};
+  const companyId = getStoredCompanyId();
 
-    if (typeof h.set === "function") {
-      h.set("Authorization", `Bearer ${token}`);
-      config.headers = h;
-    } else {
-      config.headers = {
-        ...(config.headers as any),
-        Authorization: `Bearer ${token}`,
-      };
-    }
+  const h: any = config.headers || {};
+
+  if (typeof h.set === "function") {
+    if (token) h.set("Authorization", `Bearer ${token}`);
+    if (companyId) h.set("x-company-id", companyId);
+    config.headers = h;
+  } else {
+    config.headers = {
+      ...(config.headers as any),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(companyId ? { "x-company-id": companyId } : {}),
+    };
   }
 
   return config;
@@ -116,21 +145,27 @@ api.interceptors.response.use(
 
 // =====================
 // Legacy explicit auth wrappers
-// NOTE:
-// Kept temporarily for compatibility.
-// They now rely on the same api instance/interceptors.
 // =====================
-export async function apiAuthGet<T = any>(path: string, params?: any): Promise<T> {
+export async function apiAuthGet<T = any>(
+  path: string,
+  params?: any
+): Promise<T> {
   const res = await api.get(path, { params });
   return res.data as T;
 }
 
-export async function apiAuthPost<T = any>(path: string, body?: any): Promise<T> {
+export async function apiAuthPost<T = any>(
+  path: string,
+  body?: any
+): Promise<T> {
   const res = await api.post(path, body);
   return res.data as T;
 }
 
-export async function apiAuthPatch<T = any>(path: string, body?: any): Promise<T> {
+export async function apiAuthPatch<T = any>(
+  path: string,
+  body?: any
+): Promise<T> {
   const res = await api.patch(path, body);
   return res.data as T;
 }
@@ -143,17 +178,26 @@ export async function apiAuthDelete<T = any>(path: string): Promise<T> {
 // =====================
 // Thin wrappers
 // =====================
-export async function apiGet<T = any>(path: string, params?: any): Promise<T> {
+export async function apiGet<T = any>(
+  path: string,
+  params?: any
+): Promise<T> {
   const res = await api.get(path, { params });
   return res.data as T;
 }
 
-export async function apiPost<T = any>(path: string, body?: any): Promise<T> {
+export async function apiPost<T = any>(
+  path: string,
+  body?: any
+): Promise<T> {
   const res = await api.post(path, body);
   return res.data as T;
 }
 
-export async function apiPatch<T = any>(path: string, body?: any): Promise<T> {
+export async function apiPatch<T = any>(
+  path: string,
+  body?: any
+): Promise<T> {
   const res = await api.patch(path, body);
   return res.data as T;
 }
@@ -165,8 +209,6 @@ export async function apiDelete<T = any>(path: string): Promise<T> {
 
 // =====================
 // Transitional helpers
-// NOTE:
-// Keep temporarily until all pages move to services.
 // =====================
 export function unwrapItems<T = any>(res: any): T[] {
   const d = res?.data ?? res;
@@ -179,6 +221,7 @@ export function unwrapItems<T = any>(res: any): T[] {
 
 export function unwrapTotal(res: any): number {
   const d = res?.data ?? res;
+
   const raw =
     d?.total ??
     d?.count ??
