@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 "use client";
 
 import Link from "next/link";
@@ -46,6 +47,7 @@ export default function ClientsPage() {
 
   const token = useAuth((s) => s.token);
   const hasHydrated = useAuth((s) => s.hasHydrated);
+  if (!hasHydrated) return null;
 
   const search = sp.get("search") || "";
   const activeFilter = (sp.get("active") || "all") as
