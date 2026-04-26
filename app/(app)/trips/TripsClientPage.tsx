@@ -1,1068 +1,377 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/src/store/auth";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useT } from "@/src/i18n/useT";
+
+import { DataTable } from "@/src/components/ui/DataTable";
+import { TrexInput } from "@/src/components/ui/TrexInput";
+import { TrexSelect } from "@/src/components/ui/TrexSelect";
 
 import { tripsService } from "@/src/services/trips.service";
-import type {
-  Trip,
-  TripOptionClient,
-  TripOptionDriver,
-  TripOptionSite,
-  TripOptionSupervisor,
-  TripOptionVehicle,
-} from "@/src/types/trips.types";
+import { clientsService } from "@/src/services/clients.service";
+import { vehiclesService } from "@/src/services/vehicles.service";
+import { sitesService } from "@/src/services/sites.service";
 
-type TripOptionContract = {
-  id: string;
-  contract_no?: string | null;
-  status?: string | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  currency?: string | null;
+type Option = {
+  label: string;
+  value: string;
 };
 
-const fmtDate = (d: any) => {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
-};
-
-const shortId = (id: any) => {
-  const s = String(id ?? "");
-  if (s.length <= 14) return s;
-  return `${s.slice(0, 8)}…${s.slice(-4)}`;
-};
-
-const num = (v: any) => {
-  const n = Number(v ?? 0);
-  return Number.isFinite(n) ? n : 0;
-};
-
-const fmtMoney = (n: any, currency = "EGP") => {
-  const v = num(n);
-  try {
-    return new Intl.NumberFormat("ar-EG", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(v);
-  } catch {
-    return new Intl.NumberFormat("ar-EG", {
-      maximumFractionDigits: 2,
-    }).format(v);
-  }
-};
-
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
+function extractItems(body: any): any[] {
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.items)) return body.items;
+  if (Array.isArray(body?.data)) return body.data;
+  if (Array.isArray(body?.data?.items)) return body.data.items;
+  if (Array.isArray(body?.rows)) return body.rows;
+  return [];
 }
 
-function Toast({
-  open,
-  message,
-  type,
-  onClose,
-  t,
-}: {
-  open: boolean;
-  message: string;
-  type: "success" | "error";
-  onClose: () => void;
-  t: (k: string, vars?: Record<string, any>) => string;
-}) {
-  if (!open) return null;
+export default function TripsClientPage() {
+  const [rows, setRows] = useState<any[]>([]);
 
-  return (
-    <div
-      onClick={onClose}
-      className={cn(
-        "fixed bottom-4 right-4 z-[9999] max-w-sm cursor-pointer rounded-xl px-4 py-3 text-white shadow-xl",
-        type === "success" ? "bg-emerald-600" : "bg-red-600"
-      )}
-      role="alert"
-    >
-      <div className="font-semibold">{message}</div>
-      <div className="mt-1 text-xs opacity-85">
-        {t("tripModals.toastCloseHint")}
-      </div>
-    </div>
-  );
-}
+  const [clients, setClients] = useState<Option[]>([]);
+  const [vehicles, setVehicles] = useState<Option[]>([]);
+  const [sites, setSites] = useState<Option[]>([]);
+  const [supervisors, setSupervisors] = useState<Option[]>([]);
 
-function StatusBadge({ value }: { value?: string | null }) {
-  const st = String(value || "").toUpperCase();
+  const [filters, setFilters] = useState({
+    search: "",
+    client_id: "",
+    vehicle_id: "",
+    site_id: "",
+    supervisor_id: "",
+    status: "",
+  });
 
-  const cls =
-    st === "DRAFT"
-      ? "bg-slate-100 text-slate-700 border-slate-200"
-      : st === "ASSIGNED"
-      ? "bg-blue-50 text-blue-800 border-blue-200"
-      : st === "IN_PROGRESS"
-      ? "bg-amber-50 text-amber-800 border-amber-200"
-      : st === "COMPLETED"
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : st === "CANCELLED"
-      ? "bg-red-50 text-red-800 border-red-200"
-      : "bg-white text-slate-700 border-slate-200";
+  const [loading, setLoading] = useState(true);
+  const [masterLoading, setMasterLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
-}
+  async function loadMaster() {
+    try {
+      setMasterLoading(true);
+      setError(null);
 
-function FinancialStatusBadge({ value }: { value?: string | null }) {
-  const st = String(value || "").toUpperCase();
-
-  const cls =
-    st === "OPEN"
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : st === "UNDER_REVIEW"
-      ? "bg-amber-50 text-amber-800 border-amber-200"
-      : st === "CLOSED"
-      ? "bg-slate-100 text-slate-700 border-slate-200"
-      : "bg-white text-slate-700 border-slate-200";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
-}
-
-function ProfitBadge({ value }: { value?: string | null }) {
-  const st = String(value || "").toUpperCase();
-
-  const cls =
-    st === "PROFIT"
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : st === "LOSS"
-      ? "bg-red-50 text-red-800 border-red-200"
-      : st === "BREAK_EVEN"
-      ? "bg-slate-100 text-slate-700 border-slate-200"
-      : "bg-white text-slate-700 border-slate-200";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
-}
-
-function AssignTripModal({
-  open,
-  tripId,
-  onClose,
-  onAssigned,
-  showToast,
-}: {
-  open: boolean;
-  tripId: string | null;
-  onClose: () => void;
-  onAssigned: () => void;
-  showToast: (type: "success" | "error", msg: string) => void;
-}) {
-  const t = useT();
-
-  const [loading, setLoading] = useState(false);
-  const [vehicles, setVehicles] = useState<TripOptionVehicle[]>([]);
-  const [drivers, setDrivers] = useState<TripOptionDriver[]>([]);
-  const [supervisors, setSupervisors] = useState<TripOptionSupervisor[]>([]);
-
-  const [vehicleId, setVehicleId] = useState("");
-  const [driverId, setDriverId] = useState("");
-  const [supervisorId, setSupervisorId] = useState("");
-
-  const vehicleLabel = (v: TripOptionVehicle) => {
-    const fleet = String((v as any)?.fleet_no || "").trim();
-    const plate = String(
-      (v as any)?.plate_no || (v as any)?.plate_number || ""
-    ).trim();
-    const disp = String((v as any)?.display_name || "").trim();
-
-    if (fleet && plate) return `${fleet} - ${plate}`;
-    if (fleet) return fleet;
-    if (plate) return plate;
-    if (disp) return disp;
-
-    return shortId((v as any)?.id);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-
-    setVehicleId("");
-    setDriverId("");
-    setSupervisorId("");
-
-    (async () => {
-      setLoading(true);
-      try {
-        const [vItems, dItems, uItems] = await Promise.all([
-          tripsService.listVehiclesOptions(),
-          tripsService.listDriversOptions(),
+      const [clientsRes, vehiclesRes, sitesRes, supervisorsRes] =
+        await Promise.all([
+          clientsService.list({ page: 1, limit: 200 }),
+          vehiclesService.list({ page: 1, pageSize: 200 }),
+          sitesService.list({ page: 1, limit: 200 }),
           tripsService.listSupervisorsOptions(),
         ]);
 
-        const filteredVehicles = vItems.filter((v) => {
-          if ((v as any)?.is_active === false) return false;
-          if ((v as any)?.status) {
-            return String((v as any).status).toUpperCase() === "AVAILABLE";
-          }
-          return true;
-        });
+      setClients(
+        extractItems(clientsRes).map((c: any) => ({
+          value: String(c.id),
+          label: c.name || c.company_name || c.client_name || `#${c.id}`,
+        }))
+      );
 
-        setVehicles(filteredVehicles);
-        setDrivers(dItems);
-        setSupervisors(uItems);
-      } catch (e: any) {
-        showToast("error", e?.message || t("common.failed"));
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [open, t, showToast]);
+      setVehicles(
+        extractItems(vehiclesRes).map((v: any) => ({
+          value: String(v.id),
+          label:
+            v.plate_no ||
+            v.plate_number ||
+            v.truck_number ||
+            v.code ||
+            `#${v.id}`,
+        }))
+      );
 
-  if (!open || !tripId) return null;
+      setSites(
+        extractItems(sitesRes).map((s: any) => ({
+          value: String(s.id),
+          label: s.name || s.site_name || s.code || `#${s.id}`,
+        }))
+      );
 
-  const canSubmit = !!vehicleId && !!driverId;
-
-  async function submit() {
-    if (!canSubmit || !tripId) return;
-
-    setLoading(true);
-    try {
-      await tripsService.assign(tripId, {
-        vehicle_id: vehicleId,
-        driver_id: driverId,
-        field_supervisor_id: supervisorId || null,
-      });
-
-      showToast("success", t("trips.toast.assigned"));
-      onAssigned();
-      onClose();
-    } catch (e: any) {
-      showToast("error", e?.message || t("common.failed"));
+      setSupervisors(
+        extractItems(supervisorsRes).map((s: any) => ({
+          value: String(s.id),
+          label:
+            s.name ||
+            s.full_name ||
+            s.email ||
+            s.username ||
+            `#${s.id}`,
+        }))
+      );
+    } catch (err: any) {
+      setError(err?.message || "حدث خطأ أثناء تحميل بيانات الفلاتر");
     } finally {
-      setLoading(false);
+      setMasterLoading(false);
     }
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-xl rounded-2xl bg-white text-slate-900 border border-slate-200 p-4 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">{t("tripModals.assignTitle")}</h3>
-          <button
-            onClick={onClose}
-            className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="mt-4 grid gap-3">
-          <label className="grid gap-2 text-sm">
-            {t("tripModals.vehicle")} ({t("tripModals.availableOnly")})
-            <select
-              value={vehicleId}
-              onChange={(e) => setVehicleId(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
-            >
-              <option value="">{t("tripModals.selectVehicle")}</option>
-              {vehicles.map((v) => (
-                <option key={(v as any).id} value={(v as any).id}>
-                  {vehicleLabel(v)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("tripModals.driver")} ({t("tripModals.activeOnly")})
-            <select
-              value={driverId}
-              onChange={(e) => setDriverId(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
-            >
-              <option value="">{t("tripModals.selectDriver")}</option>
-              {drivers.map((d) => (
-                <option key={(d as any).id} value={(d as any).id}>
-                  {(d as any).full_name ||
-                    (d as any).name ||
-                    (d as any).phone ||
-                    (d as any).id}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("tripModals.fieldSupervisor")}
-            <select
-              value={supervisorId}
-              onChange={(e) => setSupervisorId(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
-            >
-              <option value="">{t("tripModals.none")}</option>
-              {supervisors.map((s) => (
-                <option key={(s as any).id} value={(s as any).id}>
-                  {(s as any).full_name || (s as any).email || (s as any).id}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-60"
-          >
-            {t("tripModals.cancel")}
-          </button>
-          <button
-            onClick={submit}
-            disabled={!canSubmit || loading}
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 font-semibold"
-          >
-            {loading ? t("tripModals.saving") : t("tripModals.assign")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CreateTripModal({
-  open,
-  onClose,
-  onCreated,
-  showToast,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onCreated: () => void;
-  showToast: (type: "success" | "error", msg: string) => void;
-}) {
-  const t = useT();
-
-  const [loading, setLoading] = useState(false);
-  const [contractsLoading, setContractsLoading] = useState(false);
-
-  const [clients, setClients] = useState<TripOptionClient[]>([]);
-  const [sites, setSites] = useState<TripOptionSite[]>([]);
-  const [contracts, setContracts] = useState<TripOptionContract[]>([]);
-
-  const [clientId, setClientId] = useState("");
-  const [contractId, setContractId] = useState("");
-  const [siteId, setSiteId] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const filteredSites = useMemo(() => {
-    if (!clientId) return [];
-    return sites.filter((s: any) => {
-      if (!s?.client_id) return true;
-      return String(s.client_id) === String(clientId);
-    });
-  }, [sites, clientId]);
-
-  const contractLabel = (c: TripOptionContract) => {
-    const no = String(c.contract_no || "").trim();
-    const st = String(c.status || "").trim();
-    if (no && st) return `${no} — ${st}`;
-    if (no) return no;
-    return shortId(c.id);
-  };
-
-  const siteLabel = (s: any) => {
-    const name = String(s?.name || "").trim();
-    const city = String(s?.city || "").trim();
-    const addr = String(s?.address || "").trim();
-
-    if (name && city) return `${name} — ${city}`;
-    if (name && addr) return `${name} — ${addr}`;
-    if (name) return name;
-    if (addr) return addr;
-    return shortId(s?.id);
-  };
-
-  async function loadContractsForClient(nextClientId: string) {
-    setContracts([]);
-    setContractId("");
-
-    if (!nextClientId) return;
-
-    setContractsLoading(true);
+  async function loadTrips() {
     try {
-      const rows = await tripsService.listContractsOptions(nextClientId);
-      setContracts(Array.isArray(rows) ? rows : []);
-    } catch (e: any) {
-      showToast("error", e?.message || "فشل تحميل العقود");
-    } finally {
-      setContractsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (!open) return;
-
-    setClientId("");
-    setContractId("");
-    setSiteId("");
-    setScheduledAt("");
-    setNotes("");
-    setContracts([]);
-
-    (async () => {
       setLoading(true);
-      try {
-        const [cRes, sRes] = await Promise.all([
-          tripsService.listClientsOptions(),
-          tripsService.listSitesOptions(),
-        ]);
-        setClients(cRes);
-        setSites(sRes);
-      } catch (e: any) {
-        showToast("error", e?.message || t("common.failed"));
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [open, t, showToast]);
+      setError(null);
 
-  useEffect(() => {
-    if (!clientId) {
-      setSiteId("");
-      setContractId("");
-      setContracts([]);
-      return;
-    }
-
-    const stillValidSite = filteredSites.some(
-      (s: any) => String(s.id) === String(siteId)
-    );
-    if (!stillValidSite) {
-      setSiteId("");
-    }
-
-    loadContractsForClient(clientId);
-  }, [clientId]);
-
-  if (!open) return null;
-
-  const canSubmit = !!clientId && !!siteId;
-
-  async function submit() {
-    if (!canSubmit) return;
-
-    setLoading(true);
-    try {
-      await tripsService.create({
-        client_id: clientId,
-        contract_id: contractId || null,
-        site_id: siteId,
-        scheduled_at: scheduledAt
-          ? new Date(scheduledAt).toISOString()
-          : null,
-        notes: notes || null,
+      const res = await tripsService.list({
+        client_id: filters.client_id || undefined,
+        status: filters.status || undefined,
+        page: 1,
+        pageSize: 200,
       });
 
-      showToast("success", t("trips.toast.tripCreated"));
-      onCreated();
-      onClose();
-    } catch (e: any) {
-      showToast("error", e?.message || t("common.failed"));
+      setRows(extractItems(res));
+    } catch (err: any) {
+      setError(err?.message || "حدث خطأ أثناء تحميل الرحلات");
     } finally {
       setLoading(false);
     }
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-xl rounded-2xl bg-white text-slate-900 border border-slate-200 p-4 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">{t("tripModals.createTitle")}</h3>
-          <button
-            onClick={onClose}
-            className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="mt-4 grid gap-3">
-          <label className="grid gap-2 text-sm">
-            {t("tripModals.client")}
-            <select
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              disabled={loading}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
-            >
-              <option value="">{t("common.search")}</option>
-              {clients.map((c) => (
-                <option key={(c as any).id} value={(c as any).id}>
-                  {(c as any).name || (c as any).id}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            العقد (اختياري حاليًا لكن مهم للتسعير)
-            <select
-              value={contractId}
-              onChange={(e) => setContractId(e.target.value)}
-              disabled={loading || contractsLoading || !clientId}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
-            >
-              <option value="">
-                {contractsLoading ? "جارٍ تحميل العقود..." : "بدون عقد محدد"}
-              </option>
-              {contracts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {contractLabel(c)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("tripModals.site")}
-            <select
-              value={siteId}
-              onChange={(e) => setSiteId(e.target.value)}
-              disabled={loading || !clientId}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
-            >
-              <option value="">
-                {clientId ? t("common.search") : "اختر العميل أولًا"}
-              </option>
-              {filteredSites.map((s: any) => (
-                <option key={s.id} value={s.id}>
-                  {siteLabel(s)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("tripModals.scheduledOptional")}
-            <input
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            {t("tripModals.notesOptional")}
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-slate-200"
-              rows={3}
-            />
-          </label>
-
-          {clientId && !contractsLoading && contracts.length === 0 ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              لا توجد عقود متاحة لهذا العميل حاليًا. يمكن إنشاء الرحلة بدون
-              عقد، لكن التسعير التعاقدي لن يعمل بشكل كامل.
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-60"
-          >
-            {t("tripModals.cancel")}
-          </button>
-          <button
-            onClick={submit}
-            disabled={!canSubmit || loading}
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 font-semibold"
-          >
-            {loading ? t("tripModals.saving") : t("tripModals.create")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function TripsPage() {
-  const t = useT();
-
-  const router = useRouter();
-  const sp = useSearchParams();
-
-  const token = useAuth((s) => s.token);
-  const user = useAuth((s) => s.user);
-  const role = String(user?.role || "").toUpperCase();
-
-  const canSeeFinance = useMemo(
-    () => role === "ADMIN" || role === "ACCOUNTANT",
-    [role]
-  );
-  const canManageRevenue = useMemo(
-    () => role === "ADMIN" || role === "CONTRACT_MANAGER",
-    [role]
-  );
-  const canAssign = useMemo(() => role === "ADMIN" || role === "HR", [role]);
-
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  const [items, setItems] = useState<Trip[]>([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState<"success" | "error">("success");
-
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [assignTripId, setAssignTripId] = useState<string | null>(null);
-
-  const [createOpen, setCreateOpen] = useState(false);
-
-  function showToast(type: "success" | "error", msg: string) {
-    setToastType(type);
-    setToastMsg(msg);
-    setToastOpen(true);
-    setTimeout(() => setToastOpen(false), 2500);
-  }
-
   useEffect(() => {
-    try {
-      (useAuth as any).getState?.().hydrate?.();
-    } catch {}
+    loadMaster();
   }, []);
 
   useEffect(() => {
-    if (token === null) return;
-    if (!token) router.push("/login");
-  }, [token, router]);
-
-  const page = Math.max(parseInt(sp.get("page") || "1", 10), 1);
-  const pageSize = Math.min(
-    Math.max(parseInt(sp.get("pageSize") || "25", 10), 1),
-    100
-  );
-  const status = sp.get("status") || "";
-
-  const setParam = (k: string, v: string) => {
-    const p = new URLSearchParams(sp.toString());
-    if (v) p.set(k, v);
-    else p.delete(k);
-    if (k !== "page") p.set("page", "1");
-    router.push(`/trips?${p.toString()}`);
-  };
-
-  async function loadTrips() {
-    if (token === null || !token) return;
-
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await tripsService.list({
-        page,
-        pageSize,
-        status,
-      });
-
-      setItems(res.items);
-      setTotal(res.total);
-      setTotalPages(
-        res.pages || Math.max(Math.ceil((res.total || 0) / pageSize), 1)
-      );
-    } catch (e: any) {
-      setErr(e?.message || t("trips.errors.fetchFailed"));
-      setItems([]);
-      setTotal(0);
-      setTotalPages(1);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (token === null) return;
-    if (!token) return;
     loadTrips();
-  }, [token, page, pageSize, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.client_id, filters.status]);
 
-  async function startTrip(tripId: string) {
-    try {
-      await tripsService.start(tripId);
-      showToast("success", t("trips.toast.started"));
-      loadTrips();
-    } catch (e: any) {
-      showToast("error", e?.message || t("trips.errors.startFailed"));
-    }
-  }
+  const filteredRows = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
 
-  async function finishTrip(tripId: string) {
-    const ok = window.confirm(t("trips.confirm.finishTrip"));
-    if (!ok) return;
+    return rows.filter((r: any) => {
+      const matchesSearch =
+        !q ||
+        [
+          r.trip_no,
+          r.trip_number,
+          r.code,
+          r.clients?.name,
+          r.client?.name,
+          r.sites?.name,
+          r.site?.name,
+          r.vehicles?.plate_no,
+          r.vehicle?.plate_no,
+          r.vehicles?.plate_number,
+          r.vehicle?.plate_number,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(q);
 
-    try {
-      await tripsService.finish(tripId);
-      showToast("success", t("trips.toast.finished"));
-      loadTrips();
-    } catch (e: any) {
-      showToast("error", e?.message || t("trips.errors.finishFailed"));
-    }
-  }
+      const matchesVehicle =
+        !filters.vehicle_id ||
+        String(r.vehicle_id || r.vehicles?.id || r.vehicle?.id || "") ===
+          String(filters.vehicle_id);
 
-  function openAssign(tripId: string) {
-    setAssignTripId(tripId);
-    setAssignOpen(true);
-  }
+      const matchesSite =
+        !filters.site_id ||
+        String(r.site_id || r.sites?.id || r.site?.id || "") ===
+          String(filters.site_id);
 
-  if (token === null) {
-    return (
-      <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
-        <div className="max-w-7xl mx-auto p-4 md:p-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-            {t("common.checkingSession")}
-          </div>
-        </div>
-      </div>
-    );
-  }
+      const matchesSupervisor =
+        !filters.supervisor_id ||
+        String(
+          r.supervisor_id ||
+            r.supervisors?.id ||
+            r.supervisor?.id ||
+            r.assigned_supervisor_id ||
+            ""
+        ) === String(filters.supervisor_id);
+
+      return (
+        matchesSearch &&
+        matchesVehicle &&
+        matchesSite &&
+        matchesSupervisor
+      );
+    });
+  }, [rows, filters]);
+
+  const columns = [
+    {
+      key: "trip",
+      label: "رقم الرحلة",
+      render: (r: any) => r.trip_no || r.trip_number || r.code || "—",
+    },
+    {
+      key: "client",
+      label: "العميل",
+      render: (r: any) =>
+        r.clients?.name ||
+        r.client?.name ||
+        r.clients?.company_name ||
+        r.client?.company_name ||
+        "—",
+    },
+    {
+      key: "site",
+      label: "الموقع",
+      render: (r: any) =>
+        r.sites?.name || r.site?.name || r.sites?.site_name || "—",
+    },
+    {
+      key: "vehicle",
+      label: "المركبة",
+      render: (r: any) =>
+        r.vehicles?.plate_no ||
+        r.vehicle?.plate_no ||
+        r.vehicles?.plate_number ||
+        r.vehicle?.plate_number ||
+        r.vehicles?.truck_number ||
+        r.vehicle?.truck_number ||
+        "—",
+    },
+    {
+      key: "date",
+      label: "التاريخ",
+      render: (r: any) =>
+        r.trip_date ||
+        r.date ||
+        r.started_at ||
+        r.created_at ||
+        "—",
+    },
+    {
+      key: "status",
+      label: "الحالة",
+      render: (r: any) => (
+        <span className="text-blue-700">{r.status || "—"}</span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "الإجراءات",
+      render: (r: any) => (
+        <Link
+          href={`/trips/${r.id}`}
+          className="text-sm font-medium text-blue-700 hover:underline"
+        >
+          عرض
+        </Link>
+      ),
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900" dir="rtl">
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold">{t("trips.title")}</div>
-            <div className="text-sm text-slate-600">{t("trips.subtitle")}</div>
-          </div>
-
-          <div className="text-xs text-slate-600">
-            {t("trips.meta.role")}:{" "}
-            <span className="text-slate-900 font-semibold">
-              {role || "—"}
-            </span>
-          </div>
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">الرحلات</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            إدارة الرحلات وربطها بالعملاء والمواقع والمركبات والمشرفين.
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={status}
-            onChange={(e) => setParam("status", e.target.value)}
-            className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm outline-none"
-          >
-            <option value="">{t("trips.filters.allStatuses")}</option>
-            <option value="ASSIGNED,IN_PROGRESS">
-              {t("trips.filters.active")}
-            </option>
-            <option value="DRAFT">{t("trips.filters.DRAFT")}</option>
-            <option value="ASSIGNED">{t("trips.filters.ASSIGNED")}</option>
-            <option value="IN_PROGRESS">
-              {t("trips.filters.IN_PROGRESS")}
-            </option>
-            <option value="COMPLETED">
-              {t("trips.filters.COMPLETED")}
-            </option>
-          </select>
-
-          <span className="text-xs text-slate-600">
-            {t("trips.meta.total")}: {total} — {t("trips.meta.page")} {page}/
-            {totalPages}
-          </span>
-
+        <div className="flex gap-2">
           <button
-            onClick={() => setCreateOpen(true)}
-            className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm"
-          >
-            {t("trips.actions.createTrip")}
-          </button>
-
-          <button
+            type="button"
             onClick={loadTrips}
-            disabled={loading}
-            className="ml-auto px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-60"
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
           >
-            {loading ? t("common.loading") : t("trips.actions.refresh")}
+            تحديث
           </button>
+          
+
+          <Link
+            href="/trips/new"
+            className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            رحلة جديدة
+          </Link>
         </div>
-
-        {err ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {err}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-            {t("common.loading")}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-            <div className="overflow-auto">
-              <table className="min-w-[1250px] w-full text-sm">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("trips.table.trip")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("trips.table.status")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      الحالة المالية
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("trips.table.client")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      العقد
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("trips.table.site")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      الإيراد
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      الربحية
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("trips.table.scheduled")}
-                    </th>
-                    <th className="px-4 py-2 text-right text-slate-700">
-                      {t("trips.table.actions")}
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {items.map((r: any) => {
-                    const st = String(r?.status || "").toUpperCase();
-                    const currency = String(
-                      r?.currency || r?.revenue_currency || "EGP"
-                    );
-
-                    const siteName =
-                      r?.site?.name ||
-                      r?.sites?.name ||
-                      r?.pickup_site?.name ||
-                      r?.dropoff_site?.name ||
-                      "—";
-
-                    const contractNo =
-                      r?.client_contracts?.contract_no ||
-                      r?.contract?.contract_no ||
-                      (r?.contract_id ? shortId(r.contract_id) : "—");
-
-                    return (
-                      <tr
-                        key={r.id}
-                        className="border-t border-slate-200 hover:bg-slate-50 cursor-pointer"
-                        onClick={() => router.push(`/trips/${r.id}`)}
-                      >
-                        <td className="px-4 py-2">
-                          <div className="font-mono text-slate-800">
-                            {r.trip_code || shortId(r.id)}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {shortId(r.id)}
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-2">
-                          <StatusBadge value={r.status} />
-                        </td>
-
-                        <td className="px-4 py-2">
-                          <FinancialStatusBadge value={r.financial_status} />
-                        </td>
-
-                        <td className="px-4 py-2 text-slate-800">
-                          {r?.clients?.name || "—"}
-                        </td>
-
-                        <td className="px-4 py-2 text-slate-800">
-                          {contractNo}
-                        </td>
-
-                        <td className="px-4 py-2 text-slate-800">
-                          {siteName}
-                        </td>
-
-                        <td className="px-4 py-2 text-slate-800 whitespace-nowrap">
-                          {fmtMoney(
-                            r?.revenue ?? r?.agreed_revenue ?? 0,
-                            currency
-                          )}
-                        </td>
-
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-2">
-                            <span className="whitespace-nowrap text-slate-800">
-                              {fmtMoney(r?.profit ?? 0, currency)}
-                            </span>
-                            <ProfitBadge value={r?.profit_status} />
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-2 text-slate-700">
-                          {fmtDate(r.scheduled_at)}
-                        </td>
-
-                        <td className="px-4 py-2">
-                          <div className="flex gap-2 flex-wrap">
-                            {canSeeFinance ? (
-                              <Link
-                                href={`/trips/${r.id}/finance`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800"
-                              >
-                                المالية
-                              </Link>
-                            ) : null}
-
-                            {canManageRevenue ? (
-                              <Link
-                                href={`/trips/${r.id}/revenue`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs text-blue-800"
-                              >
-                                الإيراد
-                              </Link>
-                            ) : null}
-
-                            {st === "DRAFT" && canAssign ? (
-                              <button
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openAssign(r.id);
-                                }}
-                              >
-                                {t("trips.actions.assign")}
-                              </button>
-                            ) : null}
-
-                            {st === "ASSIGNED" ? (
-                              <button
-                                className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  startTrip(r.id);
-                                }}
-                              >
-                                {t("trips.actions.start")}
-                              </button>
-                            ) : null}
-
-                            {st === "IN_PROGRESS" ? (
-                              <button
-                                className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-xs text-amber-800"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  finishTrip(r.id);
-                                }}
-                              >
-                                {t("trips.actions.finish")}
-                              </button>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  {!items.length ? (
-                    <tr>
-                      <td className="px-4 py-6 text-slate-600" colSpan={10}>
-                        {t("trips.empty")}
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 p-4 border-t border-slate-200">
-              <button
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
-                disabled={page <= 1}
-                onClick={() => setParam("page", String(page - 1))}
-              >
-                {t("common.prev")}
-              </button>
-
-              <div className="text-xs text-slate-600">
-                {t("trips.meta.showing", { count: items.length, total })}
-              </div>
-
-              <button
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
-                disabled={page >= totalPages}
-                onClick={() => setParam("page", String(page + 1))}
-              >
-                {t("common.next")}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      <AssignTripModal
-        open={assignOpen}
-        tripId={assignTripId}
-        onClose={() => setAssignOpen(false)}
-        onAssigned={() => loadTrips()}
-        showToast={showToast}
-      />
+      <div className="grid gap-4 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-3">
+        <TrexInput
+          labelText="بحث"
+          placeholder="رقم الرحلة / العميل / الموقع / المركبة"
+          value={filters.search}
+          onChange={(e) =>
+            setFilters((prev) => ({
+              ...prev,
+              search: e.target.value,
+            }))
+          }
+        />
 
-      <CreateTripModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => loadTrips()}
-        showToast={showToast}
-      />
+        <TrexSelect
+          labelText="العميل"
+          value={filters.client_id}
+          options={[{ label: "كل العملاء", value: "" }, ...clients]}
+          loading={masterLoading}
+          onChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              client_id: value,
+            }))
+          }
+        />
 
-      <Toast
-        open={toastOpen}
-        message={toastMsg}
-        type={toastType}
-        onClose={() => setToastOpen(false)}
-        t={t}
-      />
+        <TrexSelect
+          labelText="المركبة"
+          value={filters.vehicle_id}
+          options={[{ label: "كل المركبات", value: "" }, ...vehicles]}
+          loading={masterLoading}
+          onChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              vehicle_id: value,
+            }))
+          }
+        />
+
+        <TrexSelect
+          labelText="الموقع"
+          value={filters.site_id}
+          options={[{ label: "كل المواقع", value: "" }, ...sites]}
+          loading={masterLoading}
+          onChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              site_id: value,
+            }))
+          }
+        />
+
+        <TrexSelect
+          labelText="المشرف"
+          value={filters.supervisor_id}
+          options={[{ label: "كل المشرفين", value: "" }, ...supervisors]}
+          loading={masterLoading}
+          onChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              supervisor_id: value,
+            }))
+          }
+        />
+
+        <TrexSelect
+          labelText="الحالة"
+          value={filters.status}
+          options={[
+            { label: "كل الحالات", value: "" },
+            { label: "DRAFT", value: "DRAFT" },
+            { label: "SUBMITTED", value: "SUBMITTED" },
+            { label: "POSTED", value: "POSTED" },
+            { label: "CANCELLED", value: "CANCELLED" },
+          ]}
+          onChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              status: value,
+            }))
+          }
+        />
+      </div>
+
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="rounded-2xl border bg-white shadow-sm">
+        <DataTable columns={columns} rows={filteredRows} loading={loading} />
+      </div>
     </div>
   );
 }

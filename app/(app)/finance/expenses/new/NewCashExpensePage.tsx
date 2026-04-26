@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { api } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
@@ -54,6 +54,16 @@ function isUuid(value: unknown): boolean {
 export default function NewCashExpensePage() {
   const t = useT();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tripIdFromUrl = searchParams.get("trip_id");
+  useEffect(() => {
+  if (!tripIdFromUrl) return;
+
+  setForm((prev) => ({
+    ...prev,
+    trip_id: tripIdFromUrl,
+  }));
+}, [tripIdFromUrl]);
 
   const user = useAuth((s) => s.user);
   const role = roleUpper(user?.role);
@@ -293,7 +303,11 @@ export default function NewCashExpensePage() {
       await cashExpensesService.create(payload);
 
       showToast("success", t("financeNewExpense.toast.created"));
-      router.push("/finance/expenses");
+      if (form.trip_id) {
+  router.push(`/trips/${form.trip_id}/finance`);
+} else {
+  router.push("/finance/expenses");
+}
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
@@ -410,7 +424,7 @@ export default function NewCashExpensePage() {
               onChange={(value) =>
                 setPaymentSource(value as CashExpensePaymentSource)
               }
-              disabled={loading}
+              disabled={loading || Boolean(tripIdFromUrl)}
               options={allowedSources.map((source) => ({
                 value: source,
                 label: source,

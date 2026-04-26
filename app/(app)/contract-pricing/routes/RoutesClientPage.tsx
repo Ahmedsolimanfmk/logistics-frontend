@@ -8,11 +8,13 @@ import { TrexInput } from "@/src/components/ui/TrexInput";
 
 import { contractPricingService } from "@/src/services/contract-pricing.service";
 
-type Item = {
+type RouteItem = {
   id: string;
   name?: string;
   code?: string;
-  description?: string;
+  origin_label?: string;
+  destination_label?: string;
+  distance_km?: number;
   is_active?: boolean;
 };
 
@@ -24,16 +26,16 @@ function extractItems(body: any): any[] {
   return [];
 }
 
-export default function CargoTypesClientPage() {
-  const [rows, setRows] = useState<Item[]>([]);
+export default function RoutesClientPage() {
+  const [rows, setRows] = useState<RouteItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  async function loadRoutes() {
     try {
       setLoading(true);
 
-      const res = await contractPricingService.listCargoTypes({
+      const res = await contractPricingService.listRoutes({
         page: 1,
         pageSize: 200,
       });
@@ -45,7 +47,7 @@ export default function CargoTypesClientPage() {
   }
 
   useEffect(() => {
-    load();
+    loadRoutes();
   }, []);
 
   const filtered = useMemo(() => {
@@ -54,7 +56,12 @@ export default function CargoTypesClientPage() {
     const q = search.toLowerCase();
 
     return rows.filter((r) =>
-      [r.name, r.code, r.description]
+      [
+        r.name,
+        r.code,
+        r.origin_label,
+        r.destination_label,
+      ]
         .join(" ")
         .toLowerCase()
         .includes(q)
@@ -65,18 +72,34 @@ export default function CargoTypesClientPage() {
     {
       key: "name",
       label: "الاسم",
-      render: (r: Item) => r.name || r.code || "—",
+      render: (r: RouteItem) =>
+        r.name || r.code || "—",
     },
     {
-      key: "description",
-      label: "الوصف",
-      render: (r: Item) => r.description || "—",
+      key: "route",
+      label: "المسار",
+      render: (r: RouteItem) =>
+        [r.origin_label, r.destination_label]
+          .filter(Boolean)
+          .join(" → ") || "—",
+    },
+    {
+      key: "distance",
+      label: "المسافة",
+      render: (r: RouteItem) =>
+        r.distance_km ? `${r.distance_km} كم` : "—",
     },
     {
       key: "status",
       label: "الحالة",
-      render: (r: Item) => (
-        <span className={r.is_active ? "text-green-600" : "text-red-600"}>
+      render: (r: RouteItem) => (
+        <span
+          className={
+            r.is_active
+              ? "text-green-600"
+              : "text-red-600"
+          }
+        >
           {r.is_active ? "نشط" : "غير نشط"}
         </span>
       ),
@@ -84,8 +107,11 @@ export default function CargoTypesClientPage() {
     {
       key: "actions",
       label: "الإجراءات",
-      render: (r: Item) => (
-        <Link href={`/contract-pricing/cargo-types/${r.id}`}>
+      render: (r: RouteItem) => (
+        <Link
+          href={`/contract-pricing/routes/${r.id}`}
+          className="text-blue-600 hover:underline"
+        >
           عرض
         </Link>
       ),
@@ -94,24 +120,31 @@ export default function CargoTypesClientPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between">
-        <h1 className="text-xl font-bold">أنواع الحمولة</h1>
+      {/* HEADER */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-xl font-bold">المسارات</h1>
 
         <Link
-          href="/contract-pricing/cargo-types/new"
+          href="/contract-pricing/routes/new"
           className="bg-black text-white px-4 py-2 rounded"
         >
-          إضافة
+          إضافة مسار
         </Link>
       </div>
 
+      {/* SEARCH */}
       <TrexInput
         labelText="بحث"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <DataTable columns={columns} rows={filtered} loading={loading} />
+      {/* TABLE */}
+      <DataTable
+        columns={columns}
+        rows={filtered}
+        loading={loading}
+      />
     </div>
   );
 }

@@ -1,372 +1,371 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/src/store/auth";
-import { useT } from "@/src/i18n/useT";
 
 import { tripsService } from "@/src/services/trips.service";
-import type { Trip } from "@/src/types/trips.types";
+import { tripRevenuesService } from "@/src/services/trip-revenues.service";
+import { tripFinanceService } from "@/src/services/trip-finance.service";
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
+function money(value: any) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString("ar-EG");
 }
 
-function fmtDate(d?: string | null) {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
-}
-
-function num(v: any) {
-  const n = Number(v ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function fmtMoney(n: any, currency = "EGP") {
-  const v = num(n);
-  try {
-    return new Intl.NumberFormat("ar-EG", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(v);
-  } catch {
-    return new Intl.NumberFormat("ar-EG", {
-      maximumFractionDigits: 2,
-    }).format(v);
-  }
-}
-
-function roleUpper(r: any) {
-  return String(r || "").toUpperCase();
-}
-
-function StatusBadge({ value }: { value?: string | null }) {
-  const st = String(value || "").toUpperCase();
-
-  const cls =
-    st === "DRAFT"
-      ? "bg-slate-100 text-slate-700 border-slate-200"
-      : st === "ASSIGNED"
-      ? "bg-blue-50 text-blue-800 border-blue-200"
-      : st === "IN_PROGRESS"
-      ? "bg-amber-50 text-amber-800 border-amber-200"
-      : st === "COMPLETED"
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : st === "CANCELLED"
-      ? "bg-red-50 text-red-800 border-red-200"
-      : "bg-white text-slate-700 border-slate-200";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
-}
-
-function FinancialStatusBadge({ value }: { value?: string | null }) {
-  const st = String(value || "").toUpperCase();
-
-  const cls =
-    st === "OPEN"
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : st === "UNDER_REVIEW"
-      ? "bg-amber-50 text-amber-800 border-amber-200"
-      : st === "CLOSED"
-      ? "bg-slate-100 text-slate-700 border-slate-200"
-      : "bg-white text-slate-700 border-slate-200";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
-}
-
-function KeyValue({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <div className="text-xs text-slate-500 mb-1">{label}</div>
-      <div className="text-sm text-slate-900 font-medium break-words">
-        {value ?? "—"}
-      </div>
-    </div>
-  );
+function text(value: any) {
+  return value || "—";
 }
 
 export default function TripDetailsPage() {
-  const t = useT();
+  const { id } = useParams();
   const router = useRouter();
-  const params = useParams();
-  const tripId = String((params as any)?.id || "");
 
-  const token = useAuth((s) => s.token);
-  const user = useAuth((s) => s.user);
-  const role = roleUpper(user?.role);
-
-  const canSeeFinance = useMemo(
-    () => role === "ADMIN" || role === "ACCOUNTANT",
-    [role]
-  );
-  const canManageRevenue = useMemo(
-    () => role === "ADMIN" || role === "CONTRACT_MANAGER",
-    [role]
-  );
+  const [trip, setTrip] = useState<any>(null);
+  const [revenue, setRevenue] = useState<any>(null);
+  const [financeSummary, setFinanceSummary] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trip, setTrip] = useState<Trip | null>(null);
 
-  async function load() {
-    if (!tripId || !token) return;
-
-    setLoading(true);
-    setError(null);
-
+  async function loadTrip() {
     try {
-      const data = await tripsService.getById(tripId);
-      setTrip(data);
-    } catch (e: any) {
-      setError(e?.message || "فشل تحميل بيانات الرحلة");
-      setTrip(null);
+      setLoading(true);
+      setError(null);
+
+      const [tripRes, revenueRes, financeRes] = await Promise.all([
+        tripsService.getById(id as string),
+        tripRevenuesService.getByTrip(id as string),
+        tripFinanceService.getSummary(id as string),
+      ]);
+
+      setTrip(tripRes);
+      setRevenue((revenueRes as any)?.data || null);
+      setFinanceSummary((financeRes as any)?.data || financeRes || null);
+    } catch (err: any) {
+      setError(err?.message || "فشل تحميل بيانات الرحلة");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    if (token === null) return;
-    if (!token) {
-      router.push("/login");
-      return;
+  async function runAction(action: "start" | "finish") {
+    if (!trip?.id) return;
+
+    try {
+      setActionLoading(true);
+      setError(null);
+
+      if (action === "start") {
+        await tripsService.start(trip.id);
+      }
+
+      if (action === "finish") {
+        await tripsService.finish(trip.id);
+      }
+
+      await loadTrip();
+    } catch (err: any) {
+      setError(err?.message || "فشل تنفيذ الإجراء");
+    } finally {
+      setActionLoading(false);
     }
-    load();
-  }, [token, tripId]);
+  }
 
-  const activeAssignment = useMemo(() => {
-    const rows = trip?.trip_assignments || [];
-    return rows.find((x) => x?.is_active) || rows[0] || null;
-  }, [trip]);
+  async function autoPriceTrip() {
+    if (!trip?.id) return;
 
-  const siteName =
-    trip?.site?.name ||
-    trip?.sites?.name ||
-    trip?.pickup_site?.name ||
-    trip?.dropoff_site?.name ||
-    "—";
+    try {
+      setActionLoading(true);
+      setError(null);
 
-  const routeName =
-    trip?.routes?.name ||
-    [
-      trip?.routes?.origin_label,
-      trip?.routes?.destination_label,
-    ]
-      .filter(Boolean)
-      .join(" → ") ||
-    "—";
+      await tripRevenuesService.autoPrice(trip.id, {});
+      await loadTrip();
+    } catch (err: any) {
+      setError(err?.message || "فشل حساب التسعير التلقائي");
+    } finally {
+      setActionLoading(false);
+    }
+  }
 
-  const contractLabel =
-    trip?.client_contracts?.contract_no ||
-    trip?.contract?.contract_no ||
-    trip?.contract_id ||
-    "—";
+  async function approveRevenue() {
+    if (!trip?.id) return;
 
-  const currency = trip?.currency || trip?.revenue_currency || "EGP";
+    try {
+      setActionLoading(true);
+      setError(null);
 
-  return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 p-4 md:p-6" dir="rtl">
-      <div className="max-w-6xl mx-auto space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold">
-                تفاصيل الرحلة
-              </h1>
-              <StatusBadge value={trip?.status} />
-              <FinancialStatusBadge value={trip?.financial_status} />
-            </div>
+      await tripRevenuesService.approve(trip.id, {});
+      await loadTrip();
+    } catch (err: any) {
+      setError(err?.message || "فشل اعتماد الإيراد");
+    } finally {
+      setActionLoading(false);
+    }
+  }
 
-            <div className="text-xs text-slate-600">
-              رقم الرحلة:{" "}
-              <span className="font-semibold text-slate-900">
-                {trip?.trip_code || tripId}
-              </span>
-            </div>
-          </div>
+  useEffect(() => {
+    if (id) loadTrip();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => router.back()}
-              className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
-            >
-              {t("common.back")}
-            </button>
+  if (loading) {
+    return <div className="p-6">جاري التحميل...</div>;
+  }
 
-            <Link
-              href="/trips"
-              className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
-            >
-              الرحلات
-            </Link>
-
-            {canSeeFinance ? (
-              <Link
-                href={`/trips/${tripId}/finance`}
-                className="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-sm text-emerald-800"
-              >
-                المالية
-              </Link>
-            ) : null}
-
-            {canManageRevenue ? (
-              <Link
-                href={`/trips/${tripId}/revenue`}
-                className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm text-blue-800"
-              >
-                الإيراد
-              </Link>
-            ) : null}
-          </div>
+  if (error) {
+    return (
+      <div className="space-y-4 p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
         </div>
 
-        {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-            {t("common.loading")}
-          </div>
-        ) : trip ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-              <KeyValue label="العميل" value={trip?.clients?.name || "—"} />
-              <KeyValue label="العقد" value={contractLabel} />
-              <KeyValue label="الموقع" value={siteName} />
-              <KeyValue label="المسار" value={routeName} />
-
-              <KeyValue label="نوع الرحلة" value={trip?.trip_type || "—"} />
-              <KeyValue
-                label="نوع الحمولة"
-                value={trip?.cargo_types?.name || "—"}
-              />
-              <KeyValue
-                label="وزن الحمولة"
-                value={
-                  trip?.cargo_weight != null ? String(trip.cargo_weight) : "—"
-                }
-              />
-              <KeyValue
-                label="الموعد المجدول"
-                value={fmtDate(trip?.scheduled_at)}
-              />
-
-              <KeyValue
-                label="تاريخ البدء"
-                value={fmtDate(trip?.actual_departure_at)}
-              />
-              <KeyValue
-                label="تاريخ الوصول"
-                value={fmtDate(trip?.actual_arrival_at)}
-              />
-              <KeyValue
-                label="الإيراد المتفق عليه"
-                value={fmtMoney(trip?.agreed_revenue ?? 0, currency)}
-              />
-              <KeyValue
-                label="طريقة إدخال الإيراد"
-                value={trip?.revenue_entry_mode || "—"}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-                <div className="text-sm font-bold text-slate-900">
-                  بيانات التشغيل
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <KeyValue label="الأصل" value={trip?.origin || "—"} />
-                  <KeyValue label="الوجهة" value={trip?.destination || "—"} />
-                  <KeyValue
-                    label="Pickup Site"
-                    value={trip?.pickup_site?.name || "—"}
-                  />
-                  <KeyValue
-                    label="Dropoff Site"
-                    value={trip?.dropoff_site?.name || "—"}
-                  />
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-500 mb-1">ملاحظات</div>
-                  <div className="text-sm text-slate-900 whitespace-pre-wrap">
-                    {trip?.notes || "—"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-                <div className="text-sm font-bold text-slate-900">
-                  الإسناد الحالي
-                </div>
-
-                {activeAssignment ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <KeyValue
-                      label="السيارة"
-                      value={
-                        activeAssignment?.vehicles?.display_name ||
-                        activeAssignment?.vehicles?.fleet_no ||
-                        activeAssignment?.vehicles?.plate_no ||
-                        "—"
-                      }
-                    />
-                    <KeyValue
-                      label="السائق"
-                      value={
-                        activeAssignment?.drivers?.full_name ||
-                        activeAssignment?.drivers?.name ||
-                        "—"
-                      }
-                    />
-                    <KeyValue
-                      label="المشرف"
-                      value={
-                        activeAssignment?.users_trip_assignments_supervisor
-                          ?.full_name || "—"
-                      }
-                    />
-                    <KeyValue
-                      label="تاريخ الإسناد"
-                      value={fmtDate(activeAssignment?.assigned_at)}
-                    />
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                    لا يوجد إسناد متاح لهذه الرحلة.
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-            لا توجد بيانات.
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => router.push("/trips")}
+          className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+        >
+          رجوع
+        </button>
       </div>
+    );
+  }
+
+  if (!trip) {
+    return <div className="p-6">لا توجد بيانات</div>;
+  }
+
+  const tripCode = trip.trip_no || trip.trip_number || trip.code;
+
+  const clientName =
+    trip.clients?.name ||
+    trip.client?.name ||
+    trip.clients?.company_name ||
+    trip.client?.company_name;
+
+  const contractNo =
+    trip.client_contracts?.contract_no ||
+    trip.contract?.contract_no ||
+    trip.contract_no;
+
+  const routeName =
+    trip.routes?.name ||
+    trip.route?.name ||
+    [trip.routes?.origin_label, trip.routes?.destination_label]
+      .filter(Boolean)
+      .join(" → ");
+
+  const pickupSiteName =
+    trip.pickup_site?.name ||
+    trip.pickup_sites?.name ||
+    trip.pickup_site_name;
+
+  const dropoffSiteName =
+    trip.dropoff_site?.name ||
+    trip.dropoff_sites?.name ||
+    trip.dropoff_site_name;
+
+  const siteName = trip.sites?.name || trip.site?.name || trip.site_name;
+
+  const vehicleName =
+    trip.vehicles?.plate_no ||
+    trip.vehicle?.plate_no ||
+    trip.vehicles?.plate_number ||
+    trip.vehicle?.plate_number ||
+    trip.vehicles?.truck_number ||
+    trip.vehicle?.truck_number;
+
+  const driverName =
+    trip.drivers?.name ||
+    trip.driver?.name ||
+    trip.driver_name ||
+    trip.drivers?.full_name ||
+    trip.driver?.full_name;
+
+  const supervisorName =
+    trip.supervisors?.name ||
+    trip.supervisor?.name ||
+    trip.supervisor_name ||
+    trip.supervisors?.full_name ||
+    trip.supervisor?.full_name;
+
+  const expectedRevenue =
+    revenue?.expected_amount || revenue?.amount || trip.expected_revenue;
+
+  const approvedRevenue =
+    revenue?.approved_amount || revenue?.final_amount || trip.actual_revenue;
+
+  const totalExpenses =
+    financeSummary?.total_expenses ||
+    financeSummary?.expenses_total ||
+    trip.cost;
+
+  const netProfit =
+    financeSummary?.net_profit || financeSummary?.profit || null;
+
+  const profitMargin = financeSummary?.profit_margin;
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            تفاصيل الرحلة
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">{text(tripCode)}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => router.push("/trips")}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            رجوع
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push(`/trips/${trip.id}/revenue`)}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+            >
+             تفاصيل الإيراد
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push(`/trips/${trip.id}/finance`)}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+            >
+  مالية الرحلة
+</button>
+
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={autoPriceTrip}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+          >
+            إعادة حساب التسعير
+          </button>
+
+          <button
+            type="button"
+            disabled={actionLoading || !revenue}
+            onClick={approveRevenue}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+          >
+            اعتماد الإيراد
+          </button>
+
+          {trip.status === "DRAFT" ? (
+            <button
+              type="button"
+              disabled={actionLoading}
+              onClick={() => runAction("start")}
+              className="rounded-xl bg-black px-4 py-2 text-sm text-white disabled:opacity-60"
+            >
+              بدء الرحلة
+            </button>
+          ) : null}
+
+          {trip.status === "IN_PROGRESS" ? (
+            <button
+              type="button"
+              disabled={actionLoading}
+              onClick={() => runAction("finish")}
+              className="rounded-xl bg-black px-4 py-2 text-sm text-white disabled:opacity-60"
+            >
+              إنهاء الرحلة
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {/* BASIC INFO */}
+      <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-3">
+        <Item label="رقم الرحلة" value={tripCode} />
+        <Item label="الحالة" value={trip.status} />
+        <Item label="نوع الرحلة" value={trip.trip_type} />
+        <Item label="العميل" value={clientName} />
+        <Item label="العقد" value={contractNo} />
+        <Item label="المسار" value={routeName} />
+      </section>
+
+      {/* ASSIGNMENT */}
+      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+        <h2 className="mb-3 font-semibold">التخصيص</h2>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <Item label="المركبة" value={vehicleName} />
+          <Item label="السائق" value={driverName} />
+          <Item label="المشرف" value={supervisorName} />
+        </div>
+
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => router.push(`/trips/${trip.id}/assign`)}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            تعديل التخصيص
+          </button>
+        </div>
+      </section>
+
+      {/* LOCATIONS */}
+      <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-3">
+        <Item label="موقع التحميل" value={pickupSiteName} />
+        <Item label="موقع التسليم" value={dropoffSiteName} />
+        <Item label="الموقع" value={siteName} />
+      </section>
+
+      {/* TIME */}
+      <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-3">
+        <Item label="تاريخ الرحلة" value={trip.trip_date || trip.date} />
+        <Item label="البداية المخططة" value={trip.planned_start_at} />
+        <Item label="النهاية المخططة" value={trip.planned_end_at} />
+        <Item label="بدأت فعليًا" value={trip.started_at} />
+        <Item label="انتهت فعليًا" value={trip.finished_at || trip.ended_at} />
+        <Item
+          label="المسافة المتوقعة"
+          value={
+            trip.estimated_distance_km
+              ? `${trip.estimated_distance_km} كم`
+              : null
+          }
+        />
+      </section>
+
+      {/* FINANCE + REVENUE */}
+      <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-3">
+        <Item label="الإيراد المتوقع" value={money(expectedRevenue)} />
+        <Item label="الإيراد المعتمد" value={money(approvedRevenue)} />
+        <Item label="حالة الإيراد" value={revenue?.status || "—"} />
+        <Item label="إجمالي المصروفات" value={money(totalExpenses)} />
+        <Item label="صافي الربح" value={money(netProfit)} />
+        <Item
+          label="هامش الربح"
+          value={profitMargin != null ? `${profitMargin}%` : "—"}
+        />
+      </section>
+
+      {/* NOTES */}
+      {trip.notes ? (
+        <section className="rounded-2xl border bg-white p-5 shadow-sm">
+          <h2 className="mb-2 font-semibold">ملاحظات</h2>
+          <p className="text-sm text-gray-700">{trip.notes}</p>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function Item({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="text-sm">
+      <div className="text-gray-500">{label}</div>
+      <div className="mt-1 font-medium text-gray-900">{text(value)}</div>
     </div>
   );
 }

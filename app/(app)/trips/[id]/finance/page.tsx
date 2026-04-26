@@ -1,824 +1,176 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/src/store/auth";
-import { useT } from "@/src/i18n/useT";
 
 import { tripFinanceService } from "@/src/services/trip-finance.service";
-import { tripRevenuesService } from "@/src/services/trip-revenues.service";
 
-import type { TripFinanceSummary } from "@/src/types/trip-finance.types";
-import type {
-  TripRevenue,
-  TripRevenueSource,
-} from "@/src/types/trip-revenues.types";
-
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
-
-function roleUpper(r: any) {
-  return String(r || "").toUpperCase();
-}
-
-function num(value: any) {
+function money(value: any) {
   const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString("ar-EG");
 }
 
-function fmtMoney(n: any, currency = "EGP") {
-  const v = num(n);
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(v);
-  } catch {
-    return new Intl.NumberFormat("en-US", {
-      maximumFractionDigits: 2,
-    }).format(v);
-  }
+function text(value: any) {
+  return value || "—";
 }
-
-function fmtDate(d?: string | null) {
-  if (!d) return "—";
-  const dt = new Date(String(d));
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleString("ar-EG");
-}
-
-type TabKey = "summary" | "revenue" | "expenses" | "actions";
-
-function StatusBadge({ s }: { s: string }) {
-  const st = String(s || "").toUpperCase();
-  const cls =
-    st === "OPEN"
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : st === "UNDER_REVIEW"
-      ? "bg-amber-50 text-amber-800 border-amber-200"
-      : st === "CLOSED"
-      ? "bg-slate-100 text-slate-700 border-slate-200"
-      : "bg-white text-slate-700 border-slate-200";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
-}
-
-function ProfitBadge({ s }: { s?: string | null }) {
-  const st = String(s || "").toUpperCase();
-
-  const cls =
-    st === "PROFIT"
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : st === "LOSS"
-      ? "bg-red-50 text-red-800 border-red-200"
-      : st === "BREAK_EVEN"
-      ? "bg-slate-100 text-slate-700 border-slate-200"
-      : "bg-white text-slate-700 border-slate-200";
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded-md text-xs border", cls)}>
-      {st || "—"}
-    </span>
-  );
-}
-
-const inputCls =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-300";
-
-const textareaCls =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 min-h-[100px]";
 
 export default function TripFinancePage() {
-  const t = useT();
-
-  const params = useParams();
+  const { id } = useParams();
   const router = useRouter();
-  const tripId = String((params as any)?.id || "");
 
-  const user = useAuth((s) => s.user);
-  const role = roleUpper(user?.role);
-
-  const canViewProfitability = role === "ADMIN" || role === "ACCOUNTANT";
-  const canManageFinanceState = role === "ADMIN" || role === "ACCOUNTANT";
-  const canEditRevenue = role === "ADMIN" || role === "CONTRACT_MANAGER";
-
-  const [tab, setTab] = useState<TabKey>("summary");
-
+  const [summary, setSummary] = useState<any>(null);
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [savingRevenue, setSavingRevenue] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [summary, setSummary] = useState<TripFinanceSummary | null>(null);
-  const [revenueRecord, setRevenueRecord] = useState<TripRevenue | null>(null);
-
-  const [revenueAmount, setRevenueAmount] = useState("");
-  const [revenueCurrency, setRevenueCurrency] = useState("EGP");
-  const [revenueSource, setRevenueSource] =
-    useState<TripRevenueSource>("MANUAL");
-  const [revenueNotes, setRevenueNotes] = useState("");
-
-  useEffect(() => {
-    if (!user) return;
-    if (!canViewProfitability) {
-      router.replace("/trips");
-    }
-  }, [user, canViewProfitability, router]);
-
   async function load() {
-    if (!tripId || !canViewProfitability) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
     try {
-      const financePromise = tripFinanceService.getSummary(tripId);
-      const profitabilityPromise = tripRevenuesService.getProfitability(tripId);
-      const revenuePromise = canEditRevenue
-        ? tripRevenuesService.getByTrip(tripId)
-        : Promise.resolve({ success: true, data: null } as any);
+      setLoading(true);
+      setError(null);
 
-      const [financeSummary, revenueRes, profitabilityRes] = await Promise.all([
-        financePromise,
-        revenuePromise,
-        profitabilityPromise,
-      ]);
-
-      const revenue = revenueRes?.data || null;
-      const profitability = profitabilityRes?.data || null;
-
-      const mergedSummary: TripFinanceSummary = {
-        ...financeSummary,
-        revenue: profitability?.revenue ?? financeSummary?.revenue ?? 0,
-        expenses: profitability?.expenses ?? financeSummary?.expenses ?? 0,
-        pending_expenses:
-          profitability?.pending_expenses ??
-          financeSummary?.pending_expenses ??
-          0,
-        company_expenses:
-          profitability?.company_expenses ??
-          financeSummary?.company_expenses ??
-          0,
-        advance_expenses:
-          profitability?.advance_expenses ??
-          financeSummary?.advance_expenses ??
-          0,
-        profit: profitability?.profit ?? financeSummary?.profit ?? 0,
-        profit_status:
-          profitability?.profit_status ??
-          financeSummary?.profit_status ??
-          "BREAK_EVEN",
-        currency:
-          profitability?.currency ||
-          financeSummary?.currency ||
-          revenue?.currency ||
-          "EGP",
-        revenue_record:
-          profitability?.revenue_record ??
-          financeSummary?.revenue_record ??
-          revenue ??
-          null,
-        current_revenue_record:
-          profitability?.current_revenue_record ??
-          financeSummary?.current_revenue_record ??
-          null,
-        current_approved_revenue_record:
-          profitability?.current_approved_revenue_record ??
-          financeSummary?.current_approved_revenue_record ??
-          null,
-        breakdown_by_type:
-          profitability?.breakdown_by_type ??
-          financeSummary?.breakdown_by_type ??
-          {},
-        expenses_items:
-          financeSummary?.expenses_items || profitability?.expenses_items || [],
-        pending_expenses_items:
-          financeSummary?.pending_expenses_items ||
-          profitability?.pending_expenses_items ||
-          [],
-      };
-
-      setSummary(mergedSummary);
-      setRevenueRecord(revenue);
-
-      setRevenueAmount(
-        revenue?.amount != null ? String(num(revenue.amount)) : ""
-      );
-      setRevenueCurrency(
-        String(
-          revenue?.currency ||
-            profitability?.currency ||
-            financeSummary?.currency ||
-            "EGP"
-        )
-      );
-      setRevenueSource((revenue?.source as TripRevenueSource) || "MANUAL");
-      setRevenueNotes(String(revenue?.notes || ""));
-    } catch (e: any) {
-      setError(e?.message || t("tripFinance.errors.loadFailed"));
-      setSummary(null);
-      setRevenueRecord(null);
+      const res = await tripFinanceService.getSummary(id as string);
+      setSummary(res);
+    } catch (err: any) {
+      setError(err?.message || "فشل تحميل الملخص المالي");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    if (!tripId || !canViewProfitability) return;
-    load();
-  }, [tripId, canViewProfitability]);
-
-  const financeStatus = useMemo(() => {
-    return summary?.financial_status || "UNKNOWN";
-  }, [summary]);
-
-  const totals = useMemo(() => {
-    const revenue = num(summary?.revenue);
-    const totalExpenses = num(summary?.expenses);
-    const pendingExpenses = num(summary?.pending_expenses);
-    const advanceTotal = num(summary?.advance_expenses);
-    const companyTotal = num(summary?.company_expenses);
-    const profit = num(summary?.profit ?? revenue - totalExpenses);
-
-    return {
-      revenue,
-      totalExpenses,
-      pendingExpenses,
-      advanceTotal,
-      companyTotal,
-      profit,
-    };
-  }, [summary]);
-
-  const expensesBreakdownEntries = useMemo(() => {
-    const obj = summary?.breakdown_by_type || {};
-    return Object.entries(obj).sort((a, b) => num(b[1]) - num(a[1]));
-  }, [summary]);
-
   async function openReview() {
-    if (!canManageFinanceState) return;
-
-    setBusy(true);
-    setError(null);
     try {
-      await tripFinanceService.openReview(tripId);
+      setActionLoading(true);
+      setError(null);
+
+      await tripFinanceService.openReview(id as string);
       await load();
-      setTab("summary");
-    } catch (e: any) {
-      setError(e?.message || t("tripFinance.errors.openReviewFailed"));
+    } catch (err: any) {
+      setError(err?.message || "فشل فتح المراجعة المالية");
     } finally {
-      setBusy(false);
+      setActionLoading(false);
     }
   }
 
   async function closeFinance() {
-    if (!canManageFinanceState) return;
-
-    const confirmText = t("tripFinance.confirm.closeText");
-    if (!window.confirm(confirmText)) return;
-
-    const notes = window.prompt(t("tripFinance.confirm.closeNotesPrompt")) || "";
-
-    setBusy(true);
-    setError(null);
     try {
-      await tripFinanceService.close(tripId, notes);
+      setActionLoading(true);
+      setError(null);
+
+      await tripFinanceService.close(id as string, notes);
       await load();
-      setTab("summary");
-    } catch (e: any) {
-      setError(e?.message || t("tripFinance.errors.closeFailed"));
+    } catch (err: any) {
+      setError(err?.message || "فشل إغلاق مالية الرحلة");
     } finally {
-      setBusy(false);
+      setActionLoading(false);
     }
   }
-
-  async function saveRevenue() {
-    if (!canEditRevenue) return;
-
-    const amount = Number(revenueAmount);
-    if (!Number.isFinite(amount) || amount < 0) {
-      setError("قيمة الإيراد غير صحيحة");
-      setTab("revenue");
-      return;
-    }
-
-    setSavingRevenue(true);
-    setError(null);
-
-    try {
-      await tripRevenuesService.save(tripId, {
-        amount,
-        currency: revenueCurrency || "EGP",
-        source: revenueSource,
-        contract_id: (revenueRecord as any)?.contract_id || null,
-        invoice_id: (revenueRecord as any)?.invoice_id || null,
-        pricing_rule_id: (revenueRecord as any)?.pricing_rule_id || null,
-        notes: revenueNotes.trim() || null,
-      });
-
-      await load();
-      setTab("summary");
-    } catch (e: any) {
-      setError(e?.message || "فشل حفظ إيراد الرحلة");
-      setTab("revenue");
-    } finally {
-      setSavingRevenue(false);
-    }
-  }
-
-  const tabs = useMemo(() => {
-    const baseTabs: { key: TabKey; label: string }[] = [
-      { key: "summary", label: t("tripFinance.tabs.summary") },
-      { key: "expenses", label: t("tripFinance.tabs.expenses") },
-    ];
-
-    if (canEditRevenue) {
-      baseTabs.splice(1, 0, { key: "revenue", label: "الإيراد" });
-    }
-
-    if (canManageFinanceState) {
-      baseTabs.push({ key: "actions", label: t("tripFinance.tabs.actions") });
-    }
-
-    return baseTabs;
-  }, [t, canEditRevenue, canManageFinanceState]);
 
   useEffect(() => {
-    if (tab === "revenue" && !canEditRevenue) {
-      setTab("summary");
-    }
-    if (tab === "actions" && !canManageFinanceState) {
-      setTab("summary");
-    }
-  }, [tab, canEditRevenue, canManageFinanceState]);
+    if (id) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-  const currency =
-    summary?.currency || revenueRecord?.currency || revenueCurrency || "EGP";
-
-  if (user && !canViewProfitability) {
-    return null;
-  }
+  if (loading) return <div className="p-6">جاري التحميل...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 p-4 md:p-6" dir="rtl">
-      <div className="max-w-6xl mx-auto space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">{t("tripFinance.title")}</h1>
-              <StatusBadge s={String(financeStatus)} />
-              <ProfitBadge s={summary?.profit_status} />
-            </div>
-
-            <div className="text-xs text-slate-600">
-              {t("tripFinance.tripId")}:{" "}
-              <span className="text-slate-900 font-semibold">{tripId}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.back()}
-              className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
-            >
-              {t("common.back")}
-            </button>
-
-            <Link
-              href="/trips"
-              className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
-            >
-              {t("tripFinance.trips")}
-            </Link>
-
-            {canEditRevenue ? (
-              <Link
-                href={`/trips/${tripId}/revenue`}
-                className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm text-blue-800"
-              >
-                صفحة الإيراد
-              </Link>
-            ) : null}
-          </div>
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            مالية الرحلة
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            مراجعة المصروفات، الإيرادات، وصافي الربح.
+          </p>
         </div>
-
-        {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
 
         <div className="flex flex-wrap gap-2">
-          {tabs.map((tt) => (
-            <button
-              key={tt.key}
-              onClick={() => setTab(tt.key)}
-              className={cn(
-                "px-3 py-2 rounded-lg text-sm border transition",
-                tab === tt.key
-                  ? "bg-slate-900 border-slate-900 text-white"
-                  : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-              )}
-            >
-              {tt.label}
-            </button>
-          ))}
-        </div>
+          <button
+            type="button"
+            onClick={() => router.push(`/trips/${id}`)}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            رجوع
+          </button>
+<button
+  type="button"
+  onClick={() => router.push(`/finance/expenses/new?trip_id=${id}`)}
+  className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+>
+  إضافة مصروف رحلة
+</button>
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={load}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+          >
+            تحديث
+          </button>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          {loading ? (
-            <div className="text-sm text-slate-600">{t("common.loading")}</div>
-          ) : tab === "summary" ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">الإيراد</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.revenue, currency)}
-                  </div>
-                </div>
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={openReview}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+          >
+            فتح مراجعة
+          </button>
 
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">المصروفات المعتمدة</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.totalExpenses, currency)}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">المصروفات المعلقة</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.pendingExpenses, currency)}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">مصروفات الشركة</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.companyTotal, currency)}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">مصروفات العهد</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.advanceTotal, currency)}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">الربحية</div>
-                  <div
-                    className={cn(
-                      "text-lg font-semibold",
-                      totals.profit >= 0
-                        ? "text-emerald-700"
-                        : "text-red-700"
-                    )}
-                  >
-                    {fmtMoney(totals.profit, currency)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
-                  <div className="text-sm font-semibold text-slate-900">
-                    معلومات الملف المالي
-                  </div>
-
-                  <div className="text-sm text-slate-800">
-                    الحالة المالية:{" "}
-                    <span className="font-semibold text-slate-900">
-                      {String(financeStatus || "—")}
-                    </span>
-                  </div>
-
-                  <div className="text-sm text-slate-800">
-                    العملة:{" "}
-                    <span className="font-semibold text-slate-900">
-                      {currency}
-                    </span>
-                  </div>
-
-                  <div className="text-sm text-slate-800">
-                    حالة الربحية:{" "}
-                    <span className="font-semibold text-slate-900">
-                      {String(summary?.profit_status || "—")}
-                    </span>
-                  </div>
-
-                  <div className="text-sm text-slate-800">
-                    آخر إيراد فعال:{" "}
-                    <span className="font-semibold text-slate-900">
-                      {summary?.revenue_record?.id
-                        ? fmtMoney(summary?.revenue_record?.amount, currency)
-                        : "—"}
-                    </span>
-                  </div>
-
-                  <div className="text-sm text-slate-800">
-                    تاريخ تسجيل الإيراد:{" "}
-                    <span className="font-semibold text-slate-900">
-                      {fmtDate(summary?.revenue_record?.entered_at || null)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="text-sm font-semibold text-slate-900 mb-3">
-                    توزيع المصروفات حسب النوع
-                  </div>
-
-                  {expensesBreakdownEntries.length === 0 ? (
-                    <div className="text-sm text-slate-600">
-                      لا توجد مصروفات معتمدة حتى الآن.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {expensesBreakdownEntries.map(([key, value]) => (
-                        <div
-                          key={key}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                        >
-                          <div className="text-slate-800">{key}</div>
-                          <div className="font-semibold text-slate-900">
-                            {fmtMoney(value, currency)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : tab === "revenue" && canEditRevenue ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">الإيراد الحالي</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.revenue, currency)}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">آخر قيمة محفوظة</div>
-                  <div className="text-lg font-semibold">
-                    {revenueRecord?.amount != null
-                      ? fmtMoney(revenueRecord.amount, currency)
-                      : "—"}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">مصدر الإيراد</div>
-                  <div className="text-lg font-semibold">
-                    {String(revenueRecord?.source || revenueSource || "MANUAL")}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-slate-900">
-                    بيانات الإيراد
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <label className="space-y-1">
-                    <div className="text-xs text-slate-600">قيمة الإيراد</div>
-                    <input
-                      type="number"
-                      value={revenueAmount}
-                      onChange={(e) => setRevenueAmount(e.target.value)}
-                      className={inputCls}
-                      disabled={!canEditRevenue || savingRevenue}
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <div className="text-xs text-slate-600">العملة</div>
-                    <select
-                      value={revenueCurrency}
-                      onChange={(e) => setRevenueCurrency(e.target.value)}
-                      className={inputCls}
-                      disabled={!canEditRevenue || savingRevenue}
-                    >
-                      <option value="EGP">EGP</option>
-                      <option value="USD">USD</option>
-                      <option value="SAR">SAR</option>
-                    </select>
-                  </label>
-
-                  <label className="space-y-1">
-                    <div className="text-xs text-slate-600">المصدر</div>
-                    <select
-                      value={revenueSource}
-                      onChange={(e) =>
-                        setRevenueSource(e.target.value as TripRevenueSource)
-                      }
-                      className={inputCls}
-                      disabled={!canEditRevenue || savingRevenue}
-                    >
-                      <option value="MANUAL">MANUAL</option>
-                      <option value="CONTRACT">CONTRACT</option>
-                      <option value="INVOICE">INVOICE</option>
-                    </select>
-                  </label>
-                </div>
-
-                <label className="space-y-1 block">
-                  <div className="text-xs text-slate-600">ملاحظات</div>
-                  <textarea
-                    value={revenueNotes}
-                    onChange={(e) => setRevenueNotes(e.target.value)}
-                    className={textareaCls}
-                    disabled={!canEditRevenue || savingRevenue}
-                  />
-                </label>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
-                    <div>
-                      المصدر الحالي:{" "}
-                      <span className="font-semibold">
-                        {revenueRecord?.source || "—"}
-                      </span>
-                    </div>
-                    <div>
-                      المدخل:{" "}
-                      <span className="font-semibold">
-                        {(revenueRecord as any)?.users_entered?.full_name || "—"}
-                      </span>
-                    </div>
-                    <div>
-                      تاريخ الإدخال:{" "}
-                      <span className="font-semibold">
-                        {fmtDate((revenueRecord as any)?.entered_at)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
-                    <div>
-                      الإيراد الحالي:{" "}
-                      <span className="font-semibold">
-                        {fmtMoney(totals.revenue, currency)}
-                      </span>
-                    </div>
-                    <div>
-                      آخر قيمة محفوظة:{" "}
-                      <span className="font-semibold">
-                        {revenueRecord?.amount != null
-                          ? fmtMoney(revenueRecord.amount, currency)
-                          : "—"}
-                      </span>
-                    </div>
-                    <div>
-                      العملة:{" "}
-                      <span className="font-semibold">{currency}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={!canEditRevenue || savingRevenue}
-                    onClick={saveRevenue}
-                    className="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-sm disabled:opacity-50 text-emerald-800"
-                  >
-                    {savingRevenue ? "جارٍ الحفظ..." : "حفظ الإيراد"}
-                  </button>
-
-                  <button
-                    disabled={savingRevenue}
-                    onClick={load}
-                    className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
-                  >
-                    تحديث
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : tab === "expenses" ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-800">ملخص المصروفات</div>
-                <Link
-                  href="/finance/expenses"
-                  className="text-xs text-slate-600 hover:text-slate-900"
-                >
-                  فتح قائمة المصروفات
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">مصروفات الشركة</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.companyTotal, currency)}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">مصروفات العهد</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.advanceTotal, currency)}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-xs text-slate-600">المصروفات المعلقة</div>
-                  <div className="text-lg font-semibold">
-                    {fmtMoney(totals.pendingExpenses, currency)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-slate-200 bg-white p-4">
-                <div className="text-sm font-semibold text-slate-900 mb-3">
-                  التوزيع حسب النوع
-                </div>
-
-                {expensesBreakdownEntries.length === 0 ? (
-                  <div className="text-sm text-slate-600">
-                    لا توجد مصروفات معتمدة متاحة للعرض.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {expensesBreakdownEntries.map(([key, value]) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                      >
-                        <div className="text-slate-800">{key}</div>
-                        <div className="font-semibold text-slate-900">
-                          {fmtMoney(value, currency)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : tab === "actions" && canManageFinanceState ? (
-            <div className="space-y-3">
-              <div className="text-sm text-slate-800">
-                {t("tripFinance.actions.title")}{" "}
-                <span className="text-xs text-slate-600">
-                  (Role: {role || "—"} / Finance:{" "}
-                  {String(financeStatus).toUpperCase()})
-                </span>
-              </div>
-
-              <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-                <button
-                  disabled={
-                    busy || String(financeStatus).toUpperCase() === "UNDER_REVIEW"
-                  }
-                  onClick={openReview}
-                  className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-sm disabled:opacity-50 text-amber-800"
-                >
-                  {t("tripFinance.actions.openReview")}
-                </button>
-
-                <button
-                  disabled={busy || String(financeStatus).toUpperCase() === "CLOSED"}
-                  onClick={closeFinance}
-                  className="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-sm disabled:opacity-50 text-emerald-800"
-                >
-                  {t("tripFinance.actions.closeFinance")}
-                </button>
-
-                <button
-                  disabled={busy}
-                  onClick={load}
-                  className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm disabled:opacity-50"
-                >
-                  {t("tripFinance.actions.refresh")}
-                </button>
-
-                <div className="text-xs text-slate-600">
-                  يمكن فتح المراجعة المالية ثم إغلاقها بعد اكتمال مراجعة الربحية
-                  والمصروفات والإيراد.
-                </div>
-              </div>
-            </div>
-          ) : null}
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={closeFinance}
+            className="rounded-xl bg-black px-4 py-2 text-sm text-white disabled:opacity-60"
+          >
+            إغلاق المالية
+          </button>
         </div>
       </div>
+
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <section className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-3">
+        <Item label="حالة المالية" value={summary?.status} />
+        <Item label="إجمالي الإيرادات" value={money(summary?.total_revenue)} />
+        <Item label="إجمالي المصروفات" value={money(summary?.total_expenses)} />
+        <Item label="صافي الربح" value={money(summary?.net_profit || summary?.profit)} />
+        <Item
+          label="هامش الربح"
+          value={
+            summary?.profit_margin != null
+              ? `${summary.profit_margin}%`
+              : "—"
+          }
+        />
+        <Item label="آخر تحديث" value={summary?.updated_at} />
+      </section>
+
+      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+        <h2 className="mb-3 font-semibold">ملاحظات الإغلاق</h2>
+
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="trex-input min-h-28 w-full px-3 py-2 text-sm"
+          placeholder="اكتب ملاحظات المالية هنا..."
+        />
+      </section>
+    </div>
+  );
+}
+
+function Item({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="text-sm">
+      <div className="text-gray-500">{label}</div>
+      <div className="mt-1 font-medium text-gray-900">{text(value)}</div>
     </div>
   );
 }

@@ -1,544 +1,328 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/src/store/auth";
 
+import { DataTable } from "@/src/components/ui/DataTable";
+import { TrexInput } from "@/src/components/ui/TrexInput";
+import { TrexSelect } from "@/src/components/ui/TrexSelect";
+
+import { contractPricingService } from "@/src/services/contract-pricing.service";
 import { clientsService } from "@/src/services/clients.service";
 import { contractsService } from "@/src/services/contracts.service";
-import { contractPricingService } from "@/src/services/contract-pricing.service";
 
-import type { Client } from "@/src/types/clients.types";
-import type { Contract } from "@/src/types/contracts.types";
-import type {
-  CargoTypeRef,
-  PricingRule,
-  PricingRouteRef,
-  VehicleClassRef,
-} from "@/src/types/contract-pricing.types";
+type Option = {
+  label: string;
+  value: string;
+};
 
-import { Toast } from "@/src/components/Toast";
-import { Button } from "@/src/components/ui/Button";
-import { PageHeader } from "@/src/components/ui/PageHeader";
-import { FiltersBar } from "@/src/components/ui/FiltersBar";
-import { KpiCard } from "@/src/components/ui/KpiCard";
-import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
-import { StatusBadge } from "@/src/components/ui/StatusBadge";
+type Filters = {
+  search: string;
+  client_id: string;
+  contract_id: string;
+  is_active: string;
+};
 
-function cn(...v: Array<string | false | null | undefined>) {
-  return v.filter(Boolean).join(" ");
-}
-
-type ToastState =
-  | {
-      type: "success" | "error";
-      msg: string;
-    }
-  | null;
-
-function formatMoney(value?: number | null, currency?: string | null) {
-  if (value == null) return "—";
-
-  try {
-    return new Intl.NumberFormat("ar-EG", {
-      style: "currency",
-      currency: currency || "EGP",
-      maximumFractionDigits: 2,
-    }).format(Number(value));
-  } catch {
-    return `${value} ${currency || "EGP"}`;
-  }
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("ar-EG").format(d);
-}
-
-function boolToStatus(isActive?: boolean) {
-  return isActive ? "ACTIVE" : "INACTIVE";
-}
-
-function contractLooksUsable(contract: Contract) {
-  if (!contract) return false;
-
-  const status = String(contract.status || "").toUpperCase();
-  if (status && status !== "ACTIVE") return false;
-
-  if (contract.end_date) {
-    const end = new Date(contract.end_date);
-    if (!Number.isNaN(end.getTime()) && end.getTime() < Date.now()) {
-      return false;
-    }
-  }
-
-  return true;
+function extractItems(body: any): any[] {
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.items)) return body.items;
+  if (Array.isArray(body?.data)) return body.data;
+  if (Array.isArray(body?.data?.items)) return body.data.items;
+  if (Array.isArray(body?.rows)) return body.rows;
+  return [];
 }
 
 export default function ContractPricingClientPage() {
-  const token = useAuth((s) => s.token);
+  const [rows, setRows] = useState<any[]>([]);
+  const [clients, setClients] = useState<Option[]>([]);
+  const [contracts, setContracts] = useState<Option[]>([]);
+
+  const [filters, setFilters] = useState<Filters>({
+    search: "",
+    client_id: "",
+    contract_id: "",
+    is_active: "",
+  });
 
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<PricingRule[]>([]);
-  const [total, setTotal] = useState(0);
+  const [masterLoading, setMasterLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [routes, setRoutes] = useState<PricingRouteRef[]>([]);
-  const [vehicleClasses, setVehicleClasses] = useState<VehicleClassRef[]>([]);
-  const [cargoTypes, setCargoTypes] = useState<CargoTypeRef[]>([]);
-
-  const [toast, setToast] = useState<ToastState>(null);
-
-  const [q, setQ] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [contractId, setContractId] = useState("");
-  const [routeId, setRouteId] = useState("");
-  const [vehicleClassId, setVehicleClassId] = useState("");
-  const [cargoTypeId, setCargoTypeId] = useState("");
-  const [isActive, setIsActive] = useState<"" | "true" | "false">("");
-
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
-  const [pages, setPages] = useState(1);
-
-  async function loadLookups() {
+  async function loadMaster() {
     try {
-      const [clientsRes, vehicleClassesRes, cargoTypesRes] = await Promise.all([
-        clientsService.list({ page: 1, limit: 200 }),
-        contractPricingService.listVehicleClasses({ page: 1, pageSize: 200 }),
-        contractPricingService.listCargoTypes({ page: 1, pageSize: 200 }),
-      ]);
+      setMasterLoading(true);
 
-      setClients(clientsRes.items || []);
-      setVehicleClasses(vehicleClassesRes.items || []);
-      setCargoTypes(cargoTypesRes.items || []);
-    } catch (e: any) {
-      setToast({
-        type: "error",
-        msg:
-          e?.response?.data?.message ||
-          e?.message ||
-          "فشل تحميل البيانات المساعدة",
-      });
-    }
-  }
-
-  async function loadContractsByClient(nextClientId: string) {
-    if (!nextClientId) {
-      setContracts([]);
-      setRoutes([]);
-      setContractId("");
-      setRouteId("");
-      return;
-    }
-
-    try {
-      const [contractsRes, routesRes] = await Promise.all([
+      const [clientsRes, contractsRes] = await Promise.all([
+        clientsService.list({
+          page: 1,
+          limit: 200,
+          is_active: true,
+        }),
         contractsService.list({
-          client_id: nextClientId,
           page: 1,
           limit: 200,
         }),
-        contractPricingService.listRoutes({
-          client_id: nextClientId,
-          page: 1,
-          pageSize: 200,
-          is_active: true,
-        }),
       ]);
 
-      const usableContracts = (contractsRes.items || []).filter(contractLooksUsable);
+      const clientsArr = extractItems(clientsRes);
+      const contractsArr = extractItems(contractsRes);
 
-      setContracts(usableContracts);
-      setRoutes(routesRes.items || []);
-    } catch (e: any) {
-      setContracts([]);
-      setRoutes([]);
-      setToast({
-        type: "error",
-        msg:
-          e?.response?.data?.message ||
-          e?.message ||
-          "فشل تحميل العقود أو المسارات",
-      });
+      setClients(
+        clientsArr.map((c: any) => ({
+          value: String(c.id),
+          label: c.name || c.company_name || c.client_name || `#${c.id}`,
+        }))
+      );
+
+      setContracts(
+        contractsArr.map((c: any) => ({
+          value: String(c.id),
+          label:
+            c.contract_no ||
+            c.code ||
+            c.name ||
+            c.title ||
+            `#${c.id}`,
+        }))
+      );
+    } catch (err: any) {
+      setError(err?.message || "حدث خطأ أثناء تحميل بيانات الفلاتر");
+    } finally {
+      setMasterLoading(false);
     }
   }
 
   async function loadRules() {
-    if (!token) return;
-
-    setLoading(true);
     try {
+      setLoading(true);
+      setError(null);
+
       const res = await contractPricingService.listRules({
-        q: q || undefined,
-        client_id: clientId || undefined,
-        contract_id: contractId || undefined,
-        route_id: routeId || undefined,
-        vehicle_class_id: vehicleClassId || undefined,
-        cargo_type_id: cargoTypeId || undefined,
-        is_active: isActive === "" ? "" : isActive === "true",
-        page,
-        pageSize,
+        q: filters.search || undefined,
+        client_id: filters.client_id || undefined,
+        contract_id: filters.contract_id || undefined,
+        is_active:
+          filters.is_active === ""
+            ? undefined
+            : filters.is_active === "true",
+        page: 1,
+        pageSize: 200,
       });
 
-      setItems(res.items || []);
-      setTotal(res.total || 0);
-      setPages(res.pages || 1);
-    } catch (e: any) {
-      setItems([]);
-      setTotal(0);
-      setPages(1);
-      setToast({
-        type: "error",
-        msg:
-          e?.response?.data?.message ||
-          e?.message ||
-          "فشل تحميل قواعد التسعير",
-      });
+      setRows(extractItems(res));
+    } catch (err: any) {
+      setError(err?.message || "حدث خطأ أثناء تحميل قواعد التسعير");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadLookups();
+    loadMaster();
   }, []);
 
   useEffect(() => {
     loadRules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    token,
-    q,
-    clientId,
-    contractId,
-    routeId,
-    vehicleClassId,
-    cargoTypeId,
-    isActive,
-    page,
-  ]);
+  }, [filters.client_id, filters.contract_id, filters.is_active]);
 
-  useEffect(() => {
-    loadContractsByClient(clientId);
-  }, [clientId]);
+  const filteredRows = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
 
-  const activeCount = useMemo(
-    () => items.filter((x) => x.is_active === true).length,
-    [items]
-  );
+    if (!q) return rows;
 
-  const inactiveCount = useMemo(
-    () => items.filter((x) => x.is_active === false).length,
-    [items]
-  );
+    return rows.filter((r: any) =>
+      [
+        r.clients?.name,
+        r.clients?.company_name,
+        r.client_contracts?.contract_no,
+        r.client_contracts?.code,
+        r.routes?.name,
+        r.routes?.origin_label,
+        r.routes?.destination_label,
+        r.vehicle_classes?.name,
+        r.cargo_types?.name,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [rows, filters.search]);
 
-  const withRouteCount = useMemo(
-    () => items.filter((x) => !!x.route_id).length,
-    [items]
-  );
-
-  const columns: DataTableColumn<PricingRule>[] = useMemo(
-    () => [
-      {
-        key: "contract",
-        label: "العقد",
-        render: (row) =>
-          row.client_contracts?.contract_no || row.contract_id || "—",
-      },
-      {
-        key: "client",
-        label: "العميل",
-        render: (row) => row.clients?.name || row.client_id || "—",
-      },
-      {
-        key: "route",
-        label: "المسار",
-        render: (row) => row.routes?.name || row.routes?.code || "—",
-      },
-      {
-        key: "vehicle_class",
-        label: "فئة السيارة",
-        render: (row) =>
-          row.vehicle_classes?.name || row.vehicle_classes?.code || "—",
-      },
-      {
-        key: "cargo_type",
-        label: "نوع المنقول",
-        render: (row) =>
-          row.cargo_types?.name || row.cargo_types?.code || "—",
-      },
-      {
-        key: "trip_type",
-        label: "نوع الرحلة",
-        render: (row) => row.trip_type || "—",
-      },
-      {
-        key: "base_price",
-        label: "السعر الأساسي",
-        render: (row) => formatMoney(row.base_price, row.currency),
-      },
-      {
-        key: "priority",
-        label: "الأولوية",
-        render: (row) => row.priority ?? "—",
-      },
-      {
-        key: "effective",
-        label: "الفترة",
-        render: (row) =>
-          `${formatDate(row.effective_from)} → ${formatDate(row.effective_to)}`,
-      },
-      {
-        key: "status",
-        label: "الحالة",
-        render: (row) => <StatusBadge status={boolToStatus(row.is_active)} />,
-      },
-      {
-        key: "actions",
-        label: "الإجراءات",
-        render: (row) => (
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/contract-pricing/${row.id}`}>
-              <Button variant="secondary">عرض</Button>
-            </Link>
-
-            <Link href={`/contract-pricing/${row.id}?mode=edit`}>
-              <Button variant="secondary">تعديل</Button>
-            </Link>
-
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const updated = await contractPricingService.toggleRule(row.id);
-                  setItems((prev) =>
-                    prev.map((x) => (x.id === row.id ? updated : x))
-                  );
-                  setToast({
-                    type: "success",
-                    msg: "تم تحديث حالة القاعدة بنجاح",
-                  });
-                } catch (e: any) {
-                  setToast({
-                    type: "error",
-                    msg:
-                      e?.response?.data?.message ||
-                      e?.message ||
-                      "فشل تحديث الحالة",
-                  });
-                }
-              }}
-              className={cn(
-                "inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium",
-                "border border-black/10 bg-[rgba(var(--trex-surface),0.7)] text-[rgb(var(--trex-fg))]",
-                "hover:bg-[rgba(var(--trex-surface),0.9)]"
-              )}
-            >
-              {row.is_active ? "تعطيل" : "تفعيل"}
-            </button>
-          </div>
-        ),
-      },
-    ],
-    []
-  );
-
-  function resetFilters() {
-    setQ("");
-    setClientId("");
-    setContractId("");
-    setRouteId("");
-    setVehicleClassId("");
-    setCargoTypeId("");
-    setIsActive("");
-    setPage(1);
-    setContracts([]);
-    setRoutes([]);
-  }
+  const columns = [
+    {
+      key: "client",
+      label: "العميل",
+      render: (r: any) =>
+        r.clients?.name || r.clients?.company_name || "—",
+    },
+    {
+      key: "contract",
+      label: "العقد",
+      render: (r: any) =>
+        r.client_contracts?.contract_no ||
+        r.client_contracts?.code ||
+        "—",
+    },
+    {
+      key: "route",
+      label: "المسار",
+      render: (r: any) =>
+        r.routes?.name ||
+        [r.routes?.origin_label, r.routes?.destination_label]
+          .filter(Boolean)
+          .join(" → ") ||
+        "—",
+    },
+    {
+      key: "vehicle_class",
+      label: "فئة المركبة",
+      render: (r: any) => r.vehicle_classes?.name || "—",
+    },
+    {
+      key: "cargo_type",
+      label: "نوع الحمولة",
+      render: (r: any) => r.cargo_types?.name || "—",
+    },
+    {
+      key: "price",
+      label: "السعر",
+      render: (r: any) =>
+        `${Number(r.base_price || r.price || 0).toLocaleString("ar-EG")} ${
+          r.currency || "EGP"
+        }`,
+    },
+    {
+      key: "status",
+      label: "الحالة",
+      render: (r: any) => (
+        <span
+          className={
+            r.is_active === false
+              ? "rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700"
+              : "rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"
+          }
+        >
+          {r.is_active === false ? "غير نشط" : "نشط"}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "الإجراءات",
+      render: (r: any) => (
+        <Link
+          href={`/contract-pricing/${r.id}`}
+          className="text-sm font-medium text-blue-700 hover:underline"
+        >
+          عرض
+        </Link>
+      ),
+    },
+  ];
 
   return (
-    <div className="min-h-screen space-y-6">
-      <PageHeader
-        title="قواعد التسعير التعاقدي"
-        subtitle="إدارة قواعد تسعير الرحلات المرتبطة بالعقود"
-        actions={
-          <Link href="/contract-pricing/new">
-            <Button>+ إضافة قاعدة تسعير</Button>
-          </Link>
-        }
-      />
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            التسعيرة التعاقدية
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            إدارة قواعد تسعير العقود حسب العميل، العقد، المسار، فئة المركبة ونوع الحمولة.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <KpiCard label="إجمالي القواعد" value={total} formatValue />
-        <KpiCard label="القواعد النشطة" value={activeCount} formatValue />
-        <KpiCard label="القواعد غير النشطة" value={inactiveCount} formatValue />
-        <KpiCard label="مرتبطة بمسار" value={withRouteCount} formatValue />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={loadRules}
+            className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            تحديث
+          </button>
+
+          <Link
+            href="/contract-pricing/new"
+            className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            إضافة قاعدة
+          </Link>
+        </div>
       </div>
 
-      <FiltersBar
-        left={
-          <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            <input
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setPage(1);
-              }}
-              placeholder="بحث بالملاحظات أو العقد أو العميل"
-              className={cn(
-                "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
-            />
+      <div className="grid gap-4 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-4">
+        <TrexInput
+          labelText="بحث"
+          placeholder="ابحث بالعميل / العقد / المسار"
+          value={filters.search}
+          onChange={(e) =>
+            setFilters((prev) => ({
+              ...prev,
+              search: e.target.value,
+            }))
+          }
+          onKeyDown={(e) => {
+            if (e.key === "Enter") loadRules();
+          }}
+        />
 
-            <select
-              value={clientId}
-              onChange={(e) => {
-                setClientId(e.target.value);
-                setContractId("");
-                setRouteId("");
-                setPage(1);
-              }}
-              className={cn(
-                "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
-            >
-              <option value="">كل العملاء</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+        <TrexSelect
+          labelText="العميل"
+          value={filters.client_id}
+          options={[{ label: "كل العملاء", value: "" }, ...clients]}
+          loading={masterLoading}
+          onChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              client_id: value,
+            }))
+          }
+        />
 
-            <select
-              value={contractId}
-              onChange={(e) => {
-                setContractId(e.target.value);
-                setPage(1);
-              }}
-              className={cn(
-                "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
-            >
-              <option value="">كل العقود</option>
-              {contracts.map((contract) => (
-                <option key={contract.id} value={contract.id}>
-                  {contract.contract_no || contract.id}
-                </option>
-              ))}
-            </select>
+        <TrexSelect
+          labelText="العقد"
+          value={filters.contract_id}
+          options={[{ label: "كل العقود", value: "" }, ...contracts]}
+          loading={masterLoading}
+          onChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              contract_id: value,
+            }))
+          }
+        />
 
-            <select
-              value={routeId}
-              onChange={(e) => {
-                setRouteId(e.target.value);
-                setPage(1);
-              }}
-              className={cn(
-                "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
-            >
-              <option value="">كل المسارات</option>
-              {routes.map((route) => (
-                <option key={route.id} value={route.id}>
-                  {route.name || route.code || route.id}
-                </option>
-              ))}
-            </select>
+        <TrexSelect
+          labelText="الحالة"
+          value={filters.is_active}
+          options={[
+            { label: "كل الحالات", value: "" },
+            { label: "نشط", value: "true" },
+            { label: "غير نشط", value: "false" },
+          ]}
+          onChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              is_active: value,
+            }))
+          }
+        />
+      </div>
 
-            <select
-              value={vehicleClassId}
-              onChange={(e) => {
-                setVehicleClassId(e.target.value);
-                setPage(1);
-              }}
-              className={cn(
-                "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
-            >
-              <option value="">كل فئات السيارات</option>
-              {vehicleClasses.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name || item.code}
-                </option>
-              ))}
-            </select>
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
 
-            <select
-              value={cargoTypeId}
-              onChange={(e) => {
-                setCargoTypeId(e.target.value);
-                setPage(1);
-              }}
-              className={cn(
-                "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
-            >
-              <option value="">كل أنواع المنقول</option>
-              {cargoTypes.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name || item.code}
-                </option>
-              ))}
-            </select>
-          </div>
-        }
-        right={
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={isActive}
-              onChange={(e) => {
-                setIsActive(e.target.value as "" | "true" | "false");
-                setPage(1);
-              }}
-              className={cn(
-                "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none",
-                "focus:ring-2 focus:ring-slate-200"
-              )}
-            >
-              <option value="">كل الحالات</option>
-              <option value="true">النشطة فقط</option>
-              <option value="false">غير النشطة فقط</option>
-            </select>
-
-            <Button variant="secondary" onClick={resetFilters}>
-              إعادة تعيين
-            </Button>
-          </div>
-        }
-      />
-
-      <DataTable
-        title="قواعد التسعير"
-        subtitle="قائمة القواعد المعرّفة على العقود"
-        columns={columns}
-        rows={items}
-        loading={loading}
-        emptyTitle="لا توجد قواعد تسعير"
-        emptyHint="لم يتم العثور على قواعد مطابقة للفلاتر الحالية."
-        total={total}
-        page={page}
-        pages={pages}
-        onPrev={page > 1 ? () => setPage((p) => p - 1) : undefined}
-        onNext={page < pages ? () => setPage((p) => p + 1) : undefined}
-      />
-
-      <Toast
-        open={!!toast}
-        type={toast?.type || "success"}
-        message={toast?.msg || ""}
-        onClose={() => setToast(null)}
-      />
+      <div className="rounded-2xl border bg-white shadow-sm">
+        <DataTable
+          columns={columns}
+          rows={filteredRows}
+          loading={loading}
+        />
+      </div>
     </div>
   );
 }
