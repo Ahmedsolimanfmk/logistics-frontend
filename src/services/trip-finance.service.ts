@@ -1,30 +1,56 @@
-import { api } from "@/src/lib/api";
-import type {
-  TripFinanceSummary,
-  TripFinanceSummaryResponse,
-  TripFinanceActionResponse,
-} from "@/src/types/trip-finance.types";
+import { apiGet, apiPost } from "@/src/lib/api";
+
+export type TripFinanceSummary = {
+  trip_id: string;
+  company_id?: string;
+  financial_status?: string;
+
+  revenue?: number;
+  expenses?: number;
+  pending_expenses?: number;
+
+  company_expenses?: number;
+  advance_expenses?: number;
+
+  profit?: number;
+  net_profit?: number;
+  profit_status?: string;
+  profit_margin?: number | null;
+
+  currency?: string;
+
+  revenue_record?: any;
+  latest_revenue_record?: any;
+  latest_approved_revenue_record?: any;
+
+  breakdown_by_type?: Record<string, number>;
+
+  expenses_items?: any[];
+  pending_expenses_items?: any[];
+};
+
+function unwrapData<T = any>(res: any): T {
+  return (res?.data ?? res) as T;
+}
 
 export const tripFinanceService = {
   async getSummary(tripId: string): Promise<TripFinanceSummary> {
-    const res = await api.get(`/trips/${tripId}/finance/summary`);
-    const body = res.data ?? res;
-    return (body?.data ?? body) as TripFinanceSummary;
+    const res = await apiGet(`/trips/${tripId}/finance/summary`);
+    return unwrapData<TripFinanceSummary>(res);
   },
 
-  async openReview(tripId: string): Promise<TripFinanceActionResponse> {
-    const res = await api.post(`/trips/${tripId}/finance/open-review`, {});
-    return (res.data ?? res) as TripFinanceActionResponse;
+  async openReview(tripId: string): Promise<any> {
+    return apiPost(`/trips/${tripId}/finance/open-review`);
   },
 
-  async close(tripId: string, notes?: string): Promise<TripFinanceActionResponse> {
-    const res = await api.post(`/trips/${tripId}/finance/close`, {
-      notes: notes?.trim() || undefined,
+  async close(tripId: string, notes?: string): Promise<any> {
+    return apiPost(`/trips/${tripId}/finance/close`, {
+      notes: notes || null,
     });
-    return (res.data ?? res) as TripFinanceActionResponse;
   },
 
   async refresh(tripId: string): Promise<TripFinanceSummary> {
-    return this.getSummary(tripId);
+    const res = await apiGet(`/trips/${tripId}/finance/summary`);
+    return unwrapData<TripFinanceSummary>(res);
   },
 };

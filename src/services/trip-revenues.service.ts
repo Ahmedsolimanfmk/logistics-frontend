@@ -1,96 +1,85 @@
-import { api } from "@/src/lib/api";
-import type {
-  ApproveTripRevenuePayload,
-  AutoPriceTripRevenuePayload,
-  AutoPriceTripRevenueResponse,
-  SaveTripRevenuePayload,
-  TripProfitabilityResponse,
-  TripRevenue,
-  TripRevenueHistoryResponse,
-  TripRevenueResponse,
-} from "@/src/types/trip-revenues.types";
+import { apiGet, apiPost, apiPatch } from "@/src/lib/api";
 
-function normalizeOne(body: any): TripRevenue | null {
-  if (body?.data !== undefined && !Array.isArray(body.data)) {
-    return body.data as TripRevenue | null;
-  }
-  return (body ?? null) as TripRevenue | null;
-}
+export type TripRevenue = {
+  id: string;
+  company_id?: string;
+  trip_id?: string;
+  client_id?: string;
+  contract_id?: string | null;
+  invoice_id?: string | null;
+  pricing_rule_id?: string | null;
 
-function normalizeMany(body: any): TripRevenue[] {
-  if (Array.isArray(body?.data)) return body.data as TripRevenue[];
-  if (Array.isArray(body?.items)) return body.items as TripRevenue[];
-  if (Array.isArray(body)) return body as TripRevenue[];
-  return [];
-}
+  amount?: number;
+  currency?: string;
+  source?: string;
+  status?: string;
 
-function normalizeEnvelope<T>(body: any, data: T) {
-  return {
-    success: Boolean(body?.success ?? true),
-    message: body?.message,
-    data,
-  };
+  is_current?: boolean;
+  is_approved?: boolean;
+
+  entered_at?: string;
+  approved_at?: string | null;
+  notes?: string | null;
+
+  [key: string]: any;
+};
+
+export type TripRevenueHistoryItem = TripRevenue;
+
+export type TripProfitability = {
+  trip_id?: string;
+  revenue?: number;
+  expenses?: number;
+  profit?: number;
+  net_profit?: number;
+  profit_status?: string;
+  profit_margin?: number | null;
+  currency?: string;
+  [key: string]: any;
+};
+
+function unwrapData<T = any>(res: any): T {
+  return (res?.data ?? res) as T;
 }
 
 export const tripRevenuesService = {
-  async getByTrip(tripId: string): Promise<TripRevenueResponse> {
-    const res = await api.get(`/trip-revenues/${tripId}/revenue`);
-    const body = res.data ?? res;
-
-    return normalizeEnvelope(body, normalizeOne(body));
+  async getByTrip(tripId: string): Promise<TripRevenue | null> {
+    try {
+      const res = await apiGet(`/trip-revenues/${tripId}/revenue`);
+      return unwrapData<TripRevenue | null>(res);
+    } catch (err: any) {
+      if (err?.status === 404) return null;
+      throw err;
+    }
   },
 
-  async getHistory(tripId: string): Promise<TripRevenueHistoryResponse> {
-    const res = await api.get(`/trip-revenues/${tripId}/revenue/history`);
-    const body = res.data ?? res;
-
-    return normalizeEnvelope(body, normalizeMany(body));
+  async getHistory(tripId: string): Promise<TripRevenueHistoryItem[]> {
+    const res = await apiGet(`/trip-revenues/${tripId}/revenue/history`);
+    const data = unwrapData<any>(res);
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items;
+    return [];
   },
 
-  async save(
-    tripId: string,
-    payload: SaveTripRevenuePayload
-  ): Promise<TripRevenueResponse> {
-    const res = await api.put(`/trip-revenues/${tripId}/revenue`, payload);
-    const body = res.data ?? res;
+ async save(tripId: string, payload: any): Promise<TripRevenue> {
+  const res = await apiPatch(`/trip-revenues/${tripId}/revenue`, payload);
+  return unwrapData<TripRevenue>(res);
+},
 
-    return normalizeEnvelope(body, normalizeOne(body));
+  async approve(tripId: string, payload?: any): Promise<TripRevenue> {
+    const res = await apiPost(
+      `/trip-revenues/${tripId}/revenue/approve`,
+      payload || {}
+    );
+    return unwrapData<TripRevenue>(res);
   },
 
-  async approve(
-    tripId: string,
-    payload: ApproveTripRevenuePayload = {}
-  ): Promise<TripRevenueResponse> {
-    const res = await api.post(`/trip-revenues/${tripId}/revenue/approve`, payload);
-    const body = res.data ?? res;
-
-    return normalizeEnvelope(body, normalizeOne(body));
+  async getProfitability(tripId: string): Promise<TripProfitability> {
+    const res = await apiGet(`/trip-revenues/${tripId}/profitability`);
+    return unwrapData<TripProfitability>(res);
   },
 
-  async getProfitability(tripId: string): Promise<TripProfitabilityResponse> {
-    const res = await api.get(`/trip-revenues/${tripId}/profitability`);
-    const body = res.data ?? res;
-
-    return {
-      success: Boolean(body?.success ?? true),
-      message: body?.message,
-      data: body?.data ?? body,
-    } as TripProfitabilityResponse;
-  },
-
-  async autoPrice(
-    tripId: string,
-    payload: AutoPriceTripRevenuePayload = {}
-  ): Promise<AutoPriceTripRevenueResponse> {
-    const res = await api.post(`/trips/${tripId}/auto-price`, payload);
-    const body = res.data ?? res;
-
-    return {
-      success: Boolean(body?.success ?? true),
-      message: body?.message,
-      data: body?.data ?? null,
-    };
+  async autoPrice(tripId: string, payload?: any): Promise<any> {
+    return apiPost(`/trips/${tripId}/auto-price`, payload || {});
   },
 };
-
-export default tripRevenuesService;
