@@ -78,25 +78,6 @@ function toChatMode(value: unknown): ChatMode {
   return "unknown";
 }
 
-function getPrimaryEntityLabel(snapshot: any, t: (key: string) => string): string | null {
-  const entity = snapshot?.entity_context?.primary_entity;
-  if (!entity) return null;
-
-  const typeMap: Record<string, string> = {
-    client: t("clients.title"),
-    vehicle: t("vehicles.title"),
-    trip: t("trips.title"),
-    site: t("sites.title"),
-    work_order: t("workOrders.title"),
-  };
-
-  const typeLabel = typeMap[String(entity.type || "")] || "العنصر";
-  const label = entity.label || entity.id || null;
-  if (!label) return null;
-
-  return `${typeLabel}: ${label}`;
-}
-
 function pickItems(result: any): any[] {
   if (Array.isArray(result?.data?.items)) return result.data.items;
   if (Array.isArray(result?.items)) return result.items;
@@ -106,17 +87,10 @@ function pickItems(result: any): any[] {
 
 function formatCellValue(v: any) {
   if (v == null || v === "") return "—";
-
   if (typeof v === "number") {
-    return new Intl.NumberFormat("ar-EG", {
-      maximumFractionDigits: 2,
-    }).format(v);
+    return new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(v);
   }
-
-  if (typeof v === "boolean") {
-    return v ? "نعم" : "لا";
-  }
-
+  if (typeof v === "boolean") return v ? "نعم" : "لا";
   return String(v);
 }
 
@@ -130,49 +104,37 @@ function translateColumnLabel(key: string) {
     total_outstanding: "المديونية",
     overdue_amount: "المتأخرات",
     current_amount: "الحالي",
-    display_name: "اسم المركبة",
+    display_name: "المركبة",
     fleet_no: "رقم الأسطول",
     plate_no: "اللوحة",
     payment_source: "مصدر الدفع",
     vendor_name: "المورد",
     approval_status: "حالة الاعتماد",
     total_cost: "إجمالي التكلفة",
-    issue_lines_count: "عدد الحركات",
     total_issued_qty: "إجمالي المنصرف",
-    issued_qty: "المنصرف",
-    qty: "الكمية",
     part_name: "الصنف",
     warehouse_name: "المخزن",
-    qty_on_hand: "الرصيد الحالي",
+    qty_on_hand: "الرصيد",
     min_stock: "الحد الأدنى",
     shortage: "العجز",
     status: "الحالة",
-    type: "النوع",
-    opened_at: "تاريخ الفتح",
-    created_at: "تاريخ الإنشاء",
     trips_count: "عدد الرحلات",
     total_trips: "إجمالي الرحلات",
-    active_count: "الرحلات النشطة",
-    draft_count: "المسودات",
+    active_count: "النشطة",
     completed_count: "المكتملة",
-    cancelled_count: "الملغاة",
-    need_financial_closure_count: "تحتاج إغلاق مالي",
-    total_need_financial_closure: "تحتاج إغلاق مالي",
     financial_status: "الحالة المالية",
     site_name: "الموقع",
-    scheduled_at: "التاريخ المجدول",
-    invoice_count: "عدد الفواتير",
-    expense_count: "عدد المصروفات",
-    full_name: "الاسم",
-    license_no: "رقم الرخصة",
-    license_expiry_date: "انتهاء الرخصة",
+    revenue: "الإيراد",
+    expense: "المصروفات",
+    profit: "الربح",
+    margin_pct: "الهامش",
   };
 
   return labels[key] || key;
 }
 
 function ResultsTable({ items }: { items: any[] }) {
-  if (!Array.isArray(items) || !items.length) return null;
+  if (!items.length) return null;
 
   const columns = Object.keys(items[0]).filter(
     (k) =>
@@ -183,38 +145,63 @@ function ResultsTable({ items }: { items: any[] }) {
         "vehicle_id",
         "warehouse_id",
         "site_id",
-        "created_by",
-        "updated_by",
         "raw",
       ].includes(k)
   );
 
   return (
-    <div className="mt-3 overflow-x-auto rounded-xl border border-black/10 bg-white">
-      <table className="min-w-full text-right text-xs">
-        <thead className="bg-black/5">
-          <tr>
-            {columns.map((c) => (
-              <th key={c} className="px-2 py-2 font-semibold whitespace-nowrap">
-                {translateColumnLabel(c)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row, i) => (
-            <tr key={i} className="border-t border-black/10">
+    <div className="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-white">
+      <div className="max-h-72 overflow-auto">
+        <table className="min-w-full text-right text-xs">
+          <thead className="sticky top-0 bg-slate-50 text-slate-600">
+            <tr>
               {columns.map((c) => (
-                <td key={c} className="px-2 py-2 whitespace-nowrap">
-                  {formatCellValue(row[c])}
-                </td>
+                <th key={c} className="whitespace-nowrap px-3 py-2 font-semibold">
+                  {translateColumnLabel(c)}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {items.map((row, i) => (
+              <tr key={i} className="border-t border-black/10 hover:bg-black/[0.02]">
+                {columns.map((c) => (
+                  <td key={c} className="whitespace-nowrap px-3 py-2">
+                    {formatCellValue(row[c])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
+}
+
+function insightStyle(level: string) {
+  if (level === "error") return "border-red-200 bg-red-50 text-red-800";
+  if (level === "warning") return "border-amber-200 bg-amber-50 text-amber-800";
+  return "border-blue-100 bg-blue-50 text-blue-800";
+}
+
+function getPrimaryEntityLabel(snapshot: any, t: (key: string) => string) {
+  const entity = snapshot?.entity_context?.primary_entity;
+  if (!entity) return null;
+
+  const typeMap: Record<string, string> = {
+    client: t("clients.title") === "clients.title" ? "عميل" : t("clients.title"),
+    vehicle: t("vehicles.title") === "vehicles.title" ? "مركبة" : t("vehicles.title"),
+    trip: t("trips.title") === "trips.title" ? "رحلة" : t("trips.title"),
+    site: t("sites.title") === "sites.title" ? "موقع" : t("sites.title"),
+    work_order:
+      t("workOrders.title") === "workOrders.title" ? "أمر عمل" : t("workOrders.title"),
+  };
+
+  const label = entity.label || entity.id || null;
+  if (!label) return null;
+
+  return `${typeMap[String(entity.type || "")] || "العنصر"}: ${label}`;
 }
 
 export function DashboardAssistantPanel({
@@ -225,166 +212,59 @@ export function DashboardAssistantPanel({
   const t = useT();
 
   const text = useMemo(() => {
-    
+    const get = (key: string, fallback: string) => {
+      const v = t(key);
+      return v === key ? fallback : v;
+    };
+
     return {
-      title: t("dashboardAssistant.title") === "dashboardAssistant.title"
-        ? "المساعد الذكي داخل الداشبورد"
-        : t("dashboardAssistant.title"),
-      newChat:
-        t("dashboardAssistant.newChat") === "dashboardAssistant.newChat"
-          ? "محادثة جديدة"
-          : t("dashboardAssistant.newChat"),
-      currentContext:
-        t("dashboardAssistant.currentContext") === "dashboardAssistant.currentContext"
-          ? "السياق الحالي:"
-          : t("dashboardAssistant.currentContext"),
-      quickInsights:
-        t("dashboardAssistant.quickInsights") === "dashboardAssistant.quickInsights"
-          ? "Insights سريعة"
-          : t("dashboardAssistant.quickInsights"),
-      assistant:
-        t("dashboardAssistant.assistant") === "dashboardAssistant.assistant"
-          ? "المساعد"
-          : t("dashboardAssistant.assistant"),
-      you:
-        t("dashboardAssistant.you") === "dashboardAssistant.you"
-          ? "أنت"
-          : t("dashboardAssistant.you"),
-      executeNow:
-        t("dashboardAssistant.executeNow") === "dashboardAssistant.executeNow"
-          ? "تنفيذ الآن"
-          : t("dashboardAssistant.executeNow"),
-      analyzing:
-        t("dashboardAssistant.analyzing") === "dashboardAssistant.analyzing"
-          ? "جاري التحليل..."
-          : t("dashboardAssistant.analyzing"),
-      suggestedFollowups:
-        t("dashboardAssistant.suggestedFollowups") === "dashboardAssistant.suggestedFollowups"
-          ? "متابعة مقترحة"
-          : t("dashboardAssistant.suggestedFollowups"),
-      placeholder:
-        t("dashboardAssistant.placeholder") === "dashboardAssistant.placeholder"
-          ? "اكتب سؤالك هنا..."
-          : t("dashboardAssistant.placeholder"),
-      send:
-        t("dashboardAssistant.send") === "dashboardAssistant.send"
-          ? "إرسال"
-          : t("dashboardAssistant.send"),
-      error:
-        t("dashboardAssistant.error") === "dashboardAssistant.error"
-          ? "حدث خطأ أثناء الاتصال بالمساعد الذكي."
-          : t("dashboardAssistant.error"),
-      needsMoreInfo:
-        t("dashboardAssistant.status.needsMoreInfo") === "dashboardAssistant.status.needsMoreInfo"
-          ? "يحتاج بيانات إضافية"
-          : t("dashboardAssistant.status.needsMoreInfo"),
-      readyToExecute:
-        t("dashboardAssistant.status.readyToExecute") === "dashboardAssistant.status.readyToExecute"
-          ? "جاهز للتنفيذ"
-          : t("dashboardAssistant.status.readyToExecute"),
-      executed:
-        t("dashboardAssistant.status.executed") === "dashboardAssistant.status.executed"
-          ? "تم التنفيذ"
-          : t("dashboardAssistant.status.executed"),
-      executionFailed:
-        t("dashboardAssistant.status.executionFailed") === "dashboardAssistant.status.executionFailed"
-          ? "فشل التنفيذ"
-          : t("dashboardAssistant.status.executionFailed"),
+      title: get("dashboardAssistant.title", "المساعد الذكي"),
+      subtitle: get(
+        "dashboardAssistant.subtitle",
+        "اسأل عن المصروفات، الرحلات، العملاء، الصيانة أو المخزون بلغة طبيعية."
+      ),
+      newChat: get("dashboardAssistant.newChat", "محادثة جديدة"),
+      currentContext: get("dashboardAssistant.currentContext", "السياق الحالي:"),
+      quickInsights: get("dashboardAssistant.quickInsights", "Insights سريعة"),
+      assistant: get("dashboardAssistant.assistant", "المساعد"),
+      you: get("dashboardAssistant.you", "أنت"),
+      executeNow: get("dashboardAssistant.executeNow", "تنفيذ الآن"),
+      analyzing: get("dashboardAssistant.analyzing", "جاري التحليل..."),
+      suggestedFollowups: get("dashboardAssistant.suggestedFollowups", "متابعة مقترحة"),
+      placeholder: get("dashboardAssistant.placeholder", "اكتب سؤالك هنا..."),
+      send: get("dashboardAssistant.send", "إرسال"),
+      error: get("dashboardAssistant.error", "حدث خطأ أثناء الاتصال بالمساعد الذكي."),
       welcome: {
-        finance:
-          t("dashboardAssistant.welcome.finance") === "dashboardAssistant.welcome.finance"
-            ? "مرحبًا، اسألني عن المصروفات والموردين وحالات الاعتماد."
-            : t("dashboardAssistant.welcome.finance"),
-        ar:
-          t("dashboardAssistant.welcome.ar") === "dashboardAssistant.welcome.ar"
-            ? "مرحبًا، اسألني عن مديونية العملاء والمتأخرات وأعلى العملاء مديونية."
-            : t("dashboardAssistant.welcome.ar"),
-        maintenance:
-          t("dashboardAssistant.welcome.maintenance") === "dashboardAssistant.welcome.maintenance"
-            ? "مرحبًا، اسألني عن أوامر العمل المفتوحة وتكلفة الصيانة."
-            : t("dashboardAssistant.welcome.maintenance"),
-        inventory:
-          t("dashboardAssistant.welcome.inventory") === "dashboardAssistant.welcome.inventory"
-            ? "مرحبًا، اسألني عن الأصناف منخفضة المخزون وأكثر الأصناف صرفًا."
-            : t("dashboardAssistant.welcome.inventory"),
-        trips:
-          t("dashboardAssistant.welcome.trips") === "dashboardAssistant.welcome.trips"
-            ? "مرحبًا، اسألني عن الرحلات النشطة والإغلاق المالي وأعلى العملاء أو المركبات."
-            : t("dashboardAssistant.welcome.trips"),
+        finance: "مرحبًا، اسألني عن المصروفات والموردين وحالات الاعتماد.",
+        ar: "مرحبًا، اسألني عن مديونية العملاء والمتأخرات.",
+        maintenance: "مرحبًا، اسألني عن أوامر العمل المفتوحة وتكلفة الصيانة.",
+        inventory: "مرحبًا، اسألني عن الأصناف منخفضة المخزون وأكثر الأصناف صرفًا.",
+        trips: "مرحبًا، اسألني عن الرحلات النشطة، الربحية، الإغلاق المالي، والخسائر.",
       },
       examples: {
-        finance:
-          t("dashboardAssistant.examples.finance") === "dashboardAssistant.examples.finance"
-            ? "أمثلة: كم إجمالي المصروفات هذا الشهر؟ / اعرض أعلى 5 موردين مصروفات / ما أعلى نوع مصروف؟"
-            : t("dashboardAssistant.examples.finance"),
-        ar:
-          t("dashboardAssistant.examples.ar") === "dashboardAssistant.examples.ar"
-            ? "أمثلة: كم إجمالي مستحقات العملاء؟ / اعرض أعلى 5 عملاء مديونية / الأول"
-            : t("dashboardAssistant.examples.ar"),
-        maintenance:
-          t("dashboardAssistant.examples.maintenance") === "dashboardAssistant.examples.maintenance"
-            ? "أمثلة: كم عدد أوامر العمل المفتوحة؟ / اعرض أعلى 5 مركبات تكلفة صيانة / الأولى"
-            : t("dashboardAssistant.examples.maintenance"),
-        inventory:
-          t("dashboardAssistant.examples.inventory") === "dashboardAssistant.examples.inventory"
-            ? "أمثلة: ما الأصناف القريبة من النفاد؟ / اعرض أعلى 5 أصناف صرفًا / الأول"
-            : t("dashboardAssistant.examples.inventory"),
-        trips:
-          t("dashboardAssistant.examples.trips") === "dashboardAssistant.examples.trips"
-            ? "أمثلة: اعرض الرحلات النشطة / اعرض أعلى 5 عملاء حسب الرحلات / الأول / رحلاته"
-            : t("dashboardAssistant.examples.trips"),
+        finance: "مثال: كم إجمالي المصروفات هذا الشهر؟",
+        ar: "مثال: اعرض أعلى 5 عملاء مديونية",
+        maintenance: "مثال: ما أعلى مركبة تكلفة صيانة؟",
+        inventory: "مثال: ما الأصناف القريبة من النفاد؟",
+        trips: "مثال: اعرض أعلى 5 رحلات ربحًا",
       },
     };
   }, [t]);
 
-  function getErrorMessage(err: any) {
-    return err?.response?.data?.message || err?.message || text.error;
-  }
-
-  function renderExecutionStatus(status?: ExecutionStatus | null) {
-    if (status === "needs_more_info") return text.needsMoreInfo;
-    if (status === "ready_to_execute") return text.readyToExecute;
-    if (status === "executed") return text.executed;
-    if (status === "execution_failed") return text.executionFailed;
-    return null;
-  }
-
-  function getWelcomeMessage(contextValue: DashboardAssistantContext) {
-    return text.welcome[contextValue];
-  }
-
-  function getExamplesByContext(contextValue: DashboardAssistantContext) {
-    return text.examples[contextValue];
-  }
-
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const [messages, setMessages] = useState<AssistantMessage[]>([
-    {
-      id: uid(),
-      role: "assistant",
-      text: getWelcomeMessage(context),
-      response: null,
-    },
-  ]);
-
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [sessionSnapshot, setSessionSnapshot] = useState<any>(null);
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [insights, setInsights] = useState<InsightItem[]>([]);
-
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  const [messages, setMessages] = useState<AssistantMessage[]>([
+    { id: uid(), role: "assistant", text: text.welcome[context], response: null },
+  ]);
+
   useEffect(() => {
-    setMessages([
-      {
-        id: uid(),
-        role: "assistant",
-        text: getWelcomeMessage(context),
-        response: null,
-      },
-    ]);
+    setMessages([{ id: uid(), role: "assistant", text: text.welcome[context], response: null }]);
     setConversationId(null);
     setSessionSnapshot(null);
     setFollowUps([]);
@@ -397,18 +277,23 @@ export function DashboardAssistantPanel({
     [sessionSnapshot, t]
   );
 
+  function getErrorMessage(err: any) {
+    return err?.response?.data?.message || err?.message || text.error;
+  }
+
+  function renderExecutionStatus(status?: ExecutionStatus | null) {
+    if (status === "needs_more_info") return "يحتاج بيانات إضافية";
+    if (status === "ready_to_execute") return "جاهز للتنفيذ";
+    if (status === "executed") return "تم التنفيذ";
+    if (status === "execution_failed") return "فشل التنفيذ";
+    return null;
+  }
+
   async function ask(rawQuestion?: string, autoExecute = false) {
     const q = String(rawQuestion ?? question).trim();
     if (!q || loading) return;
 
-    const userMessage: AssistantMessage = {
-      id: uid(),
-      role: "user",
-      text: q,
-      response: null,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, { id: uid(), role: "user", text: q }]);
     setQuestion("");
     setLoading(true);
 
@@ -421,17 +306,16 @@ export function DashboardAssistantPanel({
         auto_execute: autoExecute,
       });
 
-      const assistantText =
-        data?.answer || data?.message || data?.ui?.summary || "تمت معالجة الطلب.";
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: uid(),
+          role: "assistant",
+          text: data?.answer || data?.message || data?.ui?.summary || "تمت معالجة الطلب.",
+          response: data,
+        },
+      ]);
 
-      const assistantMessage: AssistantMessage = {
-        id: uid(),
-        role: "assistant",
-        text: assistantText,
-        response: data,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
       setConversationId(data?.conversation_id || conversationId || null);
       setSessionSnapshot(data?.session_snapshot || null);
       setFollowUps(Array.isArray(data?.followUps) ? data.followUps : []);
@@ -443,12 +327,7 @@ export function DashboardAssistantPanel({
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        {
-          id: uid(),
-          role: "assistant",
-          text: getErrorMessage(err),
-          response: null,
-        },
+        { id: uid(), role: "assistant", text: getErrorMessage(err), response: null },
       ]);
     } finally {
       setLoading(false);
@@ -456,14 +335,7 @@ export function DashboardAssistantPanel({
   }
 
   function handleNewChat() {
-    setMessages([
-      {
-        id: uid(),
-        role: "assistant",
-        text: getWelcomeMessage(context),
-        response: null,
-      },
-    ]);
+    setMessages([{ id: uid(), role: "assistant", text: text.welcome[context], response: null }]);
     setConversationId(null);
     setSessionSnapshot(null);
     setFollowUps([]);
@@ -475,50 +347,38 @@ export function DashboardAssistantPanel({
     <Card
       title={text.title}
       right={
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={handleNewChat}>
-            {text.newChat}
-          </Button>
-        </div>
+        <Button variant="ghost" onClick={handleNewChat}>
+          {text.newChat}
+        </Button>
       }
-      className="h-full"
+      className="h-full overflow-hidden"
     >
       <div className="space-y-4">
+        <div className="rounded-3xl border border-black/10 bg-gradient-to-br from-black/[0.04] to-transparent p-4">
+          <div className="text-sm text-slate-600">{text.subtitle}</div>
+          <div className="mt-3 text-xs text-slate-500">{text.examples[context]}</div>
+        </div>
+
         {activeEntityLabel ? (
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
             <span className="font-semibold">{text.currentContext}</span> {activeEntityLabel}
           </div>
         ) : null}
 
         {!!insights.length && (
-          <div className="space-y-2">
-            <div className="text-sm font-semibold text-[rgb(var(--trex-fg))]">
-              {text.quickInsights}
-            </div>
-
-            <div className="space-y-2">
-              {insights.map((item, idx) => (
-                <div
-                  key={`${item.type}-${idx}`}
-                  className={cn(
-                    "rounded-xl border px-3 py-2 text-sm",
-                    item.level === "warning" &&
-                      "border-amber-300 bg-amber-50 text-amber-800",
-                    item.level === "error" &&
-                      "border-red-300 bg-red-50 text-red-800",
-                    item.level !== "warning" &&
-                      item.level !== "error" &&
-                      "border-black/10 bg-black/[0.02] text-slate-700"
-                  )}
-                >
-                  {item.text}
-                </div>
-              ))}
-            </div>
+          <div className="grid grid-cols-1 gap-2">
+            {insights.slice(0, 3).map((item, idx) => (
+              <div
+                key={`${item.type}-${idx}`}
+                className={cn("rounded-2xl border px-4 py-3 text-sm", insightStyle(item.level))}
+              >
+                {item.text}
+              </div>
+            ))}
           </div>
         )}
 
-        <div className="max-h-[420px] space-y-3 overflow-auto rounded-2xl border border-black/10 bg-black/[0.02] p-3">
+        <div className="max-h-[460px] space-y-3 overflow-auto rounded-3xl border border-black/10 bg-slate-50/80 p-4">
           {messages.map((m) => {
             const response = m.response;
             const mode = toChatMode(response?.mode ?? response?.ui?.mode);
@@ -532,18 +392,18 @@ export function DashboardAssistantPanel({
               >
                 <div
                   className={cn(
-                    "max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-sm",
+                    "max-w-[90%] rounded-3xl px-4 py-3 text-sm leading-7 shadow-sm",
                     m.role === "assistant"
-                      ? "border border-black/10 bg-white text-black"
-                      : "bg-black text-white"
+                      ? "border border-black/10 bg-white text-slate-900"
+                      : "bg-slate-950 text-white"
                   )}
                 >
-                  <div className="mb-1 text-[11px] opacity-70">
+                  <div className="mb-1 text-[11px] font-semibold opacity-60">
                     {m.role === "assistant" ? text.assistant : text.you}
                   </div>
 
                   {response?.ui?.title ? (
-                    <div className="mb-2 text-sm font-semibold">{response.ui.title}</div>
+                    <div className="mb-2 font-semibold">{response.ui.title}</div>
                   ) : null}
 
                   <div className="whitespace-pre-wrap">{m.text}</div>
@@ -553,7 +413,7 @@ export function DashboardAssistantPanel({
                       {response.ui.badges.map((badge) => (
                         <span
                           key={badge}
-                          className="rounded-full bg-black/[0.05] px-2 py-1 text-[11px] font-medium text-slate-700"
+                          className="rounded-full border border-black/10 bg-black/[0.04] px-2.5 py-1 text-[11px] font-medium text-slate-700"
                         >
                           {badge}
                         </span>
@@ -564,41 +424,26 @@ export function DashboardAssistantPanel({
                   {mode === "action" ? (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       {response?.action ? (
-                        <span className="rounded-full bg-purple-100 px-2 py-1 text-[11px] font-medium text-purple-700">
+                        <span className="rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-medium text-purple-700">
                           {response.action}
                         </span>
                       ) : null}
 
                       {execLabel ? (
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-1 text-[11px] font-medium",
-                            response?.execution?.status === "executed" &&
-                              "bg-green-100 text-green-700",
-                            response?.execution?.status === "ready_to_execute" &&
-                              "bg-blue-100 text-blue-700",
-                            response?.execution?.status === "needs_more_info" &&
-                              "bg-amber-100 text-amber-700",
-                            response?.execution?.status === "execution_failed" &&
-                              "bg-red-100 text-red-700"
-                          )}
-                        >
+                        <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">
                           {execLabel}
                         </span>
                       ) : null}
 
                       {response?.execution?.ready_to_execute ? (
-                        <Button
-                          className="!px-2.5 !py-1 text-xs"
-                          onClick={() => ask("نفذ الآن", true)}
-                        >
+                        <Button className="!px-3 !py-1 text-xs" onClick={() => ask("نفذ الآن", true)}>
                           {text.executeNow}
                         </Button>
                       ) : null}
                     </div>
                   ) : null}
 
-                  {items.length > 0 ? <ResultsTable items={items} /> : null}
+                  <ResultsTable items={items} />
                 </div>
               </div>
             );
@@ -606,7 +451,7 @@ export function DashboardAssistantPanel({
 
           {loading ? (
             <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-black shadow-sm">
+              <div className="rounded-3xl border border-black/10 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
                 {text.analyzing}
               </div>
             </div>
@@ -627,7 +472,7 @@ export function DashboardAssistantPanel({
                   key={f}
                   type="button"
                   onClick={() => ask(f, f === "نفذ الآن")}
-                  className="rounded-full border border-black/10 bg-[rgba(var(--trex-surface),0.7)] px-3 py-1.5 text-xs text-[rgb(var(--trex-fg))] hover:bg-black/[0.04]"
+                  className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-black/[0.04]"
                 >
                   {f}
                 </button>
@@ -636,20 +481,23 @@ export function DashboardAssistantPanel({
           </div>
         )}
 
-        <div className="space-y-2">
-          <div className="text-xs text-slate-500">{getExamplesByContext(context)}</div>
+        <div className="flex items-end gap-2">
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder={text.placeholder}
+            className="trex-input min-h-[54px] max-h-[130px] flex-1 resize-none px-4 py-3 text-sm"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                ask();
+              }
+            }}
+          />
 
-          <div className="flex items-end gap-2">
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder={text.placeholder}
-              className="trex-input min-h-[52px] max-h-[120px] flex-1 resize-none px-3 py-2 text-sm"
-            />
-            <Button onClick={() => ask()} isLoading={loading}>
-              {text.send}
-            </Button>
-          </div>
+          <Button onClick={() => ask()} isLoading={loading}>
+            {text.send}
+          </Button>
         </div>
       </div>
     </Card>

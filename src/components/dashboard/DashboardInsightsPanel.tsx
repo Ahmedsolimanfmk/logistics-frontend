@@ -25,8 +25,36 @@ type InsightsResponse = {
   insights?: InsightItem[];
 };
 
+function cn(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
+}
+
 function getErrorMessage(err: any, fallback: string) {
   return err?.response?.data?.message || err?.message || fallback;
+}
+
+function levelConfig(level: string) {
+  if (level === "error") {
+    return {
+      dot: "bg-red-500",
+      box: "border-red-200 bg-red-50 text-red-800",
+      label: "حرج",
+    };
+  }
+
+  if (level === "warning") {
+    return {
+      dot: "bg-amber-500",
+      box: "border-amber-200 bg-amber-50 text-amber-800",
+      label: "متابعة",
+    };
+  }
+
+  return {
+    dot: "bg-blue-500",
+    box: "border-blue-100 bg-blue-50 text-blue-800",
+    label: "معلومة",
+  };
 }
 
 export function DashboardInsightsPanel({
@@ -44,41 +72,18 @@ export function DashboardInsightsPanel({
 
     return {
       refresh: get("common.refresh", "تحديث"),
-      noInsights: get("dashboardInsights.emptyTitle", "لا توجد Insights متاحة حاليًا"),
-      loadError: get("dashboardInsights.loadError", "تعذر تحميل الـ insights حاليًا."),
-      groups: {
-        error: get("dashboardInsights.groups.error", "عناصر حرجة"),
-        warning: get("dashboardInsights.groups.warning", "تحتاج متابعة"),
-        info: get("dashboardInsights.groups.info", "معلومات سريعة"),
-      },
+      noInsights: get("dashboardInsights.emptyTitle", "لا توجد مؤشرات حاليًا"),
+      loadError: get("dashboardInsights.loadError", "تعذر تحميل المؤشرات."),
+      subtitle: get(
+        "dashboardInsights.subtitle",
+        "قراءة سريعة لأهم المخاطر والفرص بناءً على بيانات النظام."
+      ),
       titles: {
-        finance: get("dashboardInsights.titles.finance", "Insights المالية"),
-        ar: get("dashboardInsights.titles.ar", "Insights حسابات العملاء"),
-        maintenance: get("dashboardInsights.titles.maintenance", "Insights الصيانة"),
-        inventory: get("dashboardInsights.titles.inventory", "Insights المخزون"),
-        trips: get("dashboardInsights.titles.trips", "Insights الرحلات"),
-      },
-      subtitles: {
-        finance: get(
-          "dashboardInsights.subtitles.finance",
-          "ملخص سريع لأهم مؤشرات المصروفات والموردين والاعتمادات."
-        ),
-        ar: get(
-          "dashboardInsights.subtitles.ar",
-          "أهم مؤشرات المديونية والمتأخرات والعملاء الأعلى رصيدًا."
-        ),
-        maintenance: get(
-          "dashboardInsights.subtitles.maintenance",
-          "مؤشرات أوامر العمل المفتوحة وتكلفة الصيانة."
-        ),
-        inventory: get(
-          "dashboardInsights.subtitles.inventory",
-          "أهم التنبيهات حول الأصناف المنخفضة وأكثر الأصناف صرفًا."
-        ),
-        trips: get(
-          "dashboardInsights.subtitles.trips",
-          "ملخص للرحلات النشطة والإغلاق المالي وأهم أنماط التشغيل."
-        ),
+        finance: get("dashboardInsights.titles.finance", "المؤشرات المالية"),
+        ar: get("dashboardInsights.titles.ar", "مؤشرات حسابات العملاء"),
+        maintenance: get("dashboardInsights.titles.maintenance", "مؤشرات الصيانة"),
+        inventory: get("dashboardInsights.titles.inventory", "مؤشرات المخزون"),
+        trips: get("dashboardInsights.titles.trips", "مؤشرات الرحلات"),
       },
     };
   }, [t]);
@@ -95,7 +100,6 @@ export function DashboardInsightsPanel({
       const res = await apiAuthGet<InsightsResponse>(
         `/ai-analytics/insights?context=${encodeURIComponent(context)}`
       );
-
       setItems(Array.isArray(res?.insights) ? res.insights : []);
     } catch (err) {
       setError(getErrorMessage(err, text.loadError));
@@ -109,11 +113,11 @@ export function DashboardInsightsPanel({
     load();
   }, [context]);
 
-  const grouped = useMemo(() => {
+  const counts = useMemo(() => {
     return {
-      warning: items.filter((x) => x.level === "warning"),
-      error: items.filter((x) => x.level === "error"),
-      info: items.filter((x) => x.level !== "warning" && x.level !== "error"),
+      error: items.filter((x) => x.level === "error").length,
+      warning: items.filter((x) => x.level === "warning").length,
+      info: items.filter((x) => x.level !== "error" && x.level !== "warning").length,
     };
   }, [items]);
 
@@ -121,86 +125,109 @@ export function DashboardInsightsPanel({
     <Card
       title={text.titles[context]}
       right={
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={load} isLoading={loading}>
-            {text.refresh}
-          </Button>
-        </div>
+        <Button variant="ghost" onClick={load} isLoading={loading}>
+          {text.refresh}
+        </Button>
       }
     >
       <div className="space-y-4">
-        <div className="text-xs text-slate-500">{text.subtitles[context]}</div>
+        <div className="rounded-2xl border border-black/10 bg-gradient-to-br from-black/[0.03] to-transparent p-4">
+          <div className="text-sm text-slate-600">{text.subtitle}</div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <MiniStat label="حرج" value={counts.error} tone="danger" />
+            <MiniStat label="متابعة" value={counts.warning} tone="warn" />
+            <MiniStat label="معلومات" value={counts.info} tone="info" />
+          </div>
+        </div>
 
         {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         ) : null}
 
         {loading ? (
-          <div className="space-y-2">
-            <div className="h-14 rounded-xl bg-black/[0.05]" />
-            <div className="h-14 rounded-xl bg-black/[0.05]" />
-            <div className="h-14 rounded-xl bg-black/[0.05]" />
+          <div className="space-y-3">
+            <Skeleton />
+            <Skeleton />
+            <Skeleton />
           </div>
         ) : !items.length ? (
           <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-6 text-center">
             <div className="text-sm font-semibold text-[rgb(var(--trex-fg))]">
               {text.noInsights}
             </div>
-            <div className="mt-1 text-xs text-slate-500">{text.subtitles[context]}</div>
-            <div className="mt-4 flex justify-center">
-              <Button variant="secondary" onClick={load} isLoading={loading}>
+            <div className="mt-3">
+              <Button variant="secondary" onClick={load}>
                 {text.refresh}
               </Button>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {!!grouped.error.length && (
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-red-700">{text.groups.error}</div>
-                {grouped.error.map((item, idx) => (
-                  <div
-                    key={`error-${item.type}-${idx}`}
-                    className="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800"
-                  >
-                    {item.text}
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="space-y-3">
+            {items.map((item, idx) => {
+              const cfg = levelConfig(item.level);
 
-            {!!grouped.warning.length && (
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-amber-700">{text.groups.warning}</div>
-                {grouped.warning.map((item, idx) => (
-                  <div
-                    key={`warning-${item.type}-${idx}`}
-                    className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800"
-                  >
-                    {item.text}
+              return (
+                <div
+                  key={`${item.type}-${idx}`}
+                  className={cn(
+                    "rounded-2xl border px-4 py-3 shadow-sm transition hover:shadow-md",
+                    cfg.box
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className={cn("mt-1.5 h-2.5 w-2.5 rounded-full", cfg.dot)} />
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 text-[11px] font-semibold opacity-70">
+                        {cfg.label}
+                      </div>
+                      <div className="text-sm leading-6">{item.text}</div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {!!grouped.info.length && (
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-slate-700">{text.groups.info}</div>
-                {grouped.info.map((item, idx) => (
-                  <div
-                    key={`info-${item.type}-${idx}`}
-                    className="rounded-xl border border-black/10 bg-black/[0.02] px-3 py-3 text-sm text-slate-700"
-                  >
-                    {item.text}
-                  </div>
-                ))}
-              </div>
-            )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
     </Card>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "danger" | "warn" | "info";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border px-3 py-3",
+        tone === "danger" && "border-red-100 bg-red-50",
+        tone === "warn" && "border-amber-100 bg-amber-50",
+        tone === "info" && "border-blue-100 bg-blue-50"
+      )}
+    >
+      <div className="text-[11px] text-slate-500">{label}</div>
+      <div className="mt-1 text-xl font-bold text-[rgb(var(--trex-fg))]">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className="animate-pulse rounded-2xl border border-black/10 bg-black/[0.03] p-4">
+      <div className="h-3 w-24 rounded bg-black/10" />
+      <div className="mt-3 h-3 w-full rounded bg-black/10" />
+      <div className="mt-2 h-3 w-2/3 rounded bg-black/10" />
+    </div>
   );
 }
