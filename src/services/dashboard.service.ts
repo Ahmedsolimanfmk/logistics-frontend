@@ -21,7 +21,7 @@ export const dashboardService = {
         limit: 5,
         threshold: 10,
       }),
-      apiAuthGet("/alerts/summary"),
+      apiAuthGet("/dashboard/alerts/summary"),
     ]);
 
     return {
