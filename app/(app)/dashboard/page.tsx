@@ -12,8 +12,14 @@ import { Toast } from "@/src/components/Toast";
 import { DashboardAssistantPanel } from "@/src/components/dashboard/DashboardAssistantPanel";
 import { DashboardInsightsPanel } from "@/src/components/dashboard/DashboardInsightsPanel";
 import { TripIntelligenceSection } from "@/src/components/dashboard/TripIntelligenceSection";
+import {
+  DashboardGrid,
+  DashboardSection,
+  DashboardStatCard,
+  DashboardTabButton,
+} from "@/src/components/dashboard/DashboardUi";
 
-import { dashboardService } from "@/src/services/dashboard.service";
+import dashboardService from "@/src/services/dashboard.service";
 import type {
   DashboardAlertRow,
   DashboardComplianceDriverItem,
@@ -108,63 +114,6 @@ function SeverityBadge({
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string | number;
-  hint?: string;
-  tone?: "neutral" | "success" | "warn" | "danger" | "info";
-}) {
-  const toneClass =
-    tone === "danger"
-      ? "border-red-100 bg-red-50"
-      : tone === "warn"
-      ? "border-amber-100 bg-amber-50"
-      : tone === "success"
-      ? "border-emerald-100 bg-emerald-50"
-      : tone === "info"
-      ? "border-blue-100 bg-blue-50"
-      : "border-black/10 bg-white";
-
-  const dotClass =
-    tone === "danger"
-      ? "bg-red-500"
-      : tone === "warn"
-      ? "bg-amber-500"
-      : tone === "success"
-      ? "bg-emerald-500"
-      : tone === "info"
-      ? "bg-blue-500"
-      : "bg-slate-400";
-
-  return (
-    <div
-      className={cn(
-        "rounded-3xl border p-4 shadow-sm transition hover:shadow-md",
-        toneClass
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xs font-medium text-slate-500">{label}</div>
-          <div className="mt-2 text-2xl font-bold text-[rgb(var(--trex-fg))]">
-            {value}
-          </div>
-        </div>
-        <span className={cn("mt-1 h-2.5 w-2.5 rounded-full", dotClass)} />
-      </div>
-
-      {hint ? (
-        <div className="mt-3 text-xs leading-5 text-slate-500">{hint}</div>
-      ) : null}
-    </div>
-  );
-}
-
 type GenericRow = Record<string, unknown>;
 
 export default function DashboardPage() {
@@ -245,15 +194,6 @@ export default function DashboardPage() {
     ],
     [t]
   );
-
-  const assistantContext = useMemo<
-    "finance" | "ar" | "maintenance" | "inventory" | "trips"
-  >(() => {
-    if (tab === "operations") return "trips";
-    if (tab === "finance") return "finance";
-    if (tab === "maintenance") return "maintenance";
-    return "finance";
-  }, [tab]);
 
   const activeTripsRows = useMemo(
     () => (summary?.tables?.active_trips_now as GenericRow[] | undefined) ?? [],
@@ -610,19 +550,13 @@ export default function DashboardPage() {
 
       <div className="flex flex-wrap gap-2 rounded-3xl border border-black/10 bg-white p-2 shadow-sm">
         {tabs.map((item) => (
-          <button
+          <DashboardTabButton
             key={item.key}
-            type="button"
+            active={tab === item.key}
             onClick={() => setTab(item.key)}
-            className={cn(
-              "rounded-2xl px-4 py-2 text-sm font-medium transition",
-              tab === item.key
-                ? "bg-slate-950 text-white shadow-sm"
-                : "text-slate-600 hover:bg-black/[0.04]"
-            )}
           >
             {item.label}
-          </button>
+          </DashboardTabButton>
         ))}
       </div>
 
@@ -634,15 +568,15 @@ export default function DashboardPage() {
 
       {showOperations ? (
         <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <StatCard
+          <DashboardGrid>
+            <DashboardStatCard
               label={tr(t, "dashboard.ops.kpis.tripsToday", "رحلات اليوم")}
               value={fmtInt(summary?.cards?.trips_today?.total)}
               hint={tr(t, "dashboard.ops.kpis.allStatuses", "كل الحالات")}
               tone="info"
             />
 
-            <StatCard
+            <DashboardStatCard
               label={tr(
                 t,
                 "dashboard.ops.activeTripsNow.title",
@@ -657,7 +591,7 @@ export default function DashboardPage() {
               tone="success"
             />
 
-            <StatCard
+            <DashboardStatCard
               label={tr(
                 t,
                 "dashboard.ops.tripsNeedingFinanceClose.title",
@@ -676,15 +610,17 @@ export default function DashboardPage() {
               }
             />
 
-            <StatCard
+            <DashboardStatCard
               label={tr(t, "alertsPage.unread", "غير مقروء")}
               value={fmtInt(alertsSummary?.unread)}
               hint={`${tr(t, "common.total", "الإجمالي")}: ${fmtInt(
                 alertsSummary?.total
               )}`}
-              tone={Number(alertsSummary?.unread || 0) > 0 ? "danger" : "success"}
+              tone={
+                Number(alertsSummary?.unread || 0) > 0 ? "danger" : "success"
+              }
             />
-          </div>
+          </DashboardGrid>
 
           <TripIntelligenceSection />
 
@@ -721,8 +657,8 @@ export default function DashboardPage() {
 
       {showFinance ? (
         <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <StatCard
+          <DashboardGrid>
+            <DashboardStatCard
               label={tr(t, "dashboard.finance.pendingExpenses", "مصروفات معلقة")}
               value={fmtInt(summary?.alerts?.expenses_pending_too_long)}
               hint={tr(t, "dashboard.finance.pendingHint", "أكثر من 48 ساعة")}
@@ -733,7 +669,7 @@ export default function DashboardPage() {
               }
             />
 
-            <StatCard
+            <DashboardStatCard
               label={tr(t, "dashboard.finance.openAdvances", "سلف مفتوحة")}
               value={fmtInt(summary?.alerts?.advances_open)}
               hint={tr(t, "dashboard.finance.openAdvancesHint", "تحتاج تسوية")}
@@ -744,7 +680,7 @@ export default function DashboardPage() {
               }
             />
 
-            <StatCard
+            <DashboardStatCard
               label={tr(t, "dashboard.finance.dueSoon", "فواتير مستحقة قريبًا")}
               value={fmtInt(summary?.alerts?.ar_due_soon_total)}
               hint={tr(t, "dashboard.finance.dueSoonHint", "خلال الأيام القادمة")}
@@ -755,7 +691,7 @@ export default function DashboardPage() {
               }
             />
 
-            <StatCard
+            <DashboardStatCard
               label={tr(t, "dashboard.finance.overdue", "فواتير متأخرة")}
               value={fmtInt(summary?.alerts?.ar_overdue_total)}
               hint={tr(t, "dashboard.finance.overdueHint", "تحتاج تحصيل")}
@@ -765,11 +701,15 @@ export default function DashboardPage() {
                   : "success"
               }
             />
-          </div>
+          </DashboardGrid>
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <DataTable<GenericRow>
-              title={tr(t, "dashboard.finance.pendingExpensesTable", "أعلى المصروفات المعلقة")}
+              title={tr(
+                t,
+                "dashboard.finance.pendingExpensesTable",
+                "أعلى المصروفات المعلقة"
+              )}
               columns={pendingExpensesColumns}
               rows={pendingExpensesRows}
               loading={loading}
@@ -824,9 +764,13 @@ export default function DashboardPage() {
 
       {showMaintenance ? (
         <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <StatCard
-              label={tr(t, "dashboard.maintenance.openWorkOrders", "أوامر عمل مفتوحة")}
+          <DashboardGrid>
+            <DashboardStatCard
+              label={tr(
+                t,
+                "dashboard.maintenance.openWorkOrders",
+                "أوامر عمل مفتوحة"
+              )}
               value={fmtInt(summary?.cards?.maintenance?.open_work_orders)}
               hint={tr(t, "dashboard.maintenance.openHint", "OPEN / IN_PROGRESS")}
               tone={
@@ -836,10 +780,14 @@ export default function DashboardPage() {
               }
             />
 
-            <StatCard
+            <DashboardStatCard
               label={tr(t, "dashboard.maintenance.qaNeeds", "تحتاج QA")}
               value={fmtInt(summary?.cards?.maintenance?.qa_needs)}
-              hint={tr(t, "dashboard.maintenance.qaNeedsHint", "مكتملة بدون تقرير")}
+              hint={tr(
+                t,
+                "dashboard.maintenance.qaNeedsHint",
+                "مكتملة بدون تقرير"
+              )}
               tone={
                 Number(summary?.cards?.maintenance?.qa_needs || 0) > 0
                   ? "warn"
@@ -847,7 +795,7 @@ export default function DashboardPage() {
               }
             />
 
-            <StatCard
+            <DashboardStatCard
               label={tr(t, "dashboard.maintenance.qaFailed", "QA فشل")}
               value={fmtInt(summary?.cards?.maintenance?.qa_failed)}
               hint={tr(t, "dashboard.maintenance.qaFailedHint", "تحتاج مراجعة")}
@@ -858,20 +806,32 @@ export default function DashboardPage() {
               }
             />
 
-            <StatCard
-              label={tr(t, "dashboard.maintenance.partsMismatch", "عدم تطابق قطع")}
+            <DashboardStatCard
+              label={tr(
+                t,
+                "dashboard.maintenance.partsMismatch",
+                "عدم تطابق قطع"
+              )}
               value={fmtInt(summary?.cards?.maintenance?.parts_mismatch)}
-              hint={tr(t, "dashboard.maintenance.partsMismatchHint", "مصروف / مركب")}
+              hint={tr(
+                t,
+                "dashboard.maintenance.partsMismatchHint",
+                "مصروف / مركب"
+              )}
               tone={
                 Number(summary?.cards?.maintenance?.parts_mismatch || 0) > 0
                   ? "danger"
                   : "success"
               }
             />
-          </div>
+          </DashboardGrid>
 
           <DataTable<GenericRow>
-            title={tr(t, "dashboard.maintenance.recentWorkOrders", "أوامر العمل الأخيرة")}
+            title={tr(
+              t,
+              "dashboard.maintenance.recentWorkOrders",
+              "أوامر العمل الأخيرة"
+            )}
             columns={maintenanceColumns}
             rows={maintenanceRows}
             loading={loading}
@@ -880,7 +840,11 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <DataTable<DashboardComplianceVehicleItem>
-              title={tr(t, "dashboard.compliance.vehiclesExpiring", "رخص مركبات تقترب من الانتهاء")}
+              title={tr(
+                t,
+                "dashboard.compliance.vehiclesExpiring",
+                "رخص مركبات تقترب من الانتهاء"
+              )}
               columns={vehiclesColumns}
               rows={vehicleExpiringRows}
               loading={loading}
@@ -888,7 +852,11 @@ export default function DashboardPage() {
             />
 
             <DataTable<DashboardComplianceDriverItem>
-              title={tr(t, "dashboard.compliance.driversExpiring", "رخص سائقين تقترب من الانتهاء")}
+              title={tr(
+                t,
+                "dashboard.compliance.driversExpiring",
+                "رخص سائقين تقترب من الانتهاء"
+              )}
               columns={driversColumns}
               rows={driverExpiringRows}
               loading={loading}
@@ -905,25 +873,27 @@ export default function DashboardPage() {
 
       {showDev ? (
         <div className="space-y-5">
-          <Card title={tr(t, "dashboard.dev.title", "معلومات المطور")}>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <StatCard
+          <DashboardSection title={tr(t, "dashboard.dev.title", "معلومات المطور")}>
+            <DashboardGrid cols={3}>
+              <DashboardStatCard
                 label="Summary loaded"
                 value={summary ? "Yes" : "No"}
                 tone={summary ? "success" : "warn"}
               />
-              <StatCard
+
+              <DashboardStatCard
                 label="Trends loaded"
                 value={trendsBundle ? "Yes" : "No"}
                 tone={trendsBundle ? "success" : "warn"}
               />
-              <StatCard
+
+              <DashboardStatCard
                 label="Alerts loaded"
                 value={alertsList.length}
                 tone={alertsList.length ? "info" : "neutral"}
               />
-            </div>
-          </Card>
+            </DashboardGrid>
+          </DashboardSection>
 
           <DashboardChartsPanel trendsBundle={trendsBundle} loading={loading} />
 
@@ -1046,7 +1016,10 @@ function MiniBarChart({
               <div
                 className="h-full rounded-full bg-slate-900"
                 style={{
-                  width: `${Math.max(4, Math.min(100, (item.value / max) * 100))}%`,
+                  width: `${Math.max(
+                    4,
+                    Math.min(100, (item.value / max) * 100)
+                  )}%`,
                 }}
               />
             </div>
