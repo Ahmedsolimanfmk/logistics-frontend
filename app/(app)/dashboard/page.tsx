@@ -11,6 +11,7 @@ import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 import { Toast } from "@/src/components/Toast";
 import { DashboardAssistantPanel } from "@/src/components/dashboard/DashboardAssistantPanel";
 import { DashboardInsightsPanel } from "@/src/components/dashboard/DashboardInsightsPanel";
+import { DashboardEntityPanel } from "@/src/components/dashboard/DashboardEntityPanel";
 import { TripIntelligenceSection } from "@/src/components/dashboard/TripIntelligenceSection";
 import {
   DashboardGrid,
@@ -122,7 +123,6 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<DashboardTabKey>("operations");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [assistantQuestion, setAssistantQuestion] = useState<string | null>(null);
 
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [trendsBundle, setTrendsBundle] =
@@ -141,17 +141,6 @@ export default function DashboardPage() {
 
   function showToast(type: "success" | "error", message: string) {
     setToast({ open: true, message, type });
-  }
-
-  function askAssistant(question: string) {
-    setAssistantQuestion(question);
-
-    setTimeout(() => {
-      document.getElementById("dashboard-assistant-panel")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 100);
   }
 
   async function load() {
@@ -536,7 +525,26 @@ export default function DashboardPage() {
       render: (row) => fmtMoney(row.amount),
     },
   ];
+type AiContext = "finance" | "ar" | "maintenance" | "inventory" | "trips";
 
+// state
+const [assistantQuestion, setAssistantQuestion] = useState<string | null>(null);
+const [assistantSnapshot, setAssistantSnapshot] = useState<any>(null);
+
+// context مؤقت
+const activeAiContext: AiContext = "trips";
+
+// 🔥 الدالة الناقصة (سبب كل errors)
+function askAssistant(question: string) {
+  setAssistantQuestion(question);
+
+  setTimeout(() => {
+    document.getElementById("dashboard-assistant-panel")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 80);
+}
   return (
     <div className="space-y-5">
       <Toast
@@ -660,14 +668,22 @@ export default function DashboardPage() {
 
           <DashboardChartsPanel trendsBundle={trendsBundle} loading={loading} />
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <DashboardInsightsPanel context="trips" onAsk={askAssistant} />
-            <div id="dashboard-assistant-panel">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+            <div className="xl:col-span-3">
+              <DashboardInsightsPanel context="trips" onAsk={askAssistant} />
+            </div>
+
+            <div className="xl:col-span-6" id="dashboard-assistant-panel">
               <DashboardAssistantPanel
                 context="trips"
                 externalQuestion={assistantQuestion}
                 onExternalQuestionHandled={() => setAssistantQuestion(null)}
+                onSessionSnapshotChange={setAssistantSnapshot}
               />
+            </div>
+
+            <div className="xl:col-span-3">
+              <DashboardEntityPanel snapshot={assistantSnapshot} onAsk={askAssistant} />
             </div>
           </div>
         </div>
@@ -773,14 +789,22 @@ export default function DashboardPage() {
             <DashboardChartsPanel trendsBundle={trendsBundle} loading={loading} />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <DashboardInsightsPanel context="finance" onAsk={askAssistant} />
-            <div id="dashboard-assistant-panel">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+            <div className="xl:col-span-3">
+              <DashboardInsightsPanel context="finance" onAsk={askAssistant} />
+            </div>
+
+            <div className="xl:col-span-6" id="dashboard-assistant-panel">
               <DashboardAssistantPanel
                 context="finance"
                 externalQuestion={assistantQuestion}
                 onExternalQuestionHandled={() => setAssistantQuestion(null)}
+                onSessionSnapshotChange={setAssistantSnapshot}
               />
+            </div>
+
+            <div className="xl:col-span-3">
+              <DashboardEntityPanel snapshot={assistantSnapshot} onAsk={askAssistant} />
             </div>
           </div>
         </div>
@@ -888,14 +912,22 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <DashboardInsightsPanel context="maintenance" onAsk={askAssistant} />
-            <div id="dashboard-assistant-panel">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+            <div className="xl:col-span-3">
+              <DashboardInsightsPanel context="maintenance" onAsk={askAssistant} />
+            </div>
+
+            <div className="xl:col-span-6" id="dashboard-assistant-panel">
               <DashboardAssistantPanel
                 context="maintenance"
                 externalQuestion={assistantQuestion}
                 onExternalQuestionHandled={() => setAssistantQuestion(null)}
+                onSessionSnapshotChange={setAssistantSnapshot}
               />
+            </div>
+
+            <div className="xl:col-span-3">
+              <DashboardEntityPanel snapshot={assistantSnapshot} onAsk={askAssistant} />
             </div>
           </div>
         </div>
