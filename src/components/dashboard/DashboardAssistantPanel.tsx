@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/src/components/ui/Card";
 import { Button } from "@/src/components/ui/Button";
-import { apiAuthPost } from "@/src/lib/api";
+import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
 import { useT } from "@/src/i18n/useT";
 
 type DashboardAssistantContext =
@@ -20,7 +20,7 @@ type ExecutionStatus =
   | "execution_failed"
   | string;
 
-type ChatMode = "query" | "action" | "unknown";
+type ChatMode = "query" | "action" | "unknown" | "reference_followup";
 
 type InsightItem = {
   type: string;
@@ -64,6 +64,8 @@ type AssistantMessage = {
   response?: QueryResponse | null;
 };
 
+const ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس"];
+
 function uid() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 }
@@ -75,7 +77,12 @@ function cn(...v: Array<string | false | null | undefined>) {
 function toChatMode(value: unknown): ChatMode {
   if (value === "query") return "query";
   if (value === "action") return "action";
+  if (value === "reference_followup") return "reference_followup";
   return "unknown";
+}
+
+function unwrap<T = any>(res: any): T {
+  return (res?.data ?? res) as T;
 }
 
 function pickItems(result: any): any[] {
@@ -87,10 +94,21 @@ function pickItems(result: any): any[] {
 
 function formatCellValue(v: any) {
   if (v == null || v === "") return "—";
+
   if (typeof v === "number") {
-    return new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(v);
+    return new Intl.NumberFormat("ar-EG", {
+      maximumFractionDigits: 2,
+    }).format(v);
   }
+
   if (typeof v === "boolean") return v ? "نعم" : "لا";
+
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+    return new Date(v).toLocaleDateString("ar-EG");
+  }
+
+  if (typeof v === "object") return "—";
+
   return String(v);
 }
 
@@ -124,37 +142,97 @@ function translateColumnLabel(key: string) {
     completed_count: "المكتملة",
     financial_status: "الحالة المالية",
     site_name: "الموقع",
+    trip_code: "كود الرحلة",
     revenue: "الإيراد",
     expense: "المصروفات",
     profit: "الربح",
-    margin_pct: "الهامش",
+    margin_pct: "الهامش %",
+    profit_status: "حالة الربح",
+    created_at: "تاريخ الإنشاء",
+    scheduled_at: "تاريخ التشغيل",
   };
 
   return labels[key] || key;
 }
 
-function ResultsTable({ items }: { items: any[] }) {
+function getRowLabel(row: any) {
+  return (
+    row?.client_name ||
+    row?.display_name ||
+    row?.fleet_no ||
+    row?.plate_no ||
+    row?.site_name ||
+    row?.trip_code ||
+    row?.trip_id ||
+    row?.part_name ||
+    row?.vendor_name ||
+    row?.expense_type ||
+    "عنصر"
+  );
+}
+
+function getPrimaryEntity(snapshot: any) {
+  return snapshot?.entity_context?.primary_entity || null;
+}
+
+function getPrimaryEntityLabel(snapshot: any) {
+  const entity = getPrimaryEntity(snapshot);
+  if (!entity) return null;
+
+  const typeMap: Record<string, string> = {
+    client: "عميل",
+    vehicle: "مركبة",
+    trip: "رحلة",
+    site: "موقع",
+    work_order: "أمر عمل",
+  };
+
+  const label = entity.label || entity.id || null;
+  if (!label) return null;
+
+  return `${typeMap[String(entity.type || "")] || "العنصر"}: ${label}`;
+}
+
+function insightStyle(level: string) {
+  if (level === "error") return "border-red-200 bg-red-50 text-red-800";
+  if (level === "warning") return "border-amber-200 bg-amber-50 text-amber-800";
+  return "border-blue-100 bg-blue-50 text-blue-800";
+}
+
+function ResultsTable({
+  items,
+  onSelectIndex,
+}: {
+  items: any[];
+  onSelectIndex?: (index: number) => void;
+}) {
   if (!items.length) return null;
 
+  const hidden = new Set([
+    "id",
+    "client_id",
+    "part_id",
+    "vehicle_id",
+    "warehouse_id",
+    "site_id",
+    "raw",
+  ]);
+
   const columns = Object.keys(items[0]).filter(
-    (k) =>
-      ![
-        "id",
-        "client_id",
-        "part_id",
-        "vehicle_id",
-        "warehouse_id",
-        "site_id",
-        "raw",
-      ].includes(k)
+    (k) => !hidden.has(k) && typeof items[0]?.[k] !== "object"
   );
 
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-white">
+      <div className="border-b border-black/10 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+        اضغط على أي صف لاختياره، أو استخدم: الأول / الثاني
+      </div>
+
       <div className="max-h-72 overflow-auto">
         <table className="min-w-full text-right text-xs">
           <thead className="sticky top-0 bg-slate-50 text-slate-600">
             <tr>
+              <th className="whitespace-nowrap px-3 py-2 font-semibold">اختيار</th>
               {columns.map((c) => (
                 <th key={c} className="whitespace-nowrap px-3 py-2 font-semibold">
                   {translateColumnLabel(c)}
@@ -162,9 +240,20 @@ function ResultsTable({ items }: { items: any[] }) {
               ))}
             </tr>
           </thead>
+
           <tbody>
             {items.map((row, i) => (
-              <tr key={i} className="border-t border-black/10 hover:bg-black/[0.02]">
+              <tr
+                key={i}
+                onClick={() => onSelectIndex?.(i)}
+                className="cursor-pointer border-t border-black/10 transition hover:bg-blue-50"
+              >
+                <td className="whitespace-nowrap px-3 py-2">
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">
+                    {ORDINALS[i] || `${i + 1}`}
+                  </span>
+                </td>
+
                 {columns.map((c) => (
                   <td key={c} className="whitespace-nowrap px-3 py-2">
                     {formatCellValue(row[c])}
@@ -179,35 +268,16 @@ function ResultsTable({ items }: { items: any[] }) {
   );
 }
 
-function insightStyle(level: string) {
-  if (level === "error") return "border-red-200 bg-red-50 text-red-800";
-  if (level === "warning") return "border-amber-200 bg-amber-50 text-amber-800";
-  return "border-blue-100 bg-blue-50 text-blue-800";
-}
-
-function getPrimaryEntityLabel(snapshot: any, t: (key: string) => string) {
-  const entity = snapshot?.entity_context?.primary_entity;
-  if (!entity) return null;
-
-  const typeMap: Record<string, string> = {
-    client: t("clients.title") === "clients.title" ? "عميل" : t("clients.title"),
-    vehicle: t("vehicles.title") === "vehicles.title" ? "مركبة" : t("vehicles.title"),
-    trip: t("trips.title") === "trips.title" ? "رحلة" : t("trips.title"),
-    site: t("sites.title") === "sites.title" ? "موقع" : t("sites.title"),
-    work_order:
-      t("workOrders.title") === "workOrders.title" ? "أمر عمل" : t("workOrders.title"),
-  };
-
-  const label = entity.label || entity.id || null;
-  if (!label) return null;
-
-  return `${typeMap[String(entity.type || "")] || "العنصر"}: ${label}`;
-}
-
 export function DashboardAssistantPanel({
   context = "finance",
+  externalQuestion,
+  onExternalQuestionHandled,
+  onSessionSnapshotChange,
 }: {
   context?: DashboardAssistantContext;
+  externalQuestion?: string | null;
+  onExternalQuestionHandled?: () => void;
+  onSessionSnapshotChange?: (snapshot: any) => void;
 }) {
   const t = useT();
 
@@ -224,8 +294,8 @@ export function DashboardAssistantPanel({
         "اسأل عن المصروفات، الرحلات، العملاء، الصيانة أو المخزون بلغة طبيعية."
       ),
       newChat: get("dashboardAssistant.newChat", "محادثة جديدة"),
-      currentContext: get("dashboardAssistant.currentContext", "السياق الحالي:"),
-      quickInsights: get("dashboardAssistant.quickInsights", "Insights سريعة"),
+      currentContext: get("dashboardAssistant.currentContext", "المحدد حاليًا:"),
+      quickQuestions: get("dashboardAssistant.quickQuestions", "أسئلة مقترحة"),
       assistant: get("dashboardAssistant.assistant", "المساعد"),
       you: get("dashboardAssistant.you", "أنت"),
       executeNow: get("dashboardAssistant.executeNow", "تنفيذ الآن"),
@@ -234,6 +304,7 @@ export function DashboardAssistantPanel({
       placeholder: get("dashboardAssistant.placeholder", "اكتب سؤالك هنا..."),
       send: get("dashboardAssistant.send", "إرسال"),
       error: get("dashboardAssistant.error", "حدث خطأ أثناء الاتصال بالمساعد الذكي."),
+      emptySuggestions: get("dashboardAssistant.emptySuggestions", "لا توجد أسئلة مقترحة حاليًا."),
       welcome: {
         finance: "مرحبًا، اسألني عن المصروفات والموردين وحالات الاعتماد.",
         ar: "مرحبًا، اسألني عن مديونية العملاء والمتأخرات.",
@@ -253,28 +324,90 @@ export function DashboardAssistantPanel({
 
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [sessionSnapshot, setSessionSnapshot] = useState<any>(null);
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [insights, setInsights] = useState<InsightItem[]>([]);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-
   const [messages, setMessages] = useState<AssistantMessage[]>([
-    { id: uid(), role: "assistant", text: text.welcome[context], response: null },
+    {
+      id: uid(),
+      role: "assistant",
+      text: text.welcome[context],
+      response: null,
+    },
   ]);
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  function updateSnapshot(snapshot: any) {
+    setSessionSnapshot(snapshot || null);
+    onSessionSnapshotChange?.(snapshot || null);
+  }
+
   useEffect(() => {
-    setMessages([{ id: uid(), role: "assistant", text: text.welcome[context], response: null }]);
+    setMessages([
+      {
+        id: uid(),
+        role: "assistant",
+        text: text.welcome[context],
+        response: null,
+      },
+    ]);
+
     setConversationId(null);
-    setSessionSnapshot(null);
+    updateSnapshot(null);
     setFollowUps([]);
     setInsights([]);
     setQuestion("");
-  }, [context, text]);
+  }, [context]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadSuggestions() {
+      setSuggestionsLoading(true);
+
+      try {
+        const res = await apiAuthGet("/ai-analytics/suggested", { context });
+        const body = unwrap<any>(res);
+        const list = Array.isArray(body?.questions) ? body.questions : [];
+
+        if (alive) {
+          setSuggestions(list.slice(0, 12));
+        }
+      } catch {
+        if (alive) setSuggestions([]);
+      } finally {
+        if (alive) setSuggestionsLoading(false);
+      }
+    }
+
+    loadSuggestions();
+
+    return () => {
+      alive = false;
+    };
+  }, [context]);
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+  }, [messages.length, loading]);
+
+  useEffect(() => {
+    const q = String(externalQuestion || "").trim();
+    if (!q || loading) return;
+
+    ask(q);
+    onExternalQuestionHandled?.();
+  }, [externalQuestion]);
 
   const activeEntityLabel = useMemo(
-    () => getPrimaryEntityLabel(sessionSnapshot, t),
-    [sessionSnapshot, t]
+    () => getPrimaryEntityLabel(sessionSnapshot),
+    [sessionSnapshot]
   );
 
   function getErrorMessage(err: any) {
@@ -306,28 +439,35 @@ export function DashboardAssistantPanel({
         auto_execute: autoExecute,
       });
 
+      const answer =
+        data?.answer ||
+        data?.message ||
+        data?.ui?.summary ||
+        "تمت معالجة الطلب.";
+
       setMessages((prev) => [
         ...prev,
         {
           id: uid(),
           role: "assistant",
-          text: data?.answer || data?.message || data?.ui?.summary || "تمت معالجة الطلب.",
+          text: answer,
           response: data,
         },
       ]);
 
       setConversationId(data?.conversation_id || conversationId || null);
-      setSessionSnapshot(data?.session_snapshot || null);
+      updateSnapshot(data?.session_snapshot || null);
       setFollowUps(Array.isArray(data?.followUps) ? data.followUps : []);
       setInsights(Array.isArray(data?.insights) ? data.insights : []);
-
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-      });
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { id: uid(), role: "assistant", text: getErrorMessage(err), response: null },
+        {
+          id: uid(),
+          role: "assistant",
+          text: getErrorMessage(err),
+          response: null,
+        },
       ]);
     } finally {
       setLoading(false);
@@ -335,12 +475,110 @@ export function DashboardAssistantPanel({
   }
 
   function handleNewChat() {
-    setMessages([{ id: uid(), role: "assistant", text: text.welcome[context], response: null }]);
+    setMessages([
+      {
+        id: uid(),
+        role: "assistant",
+        text: text.welcome[context],
+        response: null,
+      },
+    ]);
+
     setConversationId(null);
-    setSessionSnapshot(null);
+    updateSnapshot(null);
     setFollowUps([]);
     setInsights([]);
     setQuestion("");
+  }
+
+  function askByIndex(index: number) {
+    const ordinal = ORDINALS[index] || String(index + 1);
+    ask(ordinal);
+  }
+
+  function renderMessage(m: AssistantMessage) {
+    const response = m.response;
+    const mode = toChatMode(response?.mode ?? response?.ui?.mode);
+    const items = pickItems(response?.result);
+    const execLabel = renderExecutionStatus(response?.execution?.status);
+
+    return (
+      <div
+        key={m.id}
+        className={cn("flex", m.role === "assistant" ? "justify-start" : "justify-end")}
+      >
+        <div
+          className={cn(
+            "max-w-[94%] rounded-3xl px-4 py-3 text-sm leading-7 shadow-sm",
+            m.role === "assistant"
+              ? "border border-black/10 bg-white text-slate-900"
+              : "bg-slate-950 text-white"
+          )}
+        >
+          <div className="mb-1 text-[11px] font-semibold opacity-60">
+            {m.role === "assistant" ? text.assistant : text.you}
+          </div>
+
+          {response?.ui?.title ? (
+            <div className="mb-2 font-semibold">{response.ui.title}</div>
+          ) : null}
+
+          <div className="whitespace-pre-wrap">{m.text}</div>
+
+          {response?.ui?.badges?.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {response.ui.badges.map((badge) => (
+                <span
+                  key={badge}
+                  className="rounded-full border border-black/10 bg-black/[0.04] px-2.5 py-1 text-[11px] font-medium text-slate-700"
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {mode === "action" ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {response?.action ? (
+                <span className="rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-medium text-purple-700">
+                  {response.action}
+                </span>
+              ) : null}
+
+              {execLabel ? (
+                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">
+                  {execLabel}
+                </span>
+              ) : null}
+
+              {response?.execution?.ready_to_execute ? (
+                <Button className="!px-3 !py-1 text-xs" onClick={() => ask("نفذ الآن", true)}>
+                  {text.executeNow}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          <ResultsTable items={items} onSelectIndex={askByIndex} />
+
+          {items.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {items.slice(0, 5).map((row, idx) => (
+                <button
+                  key={`${idx}-${getRowLabel(row)}`}
+                  type="button"
+                  onClick={() => askByIndex(idx)}
+                  className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+                >
+                  اختار {ORDINALS[idx]}: {getRowLabel(row)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -355,8 +593,16 @@ export function DashboardAssistantPanel({
     >
       <div className="space-y-4">
         <div className="rounded-3xl border border-black/10 bg-gradient-to-br from-black/[0.04] to-transparent p-4">
-          <div className="text-sm text-slate-600">{text.subtitle}</div>
-          <div className="mt-3 text-xs text-slate-500">{text.examples[context]}</div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-sm text-slate-600">{text.subtitle}</div>
+              <div className="mt-2 text-xs text-slate-500">{text.examples[context]}</div>
+            </div>
+
+            <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+              {context.toUpperCase()}
+            </span>
+          </div>
         </div>
 
         {activeEntityLabel ? (
@@ -364,6 +610,37 @@ export function DashboardAssistantPanel({
             <span className="font-semibold">{text.currentContext}</span> {activeEntityLabel}
           </div>
         ) : null}
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold text-[rgb(var(--trex-fg))]">
+              {text.quickQuestions}
+            </div>
+
+            {suggestionsLoading ? (
+              <div className="text-xs text-slate-400">تحميل...</div>
+            ) : null}
+          </div>
+
+          {suggestions.length ? (
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => ask(s)}
+                  className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          ) : !suggestionsLoading ? (
+            <div className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-sm text-slate-500">
+              {text.emptySuggestions}
+            </div>
+          ) : null}
+        </div>
 
         {!!insights.length && (
           <div className="grid grid-cols-1 gap-2">
@@ -378,76 +655,8 @@ export function DashboardAssistantPanel({
           </div>
         )}
 
-        <div className="max-h-[460px] space-y-3 overflow-auto rounded-3xl border border-black/10 bg-slate-50/80 p-4">
-          {messages.map((m) => {
-            const response = m.response;
-            const mode = toChatMode(response?.mode ?? response?.ui?.mode);
-            const items = pickItems(response?.result);
-            const execLabel = renderExecutionStatus(response?.execution?.status);
-
-            return (
-              <div
-                key={m.id}
-                className={cn("flex", m.role === "assistant" ? "justify-start" : "justify-end")}
-              >
-                <div
-                  className={cn(
-                    "max-w-[90%] rounded-3xl px-4 py-3 text-sm leading-7 shadow-sm",
-                    m.role === "assistant"
-                      ? "border border-black/10 bg-white text-slate-900"
-                      : "bg-slate-950 text-white"
-                  )}
-                >
-                  <div className="mb-1 text-[11px] font-semibold opacity-60">
-                    {m.role === "assistant" ? text.assistant : text.you}
-                  </div>
-
-                  {response?.ui?.title ? (
-                    <div className="mb-2 font-semibold">{response.ui.title}</div>
-                  ) : null}
-
-                  <div className="whitespace-pre-wrap">{m.text}</div>
-
-                  {response?.ui?.badges?.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {response.ui.badges.map((badge) => (
-                        <span
-                          key={badge}
-                          className="rounded-full border border-black/10 bg-black/[0.04] px-2.5 py-1 text-[11px] font-medium text-slate-700"
-                        >
-                          {badge}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {mode === "action" ? (
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      {response?.action ? (
-                        <span className="rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-medium text-purple-700">
-                          {response.action}
-                        </span>
-                      ) : null}
-
-                      {execLabel ? (
-                        <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">
-                          {execLabel}
-                        </span>
-                      ) : null}
-
-                      {response?.execution?.ready_to_execute ? (
-                        <Button className="!px-3 !py-1 text-xs" onClick={() => ask("نفذ الآن", true)}>
-                          {text.executeNow}
-                        </Button>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  <ResultsTable items={items} />
-                </div>
-              </div>
-            );
-          })}
+        <div className="max-h-[500px] space-y-3 overflow-auto rounded-3xl border border-black/10 bg-slate-50/80 p-4">
+          {messages.map(renderMessage)}
 
           {loading ? (
             <div className="flex justify-start">
@@ -472,7 +681,7 @@ export function DashboardAssistantPanel({
                   key={f}
                   type="button"
                   onClick={() => ask(f, f === "نفذ الآن")}
-                  className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-black/[0.04]"
+                  className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                 >
                   {f}
                 </button>
@@ -487,6 +696,7 @@ export function DashboardAssistantPanel({
             onChange={(e) => setQuestion(e.target.value)}
             placeholder={text.placeholder}
             className="trex-input min-h-[54px] max-h-[130px] flex-1 resize-none px-4 py-3 text-sm"
+            disabled={loading}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

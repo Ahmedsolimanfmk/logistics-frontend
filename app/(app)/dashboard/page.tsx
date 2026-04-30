@@ -122,6 +122,7 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<DashboardTabKey>("operations");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [assistantQuestion, setAssistantQuestion] = useState<string | null>(null);
 
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [trendsBundle, setTrendsBundle] =
@@ -140,6 +141,17 @@ export default function DashboardPage() {
 
   function showToast(type: "success" | "error", message: string) {
     setToast({ open: true, message, type });
+  }
+
+  function askAssistant(question: string) {
+    setAssistantQuestion(question);
+
+    setTimeout(() => {
+      document.getElementById("dashboard-assistant-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
   }
 
   async function load() {
@@ -649,8 +661,14 @@ export default function DashboardPage() {
           <DashboardChartsPanel trendsBundle={trendsBundle} loading={loading} />
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <DashboardInsightsPanel context="trips" />
-            <DashboardAssistantPanel context="trips" />
+            <DashboardInsightsPanel context="trips" onAsk={askAssistant} />
+            <div id="dashboard-assistant-panel">
+              <DashboardAssistantPanel
+                context="trips"
+                externalQuestion={assistantQuestion}
+                onExternalQuestionHandled={() => setAssistantQuestion(null)}
+              />
+            </div>
           </div>
         </div>
       ) : null}
@@ -756,8 +774,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <DashboardInsightsPanel context="finance" />
-            <DashboardAssistantPanel context="finance" />
+            <DashboardInsightsPanel context="finance" onAsk={askAssistant} />
+            <div id="dashboard-assistant-panel">
+              <DashboardAssistantPanel
+                context="finance"
+                externalQuestion={assistantQuestion}
+                onExternalQuestionHandled={() => setAssistantQuestion(null)}
+              />
+            </div>
           </div>
         </div>
       ) : null}
@@ -865,8 +889,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <DashboardInsightsPanel context="maintenance" />
-            <DashboardAssistantPanel context="maintenance" />
+            <DashboardInsightsPanel context="maintenance" onAsk={askAssistant} />
+            <div id="dashboard-assistant-panel">
+              <DashboardAssistantPanel
+                context="maintenance"
+                externalQuestion={assistantQuestion}
+                onExternalQuestionHandled={() => setAssistantQuestion(null)}
+              />
+            </div>
           </div>
         </div>
       ) : null}

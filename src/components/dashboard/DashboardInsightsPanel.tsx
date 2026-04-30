@@ -13,9 +13,11 @@ type DashboardInsightsContext =
   | "inventory"
   | "trips";
 
+type InsightLevel = "info" | "warning" | "error" | string;
+
 type InsightItem = {
   type: string;
-  level: "info" | "warning" | "error" | string;
+  level: InsightLevel;
   text: string;
 };
 
@@ -25,6 +27,10 @@ type InsightsResponse = {
   insights?: InsightItem[];
 };
 
+function unwrap<T = any>(res: any): T {
+  return (res?.data ?? res) as T;
+}
+
 function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
 }
@@ -33,34 +39,75 @@ function getErrorMessage(err: any, fallback: string) {
   return err?.response?.data?.message || err?.message || fallback;
 }
 
-function levelConfig(level: string) {
+function levelConfig(level: InsightLevel) {
   if (level === "error") {
     return {
-      dot: "bg-red-500",
-      box: "border-red-200 bg-red-50 text-red-800",
       label: "حرج",
+      dot: "bg-red-500",
+      card: "border-red-200 bg-red-50 text-red-900",
+      badge: "bg-red-100 text-red-700",
+      priority: 3,
     };
   }
 
   if (level === "warning") {
     return {
+      label: "يحتاج متابعة",
       dot: "bg-amber-500",
-      box: "border-amber-200 bg-amber-50 text-amber-800",
-      label: "متابعة",
+      card: "border-amber-200 bg-amber-50 text-amber-900",
+      badge: "bg-amber-100 text-amber-700",
+      priority: 2,
     };
   }
 
   return {
-    dot: "bg-blue-500",
-    box: "border-blue-100 bg-blue-50 text-blue-800",
     label: "معلومة",
+    dot: "bg-blue-500",
+    card: "border-blue-100 bg-blue-50 text-blue-900",
+    badge: "bg-blue-100 text-blue-700",
+    priority: 1,
   };
+}
+
+function questionForInsight(context: DashboardInsightsContext, insight: InsightItem) {
+  const type = String(insight?.type || "");
+
+  if (context === "finance") {
+    if (type.includes("top")) return "اعرض أعلى 5 أنواع مصروف هذا الشهر";
+    if (type.includes("total")) return "كم إجمالي المصروفات هذا الشهر؟";
+    return "قارن مصروفات هذا الشهر بالشهر الماضي";
+  }
+
+  if (context === "ar") {
+    if (type.includes("top")) return "اعرض أعلى 5 عملاء مديونية";
+    return "كم إجمالي مستحقات العملاء؟";
+  }
+
+  if (context === "maintenance") {
+    if (type.includes("cost")) return "اعرض أعلى 5 مركبات تكلفة صيانة";
+    return "كم عدد أوامر العمل المفتوحة؟";
+  }
+
+  if (context === "inventory") {
+    if (type.includes("low")) return "ما الأصناف القريبة من النفاد؟";
+    return "اعرض أعلى 5 أصناف صرفًا";
+  }
+
+  if (context === "trips") {
+    if (type.includes("profit")) return "ملخص ربحية الرحلات هذا الشهر";
+    if (type.includes("loss")) return "اعرض الرحلات الخاسرة";
+    return "كم عدد الرحلات هذا الشهر؟";
+  }
+
+  return "اعرض ملخص الداشبورد";
 }
 
 export function DashboardInsightsPanel({
   context,
+  onAsk,
 }: {
   context: DashboardInsightsContext;
+  onAsk?: (question: string) => void;
 }) {
   const t = useT();
 
@@ -72,14 +119,16 @@ export function DashboardInsightsPanel({
 
     return {
       refresh: get("common.refresh", "تحديث"),
-      noInsights: get("dashboardInsights.emptyTitle", "لا توجد مؤشرات حاليًا"),
+      ask: get("dashboardInsights.ask", "اسأل عنها"),
+      empty: get("dashboardInsights.emptyTitle", "لا توجد مؤشرات حاليًا"),
       loadError: get("dashboardInsights.loadError", "تعذر تحميل المؤشرات."),
+      summaryTitle: get("dashboardInsights.summaryTitle", "ملخص سريع"),
       subtitle: get(
         "dashboardInsights.subtitle",
-        "قراءة سريعة لأهم المخاطر والفرص بناءً على بيانات النظام."
+        "قراءة ذكية لأهم المخاطر والفرص بناءً على بيانات النظام."
       ),
       titles: {
-        finance: get("dashboardInsights.titles.finance", "المؤشرات المالية"),
+        finance: get("dashboardInsights.titles.finance", "مؤشرات المالية"),
         ar: get("dashboardInsights.titles.ar", "مؤشرات حسابات العملاء"),
         maintenance: get("dashboardInsights.titles.maintenance", "مؤشرات الصيانة"),
         inventory: get("dashboardInsights.titles.inventory", "مؤشرات المخزون"),
@@ -97,10 +146,9 @@ export function DashboardInsightsPanel({
     setError(null);
 
     try {
-      const res = await apiAuthGet<InsightsResponse>(
-        `/ai-analytics/insights?context=${encodeURIComponent(context)}`
-      );
-      setItems(Array.isArray(res?.insights) ? res.insights : []);
+      const res = await apiAuthGet("/ai-analytics/insights", { context });
+      const body = unwrap<InsightsResponse>(res);
+      setItems(Array.isArray(body?.insights) ? body.insights : []);
     } catch (err) {
       setError(getErrorMessage(err, text.loadError));
       setItems([]);
@@ -113,6 +161,12 @@ export function DashboardInsightsPanel({
     load();
   }, [context]);
 
+  const sortedItems = useMemo(() => {
+    return [...items].sort(
+      (a, b) => levelConfig(b.level).priority - levelConfig(a.level).priority
+    );
+  }, [items]);
+
   const counts = useMemo(() => {
     return {
       error: items.filter((x) => x.level === "error").length,
@@ -120,6 +174,8 @@ export function DashboardInsightsPanel({
       info: items.filter((x) => x.level !== "error" && x.level !== "warning").length,
     };
   }, [items]);
+
+  const mainInsight = sortedItems[0] || null;
 
   return (
     <Card
@@ -131,7 +187,7 @@ export function DashboardInsightsPanel({
       }
     >
       <div className="space-y-4">
-        <div className="rounded-2xl border border-black/10 bg-gradient-to-br from-black/[0.03] to-transparent p-4">
+        <div className="rounded-3xl border border-black/10 bg-gradient-to-br from-black/[0.04] to-transparent p-4">
           <div className="text-sm text-slate-600">{text.subtitle}</div>
 
           <div className="mt-4 grid grid-cols-3 gap-2">
@@ -153,10 +209,10 @@ export function DashboardInsightsPanel({
             <Skeleton />
             <Skeleton />
           </div>
-        ) : !items.length ? (
+        ) : !sortedItems.length ? (
           <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-6 text-center">
             <div className="text-sm font-semibold text-[rgb(var(--trex-fg))]">
-              {text.noInsights}
+              {text.empty}
             </div>
             <div className="mt-3">
               <Button variant="secondary" onClick={load}>
@@ -165,34 +221,90 @@ export function DashboardInsightsPanel({
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
-            {items.map((item, idx) => {
-              const cfg = levelConfig(item.level);
+          <>
+            {mainInsight ? (
+              <InsightCard
+                item={mainInsight}
+                featured
+                question={questionForInsight(context, mainInsight)}
+                onAsk={onAsk}
+                askLabel={text.ask}
+              />
+            ) : null}
 
-              return (
-                <div
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {sortedItems.slice(1).map((item, idx) => (
+                <InsightCard
                   key={`${item.type}-${idx}`}
-                  className={cn(
-                    "rounded-2xl border px-4 py-3 shadow-sm transition hover:shadow-md",
-                    cfg.box
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className={cn("mt-1.5 h-2.5 w-2.5 rounded-full", cfg.dot)} />
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1 text-[11px] font-semibold opacity-70">
-                        {cfg.label}
-                      </div>
-                      <div className="text-sm leading-6">{item.text}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  item={item}
+                  question={questionForInsight(context, item)}
+                  onAsk={onAsk}
+                  askLabel={text.ask}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </Card>
+  );
+}
+
+function InsightCard({
+  item,
+  featured = false,
+  question,
+  onAsk,
+  askLabel,
+}: {
+  item: InsightItem;
+  featured?: boolean;
+  question: string;
+  onAsk?: (question: string) => void;
+  askLabel: string;
+}) {
+  const cfg = levelConfig(item.level);
+
+  return (
+    <div
+      className={cn(
+        "rounded-3xl border px-4 py-4 shadow-sm transition hover:shadow-md",
+        cfg.card,
+        featured && "border-2"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span className={cn("mt-2 h-2.5 w-2.5 rounded-full", cfg.dot)} />
+
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold", cfg.badge)}>
+              {cfg.label}
+            </span>
+
+            {featured ? (
+              <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                أهم مؤشر
+              </span>
+            ) : null}
+          </div>
+
+          <div className={cn("leading-7", featured ? "text-base font-semibold" : "text-sm")}>
+            {item.text}
+          </div>
+
+          {onAsk ? (
+            <button
+              type="button"
+              onClick={() => onAsk(question)}
+              className="mt-3 rounded-full border border-black/10 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-white"
+            >
+              {askLabel}: {question}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 
