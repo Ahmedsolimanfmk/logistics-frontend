@@ -65,7 +65,6 @@ type AssistantMessage = {
   response?: QueryResponse | null;
 };
 
-const [pendingAction, setPendingAction] = useState<QueryResponse | null>(null);
 const ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس"];
 
 function uid() {
@@ -306,7 +305,10 @@ export function DashboardAssistantPanel({
       placeholder: get("dashboardAssistant.placeholder", "اكتب سؤالك هنا..."),
       send: get("dashboardAssistant.send", "إرسال"),
       error: get("dashboardAssistant.error", "حدث خطأ أثناء الاتصال بالمساعد الذكي."),
-      emptySuggestions: get("dashboardAssistant.emptySuggestions", "لا توجد أسئلة مقترحة حاليًا."),
+      emptySuggestions: get(
+        "dashboardAssistant.emptySuggestions",
+        "لا توجد أسئلة مقترحة حاليًا."
+      ),
       welcome: {
         finance: "مرحبًا، اسألني عن المصروفات والموردين وحالات الاعتماد.",
         ar: "مرحبًا، اسألني عن مديونية العملاء والمتأخرات.",
@@ -332,6 +334,7 @@ export function DashboardAssistantPanel({
   const [sessionSnapshot, setSessionSnapshot] = useState<any>(null);
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [insights, setInsights] = useState<InsightItem[]>([]);
+  const [pendingAction, setPendingAction] = useState<QueryResponse | null>(null);
   const [messages, setMessages] = useState<AssistantMessage[]>([
     {
       id: uid(),
@@ -363,6 +366,7 @@ export function DashboardAssistantPanel({
     setFollowUps([]);
     setInsights([]);
     setQuestion("");
+    setPendingAction(null);
   }, [context]);
 
   useEffect(() => {
@@ -405,6 +409,7 @@ export function DashboardAssistantPanel({
 
     ask(q);
     onExternalQuestionHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalQuestion]);
 
   const activeEntityLabel = useMemo(
@@ -461,9 +466,10 @@ export function DashboardAssistantPanel({
       updateSnapshot(data?.session_snapshot || null);
       setFollowUps(Array.isArray(data?.followUps) ? data.followUps : []);
       setInsights(Array.isArray(data?.insights) ? data.insights : []);
+
       if (data?.mode === "action" && data?.execution?.ready_to_execute) {
-  setPendingAction(data);
-}
+        setPendingAction(data);
+      }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -494,6 +500,7 @@ export function DashboardAssistantPanel({
     setFollowUps([]);
     setInsights([]);
     setQuestion("");
+    setPendingAction(null);
   }
 
   function askByIndex(index: number) {
@@ -558,7 +565,10 @@ export function DashboardAssistantPanel({
               ) : null}
 
               {response?.execution?.ready_to_execute ? (
-                <Button className="!px-3 !py-1 text-xs" onClick={() => ask("نفذ الآن", true)}>
+                <Button
+                  className="!px-3 !py-1 text-xs"
+                  onClick={() => setPendingAction(response)}
+                >
                   {text.executeNow}
                 </Button>
               ) : null}
@@ -715,16 +725,17 @@ export function DashboardAssistantPanel({
           </Button>
         </div>
       </div>
+
       <DashboardActionConfirmModal
-  open={Boolean(pendingAction)}
-  response={pendingAction}
-  loading={loading}
-  onCancel={() => setPendingAction(null)}
-  onConfirm={() => {
-    setPendingAction(null);
-    ask("نفذ الآن", true);
-  }}
-/>
+        open={Boolean(pendingAction)}
+        response={pendingAction}
+        loading={loading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={() => {
+          setPendingAction(null);
+          ask("نفذ الآن", true);
+        }}
+      />
     </Card>
   );
 }
