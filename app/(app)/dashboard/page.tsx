@@ -525,26 +525,6 @@ export default function DashboardPage() {
       render: (row) => fmtMoney(row.amount),
     },
   ];
-type AiContext = "finance" | "ar" | "maintenance" | "inventory" | "trips";
-
-// state
-const [assistantQuestion, setAssistantQuestion] = useState<string | null>(null);
-const [assistantSnapshot, setAssistantSnapshot] = useState<any>(null);
-
-// context مؤقت
-const activeAiContext: AiContext = "trips";
-
-// 🔥 الدالة الناقصة (سبب كل errors)
-function askAssistant(question: string) {
-  setAssistantQuestion(question);
-
-  setTimeout(() => {
-    document.getElementById("dashboard-assistant-panel")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, 80);
-}
   return (
     <div className="space-y-5">
       <Toast
