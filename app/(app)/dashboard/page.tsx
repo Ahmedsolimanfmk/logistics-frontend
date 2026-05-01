@@ -125,6 +125,8 @@ export default function DashboardPage() {
   const [err, setErr] = useState<string | null>(null);
   const [assistantQuestion, setAssistantQuestion] = useState<string | null>(null);
   const [assistantSnapshot, setAssistantSnapshot] = useState<any>(null);
+  
+  
 
   function askAssistant(question: string) {
     setAssistantQuestion(question);
