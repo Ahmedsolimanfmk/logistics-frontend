@@ -123,6 +123,19 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<DashboardTabKey>("operations");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [assistantQuestion, setAssistantQuestion] = useState<string | null>(null);
+  const [assistantSnapshot, setAssistantSnapshot] = useState<any>(null);
+
+  function askAssistant(question: string) {
+    setAssistantQuestion(question);
+
+    setTimeout(() => {
+      document.getElementById("dashboard-assistant-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+  }
 
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [trendsBundle, setTrendsBundle] =
@@ -525,6 +538,7 @@ export default function DashboardPage() {
       render: (row) => fmtMoney(row.amount),
     },
   ];
+
   return (
     <div className="space-y-5">
       <Toast
@@ -663,7 +677,10 @@ export default function DashboardPage() {
             </div>
 
             <div className="xl:col-span-3">
-              <DashboardEntityPanel snapshot={assistantSnapshot} onAsk={askAssistant} />
+              <DashboardEntityPanel
+                snapshot={assistantSnapshot}
+                onAsk={askAssistant}
+              />
             </div>
           </div>
         </div>
@@ -784,7 +801,10 @@ export default function DashboardPage() {
             </div>
 
             <div className="xl:col-span-3">
-              <DashboardEntityPanel snapshot={assistantSnapshot} onAsk={askAssistant} />
+              <DashboardEntityPanel
+                snapshot={assistantSnapshot}
+                onAsk={askAssistant}
+              />
             </div>
           </div>
         </div>
@@ -907,7 +927,10 @@ export default function DashboardPage() {
             </div>
 
             <div className="xl:col-span-3">
-              <DashboardEntityPanel snapshot={assistantSnapshot} onAsk={askAssistant} />
+              <DashboardEntityPanel
+                snapshot={assistantSnapshot}
+                onAsk={askAssistant}
+              />
             </div>
           </div>
         </div>
