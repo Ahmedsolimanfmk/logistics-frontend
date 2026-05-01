@@ -259,6 +259,112 @@ function isProfitResponse(response?: QueryResponse | null) {
   );
 }
 
+function getActionLabel(action?: string | null) {
+  if (action === "create_expense") return "تسجيل مصروف";
+  if (action === "create_work_order") return "إنشاء أمر عمل";
+  if (action === "create_maintenance_request") return "إنشاء طلب صيانة";
+  return "إجراء تنفيذي";
+}
+
+function getActionResultData(response: QueryResponse) {
+  const result = response?.result || {};
+  const data = result?.data || result || {};
+  const payload = response?.execution?.payload || response?.parsed?.action_payload || {};
+
+  return {
+    id:
+      data?.id ||
+      data?.expense_id ||
+      data?.work_order_id ||
+      data?.maintenance_request_id ||
+      data?.created?.id ||
+      data?.record?.id ||
+      null,
+    status:
+      data?.status ||
+      data?.approval_status ||
+      data?.financial_status ||
+      response?.execution?.status ||
+      "executed",
+    vehicle:
+      data?.vehicle_name ||
+      data?.vehicle?.display_name ||
+      payload?.vehicle_hint ||
+      payload?.vehicle_id ||
+      null,
+    amount:
+      data?.amount ||
+      payload?.amount ||
+      data?.total_amount ||
+      null,
+    type:
+      data?.expense_type ||
+      payload?.expense_type ||
+      data?.type ||
+      null,
+  };
+}
+
+function ActionResultCard({ response }: { response: QueryResponse }) {
+  if (!(response?.mode === "action" && response?.execution?.executed)) {
+    return null;
+  }
+
+  const action = response.action || response.parsed?.intent || null;
+  const result = getActionResultData(response);
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-3xl border border-emerald-200 bg-emerald-50">
+      <div className="border-b border-emerald-200 bg-emerald-100/70 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold text-emerald-700">
+              تم التنفيذ بنجاح
+            </div>
+            <div className="mt-1 text-sm font-bold text-emerald-950">
+              {getActionLabel(action)}
+            </div>
+          </div>
+
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm">
+            Done
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-2">
+        <ActionResultItem label="رقم العملية" value={result.id ? String(result.id) : "—"} />
+        <ActionResultItem label="الحالة" value={String(result.status || "—")} />
+        <ActionResultItem label="المركبة" value={result.vehicle ? String(result.vehicle) : "—"} />
+        <ActionResultItem
+          label="القيمة / النوع"
+          value={
+            result.amount
+              ? `${formatNumber(result.amount)} جنيه`
+              : result.type
+              ? String(result.type)
+              : "—"
+          }
+        />
+      </div>
+
+      <div className="border-t border-emerald-200 px-4 py-3 text-xs leading-6 text-emerald-800">
+        يمكنك المتابعة بسؤال مثل: اعرض التفاصيل، أو ما تأثير هذا الإجراء على التقارير؟
+      </div>
+    </div>
+  );
+}
+
+function ActionResultItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-emerald-200 bg-white px-3 py-3">
+      <div className="text-[11px] font-semibold text-slate-500">{label}</div>
+      <div className="mt-1 truncate text-sm font-bold text-slate-900">{value}</div>
+    </div>
+  );
+}
+
+
 function ProfitSummaryCard({ response }: { response: QueryResponse }) {
   const data = getResultData(response.result);
   const revenue = pickValue(data, ["revenue", "total_revenue"]);
@@ -736,6 +842,8 @@ export function DashboardAssistantPanel({
               ) : null}
             </div>
           ) : null}
+
+          {response ? <ActionResultCard response={response} /> : null}
 
           <ResultsTable items={items} onSelectIndex={askByIndex} />
         </div>
