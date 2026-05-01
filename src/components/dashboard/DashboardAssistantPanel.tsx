@@ -5,6 +5,7 @@ import { Card } from "@/src/components/ui/Card";
 import { Button } from "@/src/components/ui/Button";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
 import { useT } from "@/src/i18n/useT";
+import { DashboardActionConfirmModal } from "@/src/components/dashboard/DashboardActionConfirmModal";
 
 type DashboardAssistantContext =
   | "finance"
@@ -64,6 +65,7 @@ type AssistantMessage = {
   response?: QueryResponse | null;
 };
 
+const [pendingAction, setPendingAction] = useState<QueryResponse | null>(null);
 const ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس"];
 
 function uid() {
@@ -459,6 +461,9 @@ export function DashboardAssistantPanel({
       updateSnapshot(data?.session_snapshot || null);
       setFollowUps(Array.isArray(data?.followUps) ? data.followUps : []);
       setInsights(Array.isArray(data?.insights) ? data.insights : []);
+      if (data?.mode === "action" && data?.execution?.ready_to_execute) {
+  setPendingAction(data);
+}
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -710,6 +715,16 @@ export function DashboardAssistantPanel({
           </Button>
         </div>
       </div>
+      <DashboardActionConfirmModal
+  open={Boolean(pendingAction)}
+  response={pendingAction}
+  loading={loading}
+  onCancel={() => setPendingAction(null)}
+  onConfirm={() => {
+    setPendingAction(null);
+    ask("نفذ الآن", true);
+  }}
+/>
     </Card>
   );
 }
