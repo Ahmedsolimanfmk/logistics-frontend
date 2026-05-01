@@ -93,13 +93,37 @@ function pickItems(result: any): any[] {
   return [];
 }
 
-function formatCellValue(v: any) {
+function pickValue(obj: any, keys: string[]) {
+  for (const key of keys) {
+    if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
+      return obj[key];
+    }
+  }
+  return null;
+}
+
+function isMoneyKey(key: string) {
+  return /amount|expense|revenue|profit|cost|outstanding|remaining|total/i.test(key);
+}
+
+function isPercentKey(key: string) {
+  return /pct|percent|margin/i.test(key);
+}
+
+function formatNumber(v: any) {
+  return new Intl.NumberFormat("ar-EG", {
+    maximumFractionDigits: 2,
+  }).format(Number(v || 0));
+}
+
+function formatCellValue(key: string, v: any) {
   if (v == null || v === "") return "—";
 
   if (typeof v === "number") {
-    return new Intl.NumberFormat("ar-EG", {
-      maximumFractionDigits: 2,
-    }).format(v);
+    const n = formatNumber(v);
+    if (isPercentKey(key)) return `${n}%`;
+    if (isMoneyKey(key)) return `${n} جنيه`;
+    return n;
   }
 
   if (typeof v === "boolean") return v ? "نعم" : "لا";
@@ -111,6 +135,23 @@ function formatCellValue(v: any) {
   if (typeof v === "object") return "—";
 
   return String(v);
+}
+
+function valueTone(key: string, value: any) {
+  const n = Number(value);
+
+  if (String(key).toLowerCase().includes("profit")) {
+    if (Number.isFinite(n) && n > 0) return "text-emerald-700 font-semibold";
+    if (Number.isFinite(n) && n < 0) return "text-red-700 font-semibold";
+  }
+
+  if (String(key).toLowerCase().includes("margin")) {
+    if (Number.isFinite(n) && n >= 20) return "text-emerald-700 font-semibold";
+    if (Number.isFinite(n) && n < 10) return "text-amber-700 font-semibold";
+  }
+
+  if (isMoneyKey(key)) return "font-semibold text-slate-900";
+  return "";
 }
 
 function translateColumnLabel(key: string) {
@@ -144,6 +185,7 @@ function translateColumnLabel(key: string) {
     financial_status: "الحالة المالية",
     site_name: "الموقع",
     trip_code: "كود الرحلة",
+    trip_id: "معرف الرحلة",
     revenue: "الإيراد",
     expense: "المصروفات",
     profit: "الربح",
@@ -200,6 +242,83 @@ function insightStyle(level: string) {
   return "border-blue-100 bg-blue-50 text-blue-800";
 }
 
+function getResultData(result: any) {
+  return result?.data && !Array.isArray(result.data) ? result.data : result || {};
+}
+
+function isProfitResponse(response?: QueryResponse | null) {
+  const intent = String(response?.parsed?.intent || "");
+  const data = getResultData(response?.result);
+
+  return (
+    intent.includes("profit") ||
+    data?.revenue !== undefined ||
+    data?.total_revenue !== undefined ||
+    data?.profit !== undefined ||
+    data?.total_profit !== undefined
+  );
+}
+
+function ProfitSummaryCard({ response }: { response: QueryResponse }) {
+  const data = getResultData(response.result);
+  const revenue = pickValue(data, ["revenue", "total_revenue"]);
+  const expense = pickValue(data, ["expense", "total_expense"]);
+  const profit = pickValue(data, ["profit", "total_profit"]);
+  const margin = pickValue(data, ["margin_pct"]);
+
+  const hasAny =
+    revenue !== null || expense !== null || profit !== null || margin !== null;
+
+  if (!hasAny) return null;
+
+  const profitNumber = Number(profit || 0);
+  const profitTone =
+    profitNumber > 0
+      ? "border-emerald-200 bg-emerald-50"
+      : profitNumber < 0
+      ? "border-red-200 bg-red-50"
+      : "border-slate-200 bg-slate-50";
+
+  return (
+    <div className="mt-4 rounded-3xl border border-black/10 bg-white p-3">
+      <div className="mb-3 text-xs font-semibold text-slate-500">
+        ملخص مالي سريع
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <MetricBox label="الإيراد" value={revenue} suffix="جنيه" />
+        <MetricBox label="المصروفات" value={expense} suffix="جنيه" />
+        <MetricBox label="صافي الربح" value={profit} suffix="جنيه" className={profitTone} />
+        <MetricBox label="الهامش" value={margin} suffix="%" />
+      </div>
+    </div>
+  );
+}
+
+function MetricBox({
+  label,
+  value,
+  suffix,
+  className,
+}: {
+  label: string;
+  value: any;
+  suffix?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("rounded-2xl border border-black/10 bg-slate-50 px-3 py-3", className)}>
+      <div className="text-[11px] font-medium text-slate-500">{label}</div>
+      <div className="mt-1 text-sm font-bold text-[rgb(var(--trex-fg))]">
+        {value === null || value === undefined ? "—" : formatNumber(value)}
+        {value !== null && value !== undefined && suffix ? (
+          <span className="mr-1 text-[11px] font-medium text-slate-500">{suffix}</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function ResultsTable({
   items,
   onSelectIndex,
@@ -219,14 +338,40 @@ function ResultsTable({
     "raw",
   ]);
 
-  const columns = Object.keys(items[0]).filter(
+  const priority = [
+    "trip_code",
+    "client_name",
+    "site_name",
+    "display_name",
+    "fleet_no",
+    "plate_no",
+    "revenue",
+    "expense",
+    "profit",
+    "margin_pct",
+    "total_amount",
+    "trips_count",
+    "status",
+  ];
+
+  const allColumns = Object.keys(items[0]).filter(
     (k) => !hidden.has(k) && typeof items[0]?.[k] !== "object"
   );
 
+  const columns = [
+    ...priority.filter((k) => allColumns.includes(k)),
+    ...allColumns.filter((k) => !priority.includes(k)),
+  ].slice(0, 6);
+
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-white">
-      <div className="border-b border-black/10 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-        اضغط على أي صف لاختياره، أو استخدم: الأول / الثاني
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/10 bg-slate-50 px-3 py-2">
+        <div className="text-xs font-semibold text-slate-600">
+          النتائج — اضغط على صف لاختياره
+        </div>
+        <div className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+          {items.length} عنصر
+        </div>
       </div>
 
       <div className="max-h-72 overflow-auto">
@@ -247,23 +392,36 @@ function ResultsTable({
               <tr
                 key={i}
                 onClick={() => onSelectIndex?.(i)}
-                className="cursor-pointer border-t border-black/10 transition hover:bg-blue-50"
+                className="group cursor-pointer border-t border-black/10 transition hover:bg-blue-50"
               >
                 <td className="whitespace-nowrap px-3 py-2">
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 group-hover:bg-blue-100 group-hover:text-blue-700">
                     {ORDINALS[i] || `${i + 1}`}
                   </span>
                 </td>
 
                 {columns.map((c) => (
-                  <td key={c} className="whitespace-nowrap px-3 py-2">
-                    {formatCellValue(row[c])}
+                  <td key={c} className={cn("whitespace-nowrap px-3 py-2", valueTone(c, row[c]))}>
+                    {formatCellValue(c, row[c])}
                   </td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex flex-wrap gap-2 border-t border-black/10 bg-slate-50 px-3 py-2">
+        {items.slice(0, 5).map((row, idx) => (
+          <button
+            key={`${idx}-${getRowLabel(row)}`}
+            type="button"
+            onClick={() => onSelectIndex?.(idx)}
+            className="rounded-full border border-blue-100 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+          >
+            اختار {ORDINALS[idx]}: {getRowLabel(row)}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -550,6 +708,10 @@ export function DashboardAssistantPanel({
             </div>
           ) : null}
 
+          {response && isProfitResponse(response) ? (
+            <ProfitSummaryCard response={response} />
+          ) : null}
+
           {mode === "action" ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {response?.action ? (
@@ -576,21 +738,6 @@ export function DashboardAssistantPanel({
           ) : null}
 
           <ResultsTable items={items} onSelectIndex={askByIndex} />
-
-          {items.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {items.slice(0, 5).map((row, idx) => (
-                <button
-                  key={`${idx}-${getRowLabel(row)}`}
-                  type="button"
-                  onClick={() => askByIndex(idx)}
-                  className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
-                >
-                  اختار {ORDINALS[idx]}: {getRowLabel(row)}
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
     );
