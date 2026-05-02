@@ -35,73 +35,62 @@ export default function LoginPage() {
 
   // ✅ redirect if logged in
   useEffect(() => {
-    if (token) {
-      router.replace("/dashboard");
-    }
-  }, [token, router]);
+  if (token) router.replace("/dashboard");
+}, [token]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (loading) return;
+  e.preventDefault();
+  if (loading) return;
 
-    setErr(null);
-    setLoading(true);
+  setErr(null);
+  setLoading(true);
 
-    try {
-      // ✅ handle autofill correctly
-      const fd = new FormData(e.currentTarget);
-      const emailRaw = String(fd.get("email") ?? "");
-      const passRaw = String(fd.get("password") ?? "");
+  try {
+    const fd = new FormData(e.currentTarget);
+    const emailRaw = String(fd.get("email") ?? "");
+    const passRaw = String(fd.get("password") ?? "");
 
-      const emailNorm = emailRaw.trim().toLowerCase();
+    const emailNorm = emailRaw.trim().toLowerCase();
 
-      console.log("LOGIN payload =>", {
-        email: emailNorm,
-        passwordLen: passRaw.length,
-      });
+    const res = await api.post("/auth/login", {
+      email: emailNorm,
+      password: passRaw,
+    });
 
-      const res = await api.post("/auth/login", {
-        email: emailNorm,
-        password: passRaw,
-      });
+    const data = (res as any)?.data ?? res;
+    const { token: t, user } = data || {};
 
-      const data = (res as any)?.data ?? res;
-      const { token: t, user } = data || {};
-
-      if (!t || !user) {
-        console.log("LOGIN RESPONSE:", res);
-        setErr("Login failed: invalid response");
-        return;
-      }
-
-      // ✅ important: check company_id
-      console.log("LOGIN SUCCESS USER =>", user);
-      console.log("COMPANY ID =>", user?.company_id);
-
-      // ✅ store auth (token + user + company_id inside store)
-      setAuth(String(t), user);
-
-      // 🚀 redirect
-      router.replace("/dashboard");
-    } catch (e: any) {
-      console.log(
-        "LOGIN ERROR FULL:",
-        e?.response?.status,
-        e?.response?.data,
-        e
-      );
-
-      const msg =
-        e?.response?.data?.message || e?.message || "Login failed";
-
-      setErr(String(msg));
-    } finally {
-      setLoading(false);
+    if (!t || !user) {
+      setErr("Login failed: invalid response");
+      return;
     }
+
+    // ✅ حفظ البيانات
+    setAuth(String(t), user);
+
+    // ✅ التوجيه الصحيح
+    if (user.platform_role === "SUPER_ADMIN") {
+      router.replace("/select-company");
+    } else {
+      router.replace("/dashboard");
+    }
+
+  } catch (e: any) {
+    console.log(
+      "LOGIN ERROR FULL:",
+      e?.response?.status,
+      e?.response?.data,
+      e
+    );
+
+    const msg =
+      e?.response?.data?.message || e?.message || "Login failed";
+
+    setErr(String(msg));
+  } finally {
+    setLoading(false);
   }
-
-  if (!mounted) return null;
-
+}
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-zinc-50">
       <form
