@@ -16,7 +16,10 @@ export default function Home() {
       return;
     }
 
-    if (user?.platform_role === "SUPER_ADMIN" && !user.company_id) {
+    if (user?.platform_role === "SUPER_ADMIN") {
+  router.replace("/select-company");
+  return;
+} {
       router.replace("/select-company");
       return;
     }
