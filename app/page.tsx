@@ -18,10 +18,10 @@ export default function Home() {
     }
 
     // 🔥 سوبر أدمن → اختيار شركة
-    if (user?.platform_role === "SUPER_ADMIN") {
-      router.replace("/select-company");
-      return;
-    }
+    if (user?.platform_role === "SUPER_ADMIN" && !user?.company_id) {
+  router.replace("/select-company");
+  return;
+}
 
     // ✅ باقي المستخدمين
     router.replace("/dashboard");

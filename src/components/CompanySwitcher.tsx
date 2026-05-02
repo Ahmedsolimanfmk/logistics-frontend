@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
+import { useRouter } from "next/navigation";
 
 export default function CompanySwitcher() {
   const [companies, setCompanies] = useState<any[]>([]);
@@ -12,6 +13,7 @@ export default function CompanySwitcher() {
   const setAuth = useAuth((s) => s.setAuth);
 
   const currentCompany = user?.company_name || "اختر شركة";
+  const router = useRouter();
 
   useEffect(() => {
     async function load() {
@@ -49,7 +51,7 @@ setAuth(res.token, {
       setOpen(false);
 
       // optional refresh
-      window.location.reload();
+      router.replace("/dashboard");
     } catch (e) {
       console.error("Switch failed", e);
     }
