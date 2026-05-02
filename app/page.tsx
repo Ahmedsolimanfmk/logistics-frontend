@@ -11,19 +11,19 @@ export default function Home() {
   useEffect(() => {
     if (!hasHydrated) return;
 
+    // ❌ مش لوجين
     if (!token) {
       router.replace("/login");
       return;
     }
 
+    // 🔥 سوبر أدمن → اختيار شركة
     if (user?.platform_role === "SUPER_ADMIN") {
-  router.replace("/select-company");
-  return;
-} {
       router.replace("/select-company");
       return;
     }
 
+    // ✅ باقي المستخدمين
     router.replace("/dashboard");
   }, [token, user, hasHydrated]);
 
