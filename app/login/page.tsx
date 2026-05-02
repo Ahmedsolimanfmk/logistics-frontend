@@ -34,9 +34,20 @@ export default function LoginPage() {
   }, []);
 
   // ✅ redirect if logged in
-  useEffect(() => {
-  if (token) router.replace("/dashboard");
-}, [token]);
+  const user = useAuth((s) => s.user);
+const hasHydrated = useAuth((s) => s.hasHydrated);
+
+useEffect(() => {
+  if (!hasHydrated) return;
+
+  if (!token) return;
+
+  if (user?.platform_role === "SUPER_ADMIN") {
+    router.replace("/select-company");
+  } else {
+    router.replace("/dashboard");
+  }
+}, [token, user, hasHydrated]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault();
