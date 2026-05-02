@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useAuth } from "@/src/store/auth";
 
 // =====================
 // Runtime API base
@@ -23,37 +24,33 @@ function getRuntimeApiBase(): string {
 }
 
 // =====================
-// Auth / Company helpers
+// Auth helpers (Zustand first)
 // =====================
 function getStoredToken(): string | null {
-  if (typeof window === "undefined") return null;
   try {
-    return localStorage.getItem("token");
+    const state = useAuth.getState();
+    if (state.token) return state.token;
+
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("token");
+    }
+
+    return null;
   } catch {
     return null;
   }
 }
 
 function getStoredCompanyId(): string | null {
-  if (typeof window === "undefined") return null;
-
   try {
-    const direct =
-      localStorage.getItem("company_id") ||
-      localStorage.getItem("companyId") ||
-      localStorage.getItem("active_company_id");
+    const state = useAuth.getState();
+    if (state.company_id) return state.company_id;
 
-    if (direct) return direct;
-
-    const userRaw = localStorage.getItem("user");
-    if (userRaw) {
-      const user = JSON.parse(userRaw);
+    if (typeof window !== "undefined") {
       return (
-        user?.company_id ||
-        user?.companyId ||
-        user?.active_company_id ||
-        user?.company?.id ||
-        null
+        localStorage.getItem("company_id") ||
+        localStorage.getItem("companyId") ||
+        localStorage.getItem("active_company_id")
       );
     }
 
@@ -69,6 +66,7 @@ function clearStoredAuth() {
   try {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("company_id");
   } catch {
     // ignore
   }
@@ -102,12 +100,17 @@ api.interceptors.request.use((config) => {
   if (typeof h.set === "function") {
     if (token) h.set("Authorization", `Bearer ${token}`);
     if (companyId) h.set("x-company-id", companyId);
+
+    // 🔥 Debug header (مهم جدًا أثناء التطوير)
+    h.set("x-debug-company", companyId || "none");
+
     config.headers = h;
   } else {
     config.headers = {
       ...(config.headers as any),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(companyId ? { "x-company-id": companyId } : {}),
+      ...(companyId ? { "x-debug-company": companyId } : {}),
     };
   }
 
@@ -144,7 +147,7 @@ api.interceptors.response.use(
 );
 
 // =====================
-// Legacy explicit auth wrappers
+// Auth wrappers
 // =====================
 export async function apiAuthGet<T = any>(
   path: string,
@@ -176,7 +179,7 @@ export async function apiAuthDelete<T = any>(path: string): Promise<T> {
 }
 
 // =====================
-// Thin wrappers
+// Thin wrappers (public)
 // =====================
 export async function apiGet<T = any>(
   path: string,
@@ -208,7 +211,7 @@ export async function apiDelete<T = any>(path: string): Promise<T> {
 }
 
 // =====================
-// Transitional helpers
+// Helpers
 // =====================
 export function unwrapItems<T = any>(res: any): T[] {
   const d = res?.data ?? res;

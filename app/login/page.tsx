@@ -22,8 +22,10 @@ export default function LoginPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // ✅ mount guard
   useEffect(() => setMounted(true), []);
 
+  // ✅ hydrate auth from storage
   useEffect(() => {
     try {
       hydrate?.();
@@ -31,8 +33,11 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ redirect if logged in
   useEffect(() => {
-    if (token) router.replace("/dashboard");
+    if (token) {
+      router.replace("/dashboard");
+    }
   }, [token, router]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -43,7 +48,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // ✅ read actual DOM values (works with Chrome autofill)
+      // ✅ handle autofill correctly
       const fd = new FormData(e.currentTarget);
       const emailRaw = String(fd.get("email") ?? "");
       const passRaw = String(fd.get("password") ?? "");
@@ -69,11 +74,26 @@ export default function LoginPage() {
         return;
       }
 
+      // ✅ important: check company_id
+      console.log("LOGIN SUCCESS USER =>", user);
+      console.log("COMPANY ID =>", user?.company_id);
+
+      // ✅ store auth (token + user + company_id inside store)
       setAuth(String(t), user);
+
+      // 🚀 redirect
       router.replace("/dashboard");
     } catch (e: any) {
-      console.log("LOGIN ERROR FULL:", e?.response?.status, e?.response?.data, e);
-      const msg = e?.response?.data?.message || e?.message || "Login failed";
+      console.log(
+        "LOGIN ERROR FULL:",
+        e?.response?.status,
+        e?.response?.data,
+        e
+      );
+
+      const msg =
+        e?.response?.data?.message || e?.message || "Login failed";
+
       setErr(String(msg));
     } finally {
       setLoading(false);
@@ -99,7 +119,7 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        {/* ✅ Password with show/hide */}
+        {/* 🔐 Password */}
         <div className="relative">
           <input
             name="password"

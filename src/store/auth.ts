@@ -9,11 +9,13 @@ export type User = {
   role: string;
   effective_role?: string;
   platform_role?: string;
+  company_id?: string | null; // ✅ NEW
 };
 
 export type AuthState = {
   token: string | null;
   user: User | null;
+  company_id: string | null; // ✅ NEW
   hasHydrated: boolean;
 
   setAuth: (token: string, user: User) => void;
@@ -30,7 +32,9 @@ function normalizeUser(u: any): User {
       ""
   ).toUpperCase();
 
-  const platformRole = String(u?.platform_role || effectiveRole || "").toUpperCase();
+  const platformRole = String(
+    u?.platform_role || effectiveRole || ""
+  ).toUpperCase();
 
   return {
     id: String(u?.id || ""),
@@ -39,12 +43,14 @@ function normalizeUser(u: any): User {
     role: effectiveRole,
     effective_role: effectiveRole,
     platform_role: platformRole,
+    company_id: u?.company_id || null, // ✅ NEW
   };
 }
 
 export const useAuth = create<AuthState>((set) => ({
   token: null,
   user: null,
+  company_id: null, // ✅ NEW
   hasHydrated: false,
 
   setAuth: (token, userRaw) => {
@@ -53,27 +59,37 @@ export const useAuth = create<AuthState>((set) => ({
     try {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("company_id", user.company_id || ""); // ✅ NEW
     } catch {}
 
-    set({ token, user, hasHydrated: true });
+    set({
+      token,
+      user,
+      company_id: user.company_id || null, // ✅ NEW
+      hasHydrated: true,
+    });
   },
 
   hydrate: () => {
     try {
       const token = localStorage.getItem("token");
       const userRaw = localStorage.getItem("user");
+      const companyId = localStorage.getItem("company_id");
+
       const parsed = userRaw ? JSON.parse(userRaw) : null;
       const user = parsed ? normalizeUser(parsed) : null;
 
       set({
         token,
         user,
+        company_id: companyId || user?.company_id || null, // ✅ NEW
         hasHydrated: true,
       });
     } catch {
       set({
         token: null,
         user: null,
+        company_id: null,
         hasHydrated: true,
       });
     }
@@ -83,11 +99,17 @@ export const useAuth = create<AuthState>((set) => ({
     try {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("company_id"); // ✅ NEW
       localStorage.removeItem("auth");
       localStorage.removeItem("persist:auth");
     } catch {}
 
-    set({ token: null, user: null, hasHydrated: true });
+    set({
+      token: null,
+      user: null,
+      company_id: null,
+      hasHydrated: true,
+    });
 
     if (typeof window !== "undefined") {
       window.location.href = "/login";
