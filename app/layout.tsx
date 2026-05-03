@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./globals.css";
+//import "./globals.css";
 import LanguageInit from "@/src/components/LanguageInit";
 
 export const metadata: Metadata = {
