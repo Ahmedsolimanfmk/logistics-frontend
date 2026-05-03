@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
+import { useRouter } from "next/navigation";
 
 export default function CompanySwitcher() {
   const router = useRouter();
@@ -14,21 +14,18 @@ export default function CompanySwitcher() {
   const user = useAuth((s) => s.user);
   const setAuth = useAuth((s) => s.setAuth);
 
+  const currentCompany = user?.company_name || "اختر شركة";
+
   useEffect(() => {
-    async function load() {
-      const res: any = await apiAuthGet("/auth/my-companies");
-      setCompanies(res.data || []);
-    }
     load();
   }, []);
 
-  // 🔥 أهم سطر يحل المشكلة كلها
-  if (!user) return null;
-
-  const currentCompany = user.company_name || "اختر شركة";
+  async function load() {
+    const res: any = await apiAuthGet("/auth/my-companies");
+    setCompanies(res.data || []);
+  }
 
   async function switchCompany(c: any) {
-    // 🔥 Narrowing جوه الفنكشن
     if (!user) return;
 
     const res: any = await apiAuthPost("/auth/switch-company", {
@@ -42,32 +39,24 @@ export default function CompanySwitcher() {
       role: user.role,
       effective_role: user.effective_role,
       platform_role: user.platform_role,
-
       company_id: c.id,
       company_name: c.name,
     });
 
     setOpen(false);
-    router.refresh();
+    router.refresh(); // ✅ بدل reload
   }
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="px-3 py-2 border rounded"
-      >
+      <button onClick={() => setOpen(!open)}>
         {currentCompany}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow">
+        <div>
           {companies.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => switchCompany(c)}
-              className="block w-full px-3 py-2 hover:bg-gray-100 text-right"
-            >
+            <button key={c.id} onClick={() => switchCompany(c)}>
               {c.name}
             </button>
           ))}

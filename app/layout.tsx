@@ -1,6 +1,6 @@
+// app/layout.tsx
 import type { Metadata } from "next";
-//import "./globals.css";
-import LanguageInit from "@/src/components/LanguageInit";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Logistics System",
@@ -15,7 +15,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <LanguageInit />
         {children}
       </body>
     </html>

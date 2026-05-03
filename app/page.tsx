@@ -6,25 +6,28 @@ import { useAuth } from "@/src/store/auth";
 
 export default function Home() {
   const router = useRouter();
-  const { token, user, hasHydrated } = useAuth();
+  const token = useAuth((s) => s.token);
+  const user = useAuth((s) => s.user);
 
   useEffect(() => {
-    if (!hasHydrated) return;
+    // 🚀 اجبر hydrate
+    useAuth.getState().hydrate();
 
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
+    setTimeout(() => {
+      const state = useAuth.getState();
 
-    if (!user) return;
+      if (!state.token) {
+        router.replace("/login");
+        return;
+      }
 
-    if (user.platform_role === "SUPER_ADMIN" && !user.company_id) {
-      router.replace("/select-company");
-      return;
-    }
+      if (state.user?.platform_role === "SUPER_ADMIN") {
+        router.replace("/select-company");
+      } else {
+        router.replace("/dashboard");
+      }
+    }, 100); // delay بسيط
+  }, []);
 
-    router.replace("/dashboard");
-  }, [token, user, hasHydrated]);
-
-  return null;
+  return <div className="p-6">Loading...</div>;
 }

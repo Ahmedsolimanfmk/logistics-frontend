@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
 import { useAuth } from "@/src/store/auth";
 import { useRouter } from "next/navigation";
@@ -10,46 +10,36 @@ export default function SelectCompanyPage() {
   const { setAuth, user } = useAuth();
 
   const [companies, setCompanies] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadCompanies();
+    load();
   }, []);
 
-  async function loadCompanies() {
-    try {
-      const res = await apiAuthGet("/auth/my-companies");
-      setCompanies(res?.data || []);
-    } catch (e) {
-      console.log("LOAD COMPANIES ERROR", e);
-    } finally {
-      setLoading(false);
-    }
+  async function load() {
+    const res: any = await apiAuthGet("/auth/my-companies");
+    setCompanies(res.data || []);
   }
 
-  async function selectCompany(company: any) {
-    try {
-      const res: any = await apiAuthPost("/auth/switch-company", {
-        company_id: company.id,
-      });
+  async function selectCompany(c: any) {
+    const res: any = await apiAuthPost("/auth/switch-company", {
+      company_id: c.id,
+    });
 
-      if (!user) return;
+    if (!user) return;
 
-      setAuth(res.token, {
-        ...user,
-        company_id: company.id,
-        company_name: company.name,
-      });
+    setAuth(res.token, {
+      id: user.id,
+      full_name: user.full_name,
+      email: user.email,
+      role: user.role,
+      effective_role: user.effective_role,
+      platform_role: user.platform_role,
+      company_id: c.id,
+      company_name: c.name,
+    });
 
-      // 🔥 مهم جدًا
-      router.replace("/dashboard");
-
-    } catch (e) {
-      console.error("Switch failed", e);
-    }
+    router.replace("/dashboard");
   }
-
-  if (loading) return <div className="p-6">Loading...</div>;
 
   return (
     <div className="p-6 space-y-4">
@@ -59,7 +49,7 @@ export default function SelectCompanyPage() {
         <button
           key={c.id}
           onClick={() => selectCompany(c)}
-          className="block w-full border p-3 rounded hover:bg-gray-100 text-left"
+          className="block w-full border p-3 rounded"
         >
           {c.name}
         </button>
