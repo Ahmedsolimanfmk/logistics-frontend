@@ -55,7 +55,7 @@ export default function AppShell({
       </main>
 
       {/* AI Widget */}
-      <AIAssistantWidget />
+      {/* <AIAssistantWidget /> */}
     </div>
   );
 }
