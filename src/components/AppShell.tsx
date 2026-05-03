@@ -15,7 +15,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     hydrate();
   }, []);
 
-  // 🔥 أهم شرط في المشروع كله
+  // 🔥 يمنع الـ crash (سبب الشاشة البيضا)
   if (!hasHydrated) {
     return <div style={{ padding: 20 }}>Loading app...</div>;
   }

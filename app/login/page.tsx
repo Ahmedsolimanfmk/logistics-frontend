@@ -9,146 +9,87 @@ export default function LoginPage() {
   const router = useRouter();
 
   const token = useAuth((s) => s.token);
+  const user = useAuth((s) => s.user);
+  const hasHydrated = useAuth((s) => s.hasHydrated);
   const setAuth = useAuth((s) => s.setAuth);
   const hydrate = useAuth((s) => s.hydrate);
 
-  const [mounted, setMounted] = useState(false);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
-
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ✅ mount guard
-  useEffect(() => setMounted(true), []);
-
-  // ✅ hydrate auth from storage
   useEffect(() => {
-    try {
-      hydrate?.();
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    hydrate();
   }, []);
 
-  // ✅ redirect if logged in
-  const user = useAuth((s) => s.user);
-const hasHydrated = useAuth((s) => s.hasHydrated);
+  // 🔥 redirect صح
+  useEffect(() => {
+    if (!hasHydrated) return;
+    if (!token) return;
 
-useEffect(() => {
-  if (!hasHydrated) return;
-
-  if (!token) return;
-
-  if (user?.platform_role === "SUPER_ADMIN") {
-    router.replace("/select-company");
-  } else {
-    router.replace("/dashboard");
-  }
-}, [token, user, hasHydrated]);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
-  if (loading) return;
-
-  setErr(null);
-  setLoading(true);
-
-  try {
-    const fd = new FormData(e.currentTarget);
-    const emailRaw = String(fd.get("email") ?? "");
-    const passRaw = String(fd.get("password") ?? "");
-
-    const emailNorm = emailRaw.trim().toLowerCase();
-
-    const res = await api.post("/auth/login", {
-      email: emailNorm,
-      password: passRaw,
-    });
-
-    const data = (res as any)?.data ?? res;
-    const { token: t, user } = data || {};
-
-    if (!t || !user) {
-      setErr("Login failed: invalid response");
-      return;
-    }
-
-    // ✅ حفظ البيانات
-    setAuth(String(t), user);
-
-    // ✅ التوجيه الصحيح
-    if (user.platform_role === "SUPER_ADMIN") {
+    if (user?.platform_role === "SUPER_ADMIN") {
       router.replace("/select-company");
     } else {
       router.replace("/dashboard");
     }
+  }, [token, user, hasHydrated]);
 
-  } catch (e: any) {
-    console.log(
-      "LOGIN ERROR FULL:",
-      e?.response?.status,
-      e?.response?.data,
-      e
-    );
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (loading) return;
 
-    const msg =
-      e?.response?.data?.message || e?.message || "Login failed";
+    setErr(null);
+    setLoading(true);
 
-    setErr(String(msg));
-  } finally {
-    setLoading(false);
+    try {
+      const res = await api.post("/auth/login", {
+        email,
+        password,
+      });
+
+      const { token: t, user } = res.data;
+
+      setAuth(t, user);
+
+      if (user.platform_role === "SUPER_ADMIN") {
+        router.replace("/select-company");
+      } else {
+        router.replace("/dashboard");
+      }
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.message || e?.message || "Login failed";
+      setErr(msg);
+    } finally {
+      setLoading(false);
+    }
   }
-}
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-zinc-50">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-3 border rounded-lg p-4 bg-white"
-      >
-        <h1 className="text-xl font-semibold">Login</h1>
+    <div className="min-h-screen flex items-center justify-center">
+      <form onSubmit={onSubmit} className="w-80 space-y-3">
+        <h1 className="text-xl font-bold">Login</h1>
 
         <input
-          name="email"
-          className="w-full border rounded p-2"
+          className="w-full border p-2"
           placeholder="email"
-          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        {/* 🔐 Password */}
-        <div className="relative">
-          <input
-            name="password"
-            className="w-full border rounded p-2 pr-10"
-            placeholder="password"
-            type={showPassword ? "text" : "password"}
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+        <input
+          className="w-full border p-2"
+          placeholder="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-          <button
-            type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-black"
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? "🙈" : "👁️"}
-          </button>
-        </div>
+        {err && <div className="text-red-500">{err}</div>}
 
-        {err ? <div className="text-sm text-red-600">{err}</div> : null}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full border rounded p-2 disabled:opacity-60"
-        >
-          {loading ? "Signing in…" : "Sign in"}
+        <button className="w-full border p-2">
+          {loading ? "Loading..." : "Login"}
         </button>
       </form>
     </div>

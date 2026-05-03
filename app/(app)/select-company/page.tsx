@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 export default function SelectCompanyPage() {
   const router = useRouter();
-  const { setAuth, token, user } = useAuth();
+  const { setAuth, user } = useAuth();
 
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,29 +28,26 @@ export default function SelectCompanyPage() {
   }
 
   async function selectCompany(company: any) {
-  try {
-    const res: any = await apiAuthPost("/auth/switch-company", {
-      company_id: company.id,
-    });
+    try {
+      const res: any = await apiAuthPost("/auth/switch-company", {
+        company_id: company.id,
+      });
 
-    if (!user || !user.id) return;
+      if (!user) return;
 
-    setAuth(res.token, {
-      id: user.id,
-      full_name: user.full_name || "",
-      email: user.email || "",
-      role: user.role || "USER",
-      effective_role: user.effective_role,
-      platform_role: user.platform_role,
+      setAuth(res.token, {
+        ...user,
+        company_id: company.id,
+        company_name: company.name,
+      });
 
-      company_id: company.id,      // ✅ هنا
-      company_name: company.name,  // ✅ وهنا
-    });
+      // 🔥 مهم جدًا
+      router.replace("/dashboard");
 
-  } catch (e) {
-    console.error("Switch failed", e);
+    } catch (e) {
+      console.error("Switch failed", e);
+    }
   }
-}
 
   if (loading) return <div className="p-6">Loading...</div>;
 
