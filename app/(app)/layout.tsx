@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
-import "./globals.css";
+import "../globals.css";
 import LanguageInit from "@/src/components/LanguageInit";
 import AppShell from "@/src/components/AppShell"; // 🔥 مهم
 
@@ -37,7 +37,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-[rgb(var(--trex-bg))] text-[rgb(var(--trex-fg))]">
         <LanguageInit />
 
-        {/* 🔥 الحل هنا */}
+        
         <AppShell>{children}</AppShell>
 
       </body>
