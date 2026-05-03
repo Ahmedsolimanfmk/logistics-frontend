@@ -8,29 +8,32 @@ import AIAssistantWidget from "@/src/components/AIAssistantWidget";
 import { useAuth } from "@/src/store/auth";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const hydrate = useAuth((s) => s.hydrate);
+  const hasHydrated = useAuth((s) => s.hasHydrated);
+
   useEffect(() => {
-    useAuth.getState().hydrate(); // 🔥 أهم سطر في المشروع كله
+    hydrate();
   }, []);
 
+  // 🔥 أهم شرط في المشروع كله
+  if (!hasHydrated) {
+    return <div style={{ padding: 20 }}>Loading app...</div>;
+  }
+
   return (
-    <div className="min-h-screen w-full overflow-hidden flex bg-[rgb(var(--trex-bg))] text-[rgb(var(--trex-fg))]">
+    <div className="min-h-screen w-full flex bg-[rgb(var(--trex-bg))] text-[rgb(var(--trex-fg))]">
       <Sidebar />
 
-      <main className="relative flex-1 min-w-0 min-h-screen overflow-hidden">
-        <div className="h-full overflow-auto">
-          <div className="p-6">
-            <div className="mb-4 flex items-center justify-end gap-2">
-              <NotificationBell />
-              <LanguageSwitcher />
-            </div>
-
-            {children}
-          </div>
+      <main className="flex-1 p-6">
+        <div className="mb-4 flex items-center justify-end gap-2">
+          <NotificationBell />
+          <LanguageSwitcher />
         </div>
 
-        {/* Smart AI Assistant */}
-        <AIAssistantWidget />
+        {children}
       </main>
+
+      <AIAssistantWidget />
     </div>
   );
 }
