@@ -22,7 +22,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full flex bg-[rgb(var(--trex-bg))] text-[rgb(var(--trex-fg))]">
-      <Sidebar />
+      {/* <Sidebar /> */}
 
       <main className="flex-1 p-6">
         <div className="mb-4 flex items-center justify-end gap-2">
