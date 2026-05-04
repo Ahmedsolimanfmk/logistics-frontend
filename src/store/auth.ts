@@ -23,7 +23,13 @@ export type AuthState = {
   hydrate: () => void;
   logout: () => void;
 };
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${value}; path=/`;
+}
 
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; Max-Age=0; path=/`;
+}
 function normalizeUser(u: any): User {
   const effectiveRole = String(
     u?.effective_role ||
@@ -57,22 +63,27 @@ export const useAuth = create<AuthState>((set) => ({
   hasHydrated: false,
 
   setAuth: (token, userRaw) => {
-    const user = normalizeUser(userRaw);
+  const user = normalizeUser(userRaw);
 
-    try {
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("company_id", user.company_id || "");
-      localStorage.setItem("company_name", user.company_name || ""); // 🔥 NEW
-    } catch {}
+  try {
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("company_id", user.company_id || "");
 
-    set({
-      token,
-      user,
-      company_id: user.company_id || null,
-      hasHydrated: true,
-    });
-  },
+    // 🔥 مهم جدا للميدل وير
+    setCookie("token", token);
+    if (user.company_id) {
+      setCookie("company_id", user.company_id);
+    }
+  } catch {}
+
+  set({
+    token,
+    user,
+    company_id: user.company_id || null,
+    hasHydrated: true,
+  });
+},
 
   hydrate: () => {
     try {
@@ -105,24 +116,21 @@ export const useAuth = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("company_id");
-      localStorage.removeItem("company_name"); // 🔥 NEW
-      localStorage.removeItem("auth");
-      localStorage.removeItem("persist:auth");
-    } catch {}
+  try {
+    localStorage.clear();
 
-    set({
-      token: null,
-      user: null,
-      company_id: null,
-      hasHydrated: true,
-    });
+    deleteCookie("token");
+    deleteCookie("company_id");
+  } catch {}
 
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
-  },
+  set({
+    token: null,
+    user: null,
+    company_id: null,
+    hasHydrated: true,
+  });
+
+  window.location.href = "/login";
+},
+  
 }));
