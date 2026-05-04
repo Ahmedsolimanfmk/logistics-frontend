@@ -11,21 +11,20 @@ export default function Home() {
   useEffect(() => {
     if (!hasHydrated) return;
 
-    // ❌ مش لوجين
     if (!token) {
       router.replace("/login");
       return;
     }
 
-    // ❌ سوبر أدمن بدون شركة
+    // SUPER_ADMIN بدون شركة
     if (user?.platform_role === "SUPER_ADMIN" && !user.company_id) {
       router.replace("/select-company");
       return;
     }
 
-    // ✅ باقي الحالات
+    // باقي الحالات
     router.replace("/dashboard");
   }, [token, user, hasHydrated]);
 
-  return null;
+  return <div className="p-6">Loading...</div>;
 }
