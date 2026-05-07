@@ -10,7 +10,7 @@ export type User = {
   effective_role?: string;
   platform_role?: string;
   company_id?: string | null;
-  company_name?: string | null; // 🔥 NEW
+  company_name?: string | null;
 };
 
 export type AuthState = {
@@ -23,6 +23,7 @@ export type AuthState = {
   hydrate: () => void;
   logout: () => void;
 };
+
 function setCookie(name: string, value: string) {
   document.cookie = `${name}=${value}; path=/`;
 }
@@ -30,6 +31,7 @@ function setCookie(name: string, value: string) {
 function deleteCookie(name: string) {
   document.cookie = `${name}=; Max-Age=0; path=/`;
 }
+
 function normalizeUser(u: any): User {
   const effectiveRole = String(
     u?.effective_role ||
@@ -50,9 +52,8 @@ function normalizeUser(u: any): User {
     role: effectiveRole,
     effective_role: effectiveRole,
     platform_role: platformRole,
-
     company_id: u?.company_id || null,
-    company_name: u?.company_name || null, // 🔥 NEW
+    company_name: u?.company_name || null,
   };
 }
 
@@ -63,41 +64,36 @@ export const useAuth = create<AuthState>((set) => ({
   hasHydrated: false,
 
   setAuth: (token, userRaw) => {
-  const user = normalizeUser(userRaw);
+    const user = normalizeUser(userRaw);
 
-  try {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
-    localStorage.setItem("company_id", user.company_id || "");
+    try {
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
 
-    // 🔥 مهم جدا للميدل وير
-    setCookie("token", token);
-    if (user.company_id) {
-      setCookie("company_id", user.company_id);
-    }
-  } catch {}
+      if (user.company_id) {
+        localStorage.setItem("company_id", user.company_id);
+        setCookie("company_id", user.company_id);
+      }
 
-  set({
-    token,
-    user,
-    company_id: user.company_id || null,
-    hasHydrated: true,
-  });
-},
+      setCookie("token", token);
+    } catch {}
+
+    set({
+      token,
+      user,
+      company_id: user.company_id || null,
+      hasHydrated: true,
+    });
+  },
 
   hydrate: () => {
     try {
       const token = localStorage.getItem("token");
       const userRaw = localStorage.getItem("user");
       const companyId = localStorage.getItem("company_id");
-      const companyName = localStorage.getItem("company_name");
 
       const parsed = userRaw ? JSON.parse(userRaw) : null;
       const user = parsed ? normalizeUser(parsed) : null;
-
-      if (user) {
-        user.company_name = companyName || user.company_name || null;
-      }
 
       set({
         token,
@@ -116,21 +112,19 @@ export const useAuth = create<AuthState>((set) => ({
   },
 
   logout: () => {
-  try {
-    localStorage.clear();
+    try {
+      localStorage.clear();
+      deleteCookie("token");
+      deleteCookie("company_id");
+    } catch {}
 
-    deleteCookie("token");
-    deleteCookie("company_id");
-  } catch {}
+    set({
+      token: null,
+      user: null,
+      company_id: null,
+      hasHydrated: true,
+    });
 
-  set({
-    token: null,
-    user: null,
-    company_id: null,
-    hasHydrated: true,
-  });
-
-  window.location.href = "/login";
-},
-  
+    window.location.href = "/login";
+  },
 }));

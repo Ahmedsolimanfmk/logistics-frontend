@@ -12,18 +12,13 @@ export default function LoginPage() {
   const user = useAuth((s) => s.user);
   const hasHydrated = useAuth((s) => s.hasHydrated);
   const setAuth = useAuth((s) => s.setAuth);
-  const hydrate = useAuth((s) => s.hydrate);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    hydrate();
-  }, []);
-
-  // 🔥 redirect صح
+  // 🔥 redirect logic
   useEffect(() => {
     if (!hasHydrated) return;
     if (!token) return;
@@ -64,6 +59,10 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (!hasHydrated) {
+    return <div className="p-6">Loading...</div>;
   }
 
   return (
