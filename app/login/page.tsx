@@ -19,16 +19,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   // 🔥 redirect logic
-  useEffect(() => {
-    if (!hasHydrated) return;
-    if (!token) return;
+ useEffect(() => {
+  if (!hasHydrated) return;
 
-    if (user?.platform_role === "SUPER_ADMIN") {
-      router.replace("/select-company");
-    } else {
-      router.replace("/dashboard");
-    }
-  }, [token, user, hasHydrated]);
+  // ❌ مهم جدًا
+  if (!token || !user) return;
+
+  if (user?.platform_role === "SUPER_ADMIN") {
+    router.replace("/select-company");
+  } else {
+    router.replace("/dashboard");
+  }
+}, [token, user, hasHydrated]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
