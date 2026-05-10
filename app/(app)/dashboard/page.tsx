@@ -32,12 +32,6 @@ import type {
   DashboardAlertsSummary,
 } from "@/src/types/dashboard.types";
 import { useAuth } from "@/src/store/auth";
-const user = useAuth((s) => s.user);
-const role =
-  user?.platform_role === "SUPER_ADMIN" && user?.is_impersonating
-    ? user.role
-    : user?.platform_role;
-    const showDev = role === "SUPER_ADMIN";
 
 function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -126,6 +120,14 @@ type GenericRow = Record<string, unknown>;
 
 export default function DashboardPage() {
   const t = useT();
+ const user = useAuth((s) => s.user);
+
+  const role =
+    user?.platform_role === "SUPER_ADMIN" && user?.is_impersonating
+      ? user.role
+      : user?.platform_role;
+
+  const showDev = role === "SUPER_ADMIN";
 
   const [tab, setTab] = useState<DashboardTabKey>("operations");
   const [loading, setLoading] = useState(true);
@@ -290,7 +292,7 @@ export default function DashboardPage() {
   const showOperations = tab === "operations";
   const showFinance = tab === "finance";
   const showMaintenance = tab === "maintenance";
-  const showDev = tab === "dev";
+  
 
   const recentAlertsColumns: DataTableColumn<DashboardAlertRow>[] = [
     {
