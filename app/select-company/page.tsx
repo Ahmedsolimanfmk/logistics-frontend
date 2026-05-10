@@ -48,7 +48,6 @@ export default function SelectCompanyPage() {
         full_name: user.full_name,
         email: user.email,
         role: user.role,
-        effective_role: user.effective_role,
         platform_role: user.platform_role,
         company_id: company.id,
         company_name: company.name,
