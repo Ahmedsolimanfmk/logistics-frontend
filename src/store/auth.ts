@@ -7,10 +7,10 @@ export type User = {
   full_name: string;
   email: string;
   role: string;
-  effective_role?: string;
   platform_role?: string;
   company_id?: string | null;
   company_name?: string | null;
+  is_impersonating?: boolean;
 };
 
 export type AuthState = {
@@ -24,37 +24,32 @@ export type AuthState = {
   logout: () => void;
 };
 
-function setCookie(name: string, value: string) {
-  document.cookie = `${name}=${value}; path=/`;
-}
-
-function deleteCookie(name: string) {
-  document.cookie = `${name}=; Max-Age=0; path=/`;
-}
-
+// 🔥 أهم حاجة هنا
 function normalizeUser(u: any): User {
-  const effectiveRole = String(
-    u?.effective_role ||
-      (String(u?.platform_role || "").toUpperCase() === "SUPER_ADMIN"
-        ? "SUPER_ADMIN"
-        : u?.role) ||
-      ""
-  ).toUpperCase();
-
-  const platformRole = String(
-    u?.platform_role || effectiveRole || ""
-  ).toUpperCase();
-
   return {
     id: String(u?.id || ""),
     full_name: String(u?.full_name || ""),
     email: String(u?.email || ""),
-    role: effectiveRole,
-    effective_role: effectiveRole,
-    platform_role: platformRole,
+
+    role: String(u?.role || "").toUpperCase(),
+    platform_role: String(u?.platform_role || "").toUpperCase(),
+
     company_id: u?.company_id || null,
     company_name: u?.company_name || null,
+
+    is_impersonating: !!u?.is_impersonating,
   };
+}
+
+// 🔥 دي النقطة السحرية
+export function getEffectiveRole(user: User | null): string {
+  if (!user) return "";
+
+  if (user.platform_role === "SUPER_ADMIN" && user.is_impersonating) {
+    return user.role; // 👈 يتحول لدور الشركة
+  }
+
+  return user.platform_role || user.role;
 }
 
 export const useAuth = create<AuthState>((set) => ({
@@ -72,10 +67,7 @@ export const useAuth = create<AuthState>((set) => ({
 
       if (user.company_id) {
         localStorage.setItem("company_id", user.company_id);
-        setCookie("company_id", user.company_id);
       }
-
-      setCookie("token", token);
     } catch {}
 
     set({
@@ -90,7 +82,6 @@ export const useAuth = create<AuthState>((set) => ({
     try {
       const token = localStorage.getItem("token");
       const userRaw = localStorage.getItem("user");
-      const companyId = localStorage.getItem("company_id");
 
       const parsed = userRaw ? JSON.parse(userRaw) : null;
       const user = parsed ? normalizeUser(parsed) : null;
@@ -98,7 +89,7 @@ export const useAuth = create<AuthState>((set) => ({
       set({
         token,
         user,
-        company_id: companyId || user?.company_id || null,
+        company_id: user?.company_id || null,
         hasHydrated: true,
       });
     } catch {
@@ -112,11 +103,7 @@ export const useAuth = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    try {
-      localStorage.clear();
-      deleteCookie("token");
-      deleteCookie("company_id");
-    } catch {}
+    localStorage.clear();
 
     set({
       token: null,

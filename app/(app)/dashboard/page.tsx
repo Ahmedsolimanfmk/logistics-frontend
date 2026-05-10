@@ -31,6 +31,13 @@ import type {
   DashboardComplianceResponse,
   DashboardAlertsSummary,
 } from "@/src/types/dashboard.types";
+import { useAuth } from "@/src/store/auth";
+const user = useAuth((s) => s.user);
+const role =
+  user?.platform_role === "SUPER_ADMIN" && user?.is_impersonating
+    ? user.role
+    : user?.platform_role;
+    const showDev = role === "SUPER_ADMIN";
 
 function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -199,17 +206,21 @@ export default function DashboardPage() {
   }, [tab]);
 
   const tabs = useMemo(
-    () => [
-      { key: "operations" as const, label: tr(t, "tabs.operations", "التشغيل") },
-      { key: "finance" as const, label: tr(t, "tabs.finance", "المالية") },
-      {
-        key: "maintenance" as const,
-        label: tr(t, "tabs.maintenance", "الصيانة"),
-      },
-      { key: "dev" as const, label: tr(t, "tabs.dev", "المطور") },
-    ],
-    [t]
-  );
+  () => [
+    { key: "operations" as const, label: tr(t, "tabs.operations", "التشغيل") },
+    { key: "finance" as const, label: tr(t, "tabs.finance", "المالية") },
+    {
+      key: "maintenance" as const,
+      label: tr(t, "tabs.maintenance", "الصيانة"),
+    },
+
+    // 🔥 أهم تعديل
+    ...(role === "SUPER_ADMIN"
+      ? [{ key: "dev" as const, label: tr(t, "tabs.dev", "المطور") }]
+      : []),
+  ],
+  [t, role] // 🔥 مهم تضيف role هنا
+);
 
   const activeTripsRows = useMemo(
     () => (summary?.tables?.active_trips_now as GenericRow[] | undefined) ?? [],
@@ -938,15 +949,17 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      {showDev ? (
-        <div className="space-y-5">
-          <DashboardSection title={tr(t, "dashboard.dev.title", "معلومات المطور")}>
-            <DashboardGrid cols={3}>
-              <DashboardStatCard
-                label="Summary loaded"
-                value={summary ? "Yes" : "No"}
-                tone={summary ? "success" : "warn"}
-              />
+      {showDev && (
+  <div className="space-y-5">
+    <DashboardSection
+      title={tr(t, "dashboard.dev.title", "معلومات المطور")}
+    >
+      <DashboardGrid cols={3}>
+        <DashboardStatCard
+          label="Summary loaded"
+          value={summary ? "Yes" : "No"}
+          tone={summary ? "success" : "warn"}
+        />
 
               <DashboardStatCard
                 label="Trends loaded"
@@ -972,7 +985,7 @@ export default function DashboardPage() {
             emptyTitle={tr(t, "common.noData", "لا توجد بيانات")}
           />
         </div>
-      ) : null}
+      )}
 
       {!showDev ? (
         <DataTable<DashboardAlertRow>
