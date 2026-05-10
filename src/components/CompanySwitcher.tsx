@@ -37,7 +37,6 @@ export default function CompanySwitcher() {
       full_name: user.full_name,
       email: user.email,
       role: user.role,
-      effective_role: user.effective_role,
       platform_role: user.platform_role,
       company_id: c.id,
       company_name: c.name,
