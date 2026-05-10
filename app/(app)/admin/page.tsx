@@ -93,7 +93,6 @@ export default function AdminPage() {
         full_name: user.full_name,
         email: user.email,
         role: user.role,
-        effective_role: user.effective_role,
         platform_role: user.platform_role,
         company_id: res.company_id,
         company_name: res.company_name,
