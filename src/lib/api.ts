@@ -76,3 +76,37 @@ export function unwrapItems<T = any>(payload: any): T[] {
 
   return [];
 }
+// =========================
+// Auth helpers
+// =========================
+
+export async function apiAuthGet<T = any>(
+  url: string,
+  token?: string
+): Promise<T> {
+  const res = await api.get(url, {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+  });
+
+  return res.data;
+}
+
+export async function apiAuthPost<T = any>(
+  url: string,
+  token?: string,
+  body?: any
+): Promise<T> {
+  const res = await api.post(url, body, {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+  });
+
+  return res.data;
+}
