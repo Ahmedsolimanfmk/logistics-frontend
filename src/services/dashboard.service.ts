@@ -45,10 +45,14 @@ export const dashboardService = {
   },
 
   async markAlertRead(alert_key: string) {
-    return unwrap(
-      await apiAuthPatch("/dashboard/alerts/read", { alert_key })
-    );
-  },
+  return unwrap(
+    await apiAuthPatch(
+      "/dashboard/alerts/read",
+      undefined,
+      { alert_key }
+    )
+  );
+},
 
   async markAllAlertsRead(area?: string | null) {
     return unwrap(

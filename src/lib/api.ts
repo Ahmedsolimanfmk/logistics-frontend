@@ -143,9 +143,23 @@ export async function apiAuthPost<T = any>(
 }
 export async function apiAuthPatch<T = any>(
   url: string,
-  token?: string,
-  body?: any
+  tokenOrBody?: any,
+  maybeBody?: any
 ): Promise<T> {
+  let token: string | undefined;
+  let body: any;
+
+  // support old signature
+  if (
+    typeof tokenOrBody === "object" ||
+    tokenOrBody === undefined
+  ) {
+    body = tokenOrBody;
+  } else {
+    token = tokenOrBody;
+    body = maybeBody;
+  }
+
   const res = await api.patch(url, body, {
     headers: token
       ? {
