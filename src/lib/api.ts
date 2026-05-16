@@ -82,14 +82,31 @@ export function unwrapItems<T = any>(payload: any): T[] {
 
 export async function apiAuthGet<T = any>(
   url: string,
-  token?: string
+  tokenOrConfig?: any
 ): Promise<T> {
+  let token: string | undefined;
+  let config: any = {};
+
+  // لو string → token
+  if (typeof tokenOrConfig === "string") {
+    token = tokenOrConfig;
+  }
+
+  // لو object → config
+  else if (typeof tokenOrConfig === "object") {
+    config = tokenOrConfig;
+  }
+
   const res = await api.get(url, {
-    headers: token
-      ? {
-          Authorization: `Bearer ${token}`,
-        }
-      : undefined,
+    ...config,
+    headers: {
+      ...(config?.headers || {}),
+      ...(token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {}),
+    },
   });
 
   return res.data;
