@@ -252,11 +252,13 @@ export default function InventoryReceiptsPage() {
   async function searchParts() {
     setPartsLoading(true);
     try {
-      const p = unwrapItems(
-        await apiGet("/inventory/parts", {
-          q: partQuery.trim() || undefined,
-        })
-      );
+     const p = unwrapItems(
+  await apiGet("/inventory/parts", {
+    params: {
+      q: partQuery.trim() || undefined,
+    },
+  })
+);
       setParts(Array.isArray(p) ? p : []);
     } catch (e: any) {
       setToast({
