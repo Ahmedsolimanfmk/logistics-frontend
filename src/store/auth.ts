@@ -40,6 +40,13 @@ function normalizeUser(u: any): User {
     is_impersonating: !!u?.is_impersonating,
   };
 }
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${value}; path=/`;
+}
+
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; Max-Age=0; path=/`;
+}
 
 // 🔥 دي النقطة السحرية
 export function getEffectiveRole(user: User | null): string {
@@ -63,6 +70,12 @@ export const useAuth = create<AuthState>((set) => ({
 
     try {
       localStorage.setItem("token", token);
+
+setCookie("token", token);
+
+if (user.company_id) {
+  setCookie("company_id", user.company_id);
+}
       localStorage.setItem("user", JSON.stringify(user));
 
       if (user.company_id) {
@@ -104,6 +117,9 @@ export const useAuth = create<AuthState>((set) => ({
 
   logout: () => {
     localStorage.clear();
+
+deleteCookie("token");
+deleteCookie("company_id");
 
     set({
       token: null,
