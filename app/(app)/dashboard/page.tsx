@@ -963,32 +963,34 @@ export default function DashboardPage() {
           tone={summary ? "success" : "warn"}
         />
 
-              <DashboardStatCard
-                label="Trends loaded"
-                value={trendsBundle ? "Yes" : "No"}
-                tone={trendsBundle ? "success" : "warn"}
-              />
+        <DashboardStatCard
+          label="Trends loaded"
+          value={trendsBundle ? "Yes" : "No"}
+          tone={trendsBundle ? "success" : "warn"}
+        />
 
-              <DashboardStatCard
-                label="Alerts loaded"
-                value={alertsList.length}
-                tone={alertsList.length ? "info" : "neutral"}
-              />
-            </DashboardGrid>
-          </DashboardSection>
+        <DashboardStatCard
+          label="Alerts loaded"
+          value={alertsList.length}
+          tone={alertsList.length ? "info" : "neutral"}
+        />
+      </DashboardGrid>
+    </DashboardSection>
 
-          <DashboardChartsPanel trendsBundle={trendsBundle} loading={loading} />
+    <DashboardChartsPanel
+      trendsBundle={trendsBundle}
+      loading={loading}
+    />
 
-          <DataTable<DashboardAlertRow>
-            title={tr(t, "dashboard.alerts.recent", "آخر التنبيهات")}
-            columns={recentAlertsColumns}
-            rows={alertsList}
-            loading={loading}
-            emptyTitle={tr(t, "common.noData", "لا توجد بيانات")}
-          />
-        </div>
-      )}
-
+    <DataTable<DashboardAlertRow>
+      title={tr(t, "dashboard.alerts.recent", "آخر التنبيهات")}
+      columns={recentAlertsColumns}
+      rows={alertsList}
+      loading={loading}
+      emptyTitle={tr(t, "common.noData", "لا توجد بيانات")}
+    />
+  </div>
+)}
       {!showDev ? (
         <DataTable<DashboardAlertRow>
           title={tr(t, "dashboard.alerts.recent", "آخر التنبيهات")}
