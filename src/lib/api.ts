@@ -110,3 +110,18 @@ export async function apiAuthPost<T = any>(
 
   return res.data;
 }
+export async function apiAuthPatch<T = any>(
+  url: string,
+  token?: string,
+  body?: any
+): Promise<T> {
+  const res = await api.patch(url, body, {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+  });
+
+  return res.data;
+}
