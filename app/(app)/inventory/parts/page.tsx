@@ -72,9 +72,11 @@ export default function PartsPage() {
     setLoading(true);
     try {
       const res = await apiGet("/inventory/parts", {
-        q: q.trim() || undefined,
-        active: activeOnly ? "1" : undefined,
-      });
+  params: {
+    q: q.trim() || undefined,
+    active: activeOnly ? "1" : undefined,
+  },
+});
 
       setRows(asArray<PartRow>(res));
     } catch (e: any) {
