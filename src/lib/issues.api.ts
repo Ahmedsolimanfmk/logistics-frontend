@@ -40,7 +40,9 @@ export async function listIssues(params?: {
   request_id?: string;
   work_order_id?: string;
 }) {
-  return apiGet<{ items: InventoryIssue[] }>("/inventory/issues", params);
+  return apiGet<{ items: InventoryIssue[] }>("/inventory/issues", {
+  params,
+});
 }
 
 export async function getIssue(id: string) {

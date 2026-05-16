@@ -65,7 +65,9 @@ export async function listInventoryRequests(params?: {
   warehouse_id?: string;
   work_order_id?: string;
 }) {
-  return apiGet<{ items: InventoryRequest[] }>("/inventory/requests", params);
+  return apiGet<{ items: InventoryRequest[] }>("/inventory/requests", {
+  params,
+});
 }
 
 export async function getInventoryRequest(id: string) {

@@ -47,8 +47,9 @@ export type InventoryReceipt = {
 };
 
 export async function listReceipts(params?: { status?: string; warehouse_id?: string }) {
-  return apiGet<{ items: InventoryReceipt[] }>("/inventory/receipts", params);
-}
+return apiGet<{ items: InventoryReceipt[] }>("/inventory/receipts", {
+  params,
+});}
 
 export async function getReceipt(id: string) {
   return apiGet<InventoryReceipt>(`/inventory/receipts/${id}`);

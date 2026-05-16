@@ -30,5 +30,6 @@ export async function listPartItems(params?: {
   part_id?: string;
   status?: string;
 }) {
-  return apiGet<{ items: PartItem[] }>("/inventory/part-items", params);
-}
+return apiGet<{ items: PartItem[] }>("/inventory/part-items", {
+  params,
+});}
