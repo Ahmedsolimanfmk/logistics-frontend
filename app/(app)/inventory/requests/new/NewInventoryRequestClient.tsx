@@ -110,8 +110,10 @@ export default function NewInventoryRequestClient() {
     setPartsLoading(true);
     try {
       const res = await apiGet("/inventory/parts", {
-        q: partQuery || undefined,
-      });
+  params: {
+    q: partQuery || undefined,
+  },
+});
       setParts(asArray<Part>(res));
     } catch (e: any) {
       setToast({
