@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Card } from "@/src/components/ui/Card";
+import { DashboardSection } from "@/src/components/dashboard/DashboardUi";
 import { Button } from "@/src/components/ui/Button";
 import { apiAuthGet } from "@/src/lib/api";
+import { Lightbulb } from "lucide-react";
 import { useT } from "@/src/i18n/useT";
 
 type DashboardInsightsContext =
@@ -178,12 +179,16 @@ export function DashboardInsightsPanel({
   const mainInsight = sortedItems[0] || null;
 
   return (
-    <Card
+    <DashboardSection
       title={text.titles[context]}
+      delay={0.4}
       right={
-        <Button variant="ghost" onClick={load} isLoading={loading}>
-          {text.refresh}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Lightbulb className="h-4 w-4 text-[rgb(var(--trex-accent))]" />
+          <Button variant="secondary" onClick={load} isLoading={loading}>
+            {text.refresh}
+          </Button>
+        </div>
       }
     >
       <div className="space-y-4">
@@ -246,7 +251,7 @@ export function DashboardInsightsPanel({
           </>
         )}
       </div>
-    </Card>
+    </DashboardSection>
   );
 }
 

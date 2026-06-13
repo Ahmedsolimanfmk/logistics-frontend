@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
+import { ROUTE_PERMISSIONS } from "@/src/config/routeRoles";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -60,7 +61,7 @@ export function Sidebar() {
       {
         labelKey: "sidebar.finance",
         key: "finance",
-        roles: ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/finance"],
         children: [
           { labelKey: "sidebar.financeOverview", href: "/finance" },
           { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
@@ -76,29 +77,29 @@ export function Sidebar() {
       {
         labelKey: "sidebar.clients",
         href: "/clients",
-        roles: ["ADMIN", "HR", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/clients"],
       },
       {
         labelKey: "sidebar.sites",
         href: "/sites",
-        roles: ["ADMIN", "HR", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/sites"],
       },
 
       {
         labelKey: "sidebar.contracts",
         href: "/contracts",
-        roles: ["ADMIN", "HR", "ACCOUNTANT", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/contracts"],
       },
       {
         labelKey: "sidebar.contractPricing",
         href: "/contract-pricing",
-        roles: ["ADMIN", "HR", "ACCOUNTANT", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/contract-pricing"],
       },
 
       {
         labelKey: "sidebar.masterData",
         key: "masterData",
-        roles: ["ADMIN", "CONTRACT_MANAGER", "MAINTENANCE_MANAGER", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/contract-pricing/vehicle-classes"],
         children: [
           {
             labelKey: "sidebar.vehicleClasses",
@@ -122,74 +123,53 @@ export function Sidebar() {
       {
         labelKey: "sidebar.vehicles",
         href: "/vehicles",
-        roles: ["ADMIN", "HR", "MAINTENANCE_MANAGER", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/vehicles"],
       },
       {
         labelKey: "sidebar.drivers",
         href: "/drivers",
-        roles: ["ADMIN", "HR", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/drivers"],
       },
 
       {
         labelKey: "sidebar.cash",
         href: "/cash",
-        roles: ["FIELD_SUPERVISOR", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/cash"],
       },
 
       {
         labelKey: "sidebar.maintenance",
         key: "maintenance",
-        roles: [
-          "ADMIN",
-          "HR",
-          "ACCOUNTANT",
-          "FIELD_SUPERVISOR",
-          "MAINTENANCE_MANAGER",
-          "SUPER_ADMIN",
-        ],
+        roles: ROUTE_PERMISSIONS["/maintenance"],
         children: [
           {
             labelKey: "sidebar.maintenanceRequests",
             href: "/maintenance/requests",
-            roles: [
-              "ADMIN",
-              "HR",
-              "ACCOUNTANT",
-              "FIELD_SUPERVISOR",
-              "MAINTENANCE_MANAGER",
-              "SUPER_ADMIN",
-            ],
+            roles: ROUTE_PERMISSIONS["/maintenance/requests"],
           },
           {
             labelKey: "sidebar.maintenanceWorkOrders",
             href: "/maintenance/work-orders",
-            roles: [
-              "ADMIN",
-              "ACCOUNTANT",
-              "MAINTENANCE_MANAGER",
-              "SUPER_ADMIN",
-            ],
+            roles: ROUTE_PERMISSIONS["/maintenance/work-orders"],
           },
-           { labelKey: "sidebar.maintenanceIssuedParts", href: "/maintenance/issued-parts" },
+          {
+            labelKey: "sidebar.maintenanceIssuedParts",
+            href: "/maintenance/issued-parts",
+            roles: ROUTE_PERMISSIONS["/maintenance/issued-parts"],
+          },
         ],
       },
 
       {
         labelKey: "sidebar.vendors",
         href: "/vendors",
-        roles: ["ADMIN", "ACCOUNTANT", "HR", "MAINTENANCE_MANAGER", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/vendors"],
       },
 
       {
         labelKey: "sidebar.inventory",
         key: "inventory",
-        roles: [
-          "ADMIN",
-          "STOREKEEPER",
-          "ACCOUNTANT",
-          "MAINTENANCE_MANAGER",
-          "SUPER_ADMIN",
-        ],
+        roles: ROUTE_PERMISSIONS["/inventory"],
         children: [
           { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
           { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
@@ -204,12 +184,12 @@ export function Sidebar() {
       {
         labelKey: "sidebar.users",
         href: "/users",
-        roles: ["ADMIN", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/users"],
       },
       {
         labelKey: "sidebar.supervisors",
         href: "/supervisors",
-        roles: ["ADMIN", "HR", "GENERAL_SUPERVISOR", "SUPER_ADMIN"],
+        roles: ROUTE_PERMISSIONS["/supervisors"],
       },
     ],
     []

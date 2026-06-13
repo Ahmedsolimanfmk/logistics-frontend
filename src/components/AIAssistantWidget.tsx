@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 type ChatRole = "assistant" | "user";
 type SectionKey = "finance" | "ar" | "maintenance" | "inventory" | "trips";
@@ -1034,6 +1035,49 @@ export default function AIAssistantWidget() {
     );
   }
 
+  function renderChart(items: any[]) {
+    if (!Array.isArray(items) || items.length < 2) return null;
+    if (!canRenderAsCards(items)) return null;
+
+    const data = items.slice(0, 10).map((item) => {
+      const title = getPrimaryCardTitle(item);
+      const metric = getPrimaryMetric(item);
+      const val = metric ? parseFloat(metric.value.replace(/[^0-9.-]+/g, "")) : 0;
+      return { name: title, value: isNaN(val) ? 0 : val };
+    });
+
+    if (data.every((d) => d.value === 0)) return null;
+
+    return (
+      <div className="mt-3 h-48 w-full rounded-xl border border-black/10 bg-white p-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.3} />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fontSize: 10 }} 
+              tickFormatter={(val) => val.length > 8 ? val.substring(0, 8) + ".." : val} 
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis 
+              tick={{ fontSize: 10 }} 
+              width={50} 
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(val) => new Intl.NumberFormat("en-US", { notation: "compact" }).format(val)}
+            />
+            <Tooltip 
+              contentStyle={{ fontSize: 12, borderRadius: 8, textAlign: "right" }}
+              formatter={(value: any) => [new Intl.NumberFormat("ar-EG").format(Number(value || 0)), "الرقم"]}
+            />
+            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
   function renderSummary(result: any) {
     const rows = extractSummaryRows(result);
     if (!rows.length) return null;
@@ -1392,6 +1436,7 @@ export default function AIAssistantWidget() {
                       {m.role === "assistant" && renderParsedEntityBadges(m.parsed)}
 
                       {m.role === "assistant" && renderSummary(m.result)}
+                      {m.role === "assistant" && m.mode !== "action" && renderChart(items)}
                       {m.role === "assistant" && renderCards(items)}
                       {m.role === "assistant" &&
                         !canRenderAsCards(items) &&

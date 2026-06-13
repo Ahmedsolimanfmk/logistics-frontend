@@ -2,8 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Card } from "@/src/components/ui/Card";
 import { Button } from "@/src/components/ui/Button";
+import { DashboardSection, DashboardStatCard } from "@/src/components/dashboard/DashboardUi";
+import { TrendingUp, TrendingDown, DollarSign, Target } from "lucide-react";
 import tripIntelligenceService, {
   TripProfitRow,
   TripsProfitSummary,
@@ -88,57 +89,58 @@ export function TripIntelligenceSection({
   }, [activeTab, topTrips, worstTrips, lowMarginTrips]);
 
   return (
-    <Card
+    <DashboardSection
       title="ذكاء ربحية الرحلات"
+      delay={0.2}
       right={
-        <Button variant="ghost" onClick={load} isLoading={loading}>
+        <Button variant="secondary" onClick={load} isLoading={loading}>
           تحديث
         </Button>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-6">
         {error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <SmartStat
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
+          <DashboardStatCard
             label="إجمالي الرحلات"
             value={summary?.total_trips ?? 0}
             hint="داخل الفترة الحالية"
-            tone="info"
-            loading={loading}
+            tone="neutral"
+            icon={<Target />}
           />
 
-          <SmartStat
+          <DashboardStatCard
             label="رحلات مربحة"
             value={summary?.profitable_count ?? 0}
             hint="حققت صافي ربح موجب"
             tone="success"
-            loading={loading}
+            icon={<TrendingUp />}
           />
 
-          <SmartStat
+          <DashboardStatCard
             label="رحلات خاسرة"
             value={summary?.loss_count ?? 0}
             hint="تحتاج مراجعة تشغيلية"
             tone={Number(summary?.loss_count || 0) > 0 ? "danger" : "success"}
-            loading={loading}
+            icon={<TrendingDown />}
           />
 
-          <SmartStat
+          <DashboardStatCard
             label="صافي الربح"
             value={`${money(summary?.total_profit)} ج`}
             hint={`هامش الربح: ${pct(summary?.margin_pct)}`}
-            tone={statusTone(Number(summary?.total_profit || 0))}
-            loading={loading}
+            tone={statusTone(Number(summary?.total_profit || 0)) as any}
+            icon={<DollarSign />}
           />
         </div>
 
-        <div className="rounded-3xl border border-black/10 bg-white p-3">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="rounded-[24px] border border-black/5 bg-slate-50/50 p-4">
+          <div className="mb-5 flex flex-wrap items-center gap-3">
             <TabButton
               active={activeTab === "top"}
               onClick={() => setActiveTab("top")}
@@ -164,73 +166,11 @@ export function TripIntelligenceSection({
           <TripsProfitTable rows={rows} loading={loading} />
         </div>
       </div>
-    </Card>
+    </DashboardSection>
   );
 }
 
-function SmartStat({
-  label,
-  value,
-  hint,
-  tone,
-  loading,
-}: {
-  label: string;
-  value: React.ReactNode;
-  hint?: string;
-  tone: "success" | "danger" | "warn" | "info" | "neutral";
-  loading?: boolean;
-}) {
-  const toneClass =
-    tone === "danger"
-      ? "border-red-100 bg-red-50"
-      : tone === "warn"
-      ? "border-amber-100 bg-amber-50"
-      : tone === "success"
-      ? "border-emerald-100 bg-emerald-50"
-      : tone === "info"
-      ? "border-blue-100 bg-blue-50"
-      : "border-black/10 bg-white";
-
-  const dotClass =
-    tone === "danger"
-      ? "bg-red-500"
-      : tone === "warn"
-      ? "bg-amber-500"
-      : tone === "success"
-      ? "bg-emerald-500"
-      : tone === "info"
-      ? "bg-blue-500"
-      : "bg-slate-400";
-
-  return (
-    <div className={cn("rounded-3xl border p-4 shadow-sm", toneClass)}>
-      {loading ? (
-        <div className="animate-pulse space-y-3">
-          <div className="h-3 w-24 rounded bg-black/10" />
-          <div className="h-6 w-16 rounded bg-black/10" />
-          <div className="h-3 w-32 rounded bg-black/10" />
-        </div>
-      ) : (
-        <>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-medium text-slate-500">{label}</div>
-              <div className="mt-2 text-2xl font-bold text-[rgb(var(--trex-fg))]">
-                {value}
-              </div>
-            </div>
-            <span className={cn("mt-1 h-2.5 w-2.5 rounded-full", dotClass)} />
-          </div>
-
-          {hint ? (
-            <div className="mt-3 text-xs leading-5 text-slate-500">{hint}</div>
-          ) : null}
-        </>
-      )}
-    </div>
-  );
-}
+// SmartStat component is now removed in favor of DashboardStatCard
 
 function TabButton({
   active,
@@ -246,10 +186,10 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full px-4 py-2 text-sm font-medium transition",
+        "rounded-full px-5 py-2 text-sm font-bold transition-all duration-300",
         active
-          ? "bg-slate-950 text-white shadow-sm"
-          : "border border-black/10 bg-white text-slate-600 hover:bg-black/[0.04]"
+          ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
+          : "bg-transparent text-slate-500 hover:bg-white hover:text-slate-900 shadow-sm border border-transparent hover:border-black/5"
       )}
     >
       {children}

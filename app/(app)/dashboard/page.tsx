@@ -3,6 +3,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useT } from "@/src/i18n/useT";
+import { 
+  Truck, Activity, AlertTriangle, BellRing, 
+  Clock, Wallet, CalendarClock, FileWarning, 
+  Settings, Wrench, Briefcase, BarChart3
+} from "lucide-react";
 
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Button } from "@/src/components/ui/Button";
@@ -209,16 +214,17 @@ export default function DashboardPage() {
 
   const tabs = useMemo(
   () => [
-    { key: "operations" as const, label: tr(t, "tabs.operations", "التشغيل") },
-    { key: "finance" as const, label: tr(t, "tabs.finance", "المالية") },
+    { key: "operations" as const, label: tr(t, "tabs.operations", "التشغيل"), icon: <Truck className="w-4 h-4" /> },
+    { key: "finance" as const, label: tr(t, "tabs.finance", "المالية"), icon: <Briefcase className="w-4 h-4" /> },
     {
       key: "maintenance" as const,
       label: tr(t, "tabs.maintenance", "الصيانة"),
+      icon: <Wrench className="w-4 h-4" />
     },
 
     // 🔥 أهم تعديل
     ...(role === "SUPER_ADMIN"
-      ? [{ key: "dev" as const, label: tr(t, "tabs.dev", "المطور") }]
+      ? [{ key: "dev" as const, label: tr(t, "tabs.dev", "المطور"), icon: <Settings className="w-4 h-4" /> }]
       : []),
   ],
   [t, role] // 🔥 مهم تضيف role هنا
@@ -577,12 +583,13 @@ export default function DashboardPage() {
         }
       />
 
-      <div className="flex flex-wrap gap-2 rounded-3xl border border-black/10 bg-white p-2 shadow-sm">
+      <div className="flex flex-wrap gap-3 rounded-[24px] border border-black/5 bg-white/60 backdrop-blur-md p-3 shadow-sm">
         {tabs.map((item) => (
           <DashboardTabButton
             key={item.key}
             active={tab === item.key}
             onClick={() => setTab(item.key)}
+            icon={item.icon}
           >
             {item.label}
           </DashboardTabButton>
@@ -596,13 +603,14 @@ export default function DashboardPage() {
       ) : null}
 
       {showOperations ? (
-        <div className="space-y-5">
+        <div className="space-y-6">
           <DashboardGrid>
             <DashboardStatCard
               label={tr(t, "dashboard.ops.kpis.tripsToday", "رحلات اليوم")}
               value={fmtInt(summary?.cards?.trips_today?.total)}
               hint={tr(t, "dashboard.ops.kpis.allStatuses", "كل الحالات")}
               tone="info"
+              icon={<Truck />}
             />
 
             <DashboardStatCard
@@ -618,6 +626,7 @@ export default function DashboardPage() {
                 "مُسندة / قيد التنفيذ"
               )}
               tone="success"
+              icon={<Activity />}
             />
 
             <DashboardStatCard
@@ -637,6 +646,7 @@ export default function DashboardPage() {
                   ? "warn"
                   : "success"
               }
+              icon={<AlertTriangle />}
             />
 
             <DashboardStatCard
@@ -648,6 +658,7 @@ export default function DashboardPage() {
               tone={
                 Number(alertsSummary?.unread || 0) > 0 ? "danger" : "success"
               }
+              icon={<BellRing />}
             />
           </DashboardGrid>
 
@@ -702,7 +713,7 @@ export default function DashboardPage() {
       ) : null}
 
       {showFinance ? (
-        <div className="space-y-5">
+        <div className="space-y-6">
           <DashboardGrid>
             <DashboardStatCard
               label={tr(t, "dashboard.finance.pendingExpenses", "مصروفات معلقة")}
@@ -713,6 +724,7 @@ export default function DashboardPage() {
                   ? "warn"
                   : "success"
               }
+              icon={<Clock />}
             />
 
             <DashboardStatCard
@@ -724,6 +736,7 @@ export default function DashboardPage() {
                   ? "warn"
                   : "success"
               }
+              icon={<Wallet />}
             />
 
             <DashboardStatCard
@@ -735,6 +748,7 @@ export default function DashboardPage() {
                   ? "info"
                   : "success"
               }
+              icon={<CalendarClock />}
             />
 
             <DashboardStatCard
@@ -746,6 +760,7 @@ export default function DashboardPage() {
                   ? "danger"
                   : "success"
               }
+              icon={<FileWarning />}
             />
           </DashboardGrid>
 

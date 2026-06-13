@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Card } from "@/src/components/ui/Card";
+import { DashboardSection } from "@/src/components/dashboard/DashboardUi";
 import { Button } from "@/src/components/ui/Button";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
+import { Sparkles } from "lucide-react";
 import { useT } from "@/src/i18n/useT";
 import { DashboardActionConfirmModal } from "@/src/components/dashboard/DashboardActionConfirmModal";
 
@@ -852,14 +853,17 @@ export function DashboardAssistantPanel({
   }
 
   return (
-    <Card
+    <DashboardSection
       title={text.title}
       right={
-        <Button variant="ghost" onClick={handleNewChat}>
-          {text.newChat}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-[rgb(var(--trex-accent))]" />
+          <Button variant="secondary" onClick={handleNewChat}>
+            {text.newChat}
+          </Button>
+        </div>
       }
-      className="h-full overflow-hidden"
+      delay={0.3}
     >
       <div className="space-y-4">
         <div className="rounded-3xl border border-black/10 bg-gradient-to-br from-black/[0.04] to-transparent p-4">
@@ -991,6 +995,6 @@ export function DashboardAssistantPanel({
           ask("نفذ الآن", true);
         }}
       />
-    </Card>
+    </DashboardSection>
   );
 }
