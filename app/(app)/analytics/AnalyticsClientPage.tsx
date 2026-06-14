@@ -88,7 +88,7 @@ export default function AnalyticsClientPage() {
     <div className="space-y-6">
       <PageHeader
         title="التحليلات الشاملة"
-        description="نظرة عامة على أداء الأسطول، المالية، الرحلات والمزيد."
+        subtitle="نظرة عامة على أداء الأسطول، المالية، الرحلات والمزيد."
       />
 
       <div className="flex flex-wrap gap-2 border-b pb-4">
