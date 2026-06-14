@@ -13,6 +13,7 @@ export default function AdminPage() {
   const token = useAuth((s) => s.token);
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
+  const setAuth = useAuth((s) => s.setAuth);
 
   const [loading, setLoading] = useState(true);
   const [companies, setCompanies] = useState<any[]>([]);
