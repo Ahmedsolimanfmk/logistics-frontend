@@ -82,7 +82,7 @@ export default function CompanyDetailsPage() {
     { key: "reference_number", label: "الرقم المرجعي", render: (r) => r.reference_number || "-" },
     {
       key: "actions", label: "إجراءات", render: (r) => (
-        <Button variant="outline" onClick={() => window.open(`http://localhost:8080/admin/companies/${company.id}/payments/${r.id}/invoice`, "_blank")}>
+        <Button variant="secondary" onClick={() => window.open(`http://localhost:8080/admin/companies/${company.id}/payments/${r.id}/invoice`, "_blank")}>
           طباعة الفاتورة
         </Button>
       )
@@ -111,7 +111,7 @@ export default function CompanyDetailsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Features */}
-        <Card title="المميزات المفعلة" actions={<Button variant="outline" onClick={() => setFeaturesOpen(true)}>تعديل المميزات</Button>}>
+        <Card title="المميزات المفعلة" actions={<Button variant="secondary" onClick={() => setFeaturesOpen(true)}>تعديل المميزات</Button>}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span>نظام الأسطول</span>
@@ -129,7 +129,7 @@ export default function CompanyDetailsPage() {
         </Card>
 
         {/* Subscription */}
-        <Card title="بيانات الاشتراك" actions={<Button variant="outline" onClick={() => setSubOpen(true)}>إدارة الاشتراك</Button>}>
+        <Card title="بيانات الاشتراك" actions={<Button variant="secondary" onClick={() => setSubOpen(true)}>إدارة الاشتراك</Button>}>
           {sub ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -265,7 +265,7 @@ function EditFeaturesModal({ open, company, saving, onClose, onSubmit }: any) {
               <div className="flex items-center justify-between p-3 border rounded">
                 <span className="text-slate-800 font-bold">نظام الأسطول (Fleet)</span>
                 {fleet ? (
-                  <Button type="button" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => setFleet(false)}>حذف الميزة</Button>
+                  <Button type="button" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => setFleet(false)}>حذف الميزة</Button>
                 ) : (
                   <Button type="button" variant="primary" onClick={() => setFleet(true)}>إضافة الميزة</Button>
                 )}
@@ -273,7 +273,7 @@ function EditFeaturesModal({ open, company, saving, onClose, onSubmit }: any) {
               <div className="flex items-center justify-between p-3 border rounded">
                 <span className="text-slate-800 font-bold">نظام المخزون (Inventory)</span>
                 {inventory ? (
-                  <Button type="button" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => setInventory(false)}>حذف الميزة</Button>
+                  <Button type="button" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => setInventory(false)}>حذف الميزة</Button>
                 ) : (
                   <Button type="button" variant="primary" onClick={() => setInventory(true)}>إضافة الميزة</Button>
                 )}
@@ -281,7 +281,7 @@ function EditFeaturesModal({ open, company, saving, onClose, onSubmit }: any) {
               <div className="flex items-center justify-between p-3 border rounded">
                 <span className="text-slate-800 font-bold">نظام العُهد (Custody)</span>
                 {custody ? (
-                  <Button type="button" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => setCustody(false)}>حذف الميزة</Button>
+                  <Button type="button" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => setCustody(false)}>حذف الميزة</Button>
                 ) : (
                   <Button type="button" variant="primary" onClick={() => setCustody(true)}>إضافة الميزة</Button>
                 )}
