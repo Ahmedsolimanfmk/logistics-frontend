@@ -141,6 +141,7 @@ export function SuperAdminDashboard() {
   const t = useT();
   const router = useRouter();
   const setAuth = useAuth((s) => s.setAuth);
+  const logout = useAuth((s) => s.logout);
 
   const [stats, setStats] = useState<any>(null);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -286,8 +287,7 @@ export function SuperAdminDashboard() {
         actions={
           <div className="flex gap-2">
             <Button variant="danger" onClick={() => {
-              setAuth(null, null);
-              window.location.href = "/login";
+              logout();
             }}>
               تسجيل الخروج
             </Button>
