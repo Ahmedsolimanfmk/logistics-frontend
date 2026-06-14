@@ -252,7 +252,7 @@ export default function AdminCompanyPage() {
           </div>
 
           <Card>
-            <DataTable columns={paymentColumns} data={payments} />
+            <DataTable columns={paymentColumns} rows={payments} />
           </Card>
         </div>
       )}
