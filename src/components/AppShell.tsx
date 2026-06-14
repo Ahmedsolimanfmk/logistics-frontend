@@ -64,8 +64,10 @@ export default function AppShell({
   return (
     <div className="min-h-screen flex bg-[rgb(var(--trex-bg))] text-[rgb(var(--trex-fg))]">
       
-      {/* ✅ Sidebar رجعناه */}
-      <Sidebar />
+      {/* ✅ Hide Sidebar for SUPER_ADMIN if not impersonating */}
+      {!(user?.platform_role === "SUPER_ADMIN" && !user?.is_impersonating) && (
+        <Sidebar />
+      )}
 
       <main className="flex-1 min-w-0">
         <div className="p-6">

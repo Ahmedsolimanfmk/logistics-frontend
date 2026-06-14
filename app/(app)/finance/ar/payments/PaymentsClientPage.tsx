@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { useT } from "@/src/i18n/useT";
 import { arPaymentsService } from "@/src/services/ar-payments.service";
 import type { ArPayment } from "@/src/types/ar.types";
+import { CreatePaymentDialog } from "@/src/components/finance/ar/CreatePaymentDialog";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -25,6 +26,7 @@ export default function PaymentsClientPage() {
   const t = useT();
   const [rows, setRows] = useState<ArPayment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const [toast, setToast] = useState<{
     open: boolean;
@@ -186,6 +188,11 @@ export default function PaymentsClientPage() {
       <PageHeader
         title="مدفوعات العملاء (AR)"
         subtitle="إنشاء/إرسال/اعتماد المدفوعات ومتابعة تخصيصها على الفواتير."
+        actions={
+          <Button onClick={() => setCreateOpen(true)} variant="primary">
+            تسجيل دفعة
+          </Button>
+        }
       />
 
       <DataTable
@@ -217,6 +224,15 @@ export default function PaymentsClientPage() {
           const fn = confirm.action;
           setConfirm((x) => ({ ...x, open: false }));
           if (fn) await fn();
+        }}
+      />
+
+      <CreatePaymentDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={() => {
+          setToast({ open: true, message: "تم تسجيل الدفعة بنجاح", type: "success" });
+          load();
         }}
       />
     </div>

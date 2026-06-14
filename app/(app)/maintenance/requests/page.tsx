@@ -9,6 +9,7 @@ import { Card } from "@/src/components/ui/Card";
 import { Button } from "@/src/components/ui/Button";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
+import { Modal } from "@/src/components/ui/Modal";
 
 import {
   RequestForm,
@@ -33,12 +34,24 @@ export default function MaintenanceRequestsPage() {
   } = useMaintenanceRequests();
 
   const [rejectId, setRejectId] = useState<string | null>(null);
+  const [approveId, setApproveId] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  async function handleApprove(id: string) {
-    setActionLoadingId(id);
+  const [approveData, setApproveData] = useState({
+    maintenance_mode: "INTERNAL",
+    type: "CORRECTIVE",
+    odometer: "",
+    notes: ""
+  });
+
+  async function handleApprove() {
+    if (!approveId) return;
+    setActionLoadingId(approveId);
     try {
-      await approveRequest(id, {});
+      await approveRequest(approveId, approveData);
+      setApproveId(null);
+    } catch (e: any) {
+      alert(e?.message || "Error approving request");
     } finally {
       setActionLoadingId(null);
     }
@@ -106,12 +119,12 @@ export default function MaintenanceRequestsPage() {
                   {isSubmitted ? (
                     <>
                       <Button
-                        onClick={() => handleApprove(r.id)}
+                        onClick={() => setApproveId(r.id)}
                         disabled={isActing}
                         isLoading={isActing}
                         variant="primary"
                       >
-                        اعتماد
+                        تحويل لأمر عمل (اعتماد)
                       </Button>
 
                       <Button
@@ -185,6 +198,39 @@ export default function MaintenanceRequestsPage() {
         onClose={() => setRejectId(null)}
         onConfirm={handleReject}
       />
+
+      {!!approveId && (
+        <Modal title="اعتماد وتحويل لأمر عمل" onClose={() => setApproveId(null)}>
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-1 font-bold">نوع الصيانة</label>
+              <select className="w-full border p-2 rounded" value={approveData.type} onChange={e => setApproveData({ ...approveData, type: e.target.value })}>
+                <option value="CORRECTIVE">علاجية (Corrective)</option>
+                <option value="PREVENTIVE">وقائية (Preventive)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block mb-1 font-bold">نمط التنفيذ</label>
+              <select className="w-full border p-2 rounded" value={approveData.maintenance_mode} onChange={e => setApproveData({ ...approveData, maintenance_mode: e.target.value })}>
+                <option value="INTERNAL">داخلي (ورشة الشركة)</option>
+                <option value="EXTERNAL">خارجي (مركز صيانة خارجي)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block mb-1 font-bold">قراءة العداد الحالية</label>
+              <input type="number" className="w-full border p-2 rounded" value={approveData.odometer} onChange={e => setApproveData({ ...approveData, odometer: e.target.value })} />
+            </div>
+            <div>
+              <label className="block mb-1 font-bold">ملاحظات لمهندس الورشة</label>
+              <textarea className="w-full border p-2 rounded" value={approveData.notes} onChange={e => setApproveData({ ...approveData, notes: e.target.value })} />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="secondary" onClick={() => setApproveId(null)}>إلغاء</Button>
+              <Button variant="primary" onClick={handleApprove} isLoading={!!approveId && actionLoadingId === approveId}>اعتماد</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

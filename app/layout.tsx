@@ -7,6 +7,7 @@ import AuthHydrator from "./AuthHydrator";
 export const metadata: Metadata = {
   title: "Logistics System",
   description: "Logistics core system",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

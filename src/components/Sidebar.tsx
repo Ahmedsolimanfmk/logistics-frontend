@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { Activity, Link2, Truck, BadgeDollarSign } from "lucide-react";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 import { ROUTE_PERMISSIONS } from "@/src/config/routeRoles";
@@ -56,6 +57,7 @@ export function Sidebar() {
   const items = useMemo<(NavItem | NavGroup)[]>(
     () => [
       { labelKey: "sidebar.dashboard", href: "/dashboard" },
+      { labelKey: "sidebar.analytics", href: "/analytics" },
       { labelKey: "sidebar.trips", href: "/trips" },
 
       {
@@ -121,7 +123,26 @@ export function Sidebar() {
       },
 
       {
+        labelKey: "sidebar.fleetDashboard",
+        icon: <Activity className="w-5 h-5 text-indigo-500" />,
+        href: "/fleet-dashboard",
+        roles: ROUTE_PERMISSIONS["/vehicles"],
+      },
+      {
+        labelKey: "sidebar.assignments",
+        icon: <Link2 className="w-5 h-5 text-indigo-500" />,
+        href: "/assignments",
+        roles: ROUTE_PERMISSIONS["/vehicles"],
+      },
+      {
+        labelKey: "sidebar.fleetExpenses",
+        icon: <BadgeDollarSign className="w-5 h-5 text-indigo-500" />,
+        href: "/fleet-expenses",
+        roles: ROUTE_PERMISSIONS["/vehicles"],
+      },
+      {
         labelKey: "sidebar.vehicles",
+        icon: <Truck className="w-5 h-5 text-indigo-500" />,
         href: "/vehicles",
         roles: ROUTE_PERMISSIONS["/vehicles"],
       },
@@ -171,6 +192,8 @@ export function Sidebar() {
         key: "inventory",
         roles: ROUTE_PERMISSIONS["/inventory"],
         children: [
+          { labelKey: "sidebar.inventoryDashboard", href: "/inventory" },
+          { labelKey: "sidebar.inventoryWarehouses", href: "/inventory/warehouses" },
           { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
           { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
           { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
@@ -185,6 +208,11 @@ export function Sidebar() {
         labelKey: "sidebar.users",
         href: "/users",
         roles: ROUTE_PERMISSIONS["/users"],
+      },
+      {
+        labelKey: "sidebar.settings",
+        href: "/settings",
+        roles: ROUTE_PERMISSIONS["/settings"] || ["ADMIN", "SUPER_ADMIN", "HR"],
       },
       {
         labelKey: "sidebar.supervisors",
@@ -339,7 +367,23 @@ export function Sidebar() {
           })}
       </nav>
 
-      <div className="border-t border-black/10 p-3">
+      <div className="border-t border-black/10 p-3 space-y-2">
+        {user?.is_impersonating && user?.platform_role === "SUPER_ADMIN" && (
+          <button
+            type="button"
+            onClick={() => {
+              // Return to super admin by unsetting company
+              const st: any = (useAuth as any).getState?.();
+              if (st?.setAuth && st?.token) {
+                st.setAuth(st.token, { ...user, is_impersonating: false, company_id: null, company_name: null });
+                window.location.href = "/dashboard";
+              }
+            }}
+            className="w-full rounded-xl border border-[rgba(var(--trex-success),0.30)] bg-[rgba(var(--trex-success),0.12)] px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-[rgba(var(--trex-success),0.18)]"
+          >
+            العودة للوحة التحكم (SaaS)
+          </button>
+        )}
         <button
           type="button"
           onClick={logout}

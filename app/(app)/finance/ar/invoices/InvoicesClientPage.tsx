@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/src/components/ui/ConfirmDialog";
 import { useT } from "@/src/i18n/useT";
 import { arInvoicesService } from "@/src/services/ar-invoices.service";
 import type { ArInvoice } from "@/src/types/ar.types";
+import { CreateInvoiceDialog } from "@/src/components/finance/ar/CreateInvoiceDialog";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -24,6 +25,7 @@ export default function InvoicesClientPage() {
   const t = useT();
   const [rows, setRows] = useState<ArInvoice[]>([]);
   const [loading, setLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const [toast, setToast] = useState<{
     open: boolean;
@@ -181,6 +183,11 @@ export default function InvoicesClientPage() {
       <PageHeader
         title="فواتير العملاء (AR)"
         subtitle="إنشاء/إرسال/اعتماد الفواتير وإدارة حالاتها."
+        actions={
+          <Button onClick={() => setCreateOpen(true)} variant="primary">
+            إنشاء فاتورة
+          </Button>
+        }
       />
 
       <DataTable
@@ -212,6 +219,15 @@ export default function InvoicesClientPage() {
           const fn = confirm.action;
           setConfirm((x) => ({ ...x, open: false }));
           if (fn) await fn();
+        }}
+      />
+
+      <CreateInvoiceDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={() => {
+          setToast({ open: true, message: "تم إنشاء الفاتورة بنجاح", type: "success" });
+          load();
         }}
       />
     </div>

@@ -17,8 +17,8 @@ export default function Home() {
     }
 
     // SUPER_ADMIN بدون شركة
-    if (user?.platform_role === "SUPER_ADMIN" && !user.company_id) {
-      router.replace("/select-company");
+    if (user?.platform_role === "SUPER_ADMIN") {
+      router.replace("/dashboard");
       return;
     }
 

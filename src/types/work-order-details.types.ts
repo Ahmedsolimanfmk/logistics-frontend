@@ -19,6 +19,7 @@ export type WorkOrder = {
   id: string;
   status: string;
   type: string;
+  total_parts_cost?: number;
   vendor_id?: string | null;
   vendor_name?: string | null;
   opened_at?: string | null;

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { fetchJSON } from "@/src/lib/fetcher";
+import { PageHeader } from "@/src/components/ui/PageHeader";
+import { Button } from "@/src/components/ui/Button";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -115,7 +117,20 @@ export default function AdminPage() {
   // UI
   // =====================
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6" dir="rtl">
+      <PageHeader 
+        title="لوحة تحكم مدير النظام (Super Admin)" 
+        subtitle="إدارة الشركات والاشتراكات"
+        right={
+          <Button variant="danger" onClick={() => {
+            setAuth(null, null);
+            router.push("/login");
+          }}>
+            تسجيل الخروج
+          </Button>
+        }
+      />
+
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card title="إجمالي الشركات" value={summary.total} />
@@ -148,10 +163,17 @@ export default function AdminPage() {
                   )}
                 </td>
 
-                <td className="space-x-2">
+                <td className="space-x-2 space-x-reverse">
+                  <button
+                    onClick={() => router.push(`/admin/companies/${c.id}`)}
+                    className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 ml-2"
+                  >
+                    إدارة
+                  </button>
+
                   <button
                     onClick={() => toggleCompany(c.id)}
-                    className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                    className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 ml-2"
                   >
                     تبديل الحالة
                   </button>

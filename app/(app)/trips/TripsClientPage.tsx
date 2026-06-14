@@ -6,6 +6,8 @@ import Link from "next/link";
 import { DataTable } from "@/src/components/ui/DataTable";
 import { TrexInput } from "@/src/components/ui/TrexInput";
 import { TrexSelect } from "@/src/components/ui/TrexSelect";
+import { useT } from "@/src/i18n/useT";
+import { ExportButtons } from "@/src/components/ExportButtons";
 
 import { tripsService } from "@/src/services/trips.service";
 import { clientsService } from "@/src/services/clients.service";
@@ -27,6 +29,7 @@ function extractItems(body: any): any[] {
 }
 
 export default function TripsClientPage() {
+  const t = useT();
   const [rows, setRows] = useState<any[]>([]);
 
   const [clients, setClients] = useState<Option[]>([]);
@@ -268,11 +271,28 @@ export default function TripsClientPage() {
           >
             تحديث
           </button>
-          
+          <ExportButtons 
+            title="تقرير الرحلات"
+            fileName="trips_report"
+            columns={[
+              { header: "رقم الرحلة", dataKey: "trip_no" },
+              { header: "العميل", dataKey: "client_name" },
+              { header: "الموقع", dataKey: "site_name" },
+              { header: "المركبة", dataKey: "vehicle_plate" },
+              { header: "الحالة", dataKey: "status" },
+            ]}
+            data={filteredRows.map(r => ({
+              trip_no: r.trip_no || r.trip_number || r.code || "—",
+              client_name: r.clients?.name || r.client?.name || r.clients?.company_name || r.client?.company_name || "—",
+              site_name: r.sites?.name || r.site?.name || r.sites?.site_name || "—",
+              vehicle_plate: r.vehicles?.plate_no || r.vehicle?.plate_no || r.vehicles?.plate_number || r.vehicle?.plate_number || r.vehicles?.truck_number || r.vehicle?.truck_number || "—",
+              status: r.status || "—"
+            }))}
+          />
 
           <Link
             href="/trips/new"
-            className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+            className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-800"
           >
             رحلة جديدة
           </Link>
@@ -295,7 +315,7 @@ export default function TripsClientPage() {
         <TrexSelect
           labelText="العميل"
           value={filters.client_id}
-          options={[{ label: "كل العملاء", value: "" }, ...clients]}
+          options={[{ label: t("trips.filters.allClients"), value: "" }, ...clients]}
           loading={masterLoading}
           onChange={(value) =>
             setFilters((prev) => ({
@@ -308,7 +328,7 @@ export default function TripsClientPage() {
         <TrexSelect
           labelText="المركبة"
           value={filters.vehicle_id}
-          options={[{ label: "كل المركبات", value: "" }, ...vehicles]}
+          options={[{ label: t("trips.filters.allVehicles"), value: "" }, ...vehicles]}
           loading={masterLoading}
           onChange={(value) =>
             setFilters((prev) => ({
@@ -321,7 +341,7 @@ export default function TripsClientPage() {
         <TrexSelect
           labelText="الموقع"
           value={filters.site_id}
-          options={[{ label: "كل المواقع", value: "" }, ...sites]}
+          options={[{ label: t("trips.filters.allSites"), value: "" }, ...sites]}
           loading={masterLoading}
           onChange={(value) =>
             setFilters((prev) => ({
@@ -334,7 +354,7 @@ export default function TripsClientPage() {
         <TrexSelect
           labelText="المشرف"
           value={filters.supervisor_id}
-          options={[{ label: "كل المشرفين", value: "" }, ...supervisors]}
+          options={[{ label: t("trips.filters.allSupervisors"), value: "" }, ...supervisors]}
           loading={masterLoading}
           onChange={(value) =>
             setFilters((prev) => ({
@@ -348,11 +368,11 @@ export default function TripsClientPage() {
           labelText="الحالة"
           value={filters.status}
           options={[
-            { label: "كل الحالات", value: "" },
-            { label: "DRAFT", value: "DRAFT" },
-            { label: "SUBMITTED", value: "SUBMITTED" },
-            { label: "POSTED", value: "POSTED" },
-            { label: "CANCELLED", value: "CANCELLED" },
+            { label: t("trips.status.ALL"), value: "" },
+            { label: t("trips.status.DRAFT"), value: "DRAFT" },
+            { label: t("trips.status.SUBMITTED"), value: "SUBMITTED" },
+            { label: t("trips.status.POSTED"), value: "POSTED" },
+            { label: t("trips.status.CANCELLED"), value: "CANCELLED" },
           ]}
           onChange={(value) =>
             setFilters((prev) => ({

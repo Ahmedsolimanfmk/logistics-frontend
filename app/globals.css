@@ -54,12 +54,12 @@ body {
 *,
 ::before,
 ::after {
-  border-color: rgba(var(--trex-border), 0.12);
+  border-color: rgb(var(--trex-border) / 0.12);
 }
 
 /* Selection */
 ::selection {
-  background: rgba(var(--trex-accent), 0.22);
+  background: rgb(var(--trex-accent) / 0.22);
 }
 
 /* =========================
@@ -67,7 +67,7 @@ body {
    ========================= */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(var(--trex-border), 0.28) rgba(var(--trex-border), 0.10);
+  scrollbar-color: rgb(var(--trex-border) / 0.28) rgb(var(--trex-border) / 0.10);
 }
 
 *::-webkit-scrollbar {
@@ -76,16 +76,16 @@ body {
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(var(--trex-border), 0.10);
+  background: rgb(var(--trex-border) / 0.10);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(var(--trex-border), 0.28);
+  background: rgb(var(--trex-border) / 0.28);
   border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--trex-border), 0.38);
+  background: rgb(var(--trex-border) / 0.38);
 }
 
 /* =========================
@@ -93,27 +93,27 @@ body {
    ========================= */
 
 .trex-card {
-  background: rgba(var(--trex-card), 0.55);
-  border: 1px solid rgba(var(--trex-border), 0.10);
+  background: rgb(var(--trex-card) / 0.55);
+  border: 1px solid rgb(var(--trex-border) / 0.10);
   border-radius: var(--trex-radius);
 }
 
 .trex-card-solid {
-  background: rgba(var(--trex-card), 0.75);
-  border: 1px solid rgba(var(--trex-border), 0.10);
+  background: rgb(var(--trex-card) / 0.75);
+  border: 1px solid rgb(var(--trex-border) / 0.10);
   border-radius: var(--trex-radius);
 }
 
 .trex-input {
-  background: rgba(var(--trex-bg), 0.25);
-  border: 1px solid rgba(var(--trex-border), 0.12);
+  background: rgb(var(--trex-bg) / 0.8);
+  border: 1px solid rgb(var(--trex-border) / 0.2);
   border-radius: 14px;
   outline: none;
 }
 
 .trex-input:focus {
-  border-color: rgba(var(--trex-accent), 0.45);
-  box-shadow: 0 0 0 4px rgba(var(--trex-accent), 0.12);
+  border-color: rgb(var(--trex-accent) / 0.45);
+  box-shadow: 0 0 0 4px rgb(var(--trex-accent) / 0.12);
 }
 
 .trex-sidebar {
@@ -122,6 +122,6 @@ body {
 }
 
 .trex-sidebar a.active {
-  background: rgba(var(--trex-accent), 0.14);
+  background: rgb(var(--trex-accent) / 0.14);
   border-left: 3px solid rgb(var(--trex-accent));
 }

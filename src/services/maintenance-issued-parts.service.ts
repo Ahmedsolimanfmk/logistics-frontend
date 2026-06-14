@@ -33,6 +33,8 @@ export type IssuedPartRow = {
   issued_qty: number;
   installed_qty: number;
   remaining_qty: number;
+  unit_cost?: number;
+  total_cost?: number;
 
   issued_at?: string | null;
   last_installed_at?: string | null;

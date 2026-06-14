@@ -44,7 +44,10 @@
     "status": "Status",
     "selected": "Selected",
     "view": "View",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "confirm": "Confirm",
+    "count": "Count",
+    "tryAgain": "Try Again"
   },
   "tabs": {
     "operations": "Operations",
@@ -70,6 +73,9 @@
     "financeARLedger": "AR Ledger",
     "clients": "Clients",
     "sites": "Sites",
+    "fleetDashboard": "Fleet Dashboard",
+    "assignments": "Fleet Assignments",
+    "fleetExpenses": "Fleet Expenses",
     "vehicles": "Vehicles",
     "drivers": "Drivers",
     "cash": "Cash",
@@ -77,13 +83,24 @@
     "maintenanceRequests": "Requests",
     "maintenanceWorkOrders": "Work Orders",
     "inventory": "Inventory",
-    "inventoryRequests": "Requests",
-    "inventoryIssues": "Issues",
-    "inventoryReceipts": "Receipts",
+    "inventoryDashboard": "Inventory Dashboard",
+    "inventoryWarehouses": "Warehouses",
+    "inventoryRequests": "Inventory Requests",
+    "inventoryIssues": "Inventory Issues",
+    "inventoryReceipts": "Inventory Receipts",
     "inventoryPartItems": "Part Items",
     "users": "Users",
     "supervisors": "Supervisors",
-    "vendors": "Vendors"
+    "vendors": "Vendors",
+    "maintenanceIssuedParts": "Issued Parts",
+    "inventoryStock": "Inventory Stock",
+    "masterData": "Master Data",
+    "vehicleClasses": "Vehicle Classes",
+    "cargoTypes": "Cargo Types",
+    "zones": "Zones",
+    "routes": "Routes",
+    "inventoryParts": "Parts Catalog",
+    "inventoryCategories": "Part Categories"
   },
   "notifications": {
     "open": "Open notifications",
@@ -106,7 +123,13 @@
       "amount": "Amount",
       "wo": "WO",
       "opened": "Opened",
-      "completed": "Completed"
+      "completed": "Completed",
+      "invoice": "Invoice",
+      "dueDate": "Due Date",
+      "daysOverdue": "Days Overdue",
+      "daysToDue": "Days To Due",
+      "outstanding": "Outstanding",
+      "days": "Days"
     },
     "errors": {
       "trendsUnavailable": "Trends endpoint not available."
@@ -120,7 +143,8 @@
       "activeTripsNow": {
         "title": "Active Trips Now",
         "hintOn": "Assigned / In progress (follow-up dispatch)",
-        "hintOff": "✓ All vehicles are idle"
+        "hintOff": "✓ All vehicles are idle",
+        "table": "Table"
       },
       "tripsToday": {
         "title": "Trips Today",
@@ -187,7 +211,51 @@
           "title": "No approved expenses today",
           "hint": "No data to show"
         }
-      }
+      },
+      "arDueSoon": {
+        "title": "Title",
+        "hintOn": "Hint On",
+        "hintOff": "Hint Off"
+      },
+      "arOverdue": {
+        "title": "Title",
+        "hintOn": "Hint On",
+        "hintOff": "Hint Off"
+      },
+      "apDueSoon": {
+        "title": "Title",
+        "hintOn": "Hint On",
+        "hintOff": "Hint Off"
+      },
+      "apOverdue": {
+        "title": "Title",
+        "hintOn": "Hint On",
+        "hintOff": "Hint Off"
+      },
+      "arAlertsSection": "Ar Alerts Section",
+      "topArOverdue": {
+        "sectionTitle": "Section Title",
+        "tableTitle": "Table Title",
+        "emptyTitle": "No Empty Title",
+        "emptyHint": "All current invoices are within term or fully paid"
+      },
+      "topArDueSoon": {
+        "sectionTitle": "Section Title",
+        "tableTitle": "Table Title",
+        "emptyTitle": "No Empty Title",
+        "emptyHint": "Empty Hint"
+      },
+      "pendingExpenses": "Pending Expenses",
+      "pendingHint": "Pending Hint",
+      "openAdvancesHint": "Open Advances Hint",
+      "dueSoon": "Due Soon",
+      "dueSoonHint": "Due Soon Hint",
+      "overdue": "Overdue",
+      "overdueHint": "Overdue Hint",
+      "openAdvancesTable": "Open Advances Table",
+      "overdueInvoices": "Overdue Invoices",
+      "dueSoonInvoices": "Due Soon Invoices",
+      "expenseTypes": "Expense Types"
     },
     "alerts": {
       "title": "Central Alerts",
@@ -213,7 +281,8 @@
         "danger": "Critical",
         "warn": "Warning",
         "info": "Info"
-      }
+      },
+      "recent": "Recent"
     },
     "maintenance": {
       "actionRequired": "Maintenance – Action Required",
@@ -270,6 +339,34 @@
     "dev": {
       "title": "Dev tab",
       "hint": "Reserved for development diagnostics."
+    },
+    "compliance": {
+      "title": "Title",
+      "range": "Range",
+      "vehiclesExpiring": "Vehicles Expiring",
+      "vehiclesExpired": "Vehicles Expired",
+      "driversExpiring": "Drivers Expiring",
+      "driversExpired": "Drivers Expired",
+      "openVehicles": "Open Vehicles",
+      "reviewVehicles": "Review Vehicles",
+      "openDrivers": "Open Drivers",
+      "reviewDrivers": "Review Drivers",
+      "vehiclesTable": "Vehicles Table",
+      "driversTable": "Drivers Table",
+      "vehiclesEmptyTitle": "Vehicles Empty Title",
+      "vehiclesEmptyHint": "Vehicles Empty Hint",
+      "driversEmptyTitle": "Drivers Empty Title",
+      "driversEmptyHint": "Drivers Empty Hint",
+      "licenseNo": "License No",
+      "expiry": "Expiry",
+      "supervisor": "Supervisor",
+      "nationalId": "National Id",
+      "vehicle": "Vehicle"
+    },
+    "tabs": {
+      "operations": "Operations",
+      "finance": "Finance",
+      "maintenance": "Maintenance"
     }
   },
   "alertsPage": {
@@ -338,11 +435,12 @@
       "maintenance": "Examples: How many open work orders? / Show top 5 vehicles by maintenance cost / the first one",
       "inventory": "Examples: Which items are low in stock? / Show top 5 issued parts / the first one",
       "trips": "Examples: Show active trips / Show top 5 clients by trips / the first one / its trips"
-    }
+    },
+    "quickQuestions": "Suggested Questions"
   },
   "dashboardInsights": {
-    "emptyTitle": "No insights available right now",
-    "loadError": "Unable to load insights right now.",
+    "emptyTitle": "No insights available currently",
+    "loadError": "Could not load insights.",
     "groups": {
       "error": "Critical items",
       "warning": "Need attention",
@@ -361,7 +459,9 @@
       "maintenance": "Indicators for open work orders and maintenance costs.",
       "inventory": "Key alerts around low-stock items and top issued parts.",
       "trips": "A summary of active trips, financial close, and important operating patterns."
-    }
+    },
+    "ask": "Ask Me",
+    "summaryTitle": "Smart Insights on Risks & Opportunities"
   },
   "users": {
     "title": "Users",
@@ -609,7 +709,8 @@
       "partsDisplayOnly": "Parts (display only)",
       "searchTitle": "Search (vendor / notes)",
       "searchBtn": "Search",
-      "selected": "Selected"
+      "selected": "Selected",
+      "searchPlaceholder": "Search Placeholder"
     },
     "status": {
       "all": "All",
@@ -984,6 +1085,9 @@
       },
       "errors": {
         "loadFailed": "Failed to load client details"
+      },
+      "empty": {
+        "notFound": "Not Found"
       }
     },
     "ar": {
@@ -1030,7 +1134,8 @@
       "showingFirst20Adv": "Showing first 20 overdue advances",
       "allData": "All data",
       "pageOnly": "Current page only",
-      "openFromListNote": "Open total calculated from open advances"
+      "openFromListNote": "Open total calculated from open advances",
+      "tryFilters": "Try Filters"
     },
     "tables": {
       "pending": {
@@ -1134,7 +1239,8 @@
     "tabs": {
       "overview": "Overview",
       "expenses": "Expenses",
-      "actions": "Actions"
+      "actions": "Actions",
+      "source": "Source"
     },
     "common": {
       "confirm": "Confirm",
@@ -1165,6 +1271,44 @@
     },
     "empty": {
       "noExpenses": "No expenses"
+    },
+    "expenses": {
+      "title": "Title",
+      "empty": "Empty",
+      "table": {
+        "amount": "Amount",
+        "type": "Type",
+        "status": "Status",
+        "created": "Created",
+        "link": "Link"
+      }
+    },
+    "actions": {
+      "title": "Title",
+      "role": "Role",
+      "status": "Status",
+      "notAvailable": "Not Available",
+      "submitReview": "Submit Review",
+      "close": "Close",
+      "reopen": "Reopen"
+    },
+    "prompts": {
+      "closeNotesOptional": "Close Notes Optional",
+      "reopenNotesOptional": "Reopen Notes Optional"
+    },
+    "hints": {
+      "endpoints": "Endpoints"
+    },
+    "meta": {
+      "id": "Id",
+      "source": "Source"
+    },
+    "errors": {
+      "loadFailed": "Load Failed",
+      "forbiddenNotYours": "Forbidden Not Yours",
+      "submitReviewFailed": "Submit Review Failed",
+      "closeFailed": "Close Failed",
+      "reopenFailed": "Reopen Failed"
     }
   },
   "financePurchases": {
@@ -1330,7 +1474,11 @@
       "DRAFT": "DRAFT",
       "ASSIGNED": "ASSIGNED",
       "IN_PROGRESS": "IN_PROGRESS",
-      "COMPLETED": "COMPLETED"
+      "COMPLETED": "COMPLETED",
+      "allClients": "All Clients",
+      "allVehicles": "All Vehicles",
+      "allSites": "All Sites",
+      "allSupervisors": "All Supervisors"
     },
     "meta": {
       "role": "Role",
@@ -1344,7 +1492,9 @@
       "assign": "Assign",
       "start": "Start",
       "finish": "Finish",
-      "finance": "Finance"
+      "finance": "Finance",
+      "issueAdvance": "Issue Advance",
+      "issue": "Issue"
     },
     "empty": "No trips found.",
     "toast": {
@@ -1369,6 +1519,17 @@
       "scheduled": "Scheduled",
       "created": "Created",
       "actions": "Actions"
+    },
+    "fields": {
+      "supervisor": "Supervisor",
+      "amount": "Amount"
+    },
+    "status": {
+      "ALL": "All Statuses",
+      "DRAFT": "Draft",
+      "SUBMITTED": "Submitted",
+      "POSTED": "Posted",
+      "CANCELLED": "Cancelled"
     }
   },
   "tripModals": {
@@ -1391,7 +1552,9 @@
     "saving": "Saving…",
     "assign": "Assign",
     "create": "Create",
-    "toastCloseHint": "Click to close"
+    "toastCloseHint": "Click to close",
+    "selectClient": "Select Client",
+    "selectSite": "Select Site"
   },
   "tripFinance": {
     "title": "Trip Finance",
@@ -1509,7 +1672,11 @@
       "resolution": "Resolution",
       "approvedAt": "Approved At",
       "rejectedAt": "Rejected At",
-      "resolvedAt": "Resolved At"
+      "resolvedAt": "Resolved At",
+      "companyFields": "Company Fields",
+      "vendor": "Vendor",
+      "invoiceNo": "Invoice No",
+      "invoiceDate": "Invoice Date"
     },
     "audit": {
       "title": "Audit Timeline",
@@ -1527,10 +1694,30 @@
       "appeal": "Appeal",
       "resolveApprove": "Resolve Appeal: Approve",
       "resolveReject": "Resolve Appeal: Reject",
-      "reopen": "Reopen (REJECTED → PENDING)"
+      "reopen": "Reopen (REJECTED → PENDING)",
+      "title": "Title",
+      "metaRole": "Meta Role",
+      "metaStatus": "Meta Status",
+      "hint": "Hint"
     },
     "hints": {
       "endpoints": "Note: Actions are based on endpoints: approve / reject / appeal / resolve-appeal / reopen."
+    },
+    "confirm": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "appeal": "Appeal",
+      "reopen": "Reopen",
+      "resolveApprove": "Resolve Approve",
+      "resolveReject": "Resolve Reject"
+    },
+    "common": {
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "labels": {
+      "reason": "Reason",
+      "notes": "Notes"
     }
   },
   "inventory": {
@@ -1669,16 +1856,16 @@
     "cashExpenseStatus": "Approval Status",
     "cashExpenseType": "Expense Type",
     "header": "Header",
-"vendorSelect": "Select vendor",
-"vendorsEmpty": "No vendors",
-"vendorsLoadFailed": "Failed to load vendors",
-"searchParts": "Search parts",
-"searchPartsPlaceholder": "Search by part number / name / brand",
-"serialMode": "Serial",
-"bulkMode": "Bulk",
-"regenerateSerials": "Regenerate Serials",
-"serialItems": "Serial Items",
-"bulkItems": "Bulk Items"
+    "vendorSelect": "Select vendor",
+    "vendorsEmpty": "No vendors",
+    "vendorsLoadFailed": "Failed to load vendors",
+    "searchParts": "Search parts",
+    "searchPartsPlaceholder": "Search by part number / name / brand",
+    "serialMode": "Serial",
+    "bulkMode": "Bulk",
+    "regenerateSerials": "Regenerate Serials",
+    "serialItems": "Serial Items",
+    "bulkItems": "Bulk Items"
   },
   "contracts": {
     "title": "Contracts",
@@ -1815,5 +2002,307 @@
   },
   "sections": {
     "opsAction": "Operations Actions"
-  }
+  },
+  "woDetails": {
+    "breadcrumb": "Breadcrumb",
+    "title": "Title",
+    "wo": "Wo",
+    "type": "Type",
+    "vendor": "Vendor",
+    "opened": "Opened",
+    "started": "Started",
+    "completedAt": "Completed At",
+    "odometer": "Odometer",
+    "notes": "Notes",
+    "vehicle": "Vehicle",
+    "report": "Report",
+    "reportStatus": "Report Status",
+    "parts": "Parts",
+    "labor": "Labor",
+    "service": "Service",
+    "cashApproved": "Cash Approved",
+    "mismatches": "Mismatches",
+    "grandTotal": "Grand Total",
+    "completeWo": "Complete Wo",
+    "completing": "Completing",
+    "tabIssues": "Tab Issues",
+    "tabInstallations": "Tab Installations",
+    "tabQa": "Tab Qa",
+    "reconTitle": "Recon Title",
+    "reconMatched": "Recon Matched",
+    "reconIssuedNotInstalled": "Recon Issued Not Installed",
+    "reconInstalledNotIssued": "Recon Installed Not Issued",
+    "part": "Part",
+    "issuedQty": "Issued Qty",
+    "installedQty": "Installed Qty",
+    "issuedCost": "Issued Cost",
+    "matched": "Matched",
+    "issuedGtInstalled": "Issued Gt Installed",
+    "installedGtIssued": "Installed Gt Issued",
+    "noReconData": "No Recon Data",
+    "issuesTitle": "Issues Title",
+    "createIssue": "Create Issue",
+    "currentIssueId": "Current Issue Id",
+    "partIdUuid": "Part Id Uuid",
+    "uuidPlaceholder": "Uuid Placeholder",
+    "qty": "Qty",
+    "unitCost": "Unit Cost",
+    "total": "Total",
+    "issue": "Issue",
+    "notesOpt": "Notes Opt",
+    "addLine": "Add Line",
+    "issuedLinesFromReport": "Issued Lines From Report",
+    "noIssuedLines": "No Issued Lines",
+    "installationsTitle": "Installations Title",
+    "qtyInstalled": "Qty Installed",
+    "odometerOpt": "Odometer Opt",
+    "addInstallation": "Add Installation",
+    "installationsApiList": "Installations Api List",
+    "installationsRuntimeList": "Installations Runtime List",
+    "installedAt": "Installed At",
+    "noInstallations": "No Installations",
+    "noRuntimeInstallations": "No Runtime Installations",
+    "qaTitle": "Qa Title",
+    "qaEndpoint": "Qa Endpoint",
+    "roadTestResult": "Road Test Result",
+    "pass": "Pass",
+    "fail": "Fail",
+    "remarks": "Remarks",
+    "remarksPlaceholder": "Remarks Placeholder",
+    "saveQa": "Save Qa",
+    "onlyAdminAccountantQa": "Only Admin Accountant Qa",
+    "failedToLoad": "Failed To Load",
+    "installationsLoadFailed": "Installations Load Failed",
+    "hintMismatch": "Hint Mismatch",
+    "hintNeedsQa": "Hint Needs Qa",
+    "hintQaFailed": "Hint Qa Failed",
+    "hintReady": "Hint Ready"
+  },
+  "financeAdvances": {
+    "title": "Title",
+    "subtitle": "Subtitle",
+    "subtitleAdmin": "Subtitle Admin",
+    "actions": {
+      "issue": "Issue"
+    },
+    "filters": {
+      "allStatuses": "All Statuses",
+      "searchPlaceholder": "Search Placeholder",
+      "status": {
+        "OPEN": " O P E N",
+        "PENDING": " P E N D I N G",
+        "SETTLED": " S E T T L E D",
+        "CLOSED": " C L O S E D",
+        "REJECTED": " R E J E C T E D",
+        "CANCELED": " C A N C E L E D"
+      },
+      "open": "Open",
+      "settled": "Settled",
+      "canceled": "Canceled"
+    },
+    "table": {
+      "actions": "Actions",
+      "created": "Created",
+      "status": "Status",
+      "amount": "Amount",
+      "supervisor": "Supervisor",
+      "id": "Id"
+    },
+    "meta": {
+      "showing": "Showing",
+      "showingAll": "Showing All",
+      "showingMine": "Showing Mine"
+    },
+    "placeholders": {
+      "selectSupervisor": "Select Supervisor"
+    },
+    "hints": {
+      "issueHint": "Issue Hint"
+    },
+    "toast": {
+      "issued": "Issued"
+    },
+    "empty": "Empty",
+    "errors": {
+      "loadFailed": "Load Failed"
+    },
+    "kpi": {
+      "totalAmount": "Total Amount",
+      "pageOnly": "Page Only",
+      "open": "Open",
+      "settled": "Settled",
+      "canceled": "Canceled",
+      "allData": "All Data"
+    },
+    "modal": {
+      "issueTitle": "Issue Title",
+      "supervisor": "Supervisor",
+      "selectSupervisor": "Select Supervisor",
+      "amount": "Amount",
+      "amountPh": "Amount Ph"
+    }
+  },
+  "financeNewExpense": {
+    "title": "Title",
+    "notAllowedBanner": "Not Allowed Banner",
+    "fields": {
+      "paymentSource": "Payment Source",
+      "expenseType": "Expense Type",
+      "amount": "Amount",
+      "cashAdvance": "Cash Advance",
+      "vendorName": "Vendor Name",
+      "invoiceNo": "Invoice No",
+      "linkWorkOrder": "Link Work Order",
+      "linkTrip": "Link Trip",
+      "notes": "Notes"
+    },
+    "hints": {
+      "advance": "Advance",
+      "company": "Company"
+    },
+    "actions": {
+      "create": "Create"
+    },
+    "toast": {
+      "created": "Created",
+      "createFailed": "Create Failed"
+    },
+    "errors": {
+      "loadFailed": "Load Failed",
+      "notAllowed": "Not Allowed",
+      "expenseTypeRequired": "Expense Type Required",
+      "amountInvalid": "Amount Invalid",
+      "advanceOnlySupervisor": "Advance Only Supervisor",
+      "selectOpenAdvance": "Select Open Advance",
+      "companyOnlyPrivileged": "Company Only Privileged",
+      "vendorRequired": "Vendor Required",
+      "invoiceDateRequired": "Invoice Date Required",
+      "tripInvalid": "Trip Invalid",
+      "woInvalid": "Wo Invalid"
+    }
+  },
+  "partItems": {
+    "title": "Title",
+    "subtitle": "Subtitle",
+    "directIssue": "Direct Issue",
+    "filterQ": "Filter Q",
+    "filterWarehouseId": "Filter Warehouse Id",
+    "filterPartId": "Filter Part Id",
+    "filterStatus": "Filter Status",
+    "colSerial": "Col Serial",
+    "colStatus": "Col Status",
+    "colPart": "Col Part",
+    "colWarehouse": "Col Warehouse",
+    "colReceivedAt": "Col Received At",
+    "colLastMovedAt": "Col Last Moved At",
+    "colIds": "Col Ids"
+  },
+  "directIssue": {
+    "title": "Title",
+    "subtitle": "Subtitle",
+    "warehouseId": "Warehouse Id",
+    "workOrderId": "Work Order Id",
+    "notes": "Notes",
+    "notesPh": "Notes Ph",
+    "search": "Search",
+    "searchPh": "Search Ph",
+    "loadStock": "Load Stock",
+    "selectedCount": "Selected Count",
+    "createDraft": "Create Draft",
+    "stockTitle": "Stock Title",
+    "colPick": "Col Pick",
+    "colSerial": "Col Serial",
+    "colPart": "Col Part",
+    "colWarehouse": "Col Warehouse",
+    "colStatus": "Col Status",
+    "pick": "Pick",
+    "picked": "Picked",
+    "noStock": "No Stock",
+    "errWarehouse": "Err Warehouse",
+    "errWorkOrder": "Err Work Order",
+    "errNotes": "Err Notes",
+    "errPick": "Err Pick",
+    "createdOk": "Created Ok",
+    "noStockHint": "No Stock Hint"
+  },
+  "partsCatalog": {
+    "add": "Add",
+    "modalTitle": "Modal Title",
+    "partNumber": "Part Number",
+    "partNumberPh": "Part Number Ph",
+    "suggest": "Suggest",
+    "name": "Name",
+    "namePh": "Name Ph",
+    "brand": "Brand",
+    "brandPh": "Brand Ph",
+    "category": "Category",
+    "categoryPh": "Category Ph",
+    "unit": "Unit",
+    "unitPh": "Unit Ph",
+    "minStock": "Min Stock",
+    "minStockPh": "Min Stock Ph",
+    "save": "Save",
+    "savedOk": "Saved Ok",
+    "errPartNumber": "Err Part Number",
+    "errName": "Err Name",
+    "errMinStock": "Err Min Stock",
+    "errPartNumberExists": "Err Part Number Exists"
+  },
+  "MAINTENANCE": "MAINTENANCE",
+  "FINANCE": "FINANCE",
+  "OPERATIONS": "OPERATIONS",
+  "alerts": {
+    "toast": {
+      "markedRead": "Marked Read",
+      "markedAllRead": "Marked All Read"
+    },
+    "table": {
+      "severity": "Severity",
+      "alert": "Alert",
+      "area": "Area",
+      "created": "Created",
+      "state": "State",
+      "title": "Title"
+    },
+    "read": "Read",
+    "unread": "Unread",
+    "actions": {
+      "markRead": "Mark Read",
+      "markAllRead": "Mark All Read"
+    },
+    "title": "Title",
+    "subtitle": "Subtitle",
+    "summary": {
+      "danger": "Danger",
+      "warn": "Warn",
+      "info": "Info"
+    },
+    "filters": {
+      "title": "Title",
+      "severity": "Severity",
+      "area": "Area",
+      "compliance": "Compliance",
+      "read": "Read",
+      "searchPlaceholder": "Search Placeholder"
+    },
+    "empty": {
+      "title": "Title",
+      "hint": "Hint"
+    },
+    "severity": {
+      "danger": "Danger",
+      "warn": "Warn",
+      "info": "Info"
+    },
+    "columns": {
+      "severity": "Severity",
+      "title": "Title",
+      "area": "Area"
+    }
+  },
+  "active": "Active",
+  "page": "Page",
+  "limit": "Limit",
+  "status": "Status",
+  "pageSize": "Page Size"
 }

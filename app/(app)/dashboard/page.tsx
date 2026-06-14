@@ -3,11 +3,31 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useT } from "@/src/i18n/useT";
-import { 
-  Truck, Activity, AlertTriangle, BellRing, 
-  Clock, Wallet, CalendarClock, FileWarning, 
-  Settings, Wrench, Briefcase, BarChart3
+import {
+  Truck,
+  Briefcase,
+  Wrench,
+  AlertTriangle,
+  Activity,
+  ArrowUpRight,
+  TrendingUp,
+  Settings,
+  BellRing,
+  Clock,
+  Wallet,
+  CalendarClock,
+  FileWarning,
+  BarChart3,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Button } from "@/src/components/ui/Button";
@@ -24,6 +44,7 @@ import {
   DashboardStatCard,
   DashboardTabButton,
 } from "@/src/components/dashboard/DashboardUi";
+import { SuperAdminDashboard } from "@/src/components/dashboard/SuperAdminDashboard";
 
 import dashboardService from "@/src/services/dashboard.service";
 import type {
@@ -125,7 +146,9 @@ type GenericRow = Record<string, unknown>;
 
 export default function DashboardPage() {
   const t = useT();
- const user = useAuth((s) => s.user);
+  const user = useAuth((s) => s.user);
+
+  const isSystemOwner = user?.platform_role === "SUPER_ADMIN" && !user?.is_impersonating;
 
   const role =
     user?.platform_role === "SUPER_ADMIN" && user?.is_impersonating
@@ -139,6 +162,10 @@ export default function DashboardPage() {
   const [err, setErr] = useState<string | null>(null);
   const [assistantQuestion, setAssistantQuestion] = useState<string | null>(null);
   const [assistantSnapshot, setAssistantSnapshot] = useState<any>(null);
+
+  if (isSystemOwner) {
+    return <SuperAdminDashboard />;
+  }
   
   
 
@@ -846,11 +873,11 @@ export default function DashboardPage() {
             <DashboardStatCard
               label={tr(
                 t,
-                "dashboard.maintenance.openWorkOrders",
+                "dashboard.maintenance.openWorkOrders.title",
                 "أوامر عمل مفتوحة"
               )}
               value={fmtInt(summary?.cards?.maintenance?.open_work_orders)}
-              hint={tr(t, "dashboard.maintenance.openHint", "OPEN / IN_PROGRESS")}
+              hint={tr(t, "dashboard.maintenance.openWorkOrders.hintOn", "OPEN / IN_PROGRESS")}
               tone={
                 Number(summary?.cards?.maintenance?.open_work_orders || 0) > 0
                   ? "warn"
@@ -859,11 +886,11 @@ export default function DashboardPage() {
             />
 
             <DashboardStatCard
-              label={tr(t, "dashboard.maintenance.qaNeeds", "تحتاج QA")}
+              label={tr(t, "dashboard.maintenance.qaNeeds.title", "تحتاج QA")}
               value={fmtInt(summary?.cards?.maintenance?.qa_needs)}
               hint={tr(
                 t,
-                "dashboard.maintenance.qaNeedsHint",
+                "dashboard.maintenance.qaNeeds.hintOn",
                 "مكتملة بدون تقرير"
               )}
               tone={
@@ -874,9 +901,9 @@ export default function DashboardPage() {
             />
 
             <DashboardStatCard
-              label={tr(t, "dashboard.maintenance.qaFailed", "QA فشل")}
+              label={tr(t, "dashboard.maintenance.qaFailed.title", "QA فشل")}
               value={fmtInt(summary?.cards?.maintenance?.qa_failed)}
-              hint={tr(t, "dashboard.maintenance.qaFailedHint", "تحتاج مراجعة")}
+              hint={tr(t, "dashboard.maintenance.qaFailed.hintOn", "تحتاج مراجعة")}
               tone={
                 Number(summary?.cards?.maintenance?.qa_failed || 0) > 0
                   ? "danger"
@@ -887,13 +914,13 @@ export default function DashboardPage() {
             <DashboardStatCard
               label={tr(
                 t,
-                "dashboard.maintenance.partsMismatch",
+                "dashboard.maintenance.partsMismatch.title",
                 "عدم تطابق قطع"
               )}
               value={fmtInt(summary?.cards?.maintenance?.parts_mismatch)}
               hint={tr(
                 t,
-                "dashboard.maintenance.partsMismatchHint",
+                "dashboard.maintenance.partsMismatch.hintOn",
                 "مصروف / مركب"
               )}
               tone={
@@ -907,7 +934,7 @@ export default function DashboardPage() {
           <DataTable<GenericRow>
             title={tr(
               t,
-              "dashboard.maintenance.recentWorkOrders",
+              "dashboard.maintenance.recentWorkOrders.sectionTitle",
               "أوامر العمل الأخيرة"
             )}
             columns={maintenanceColumns}
@@ -1095,35 +1122,46 @@ function MiniBarChart({
     return { label: String(label), value };
   });
 
-  const max = Math.max(...normalized.map((x) => x.value), 1);
-
   return (
-    <div className="rounded-3xl border border-black/10 bg-white p-4">
-      <div className="mb-4 text-sm font-semibold text-[rgb(var(--trex-fg))]">
+    <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm transition hover:shadow-md">
+      <div className="mb-6 text-sm font-bold text-[rgb(var(--trex-fg))]">
         {title}
       </div>
 
-      <div className="space-y-3">
-        {normalized.map((item) => (
-          <div key={item.label} className="space-y-1">
-            <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-              <span className="truncate">{item.label}</span>
-              <span>{fmtMoney(item.value)}</span>
-            </div>
-
-            <div className="h-2 overflow-hidden rounded-full bg-black/[0.06]">
-              <div
-                className="h-full rounded-full bg-slate-900"
-                style={{
-                  width: `${Math.max(
-                    4,
-                    Math.min(100, (item.value / max) * 100)
-                  )}%`,
-                }}
-              />
-            </div>
-          </div>
-        ))}
+      <div className="h-[200px] w-full" dir="ltr">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={normalized} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: "#64748b" }}
+              tickLine={false}
+              axisLine={false}
+              dy={10}
+            />
+            <Tooltip
+              cursor={{ fill: "rgba(0,0,0,0.04)" }}
+              contentStyle={{
+                borderRadius: "16px",
+                border: "1px solid rgba(0,0,0,0.1)",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                fontSize: "12px",
+                fontWeight: "bold",
+              }}
+              formatter={(val: number) => [fmtMoney(val), "القيمة"]}
+            />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40}>
+              {normalized.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={`url(#gradient-${title.replace(/\s+/g, '')})`} />
+              ))}
+            </Bar>
+            <defs>
+              <linearGradient id={`gradient-${title.replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgb(var(--trex-accent))" stopOpacity={1} />
+                <stop offset="100%" stopColor="rgb(var(--trex-accent))" stopOpacity={0.6} />
+              </linearGradient>
+            </defs>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

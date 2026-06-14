@@ -393,7 +393,7 @@ export default function WorkOrderDetailsPage() {
           ) : null}
         </Card>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <KpiCard label="المصروف" value={fmtQty(totalsFromIssuedParts.issued)} />
           <KpiCard
             label="المركب"
@@ -402,6 +402,10 @@ export default function WorkOrderDetailsPage() {
           <KpiCard
             label="المتبقي للتركيب"
             value={fmtQty(totalsFromIssuedParts.remaining)}
+          />
+          <KpiCard
+            label="تكلفة القطع"
+            value={fmtQty(workOrder?.total_parts_cost) + " ر.س"}
           />
           <KpiCard
             label="حالة الإغلاق"

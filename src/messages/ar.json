@@ -44,7 +44,10 @@
     "status": "الحالة",
     "selected": "المحدد",
     "view": "عرض",
-    "viewAll": "عرض الكل"
+    "viewAll": "عرض الكل",
+    "confirm": "تأكيد",
+    "count": "Count",
+    "tryAgain": "حاول مرة أخرى"
   },
   "tabs": {
     "operations": "التشغيل",
@@ -63,6 +66,7 @@
     "appName": "النظام اللوجستي",
     "dashboard": "لوحة التحكم",
     "trips": "الرحلات",
+    "settings": "الإعدادات",
     "contracts": "العقود",
     "contractPricing": "تسعير العقود",
     "finance": "المالية",
@@ -76,6 +80,9 @@
     "financeARLedger": "كشف حساب AR",
     "clients": "العملاء",
     "sites": "المواقع",
+    "fleetDashboard": "لوحة تحكم الأسطول",
+    "assignments": "تعيينات الأسطول",
+    "fleetExpenses": "مصروفات الأسطول",
     "vehicles": "المركبات",
     "drivers": "السائقين",
     "cash": "الكاش",
@@ -84,6 +91,8 @@
     "maintenanceWorkOrders": "أوامر العمل",
     "maintenanceIssuedParts": "القطع المصروفة",
     "inventory": "المخازن",
+    "inventoryDashboard": "لوحة تحكم المخازن",
+    "inventoryWarehouses": "إدارة المخازن (الفروع)",
     "inventoryRequests": "طلبات المخزن",
     "inventoryIssues": "أذون الصرف",
     "inventoryReceipts": "الإضافة المخزنية",
@@ -91,7 +100,15 @@
     "inventoryStock": "رصيد المخازن",
     "users": "المستخدمين",
     "supervisors": "المشرفين",
-    "vendors": "الموردون ومراكز الصيانة"
+    "vendors": "الموردون ومراكز الصيانة",
+    "financeARClients": "عملاء الحسابات",
+    "masterData": "البيانات الأساسية",
+    "vehicleClasses": "فئات المركبات",
+    "cargoTypes": "أنواع الحمولات",
+    "zones": "المناطق",
+    "routes": "المسارات",
+    "inventoryParts": "دليل القطع",
+    "inventoryCategories": "تصنيفات القطع"
   },
   "notifications": {
     "open": "فتح التنبيهات",
@@ -119,7 +136,8 @@
       "dueDate": "تاريخ الاستحقاق",
       "daysOverdue": "أيام التأخير",
       "daysToDue": "الأيام المتبقية",
-      "outstanding": "الرصيد المستحق"
+      "outstanding": "الرصيد المستحق",
+      "days": "الأيام"
     },
     "errors": {
       "trendsUnavailable": "خدمة الاتجاهات غير متاحة."
@@ -144,7 +162,8 @@
       "licenseNo": "رقم الرخصة",
       "expiry": "الانتهاء",
       "supervisor": "مشرف",
-      "nationalId": "الرقم القومي"
+      "nationalId": "الرقم القومي",
+      "vehicle": "المركبة"
     },
     "ops": {
       "tripsNeedingFinanceClose": {
@@ -155,7 +174,8 @@
       "activeTripsNow": {
         "title": "الرحلات النشطة الآن",
         "hintOn": "مُسندة / قيد التنفيذ (متابعة التشغيل)",
-        "hintOff": "✓ كل المركبات متوقفة"
+        "hintOff": "✓ كل المركبات متوقفة",
+        "table": "الرحلات النشطة"
       },
       "tripsToday": {
         "title": "رحلات اليوم",
@@ -190,6 +210,11 @@
       "charts": {
         "tripsCreated": "رحلات تم إنشاؤها",
         "tripsAssigned": "رحلات تم إسنادها"
+      },
+      "language": {
+        "switch": "تغيير اللغة",
+        "ar": "العربية",
+        "en": "English"
       }
     },
     "finance": {
@@ -250,7 +275,18 @@
           "title": "لا توجد مصروفات معتمدة اليوم",
           "hint": "لا توجد بيانات للعرض"
         }
-      }
+      },
+      "pendingExpenses": "مصروفات معلقة",
+      "pendingHint": "أكثر من 48 ساعة",
+      "openAdvancesHint": "تحتاج تسوية",
+      "dueSoon": "فواتير مستحقة قريبًا",
+      "dueSoonHint": "خلال الأيام القادمة",
+      "overdue": "فواتير متأخرة",
+      "overdueHint": "تحتاج تحصيل",
+      "openAdvancesTable": "السلف المفتوحة",
+      "overdueInvoices": "الفواتير المتأخرة",
+      "dueSoonInvoices": "فواتير مستحقة قريبًا",
+      "expenseTypes": "أعلى أنواع المصروف"
     },
     "alerts": {
       "title": "التنبيهات المركزية",
@@ -276,7 +312,8 @@
         "danger": "حرج",
         "warn": "تحذير",
         "info": "معلومة"
-      }
+      },
+      "recent": "آخر التنبيهات"
     },
     "maintenance": {
       "actionRequired": "الصيانة – إجراءات مطلوبة",
@@ -333,6 +370,11 @@
     "dev": {
       "title": "تبويب المطور",
       "hint": "مخصص لتشخيصات التطوير."
+    },
+    "tabs": {
+      "operations": "التشغيل",
+      "finance": "المالية",
+      "maintenance": "الصيانة"
     }
   },
   "alertsPage": {
@@ -401,22 +443,23 @@
       "maintenance": "أمثلة: كم عدد أوامر العمل المفتوحة؟ / اعرض أعلى 5 مركبات تكلفة صيانة / الأولى",
       "inventory": "أمثلة: ما الأصناف القريبة من النفاد؟ / اعرض أعلى 5 أصناف صرفًا / الأول",
       "trips": "أمثلة: اعرض الرحلات النشطة / اعرض أعلى 5 عملاء حسب الرحلات / الأول / رحلاته"
-    }
+    },
+    "quickQuestions": "أسئلة مقترحة"
   },
   "dashboardInsights": {
-    "emptyTitle": "لا توجد Insights متاحة حاليًا",
-    "loadError": "تعذر تحميل الـ insights حاليًا.",
+    "emptyTitle": "لا توجد مؤشرات متاحة حاليًا",
+    "loadError": "تعذر تحميل المؤشرات حاليًا.",
     "groups": {
       "error": "عناصر حرجة",
       "warning": "تحتاج متابعة",
       "info": "معلومات سريعة"
     },
     "titles": {
-      "finance": "Insights المالية",
-      "ar": "Insights حسابات العملاء",
-      "maintenance": "Insights الصيانة",
-      "inventory": "Insights المخزون",
-      "trips": "Insights الرحلات"
+      "finance": "مؤشرات المالية",
+      "ar": "مؤشرات حسابات العملاء",
+      "maintenance": "مؤشرات الصيانة",
+      "inventory": "مؤشرات المخزون",
+      "trips": "مؤشرات الرحلات"
     },
     "subtitles": {
       "finance": "ملخص سريع لأهم مؤشرات المصروفات والموردين والاعتمادات.",
@@ -424,7 +467,9 @@
       "maintenance": "مؤشرات أوامر العمل المفتوحة وتكلفة الصيانة.",
       "inventory": "أهم التنبيهات حول الأصناف المنخفضة وأكثر الأصناف صرفًا.",
       "trips": "ملخص للرحلات النشطة والإغلاق المالي وأهم أنماط التشغيل."
-    }
+    },
+    "ask": "اسألني",
+    "summaryTitle": "قراءة ذكية لأهم المخاطر والفرص"
   },
   "users": {
     "title": "المستخدمون",
@@ -435,7 +480,8 @@
       "searchPlaceholder": "الاسم / البريد / الهاتف",
       "role": "الدور",
       "rolePlaceholder": "ADMIN / ACCOUNTANT / ...",
-      "status": "الحالة"
+      "status": "الحالة",
+      "clearFilters": "مسح الفلاتر"
     },
     "table": {
       "name": "الاسم",
@@ -746,7 +792,8 @@
       "partsDisplayOnly": "Parts (عرض فقط)",
       "searchTitle": "بحث (المورّد / الملاحظات)",
       "searchBtn": "بحث",
-      "selected": "المحدد"
+      "selected": "المحدد",
+      "searchPlaceholder": "ابحث برقم الأمر، المركبة، المورد..."
     },
     "status": {
       "all": "الكل",
@@ -1121,6 +1168,9 @@
       },
       "errors": {
         "loadFailed": "فشل تحميل تفاصيل العميل"
+      },
+      "empty": {
+        "notFound": "العميل غير موجود"
       }
     },
     "ar": {
@@ -1167,7 +1217,8 @@
       "showingFirst20Adv": "عرض أول 20 سلفة متأخرة",
       "allData": "كل البيانات",
       "pageOnly": "الصفحة الحالية فقط",
-      "openFromListNote": "إجمالي المفتوح محسوب من السلف المفتوحة"
+      "openFromListNote": "إجمالي المفتوح محسوب من السلف المفتوحة",
+      "tryFilters": "جرّب تغيير الفلاتر أو البحث."
     },
     "tables": {
       "pending": {
@@ -1440,7 +1491,12 @@
       "actions": "إجراءات"
     },
     "confirm": {
-      "approve": "هل أنت متأكد من اعتماد هذا المصروف؟"
+      "approve": "هل أنت متأكد من اعتماد هذا المصروف؟",
+      "reject": "هل أنت متأكد من رفض هذا المصروف؟",
+      "appeal": "هل تريد إرسال استئناف على هذا المصروف؟",
+      "reopen": "هل تريد إعادة فتح المصروف (إلى Pending)؟",
+      "resolveApprove": "هل تريد اعتماد الاستئناف؟",
+      "resolveReject": "هل تريد رفض الاستئناف؟"
     },
     "common": {
       "confirm": "تأكيد",
@@ -1491,6 +1547,10 @@
     },
     "hints": {
       "endpoints": "ملاحظة: الإجراءات مرتبطة بمسارات: approve / reject / appeal / resolve-appeal / reopen."
+    },
+    "labels": {
+      "reason": "السبب",
+      "notes": "ملاحظات"
     }
   },
   "financeARSection": {
@@ -1557,7 +1617,11 @@
       "DRAFT": "مسودة",
       "ASSIGNED": "مُسندة",
       "IN_PROGRESS": "قيد التنفيذ",
-      "COMPLETED": "مكتملة"
+      "COMPLETED": "مكتملة",
+      "allClients": "كل العملاء",
+      "allVehicles": "كل المركبات",
+      "allSites": "كل المواقع",
+      "allSupervisors": "كل المشرفين"
     },
     "fields": {
       "supervisor": "المشرف",
@@ -1602,6 +1666,13 @@
       "scheduled": "الموعد",
       "created": "تاريخ الإنشاء",
       "actions": "إجراءات"
+    },
+    "status": {
+      "ALL": "كل الحالات",
+      "DRAFT": "مسودة (Draft)",
+      "SUBMITTED": "مقدمة (Submitted)",
+      "POSTED": "مرحلة (Posted)",
+      "CANCELLED": "ملغاة (Cancelled)"
     }
   },
   "tripModals": {
@@ -1770,7 +1841,8 @@
       "back": "رجوع",
       "list": "القائمة",
       "refresh": "تحديث",
-      "newExpense": "مصروف جديد"
+      "newExpense": "مصروف جديد",
+      "closeAdvance": "إغلاق السلفة"
     },
     "labels": {
       "id": "المعرّف",
@@ -1822,6 +1894,16 @@
       "submitReviewFailed": "فشل إرسال العُهدة للمراجعة",
       "closeFailed": "فشل إغلاق العُهدة",
       "reopenFailed": "فشل إعادة فتح العُهدة"
+    },
+    "common": {
+      "confirm": "تأكيد",
+      "cancel": "إلغاء"
+    },
+    "confirm": {
+      "approve": "قبول السلفة؟"
+    },
+    "empty": {
+      "noExpenses": "لا توجد مصروفات"
     }
   },
   "inventory": {
@@ -1960,16 +2042,16 @@
     "cashExpenseStatus": "حالة الاعتماد",
     "cashExpenseType": "نوع المصروف",
     "header": "البيانات الأساسية",
-"vendorSelect": "اختر المورد",
-"vendorsEmpty": "لا يوجد موردون",
-"vendorsLoadFailed": "فشل تحميل الموردين",
-"searchParts": "بحث الأصناف",
-"searchPartsPlaceholder": "ابحث برقم القطعة / الاسم / البراند",
-"serialMode": "مسلسل",
-"bulkMode": "مجمع",
-"regenerateSerials": "إعادة توليد السيريالات",
-"serialItems": "العناصر المسلسلة",
-"bulkItems": "العناصر المجمعة"
+    "vendorSelect": "اختر المورد",
+    "vendorsEmpty": "لا يوجد موردون",
+    "vendorsLoadFailed": "فشل تحميل الموردين",
+    "searchParts": "بحث الأصناف",
+    "searchPartsPlaceholder": "ابحث برقم القطعة / الاسم / البراند",
+    "serialMode": "مسلسل",
+    "bulkMode": "مجمع",
+    "regenerateSerials": "إعادة توليد السيريالات",
+    "serialItems": "العناصر المسلسلة",
+    "bulkItems": "العناصر المجمعة"
   },
   "partItems": {
     "title": "السيريالات (Part Items)",
@@ -2012,7 +2094,8 @@
     "errWorkOrder": "work_order_id مطلوب",
     "errNotes": "سبب الصرف مطلوب (5 حروف على الأقل)",
     "errPick": "اختر سيريال واحد على الأقل",
-    "createdOk": "تم إنشاء إذن صرف Draft للصرف المباشر"
+    "createdOk": "تم إنشاء إذن صرف Draft للصرف المباشر",
+    "noStockHint": "اختر مخزن ثم اضغط تحميل المتاح"
   },
   "partsCatalog": {
     "add": "+ إضافة للكتالوج",
@@ -2165,5 +2248,62 @@
       "clientRequired": "العميل مطلوب",
       "startDateRequired": "تاريخ البداية مطلوب"
     }
-  }
+  },
+  "MAINTENANCE": "الصيانة",
+  "FINANCE": "المالية",
+  "OPERATIONS": "التشغيل",
+  "alerts": {
+    "toast": {
+      "markedRead": "تم التحديث",
+      "markedAllRead": "تم تعليم الكل كمقروء"
+    },
+    "table": {
+      "severity": "الأولوية",
+      "alert": "التنبيه",
+      "area": "المجال",
+      "created": "التاريخ",
+      "state": "الحالة",
+      "title": "قائمة التنبيهات"
+    },
+    "read": "مقروء",
+    "unread": "غير مقروء",
+    "actions": {
+      "markRead": "تعليم كمقروء",
+      "markAllRead": "تعليم الكل كمقروء"
+    },
+    "title": "التنبيهات",
+    "subtitle": "متابعة التنبيهات التشغيلية والمالية حسب الأولوية والحالة.",
+    "summary": {
+      "danger": "خطر",
+      "warn": "تحذير",
+      "info": "معلومة"
+    },
+    "filters": {
+      "title": "الفلاتر",
+      "severity": "الأولوية",
+      "area": "المجال",
+      "compliance": "الالتزام",
+      "read": "القراءة",
+      "searchPlaceholder": "ابحث في التنبيهات"
+    },
+    "empty": {
+      "title": "لا توجد تنبيهات",
+      "hint": "جرّب تغيير الفلاتر."
+    },
+    "severity": {
+      "danger": "حرج",
+      "warn": "تحذير",
+      "info": "معلومة"
+    },
+    "columns": {
+      "severity": "الأولوية",
+      "title": "العنوان",
+      "area": "القسم"
+    }
+  },
+  "active": "all",
+  "page": "1",
+  "limit": "50",
+  "status": "OPEN",
+  "pageSize": "25"
 }

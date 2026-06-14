@@ -6,6 +6,7 @@ import Link from "next/link";
 import maintenanceIssuedPartsService, {
   type IssuedPartRow,
 } from "@/src/services/maintenance-issued-parts.service";
+import warehousesService, { type WarehouseOption } from "@/src/services/warehouses.service";
 
 import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
@@ -47,7 +48,9 @@ function statusClass(status: string) {
 export default function MaintenanceIssuedPartsPage() {
   const [items, setItems] = useState<IssuedPartRow[]>([]);
   const [status, setStatus] = useState("ALL");
+  const [warehouseId, setWarehouseId] = useState("ALL");
   const [q, setQ] = useState("");
+  const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [actionKey, setActionKey] = useState<string | null>(null);
@@ -75,6 +78,11 @@ export default function MaintenanceIssuedPartsPage() {
     } finally {
       setLoading(false);
     }
+
+    try {
+      const wRes = await warehousesService.listOptions();
+      setWarehouses(wRes.items);
+    } catch (e) {}
   }
 
   useEffect(() => {
@@ -85,9 +93,15 @@ export default function MaintenanceIssuedPartsPage() {
   const filteredItems = useMemo(() => {
     const term = q.trim().toLowerCase();
 
-    if (!term) return items;
+    let filtered = items;
 
-    return items.filter((row) => {
+    if (warehouseId !== "ALL") {
+      filtered = filtered.filter((r) => r.warehouse?.id === warehouseId);
+    }
+
+    if (!term) return filtered;
+
+    return filtered.filter((row) => {
       const partName = row.part?.name || "";
       const partNo = row.part?.part_number || "";
       const brand = row.part?.brand || "";
@@ -104,7 +118,7 @@ export default function MaintenanceIssuedPartsPage() {
         .toLowerCase()
         .includes(term);
     });
-  }, [items, q]);
+  }, [items, q, warehouseId]);
 
   const totals = useMemo(() => {
     return {
@@ -181,7 +195,7 @@ export default function MaintenanceIssuedPartsPage() {
         </div>
 
         <Card>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
             <div className="md:col-span-2">
               <div className="mb-1 text-xs text-slate-500">بحث</div>
               <input
@@ -206,6 +220,20 @@ export default function MaintenanceIssuedPartsPage() {
               </select>
             </div>
 
+            <div>
+              <div className="mb-1 text-xs text-slate-500">المخزن</div>
+              <select
+                value={warehouseId}
+                onChange={(e) => setWarehouseId(e.target.value)}
+                className="trex-input w-full px-3 py-2 text-sm"
+              >
+                <option value="ALL">الكل</option>
+                {warehouses.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex items-end gap-2">
               <Button onClick={load} isLoading={loading}>
                 تطبيق
@@ -216,6 +244,7 @@ export default function MaintenanceIssuedPartsPage() {
                 onClick={() => {
                   setQ("");
                   setStatus("ALL");
+                  setWarehouseId("ALL");
                   setTimeout(load, 0);
                 }}
               >
@@ -240,6 +269,8 @@ export default function MaintenanceIssuedPartsPage() {
                   <th className="p-3 text-right">المركبة</th>
                   <th className="p-3 text-right">المخزن</th>
                   <th className="p-3 text-right">القطعة</th>
+                  <th className="p-3 text-right">سعر الوحدة</th>
+                  <th className="p-3 text-right">الإجمالي</th>
                   <th className="p-3 text-right">مصروف</th>
                   <th className="p-3 text-right">مركب</th>
                   <th className="p-3 text-right">متبقي</th>
@@ -261,7 +292,7 @@ export default function MaintenanceIssuedPartsPage() {
                   </tr>
                 ) : filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="p-4 text-slate-500">
+                    <td colSpan={15} className="p-4 text-slate-500">
                       لا توجد قطع مصروفة مطابقة.
                     </td>
                   </tr>
@@ -321,6 +352,14 @@ export default function MaintenanceIssuedPartsPage() {
                               {row.part.brand}
                             </div>
                           ) : null}
+                        </td>
+
+                        <td className="p-3 font-semibold text-slate-700">
+                          {fmtQty(row.unit_cost)}
+                        </td>
+
+                        <td className="p-3 font-bold text-slate-800">
+                          {fmtQty(row.total_cost)}
                         </td>
 
                         <td className="p-3 font-semibold">

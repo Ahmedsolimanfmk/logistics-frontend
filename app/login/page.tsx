@@ -23,14 +23,16 @@ export default function LoginPage() {
   if (!hasHydrated) return;
 
   // ❌ مهم جدًا
-  if (!token || !user) return;
+    if (!token || !user) return;
 
-  if (user?.platform_role === "SUPER_ADMIN") {
-    router.replace("/select-company");
-  } else {
-    router.replace("/dashboard");
-  }
-}, [token, user, hasHydrated]);
+    if (user?.platform_role === "SUPER_ADMIN") {
+      router.replace("/dashboard");
+    } else if (user?.role === "ADMIN" && !user?.company_id) { // maybe normal users go to select-company if they have multiple
+      router.replace("/dashboard");
+    } else {
+      router.replace("/dashboard");
+    }
+  }, [token, user, hasHydrated]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,7 +52,7 @@ export default function LoginPage() {
       setAuth(t, user);
 
       if (user.platform_role === "SUPER_ADMIN") {
-        router.replace("/select-company");
+        router.replace("/dashboard");
       } else {
         router.replace("/dashboard");
       }

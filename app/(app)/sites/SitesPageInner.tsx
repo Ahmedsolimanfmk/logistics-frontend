@@ -1,5 +1,4 @@
 "use client";
-const hasHydrated = useAuth((s) => s.hasHydrated);
 
 
 import React, { useEffect, useMemo, useState } from "react";

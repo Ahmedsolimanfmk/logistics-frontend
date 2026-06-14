@@ -170,3 +170,32 @@ export async function apiAuthPatch<T = any>(
 
   return res.data;
 }
+
+export async function apiAuthPut<T = any>(
+  url: string,
+  tokenOrBody?: any,
+  maybeBody?: any
+): Promise<T> {
+  let token: string | undefined;
+  let body: any;
+
+  if (
+    typeof tokenOrBody === "object" ||
+    tokenOrBody === undefined
+  ) {
+    body = tokenOrBody;
+  } else {
+    token = tokenOrBody;
+    body = maybeBody;
+  }
+
+  const res = await api.put(url, body, {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+  });
+
+  return res.data;
+}

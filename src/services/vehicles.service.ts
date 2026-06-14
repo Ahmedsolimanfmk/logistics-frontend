@@ -40,6 +40,16 @@ export const vehiclesService = {
     return (res.data ?? res) as VehicleSummaryResponse;
   },
 
+  async getFleetDashboard(params?: Record<string, any>) {
+    const res = await api.get("/vehicles/dashboard", { params });
+    return res.data ?? res;
+  },
+
+  async getFleetExpenses(params?: Record<string, any>) {
+    const res = await api.get("/vehicles/expenses", { params });
+    return res.data ?? res;
+  },
+
   async create(payload: VehiclePayload) {
     const res = await api.post("/vehicles", payload);
     return res.data ?? res;

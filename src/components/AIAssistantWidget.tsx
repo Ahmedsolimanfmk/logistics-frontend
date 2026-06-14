@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/src/store/auth";
 import { apiAuthGet, apiAuthPost } from "@/src/lib/api";
+import { Sparkles, X, RefreshCw, MessageSquarePlus } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 type ChatRole = "assistant" | "user";
@@ -154,18 +155,27 @@ const SECTION_SUPPORTED_QUESTIONS: Record<SectionKey, string[]> = {
 const SECTION_ACTION_COMMANDS: Partial<Record<SectionKey, string[]>> = {
   finance: [
     "سجل مصروف وقود 500 جنيه للمركبة TR-10",
-    "سجل مصروف صيانة 1200 جنيه على أمر العمل 123",
-    "سجل مصروف شراء 3000 جنيه من مورد النور تحويل بنكي",
+    "افتح عهدة بمبلغ 2000 جنيه",
   ],
   maintenance: [
     "افتح طلب صيانة للمركبة TR-12 يوجد عطل كهرباء",
     "أنشئ أمر عمل للمركبة Truck 8 صيانة فرامل",
-    "أنشئ أمر عمل للمركبة TR-22 تغيير زيت",
   ],
-  trips: [],
+  trips: [
+    "أنشئ رحلة للعميل المراعي",
+    "عين السائق أحمد للرحلة 12345",
+  ],
+  ar: [
+    "أنشئ فاتورة للعميل المراعي بمبلغ 5000",
+    "سجل دفعة من العميل الصافي بمبلغ 2000",
+  ],
+  inventory: [
+    "اصرف قطعة فلتر زيت للمركبة TR-15 من المخزن الرئيسي",
+  ],
 };
 
 const SECTIONS_BY_ROLE: Record<string, SectionKey[]> = {
+  SUPER_ADMIN: ["finance", "ar", "maintenance", "inventory", "trips"],
   ADMIN: ["finance", "ar", "maintenance", "inventory", "trips"],
   ACCOUNTANT: ["finance", "ar", "trips"],
   STOREKEEPER: ["inventory"],
@@ -1180,10 +1190,10 @@ export default function AIAssistantWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 left-5 z-[1000] flex items-center gap-2 rounded-full border border-black/10 bg-[rgb(var(--trex-card))] px-4 py-3 text-sm font-medium text-[rgb(var(--trex-fg))] shadow-lg hover:opacity-95"
+          className="fixed bottom-6 left-6 z-[1000] flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(79,70,229,0.5)] focus:outline-none focus:ring-4 focus:ring-blue-500/50"
         >
-          <span>🤖</span>
-          <span>{effectiveSection ? `${SECTION_LABELS[effectiveSection]} AI` : "المساعد الذكي"}</span>
+          <Sparkles className="h-5 w-5 animate-pulse text-blue-100" />
+          <span className="tracking-wide">{effectiveSection ? `${SECTION_LABELS[effectiveSection]} AI` : "المساعد الذكي"}</span>
         </button>
       )}
 
