@@ -38,8 +38,8 @@ export default function MaintenanceRequestsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const [approveData, setApproveData] = useState({
-    maintenance_mode: "INTERNAL",
-    type: "CORRECTIVE",
+    maintenance_mode: "INTERNAL" as "INTERNAL" | "EXTERNAL",
+    type: "CORRECTIVE" as "CORRECTIVE" | "PREVENTIVE",
     odometer: "",
     notes: ""
   });
@@ -200,7 +200,7 @@ export default function MaintenanceRequestsPage() {
       />
 
       {!!approveId && (
-        <Modal title="اعتماد وتحويل لأمر عمل" onClose={() => setApproveId(null)}>
+        <Modal open={!!approveId} title="اعتماد وتحويل لأمر عمل" onClose={() => setApproveId(null)}>
           <div className="space-y-4">
             <div>
               <label className="block mb-1 font-bold">نوع الصيانة</label>
