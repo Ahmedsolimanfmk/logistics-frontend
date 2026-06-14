@@ -181,7 +181,7 @@ export default function CompanyDetailsPage() {
           company={company}
           saving={saving}
           onClose={() => setFeaturesOpen(false)}
-          onSubmit={async (id, payload) => {
+          onSubmit={async (id: string, payload: any) => {
             setSaving(true);
             try {
               await superAdminService.updateFeatures(id, payload);
@@ -199,7 +199,7 @@ export default function CompanyDetailsPage() {
           company={company}
           saving={saving}
           onClose={() => setSubOpen(false)}
-          onSubmit={async (id, payload) => {
+          onSubmit={async (id: string, payload: any) => {
             setSaving(true);
             try {
               await superAdminService.updateSubscription(id, payload);
@@ -217,7 +217,7 @@ export default function CompanyDetailsPage() {
           company={company}
           saving={saving}
           onClose={() => setPaymentOpen(false)}
-          onSubmit={async (id, payload) => {
+          onSubmit={async (id: string, payload: any) => {
             setSaving(true);
             try {
               await superAdminService.addCompanyPayment(id, payload);
