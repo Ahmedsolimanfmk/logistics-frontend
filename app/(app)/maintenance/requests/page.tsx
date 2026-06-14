@@ -48,7 +48,10 @@ export default function MaintenanceRequestsPage() {
     if (!approveId) return;
     setActionLoadingId(approveId);
     try {
-      await approveRequest(approveId, approveData);
+      await approveRequest(approveId, {
+        ...approveData,
+        odometer: Number(approveData.odometer)
+      });
       setApproveId(null);
     } catch (e: any) {
       alert(e?.message || "Error approving request");
