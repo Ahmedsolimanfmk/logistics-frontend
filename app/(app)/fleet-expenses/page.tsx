@@ -124,7 +124,7 @@ export default function FleetExpensesPage() {
         {loading ? (
           <div className="p-8 text-center text-gray-500">جاري تحميل التقرير...</div>
         ) : (
-          <DataTable columns={columns} data={data} />
+          <DataTable columns={columns} rows={data} />
         )}
       </Card>
     </div>
