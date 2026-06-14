@@ -258,7 +258,7 @@ export default function AdminCompanyPage() {
       )}
 
       {paymentModalOpen && (
-        <Modal title="تسجيل دفعة وإصدار فاتورة" onClose={() => setPaymentModalOpen(false)}>
+        <Modal open={paymentModalOpen} title="تسجيل دفعة وإصدار فاتورة" onClose={() => setPaymentModalOpen(false)}>
           <div className="space-y-4">
             <div>
               <label className="block mb-1 font-bold">المبلغ</label>
