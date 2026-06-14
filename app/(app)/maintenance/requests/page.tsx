@@ -207,14 +207,14 @@ export default function MaintenanceRequestsPage() {
           <div className="space-y-4">
             <div>
               <label className="block mb-1 font-bold">نوع الصيانة</label>
-              <select className="w-full border p-2 rounded" value={approveData.type} onChange={e => setApproveData({ ...approveData, type: e.target.value })}>
+              <select className="w-full border p-2 rounded" value={approveData.type} onChange={e => setApproveData({ ...approveData, type: e.target.value as any })}>
                 <option value="CORRECTIVE">علاجية (Corrective)</option>
                 <option value="PREVENTIVE">وقائية (Preventive)</option>
               </select>
             </div>
             <div>
               <label className="block mb-1 font-bold">نمط التنفيذ</label>
-              <select className="w-full border p-2 rounded" value={approveData.maintenance_mode} onChange={e => setApproveData({ ...approveData, maintenance_mode: e.target.value })}>
+              <select className="w-full border p-2 rounded" value={approveData.maintenance_mode} onChange={e => setApproveData({ ...approveData, maintenance_mode: e.target.value as any })}>
                 <option value="INTERNAL">داخلي (ورشة الشركة)</option>
                 <option value="EXTERNAL">خارجي (مركز صيانة خارجي)</option>
               </select>
