@@ -1147,7 +1147,7 @@ function MiniBarChart({
                 fontSize: "12px",
                 fontWeight: "bold",
               }}
-              formatter={(val: number) => [fmtMoney(val), "القيمة"]}
+              formatter={(val: any) => [fmtMoney(val || 0), "القيمة"]}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40}>
               {normalized.map((entry, index) => (
