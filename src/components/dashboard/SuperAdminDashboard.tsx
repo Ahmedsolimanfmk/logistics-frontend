@@ -219,7 +219,7 @@ export function SuperAdminDashboard() {
           <Button variant="secondary" onClick={() => handleToggleStatus(row.id)}>
             {row.is_active ? "تجميد" : "تفعيل"}
           </Button>
-          <Button variant="outline" onClick={() => router.push(`/dashboard/companies/${row.id}`)}>
+          <Button variant="secondary" onClick={() => router.push(`/dashboard/companies/${row.id}`)}>
             إدارة الشركة
           </Button>
         </div>
