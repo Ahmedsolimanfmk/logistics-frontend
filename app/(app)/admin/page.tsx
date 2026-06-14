@@ -12,7 +12,7 @@ export default function AdminPage() {
 
   const token = useAuth((s) => s.token);
   const user = useAuth((s) => s.user);
-  const setAuth = useAuth((s) => s.setAuth);
+  const logout = useAuth((s) => s.logout);
 
   const [loading, setLoading] = useState(true);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -123,8 +123,7 @@ export default function AdminPage() {
         subtitle="إدارة الشركات والاشتراكات"
         actions={
           <Button variant="danger" onClick={() => {
-            setAuth(null, null);
-            router.push("/login");
+            logout();
           }}>
             تسجيل الخروج
           </Button>
