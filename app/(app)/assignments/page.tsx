@@ -137,7 +137,7 @@ export default function AssignmentsPage() {
       </div>
 
       <Card>
-        {loading ? <div className="p-4 text-center">جاري التحميل...</div> : <DataTable columns={columns} data={assignments} />}
+        {loading ? <div className="p-4 text-center">جاري التحميل...</div> : <DataTable columns={columns} rows={assignments} />}
       </Card>
 
       {isAssignModalOpen && (
