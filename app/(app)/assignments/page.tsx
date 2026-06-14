@@ -141,7 +141,7 @@ export default function AssignmentsPage() {
       </Card>
 
       {isAssignModalOpen && (
-        <Modal title="تعيين سائق على شاحنة" onClose={() => setAssignModalOpen(false)}>
+        <Modal open={isAssignModalOpen} title="تعيين سائق على شاحنة" onClose={() => setAssignModalOpen(false)}>
           <div className="space-y-4">
             <div>
               <label className="block mb-1 font-bold">الشاحنة</label>
@@ -170,7 +170,7 @@ export default function AssignmentsPage() {
       )}
 
       {isCustodyModalOpen && selectedAssignment && (
-        <Modal title={`تسليم عهدة عينية: ${selectedAssignment.driver?.full_name}`} onClose={() => setCustodyModalOpen(false)}>
+        <Modal open={isCustodyModalOpen} title={`تسليم عهدة عينية: ${selectedAssignment.driver?.full_name}`} onClose={() => setCustodyModalOpen(false)}>
           <div className="space-y-4">
             <div>
               <label className="block mb-1 font-bold">اسم العهدة (مفتاح، إطار...)</label>
