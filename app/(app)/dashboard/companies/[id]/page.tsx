@@ -53,7 +53,7 @@ export default function CompanyDetailsPage() {
 
   const handleImpersonate = async () => {
     try {
-      const res = await superAdminService.impersonateCompany(id);
+      const res = await superAdminService.impersonateCompany(id as string);
       setAuth(res.token, res.user);
       window.location.href = "/dashboard";
     } catch (error: any) {
