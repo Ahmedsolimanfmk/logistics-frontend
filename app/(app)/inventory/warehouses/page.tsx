@@ -107,7 +107,7 @@ export default function WarehousesPage() {
       <PageHeader 
         title="إدارة المخازن" 
         subtitle="تعريف فروع المخازن وأماكنها" 
-        right={
+        actions={
           <Button variant="primary" onClick={handleAdd}>+ إضافة مخزن جديد</Button>
         }
       />
