@@ -112,10 +112,10 @@ export default function AssignmentsPage() {
     },
     { key: "actions", label: "إجراءات", render: (r: any) => (
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => { setSelectedAssignment(r); setCustodyModalOpen(true); }}>
+          <Button variant="secondary" onClick={() => { setSelectedAssignment(r); setCustodyModalOpen(true); }}>
             + عهدة
           </Button>
-          <Button variant="danger" size="sm" onClick={() => handleUnassign(r.id)}>
+          <Button variant="danger" onClick={() => handleUnassign(r.id)}>
             إلغاء التعيين
           </Button>
         </div>
