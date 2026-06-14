@@ -121,7 +121,7 @@ export default function AdminPage() {
       <PageHeader 
         title="لوحة تحكم مدير النظام (Super Admin)" 
         subtitle="إدارة الشركات والاشتراكات"
-        right={
+        actions={
           <Button variant="danger" onClick={() => {
             setAuth(null, null);
             router.push("/login");
