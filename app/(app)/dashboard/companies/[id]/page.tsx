@@ -111,7 +111,7 @@ export default function CompanyDetailsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Features */}
-        <Card title="المميزات المفعلة" actions={<Button variant="secondary" onClick={() => setFeaturesOpen(true)}>تعديل المميزات</Button>}>
+        <Card title="المميزات المفعلة" right={<Button variant="secondary" onClick={() => setFeaturesOpen(true)}>تعديل المميزات</Button>}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span>نظام الأسطول</span>
@@ -129,7 +129,7 @@ export default function CompanyDetailsPage() {
         </Card>
 
         {/* Subscription */}
-        <Card title="بيانات الاشتراك" actions={<Button variant="secondary" onClick={() => setSubOpen(true)}>إدارة الاشتراك</Button>}>
+        <Card title="بيانات الاشتراك" right={<Button variant="secondary" onClick={() => setSubOpen(true)}>إدارة الاشتراك</Button>}>
           {sub ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -167,7 +167,7 @@ export default function CompanyDetailsPage() {
         <DataTable columns={usersColumns} rows={company.memberships || []} />
       </Card>
 
-      <Card title="سجل المدفوعات" actions={<Button variant="primary" onClick={() => setPaymentOpen(true)}>تسجيل دفعة جديدة</Button>}>
+      <Card title="سجل المدفوعات" right={<Button variant="primary" onClick={() => setPaymentOpen(true)}>تسجيل دفعة جديدة</Button>}>
         {payments.length > 0 ? (
           <DataTable columns={paymentsColumns} rows={payments} />
         ) : (
