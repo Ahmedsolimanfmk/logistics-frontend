@@ -103,10 +103,10 @@ export default function CompanyDetailsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <DashboardStatCard title="إجمالي الرحلات" value={stats?.trips || 0} icon="🚚" color="blue" />
-        <DashboardStatCard title="إجمالي المركبات" value={stats?.vehicles || 0} icon="🚜" color="orange" />
-        <DashboardStatCard title="إجمالي السائقين" value={stats?.drivers || 0} icon="👷" color="green" />
-        <DashboardStatCard title="إجمالي الإيرادات" value={stats?.revenue || 0} icon="💰" color="emerald" format="currency" />
+        <DashboardStatCard label="إجمالي الرحلات" value={stats?.trips || 0} icon="🚚" tone="info" />
+        <DashboardStatCard label="إجمالي المركبات" value={stats?.vehicles || 0} icon="🚜" tone="warn" />
+        <DashboardStatCard label="إجمالي السائقين" value={stats?.drivers || 0} icon="👷" tone="success" />
+        <DashboardStatCard label="إجمالي الإيرادات" value={`${stats?.revenue || 0} ر.س`} icon="💰" tone="success" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
