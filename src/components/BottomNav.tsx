@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Activity, Wrench, Wallet, Fuel, Menu } from "lucide-react";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
+import { canAccessRoute } from "@/src/config/routeRoles";
 
 export function BottomNav({ onOpenMenu }: { onOpenMenu: () => void }) {
   const pathname = usePathname();
@@ -48,7 +49,18 @@ export function BottomNav({ onOpenMenu }: { onOpenMenu: () => void }) {
           <span className="text-[10px] font-medium">القائمة</span>
         </button>
 
-        {items.map((it) => {
+        {items
+          .filter((it) => {
+            const r = (user as any)?.role;
+            const er = (user as any)?.effective_role || (user as any)?.platform_role;
+            
+            // Check feature flags if applicable
+            if (it.href === "/fuel-transactions" && user?.features?.fuel_enabled === false) return false;
+            if (it.href === "/finance/advances" && user?.features?.fleet_enabled === false) return false;
+
+            return canAccessRoute(it.href, r, er);
+          })
+          .map((it) => {
           const active = isActive(it.href);
           return (
             <button

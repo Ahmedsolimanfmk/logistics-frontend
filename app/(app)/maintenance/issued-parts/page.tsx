@@ -12,6 +12,7 @@ import { PageHeader } from "@/src/components/ui/PageHeader";
 import { Card } from "@/src/components/ui/Card";
 import { Button } from "@/src/components/ui/Button";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { DataTable, type DataTableColumn } from "@/src/components/ui/DataTable";
 
 function fmtDate(v?: string | null) {
   if (!v) return "—";
@@ -260,194 +261,147 @@ export default function MaintenanceIssuedPartsPage() {
           </Card>
         ) : null}
 
-        <Card title="دفتر القطع المصروفة">
-          <div className="overflow-auto rounded-xl border border-black/10">
-            <table className="min-w-[1250px] w-full text-sm">
-              <thead className="bg-black/[0.03] text-slate-600">
-                <tr>
-                  <th className="p-3 text-right">أمر الشغل</th>
-                  <th className="p-3 text-right">المركبة</th>
-                  <th className="p-3 text-right">المخزن</th>
-                  <th className="p-3 text-right">القطعة</th>
-                  <th className="p-3 text-right">سعر الوحدة</th>
-                  <th className="p-3 text-right">الإجمالي</th>
-                  <th className="p-3 text-right">مصروف</th>
-                  <th className="p-3 text-right">مركب</th>
-                  <th className="p-3 text-right">متبقي</th>
-                  <th className="p-3 text-right">تاريخ الصرف</th>
-                  <th className="p-3 text-right">آخر تركيب</th>
-                  <th className="p-3 text-right">الحالة</th>
-                  <th className="p-3 text-right">كمية التركيب</th>
-                  <th className="p-3 text-right">ملاحظات</th>
-                  <th className="p-3 text-right">إجراء</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={13} className="p-4 text-slate-500">
-                      جاري التحميل...
-                    </td>
-                  </tr>
-                ) : filteredItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={15} className="p-4 text-slate-500">
-                      لا توجد قطع مصروفة مطابقة.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredItems.map((row) => {
-                    const key = `${row.work_order_id}:${row.part_id}`;
-                    const remaining = Number(row.remaining_qty || 0);
-                    const inputQty = Number(qtyByKey[key] || remaining || 0);
-                    const overQty = inputQty > remaining;
-                    const isLoading = actionKey === key;
-
-                    return (
-                      <tr key={key} className="border-t border-black/10">
-                        <td className="p-3">
-                          <Link
-                            href={`/maintenance/work-orders/${row.work_order_id}`}
-                            className="font-mono text-xs text-blue-700 hover:underline"
-                          >
-                            {row.work_order_id}
-                          </Link>
-                        </td>
-
-                        <td className="p-3">
-                          <div className="font-medium">
-                            {row.vehicle?.fleet_no ||
-                              row.vehicle?.plate_no ||
-                              row.vehicle?.display_name ||
-                              "—"}
-                          </div>
-                          {row.vehicle?.plate_no ? (
-                            <div className="text-xs text-slate-500">
-                              {row.vehicle.plate_no}
-                            </div>
-                          ) : null}
-                        </td>
-
-                        <td className="p-3">
-                          <div className="font-medium">
-                            {row.warehouse?.name || "—"}
-                          </div>
-                          {row.warehouse?.location ? (
-                            <div className="text-xs text-slate-500">
-                              {row.warehouse.location}
-                            </div>
-                          ) : null}
-                        </td>
-
-                        <td className="p-3">
-                          <div className="font-semibold">
-                            {row.part?.name || "—"}
-                          </div>
-                          <div className="font-mono text-xs text-slate-500">
-                            {row.part?.part_number || "—"}
-                          </div>
-                          {row.part?.brand ? (
-                            <div className="text-xs text-slate-500">
-                              {row.part.brand}
-                            </div>
-                          ) : null}
-                        </td>
-
-                        <td className="p-3 font-semibold text-slate-700">
-                          {fmtQty(row.unit_cost)}
-                        </td>
-
-                        <td className="p-3 font-bold text-slate-800">
-                          {fmtQty(row.total_cost)}
-                        </td>
-
-                        <td className="p-3 font-semibold">
-                          {fmtQty(row.issued_qty)}
-                        </td>
-
-                        <td className="p-3 text-green-700 font-semibold">
-                          {fmtQty(row.installed_qty)}
-                        </td>
-
-                        <td className="p-3 text-amber-700 font-semibold">
-                          {fmtQty(row.remaining_qty)}
-                        </td>
-
-                        <td className="p-3">{fmtDate(row.issued_at)}</td>
-
-                        <td className="p-3">
-                          {fmtDate(row.last_installed_at)}
-                        </td>
-
-                        <td className="p-3">
-                          <span className={statusClass(row.status)}>
-                            {statusLabel(row.status)}
-                          </span>
-                        </td>
-
-                        <td className="p-3">
-                          <input
-                            type="number"
-                            min={1}
-                            max={remaining}
-                            value={qtyByKey[key] ?? remaining}
-                            onChange={(e) =>
-                              setQtyByKey((prev) => ({
-                                ...prev,
-                                [key]: Number(e.target.value),
-                              }))
-                            }
-                            disabled={remaining <= 0 || isLoading}
-                            className="trex-input w-24 px-3 py-2 text-sm"
-                          />
-
-                          {overQty ? (
-                            <div className="mt-1 text-xs text-red-600">
-                              أكبر من المتبقي
-                            </div>
-                          ) : null}
-                        </td>
-
-                        <td className="p-3">
-                          <input
-                            value={notesByKey[key] || ""}
-                            onChange={(e) =>
-                              setNotesByKey((prev) => ({
-                                ...prev,
-                                [key]: e.target.value,
-                              }))
-                            }
-                            disabled={remaining <= 0 || isLoading}
-                            className="trex-input w-40 px-3 py-2 text-sm"
-                            placeholder="اختياري"
-                          />
-                        </td>
-
-                        <td className="p-3">
-                          <Button
-                            type="button"
-                            variant="primary"
-                            onClick={() => handleInstall(row)}
-                            isLoading={isLoading}
-                            disabled={
-                              isLoading ||
-                              remaining <= 0 ||
-                              inputQty <= 0 ||
-                              overQty
-                            }
-                          >
-                            تركيب
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <DataTable
+          title="دفتر القطع المصروفة"
+          minWidthClassName="min-w-[1250px]"
+          columns={[
+            {
+              key: "work_order_id",
+              label: "أمر الشغل",
+              render: (row) => (
+                <Link
+                  href={`/maintenance/work-orders/${row.work_order_id}`}
+                  className="font-mono text-xs text-blue-700 hover:underline"
+                >
+                  {row.work_order_id}
+                </Link>
+              ),
+            },
+            {
+              key: "vehicle",
+              label: "المركبة",
+              render: (row) => (
+                <div>
+                  <div className="font-medium">
+                    {row.vehicle?.fleet_no || row.vehicle?.plate_no || row.vehicle?.display_name || "—"}
+                  </div>
+                  {row.vehicle?.plate_no ? <div className="text-xs text-slate-500">{row.vehicle.plate_no}</div> : null}
+                </div>
+              ),
+            },
+            {
+              key: "warehouse",
+              label: "المخزن",
+              render: (row) => (
+                <div>
+                  <div className="font-medium">{row.warehouse?.name || "—"}</div>
+                  {row.warehouse?.location ? <div className="text-xs text-slate-500">{row.warehouse.location}</div> : null}
+                </div>
+              ),
+            },
+            {
+              key: "part",
+              label: "القطعة",
+              render: (row) => (
+                <div>
+                  <div className="font-semibold">{row.part?.name || "—"}</div>
+                  <div className="font-mono text-xs text-slate-500">{row.part?.part_number || "—"}</div>
+                  {row.part?.brand ? <div className="text-xs text-slate-500">{row.part.brand}</div> : null}
+                </div>
+              ),
+            },
+            { key: "unit_cost", label: "سعر الوحدة", render: (row) => <span className="font-semibold text-slate-700">{fmtQty(row.unit_cost)}</span> },
+            { key: "total_cost", label: "الإجمالي", render: (row) => <span className="font-bold text-slate-800">{fmtQty(row.total_cost)}</span> },
+            { key: "issued_qty", label: "مصروف", render: (row) => <span className="font-semibold">{fmtQty(row.issued_qty)}</span> },
+            { key: "installed_qty", label: "مركب", render: (row) => <span className="text-green-700 font-semibold">{fmtQty(row.installed_qty)}</span> },
+            { key: "remaining_qty", label: "متبقي", render: (row) => <span className="text-amber-700 font-semibold">{fmtQty(row.remaining_qty)}</span> },
+            { key: "issued_at", label: "تاريخ الصرف", render: (row) => fmtDate(row.issued_at) },
+            { key: "last_installed_at", label: "آخر تركيب", render: (row) => fmtDate(row.last_installed_at) },
+            {
+              key: "status",
+              label: "الحالة",
+              render: (row) => <span className={statusClass(row.status)}>{statusLabel(row.status)}</span>,
+            },
+            {
+              key: "qty_input",
+              label: "كمية التركيب",
+              render: (row) => {
+                const key = `${row.work_order_id}:${row.part_id}`;
+                const remaining = Number(row.remaining_qty || 0);
+                const inputQty = Number(qtyByKey[key] || remaining || 0);
+                const overQty = inputQty > remaining;
+                const isLoading = actionKey === key;
+                return (
+                  <div>
+                    <input
+                      type="number"
+                      min={1}
+                      max={remaining}
+                      value={qtyByKey[key] ?? remaining}
+                      onChange={(e) =>
+                        setQtyByKey((prev) => ({
+                          ...prev,
+                          [key]: Number(e.target.value),
+                        }))
+                      }
+                      disabled={remaining <= 0 || isLoading}
+                      className="trex-input w-24 px-3 py-2 text-sm"
+                    />
+                    {overQty ? <div className="mt-1 text-xs text-red-600">أكبر من المتبقي</div> : null}
+                  </div>
+                );
+              },
+            },
+            {
+              key: "notes_input",
+              label: "ملاحظات",
+              render: (row) => {
+                const key = `${row.work_order_id}:${row.part_id}`;
+                const remaining = Number(row.remaining_qty || 0);
+                const isLoading = actionKey === key;
+                return (
+                  <input
+                    value={notesByKey[key] || ""}
+                    onChange={(e) =>
+                      setNotesByKey((prev) => ({
+                        ...prev,
+                        [key]: e.target.value,
+                      }))
+                    }
+                    disabled={remaining <= 0 || isLoading}
+                    className="trex-input w-40 px-3 py-2 text-sm"
+                    placeholder="اختياري"
+                  />
+                );
+              },
+            },
+            {
+              key: "actions",
+              label: "إجراء",
+              render: (row) => {
+                const key = `${row.work_order_id}:${row.part_id}`;
+                const remaining = Number(row.remaining_qty || 0);
+                const inputQty = Number(qtyByKey[key] || remaining || 0);
+                const overQty = inputQty > remaining;
+                const isLoading = actionKey === key;
+                return (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => handleInstall(row)}
+                    isLoading={isLoading}
+                    disabled={isLoading || remaining <= 0 || inputQty <= 0 || overQty}
+                  >
+                    تركيب
+                  </Button>
+                );
+              },
+            },
+          ]}
+          rows={filteredItems}
+          loading={loading}
+          emptyTitle="لا توجد قطع مصروفة مطابقة."
+        />
       </div>
     </div>
   );
