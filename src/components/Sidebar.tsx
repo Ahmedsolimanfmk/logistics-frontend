@@ -15,12 +15,16 @@ type NavItem = {
   labelKey: string;
   href: string;
   roles?: string[];
+  icon?: React.ReactNode;
+  feature?: string;
 };
 
 type NavGroup = {
   labelKey: string;
   key: string;
   roles?: string[];
+  icon?: React.ReactNode;
+  feature?: string;
   children: NavItem[];
 };
 
@@ -102,6 +106,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         labelKey: "sidebar.masterData",
         key: "masterData",
         roles: ROUTE_PERMISSIONS["/contract-pricing/vehicle-classes"],
+        feature: "fleet_enabled",
         children: [
           {
             labelKey: "sidebar.vehicleClasses",
@@ -127,24 +132,28 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         icon: <Activity className="w-5 h-5 text-indigo-500" />,
         href: "/fleet-dashboard",
         roles: ROUTE_PERMISSIONS["/vehicles"],
+        feature: "fleet_enabled",
       },
       {
         labelKey: "sidebar.assignments",
         icon: <Link2 className="w-5 h-5 text-indigo-500" />,
         href: "/assignments",
         roles: ROUTE_PERMISSIONS["/vehicles"],
+        feature: "fleet_enabled",
       },
       {
         labelKey: "sidebar.fleetExpenses",
         icon: <BadgeDollarSign className="w-5 h-5 text-indigo-500" />,
         href: "/fleet-expenses",
         roles: ROUTE_PERMISSIONS["/vehicles"],
+        feature: "fleet_enabled",
       },
       {
         labelKey: "sidebar.vehicles",
         icon: <Truck className="w-5 h-5 text-indigo-500" />,
         href: "/vehicles",
         roles: ROUTE_PERMISSIONS["/vehicles"],
+        feature: "fleet_enabled",
       },
       {
         labelKey: "sidebar.drivers",
@@ -162,6 +171,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         labelKey: "sidebar.maintenance",
         key: "maintenance",
         roles: ROUTE_PERMISSIONS["/maintenance"],
+        feature: "inventory_enabled",
         children: [
           {
             labelKey: "sidebar.maintenanceRequests",
@@ -191,6 +201,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         labelKey: "sidebar.fuel",
         key: "fuel",
         roles: ["ADMIN", "SUPER_ADMIN"],
+        feature: "fuel_enabled",
         children: [
           { labelKey: "sidebar.fuelWallet", href: "/fuel-wallet" },
           { labelKey: "sidebar.fuelTransactions", href: "/fuel-transactions" },
@@ -201,6 +212,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         labelKey: "sidebar.inventory",
         key: "inventory",
         roles: ROUTE_PERMISSIONS["/inventory"],
+        feature: "inventory_enabled",
         children: [
           { labelKey: "sidebar.inventoryDashboard", href: "/inventory" },
           { labelKey: "sidebar.inventoryWarehouses", href: "/inventory/warehouses" },
@@ -233,8 +245,13 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
     []
   );
 
-  const canSee = (roles?: string[]) => {
-    if (isSuperAdmin) return true;
+  const canSee = (roles?: string[], feature?: string) => {
+    if (isSuperAdmin && !user?.is_impersonating) return true;
+    
+    if (feature && user?.features && (user.features as any)[feature] === false) {
+      return false;
+    }
+
     if (!roles || roles.length === 0) return true;
 
     const allowed = roles.map((x) => String(x).toUpperCase());
@@ -318,7 +335,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
 
       <nav className="flex-1 space-y-1 overflow-auto p-3">
         {items
-          .filter((it) => canSee((it as any).roles))
+          .filter((it) => canSee((it as any).roles, (it as any).feature))
           .map((it) => {
             if ("children" in it) {
               const isOpen = !!open[it.key];
@@ -352,7 +369,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                   {isOpen && (
                     <div className="space-y-1 pr-2">
                       {it.children
-                        .filter((c) => canSee(c.roles))
+                        .filter((c) => canSee(c.roles, c.feature))
                         .map((c) => (
                           <button
                             key={c.href}

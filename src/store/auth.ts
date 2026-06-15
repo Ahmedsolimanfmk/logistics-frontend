@@ -11,6 +11,12 @@ export type User = {
   company_id?: string | null;
   company_name?: string | null;
   is_impersonating?: boolean;
+  features?: {
+    fleet_enabled?: boolean;
+    inventory_enabled?: boolean;
+    fuel_enabled?: boolean;
+    custody_enabled?: boolean;
+  } | null;
 };
 
 export type AuthState = {
@@ -38,6 +44,7 @@ function normalizeUser(u: any): User {
     company_name: u?.company_name || null,
 
     is_impersonating: !!u?.is_impersonating,
+    features: u?.features || null,
   };
 }
 function setCookie(name: string, value: string) {

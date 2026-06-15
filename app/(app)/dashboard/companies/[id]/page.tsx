@@ -125,6 +125,10 @@ export default function CompanyDetailsPage() {
               <span>نظام العُهد</span>
               <span className={f?.custody_enabled ? "text-green-600 font-bold" : "text-gray-400"}>{f?.custody_enabled ? "مفعل" : "معطل"}</span>
             </div>
+            <div className="flex items-center justify-between">
+              <span>نظام الوقود</span>
+              <span className={f?.fuel_enabled ? "text-green-600 font-bold" : "text-gray-400"}>{f?.fuel_enabled ? "مفعل" : "معطل"}</span>
+            </div>
           </div>
         </Card>
 
@@ -240,6 +244,7 @@ function EditFeaturesModal({ open, company, saving, onClose, onSubmit }: any) {
   const [fleet, setFleet] = useState(false);
   const [inventory, setInventory] = useState(false);
   const [custody, setCustody] = useState(false);
+  const [fuel, setFuel] = useState(false);
 
   useEffect(() => {
     if (open && company) {
@@ -247,6 +252,7 @@ function EditFeaturesModal({ open, company, saving, onClose, onSubmit }: any) {
       setFleet(!!f.fleet_enabled);
       setInventory(!!f.inventory_enabled);
       setCustody(!!f.custody_enabled);
+      setFuel(!!f.fuel_enabled);
     }
   }, [open, company]);
 
@@ -255,7 +261,7 @@ function EditFeaturesModal({ open, company, saving, onClose, onSubmit }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden">
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(company.id, { fleet_enabled: fleet, inventory_enabled: inventory, custody_enabled: custody }); }}>
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(company.id, { fleet_enabled: fleet, inventory_enabled: inventory, custody_enabled: custody, fuel_enabled: fuel }); }}>
           <div className="p-6">
             <div className="flex items-center justify-between border-b pb-3 mb-4">
               <h2 className="text-xl font-bold text-slate-800">تعديل مميزات: {company.name}</h2>
@@ -271,7 +277,7 @@ function EditFeaturesModal({ open, company, saving, onClose, onSubmit }: any) {
                 )}
               </div>
               <div className="flex items-center justify-between p-3 border rounded">
-                <span className="text-slate-800 font-bold">نظام المخزون (Inventory)</span>
+                <span className="text-slate-800 font-bold">نظام المخزون والصيانة (Inventory & Maintenance)</span>
                 {inventory ? (
                   <Button type="button" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => setInventory(false)}>حذف الميزة</Button>
                 ) : (
@@ -284,6 +290,14 @@ function EditFeaturesModal({ open, company, saving, onClose, onSubmit }: any) {
                   <Button type="button" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => setCustody(false)}>حذف الميزة</Button>
                 ) : (
                   <Button type="button" variant="primary" onClick={() => setCustody(true)}>إضافة الميزة</Button>
+                )}
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded">
+                <span className="text-slate-800 font-bold">نظام إدارة الوقود (Fuel)</span>
+                {fuel ? (
+                  <Button type="button" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => setFuel(false)}>حذف الميزة</Button>
+                ) : (
+                  <Button type="button" variant="primary" onClick={() => setFuel(true)}>إضافة الميزة</Button>
                 )}
               </div>
             </div>
