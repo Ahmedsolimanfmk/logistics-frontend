@@ -1,0 +1,13 @@
+{
+  "appId": "com.trex.logistics",
+  "appName": "TREX Logistics",
+  "webDir": "out",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://logistics-frontend.onrender.com",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
