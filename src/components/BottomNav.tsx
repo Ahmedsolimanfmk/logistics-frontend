@@ -22,7 +22,7 @@ export function BottomNav({ onOpenMenu }: { onOpenMenu: () => void }) {
     {
       label: "صيانة",
       icon: <Wrench className="w-6 h-6" />,
-      href: "/maintenance/requests",
+      href: "/maintenance/requests/new",
     },
     {
       label: "عُهدة",

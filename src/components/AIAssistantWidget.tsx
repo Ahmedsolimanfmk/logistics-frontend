@@ -1190,7 +1190,7 @@ export default function AIAssistantWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 left-6 z-[1000] flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(79,70,229,0.5)] focus:outline-none focus:ring-4 focus:ring-blue-500/50"
+          className="fixed bottom-24 md:bottom-6 left-6 z-[1000] flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(79,70,229,0.5)] focus:outline-none focus:ring-4 focus:ring-blue-500/50"
         >
           <Sparkles className="h-5 w-5 animate-pulse text-blue-100" />
           <span className="tracking-wide">{effectiveSection ? `${SECTION_LABELS[effectiveSection]} AI` : "المساعد الذكي"}</span>
@@ -1198,7 +1198,7 @@ export default function AIAssistantWidget() {
       )}
 
       {open && (
-        <div className="fixed bottom-3 left-3 z-[1000] w-[440px] max-w-[calc(100vw-24px)] h-[85vh] max-h-[760px] min-h-[560px] overflow-hidden rounded-2xl border border-black/10 bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] shadow-2xl flex flex-col">
+        <div className="fixed bottom-24 md:bottom-3 left-3 z-[1000] w-[440px] max-w-[calc(100vw-24px)] h-[85vh] max-h-[760px] min-h-[560px] overflow-hidden rounded-2xl border border-black/10 bg-[rgb(var(--trex-card))] text-[rgb(var(--trex-fg))] shadow-2xl flex flex-col">
           <div className="shrink-0 border-b border-black/10 bg-[rgb(var(--trex-card))] px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
