@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TREX Logistics</string>
+    <string name="title_activity_main">TREX Logistics</string>
+    <string name="package_name">com.trex.logistics</string>
+    <string name="custom_url_scheme">com.trex.logistics</string>
+</resources>
