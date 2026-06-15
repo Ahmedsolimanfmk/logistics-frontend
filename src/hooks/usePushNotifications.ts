@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
-import { api } from '@/lib/api';
+import { api } from '@/src/lib/api';
 
 export function usePushNotifications(isAuthenticated: boolean) {
   useEffect(() => {
