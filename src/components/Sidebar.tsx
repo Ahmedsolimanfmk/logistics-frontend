@@ -28,7 +28,7 @@ function roleUpper(r: any) {
   return String(r || "").toUpperCase();
 }
 
-export function Sidebar() {
+export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const t = useT();
@@ -289,7 +289,21 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] shadow-[0_0_30px_rgba(0,0,0,0.06)]">
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 md:hidden" 
+          onClick={onClose}
+        />
+      )}
+
+      <aside 
+        className={cn(
+          "fixed md:sticky top-0 z-50 flex h-screen w-[260px] shrink-0 flex-col border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] shadow-[0_0_30px_rgba(0,0,0,0.06)] transition-transform duration-300 md:translate-x-0",
+          isOpen ? "translate-x-0 right-0" : "translate-x-full right-0 md:right-auto"
+        )}
+      >
       <div className="border-b border-black/10 bg-[rgba(var(--trex-card),0.7)] p-4">
         <div className="text-lg font-bold tracking-wide">
           {t("sidebar.appName")}

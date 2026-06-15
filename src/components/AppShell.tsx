@@ -5,6 +5,7 @@ import { Sidebar } from "@/src/components/Sidebar";
 import LanguageSwitcher from "@/src/components/LanguageSwitcher";
 import NotificationBell from "@/src/components/NotificationBell";
 import AIAssistantWidget from "@/src/components/AIAssistantWidget";
+import { Menu } from "lucide-react";
 import { useAuth } from "@/src/store/auth";
 import { usePathname } from "next/navigation";
 import { canAccessRoute } from "@/src/config/routeRoles";
@@ -16,9 +17,15 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const [ready, setReady] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
   const t = useT();
+
+  // Close sidebar on navigation
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     useAuth.getState().hydrate();
@@ -66,15 +73,28 @@ export default function AppShell({
       
       {/* ✅ Hide Sidebar for SUPER_ADMIN if not impersonating */}
       {!(user?.platform_role === "SUPER_ADMIN" && !user?.is_impersonating) && (
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       )}
 
       <main className="flex-1 min-w-0">
         <div className="p-6">
 
-          <div className="mb-4 flex justify-end gap-2">
-            <NotificationBell />
-            <LanguageSwitcher />
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 md:hidden">
+              {!(user?.platform_role === "SUPER_ADMIN" && !user?.is_impersonating) && (
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="p-2 rounded-lg bg-white/50 border hover:bg-white/80 transition"
+                >
+                  <Menu className="w-5 h-5 text-slate-700" />
+                </button>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 flex-1">
+              <NotificationBell />
+              <LanguageSwitcher />
+            </div>
           </div>
 
           {children}
