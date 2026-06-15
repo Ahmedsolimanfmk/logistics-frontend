@@ -117,14 +117,40 @@ export function DataTable<T>({
         </div>
       ) : (
         <div className="overflow-auto">
-          <table className={cn("w-full text-sm", minWidthClassName)}>
-            <thead className="bg-black/[0.04]">
+          {/* Mobile Card View */}
+          <div className="md:hidden flex flex-col divide-y divide-black/5">
+            {rows.map((row, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "p-4 space-y-3",
+                  clickable && "cursor-pointer hover:bg-black/[0.03] active:bg-black/[0.05]"
+                )}
+                onClick={() => onRowClick?.(row)}
+              >
+                {columns.map((c) => (
+                  <div key={c.key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                      {c.label}
+                    </span>
+                    <span className="text-sm font-semibold text-slate-800 break-words">
+                      {c.render ? c.render(row) : String((row as any)?.[c.key] ?? "")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <table className={cn("hidden md:table w-full text-sm", minWidthClassName)}>
+            <thead className="bg-black/[0.02]">
               <tr>
                 {columns.map((c) => (
                   <th
                     key={c.key}
                     className={cn(
-                      "text-left px-4 py-3 font-semibold whitespace-nowrap text-slate-600",
+                      "text-left px-4 py-3 font-semibold whitespace-nowrap text-slate-500 text-xs uppercase tracking-wider",
                       c.headerClassName
                     )}
                   >
@@ -134,13 +160,13 @@ export function DataTable<T>({
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-black/5">
               {rows.map((row, idx) => (
                 <tr
                   key={idx}
                   className={cn(
-                    "border-t border-black/10",
-                    clickable && "cursor-pointer hover:bg-black/[0.03]"
+                    "transition-colors",
+                    clickable ? "cursor-pointer hover:bg-slate-50" : "hover:bg-slate-50/50"
                   )}
                   onClick={() => onRowClick?.(row)}
                 >
@@ -148,7 +174,7 @@ export function DataTable<T>({
                     <td
                       key={c.key}
                       className={cn(
-                        "px-4 py-3 whitespace-nowrap text-slate-800",
+                        "px-4 py-3 whitespace-nowrap text-slate-800 font-medium",
                         c.className
                       )}
                     >
