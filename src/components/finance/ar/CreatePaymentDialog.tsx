@@ -74,7 +74,7 @@ export function CreatePaymentDialog({
         client_id: form.client_id,
         payment_date: form.payment_date || undefined,
         amount: Number(form.amount),
-        method: form.method,
+        method: form.method as any,
         reference: form.reference || undefined,
         notes: form.notes || undefined,
       });
