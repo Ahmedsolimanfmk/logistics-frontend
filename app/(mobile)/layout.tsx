@@ -9,17 +9,19 @@ import Link from "next/link";
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isHydrated } = useAuth();
+  const { user, hasHydrated } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (hasHydrated && !user) {
+      router.push("/login?redirect=" + encodeURIComponent(pathname));
+    }
+  }, [user, hasHydrated, router, pathname]);
 
-  if (!mounted || !isHydrated) return <div className="h-screen w-screen flex items-center justify-center">جاري التحميل...</div>;
+  if (!mounted || !hasHydrated) return <div className="h-screen w-screen flex items-center justify-center">جاري التحميل...</div>;
 
   if (!user) {
-    router.push("/login?redirect=/mobile");
     return null;
   }
 
