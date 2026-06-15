@@ -476,11 +476,21 @@ export default function UsersPage() {
                       onChange={(e) => setCRole(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
                     >
-                      <option value="FIELD_SUPERVISOR">FIELD_SUPERVISOR</option>
-                      <option value="ACCOUNTANT">ACCOUNTANT</option>
-                      <option value="ADMIN">ADMIN</option>
-                      <option value="HR">HR</option>
-                      <option value="GENERAL_SUPERVISOR">GENERAL_SUPERVISOR</option>
+                      <option value="ADMIN">ADMIN (مدير نظام)</option>
+                      <option value="ACCOUNTANT">ACCOUNTANT (محاسب)</option>
+                      <option value="FIELD_SUPERVISOR">FIELD_SUPERVISOR (مشرف ميداني)</option>
+                      <option value="GENERAL_SUPERVISOR">GENERAL_SUPERVISOR (مشرف عام)</option>
+                      <option value="DEPT_MANAGER">DEPT_MANAGER (مدير إدارة)</option>
+                      <option value="GENERAL_MANAGER">GENERAL_MANAGER (مدير عام)</option>
+                      <option value="GENERAL_RESPONSIBLE">GENERAL_RESPONSIBLE (مسؤول عام)</option>
+                      <option value="CONTRACT_MANAGER">CONTRACT_MANAGER (مدير عقود)</option>
+                      <option value="STOREKEEPER">STOREKEEPER (أمين مستودع)</option>
+                      <option value="HR">HR (موارد بشرية)</option>
+                      <option value="DRIVER">DRIVER (سائق)</option>
+                      <option value="STATION_WORKER">STATION_WORKER (عامل محطة)</option>
+                      <option value="DISPATCHER">DISPATCHER (مُرحّل)</option>
+                      <option value="OPERATIONS">OPERATIONS (تشغيل)</option>
+                      <option value="MAINTENANCE_MANAGER">MAINTENANCE_MANAGER (مدير صيانة)</option>
                     </select>
                   </div>
 
