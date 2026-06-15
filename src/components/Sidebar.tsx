@@ -188,6 +188,16 @@ export function Sidebar() {
       },
 
       {
+        labelKey: "sidebar.fuel",
+        key: "fuel",
+        roles: ["ADMIN", "SUPER_ADMIN"],
+        children: [
+          { labelKey: "sidebar.fuelWallet", href: "/fuel-wallet" },
+          { labelKey: "sidebar.fuelTransactions", href: "/fuel-transactions" },
+        ],
+      },
+
+      {
         labelKey: "sidebar.inventory",
         key: "inventory",
         roles: ROUTE_PERMISSIONS["/inventory"],
@@ -239,6 +249,7 @@ export function Sidebar() {
     maintenance: false,
     inventory: false,
     masterData: false,
+    fuel: false,
   });
 
   useEffect(() => {

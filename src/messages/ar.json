@@ -108,7 +108,10 @@
     "zones": "المناطق",
     "routes": "المسارات",
     "inventoryParts": "دليل القطع",
-    "inventoryCategories": "تصنيفات القطع"
+    "inventoryCategories": "تصنيفات القطع",
+    "fuel": "إدارة الوقود",
+    "fuelWallet": "محفظة الوقود",
+    "fuelTransactions": "سجل التموين"
   },
   "notifications": {
     "open": "فتح التنبيهات",
