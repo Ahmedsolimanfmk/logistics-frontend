@@ -418,5 +418,6 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         </button>
       </div>
     </aside>
+    </>
   );
 }
