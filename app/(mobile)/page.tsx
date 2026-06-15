@@ -6,10 +6,10 @@ import { useAuth } from "@/src/store/auth";
 
 export default function MobileIndex() {
   const router = useRouter();
-  const { user, isHydrated } = useAuth();
+  const { user, hasHydrated } = useAuth();
 
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!hasHydrated) return;
     
     if (!user) {
       router.replace("/login?redirect=/mobile");
@@ -27,7 +27,7 @@ export default function MobileIndex() {
       // Admins or unknown roles in mobile app go to their respective dashboards
       router.replace("/dashboard");
     }
-  }, [user, isHydrated, router]);
+  }, [user, hasHydrated, router]);
 
   return <div className="h-screen w-screen flex items-center justify-center">جاري توجيهك...</div>;
 }
