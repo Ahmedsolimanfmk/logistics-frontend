@@ -3,7 +3,7 @@ import { api } from "@/src/lib/api";
 export const settingsService = {
   async listSettings(): Promise<any[]> {
     const res = await api.get("/companies/me/settings");
-    return res.data?.items ?? res.items ?? [];
+    return res.data?.items ?? (res as any).items ?? [];
   },
 
   // Save a setting
