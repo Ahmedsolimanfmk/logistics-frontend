@@ -317,19 +317,19 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
 
       <aside 
         className={cn(
-          "fixed md:sticky top-0 z-50 flex h-screen w-[260px] shrink-0 flex-col border-l border-black/10 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] shadow-[0_0_30px_rgba(0,0,0,0.06)] transition-transform duration-300 md:translate-x-0",
+          "fixed md:sticky top-0 z-50 flex h-screen w-[260px] shrink-0 flex-col border-l border-slate-200/60 bg-[rgb(var(--trex-sidebar))] text-[rgb(var(--trex-fg))] shadow-[0_4px_30px_rgba(0,0,0,0.04)] transition-transform duration-300 md:translate-x-0",
           isOpen ? "translate-x-0 right-0" : "translate-x-full right-0 md:right-auto"
         )}
       >
-      <div className="border-b border-black/10 bg-[rgba(var(--trex-card),0.7)] p-4">
-        <div className="text-lg font-bold tracking-wide">
+      <div className="border-b border-slate-200/60 bg-white/80 backdrop-blur-md p-5">
+        <div className="text-xl font-bold tracking-wide text-[rgb(var(--trex-accent))]">
           {t("sidebar.appName")}
         </div>
-        <div className="mt-1 text-xs text-slate-500">
-          {user?.full_name || user?.email || "—"} —{" "}
-          <span className="text-slate-900">
-            {effectiveRole || role || "—"}
-          </span>
+        <div className="mt-2 text-xs font-medium text-slate-500">
+          {user?.full_name || user?.email || "—"}
+        </div>
+        <div className="mt-1 inline-block px-2 py-1 bg-slate-100 text-slate-700 text-[10px] rounded-full font-bold">
+          {effectiveRole || role || "—"}
         </div>
       </div>
 

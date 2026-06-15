@@ -5,17 +5,17 @@
    ========================= */
 
 :root {
-  /* LIGHT DEFAULT */
-  --trex-bg: 248 250 252;        /* slate-50 */
+  /* LIGHT DEFAULT - Modern Minimal */
+  --trex-bg: 248 250 252;        /* slate-50 - very light soft background */
   --trex-fg: 15 23 42;           /* slate-900 */
   --trex-surface: 255 255 255;   /* white */
   --trex-card: 255 255 255;      /* white */
   --trex-sidebar: 255 255 255;   /* white */
-  --trex-accent: 249 115 22;     /* orange-500 */
+  --trex-accent: 37 99 235;      /* blue-600 - highly professional */
 
   /* helpers */
   --trex-border: 15 23 42;       /* base for alpha borders in light */
-  --trex-radius: 16px;
+  --trex-radius: 20px;           /* Large modern radius */
 
   color-scheme: light;
 }
@@ -93,15 +93,18 @@ body {
    ========================= */
 
 .trex-card {
-  background: rgb(var(--trex-card) / 0.55);
-  border: 1px solid rgb(var(--trex-border) / 0.10);
+  background: rgb(var(--trex-card) / 0.8);
+  border: 1px solid rgb(var(--trex-border) / 0.06);
   border-radius: var(--trex-radius);
+  box-shadow: 0 4px 20px -2px rgba(0,0,0,0.03);
+  backdrop-filter: blur(12px);
 }
 
 .trex-card-solid {
-  background: rgb(var(--trex-card) / 0.75);
-  border: 1px solid rgb(var(--trex-border) / 0.10);
+  background: rgb(var(--trex-card));
+  border: 1px solid rgb(var(--trex-border) / 0.08);
   border-radius: var(--trex-radius);
+  box-shadow: 0 10px 30px -4px rgba(0,0,0,0.04);
 }
 
 .trex-input {

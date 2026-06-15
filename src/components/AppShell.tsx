@@ -8,6 +8,7 @@ import AIAssistantWidget from "@/src/components/AIAssistantWidget";
 import { Menu } from "lucide-react";
 import { useAuth } from "@/src/store/auth";
 import { usePathname } from "next/navigation";
+import { BottomNav } from "@/src/components/BottomNav";
 import { canAccessRoute } from "@/src/config/routeRoles";
 import { useT } from "@/src/i18n/useT";
 
@@ -76,20 +77,15 @@ export default function AppShell({
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       )}
 
-      <main className="flex-1 min-w-0">
-        <div className="p-6">
+      <main className="flex-1 min-w-0 pb-20 md:pb-0 relative">
+        <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
 
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 md:hidden">
-              {!(user?.platform_role === "SUPER_ADMIN" && !user?.is_impersonating) && (
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="p-2 rounded-lg bg-white/50 border hover:bg-white/80 transition"
-                >
-                  <Menu className="w-5 h-5 text-slate-700" />
-                </button>
-              )}
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3 md:hidden">
+              <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center font-bold text-[rgb(var(--trex-accent))] border border-slate-100">
+                TR
+              </div>
+              <h2 className="font-bold text-slate-800 text-lg">لوجيستكس</h2>
             </div>
             <div className="flex justify-end gap-2 flex-1">
               <NotificationBell />
@@ -102,6 +98,11 @@ export default function AppShell({
         </div>
 
         <AIAssistantWidget />
+        
+        {/* Mobile Bottom Navigation */}
+        {!(user?.platform_role === "SUPER_ADMIN" && !user?.is_impersonating) && (
+          <BottomNav onOpenMenu={() => setIsSidebarOpen(true)} />
+        )}
       </main>
     </div>
   );
