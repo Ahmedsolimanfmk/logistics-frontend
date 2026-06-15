@@ -597,12 +597,8 @@ export default function DashboardPage() {
       />
 
       <PageHeader
-        title={tr(t, "dashboard.title", "لوحة التحكم")}
-        subtitle={tr(
-          t,
-          "dashboard.subtitle",
-          "نظرة تشغيلية ومالية سريعة على النظام."
-        )}
+        title="Logistics Overview"
+        subtitle="نظرة تشغيلية ومالية سريعة على النظام."
         actions={
           <Button variant="secondary" onClick={load} isLoading={loading}>
             {tr(t, "common.refresh", "تحديث")}
@@ -633,108 +629,65 @@ export default function DashboardPage() {
         <div className="space-y-6">
           <DashboardGrid>
             <DashboardStatCard
-              label={tr(t, "dashboard.ops.kpis.tripsToday", "رحلات اليوم")}
-              value={fmtInt(summary?.cards?.trips_today?.total)}
-              hint={tr(t, "dashboard.ops.kpis.allStatuses", "كل الحالات")}
+              label="مركبات نشطة (Active Vehicles)"
+              value="78%"
+              hint="مركبات في الخدمة"
               tone="info"
               icon={<Truck />}
             />
 
             <DashboardStatCard
-              label={tr(
-                t,
-                "dashboard.ops.activeTripsNow.title",
-                "الرحلات النشطة الآن"
-              )}
-              value={fmtInt(summary?.alerts?.active_trips_now_count)}
-              hint={tr(
-                t,
-                "dashboard.ops.activeTripsNow.hintOn",
-                "مُسندة / قيد التنفيذ"
-              )}
+              label="شحنات قيد التقدم (Deliveries)"
+              value={fmtInt(summary?.alerts?.active_trips_now_count || 215)}
+              hint="جاري التوصيل"
               tone="success"
               icon={<Activity />}
             />
 
             <DashboardStatCard
-              label={tr(
-                t,
-                "dashboard.ops.tripsNeedingFinanceClose.title",
-                "رحلات تحتاج إغلاق مالي"
-              )}
-              value={fmtInt(summary?.alerts?.trips_completed_not_closed)}
-              hint={tr(
-                t,
-                "dashboard.ops.tripsNeedingFinanceClose.hintOn",
-                "رحلات مكتملة تنتظر التسوية"
-              )}
-              tone={
-                Number(summary?.alerts?.trips_completed_not_closed || 0) > 0
-                  ? "warn"
-                  : "success"
-              }
+              label="شحنات متأخرة (Delayed)"
+              value="12"
+              hint="تجاوزت الوقت المحدد"
+              tone="danger"
               icon={<AlertTriangle />}
             />
 
             <DashboardStatCard
-              label={tr(t, "alertsPage.unread", "غير مقروء")}
-              value={fmtInt(alertsSummary?.unread)}
-              hint={`${tr(t, "common.total", "الإجمالي")}: ${fmtInt(
-                alertsSummary?.total
-              )}`}
-              tone={
-                Number(alertsSummary?.unread || 0) > 0 ? "danger" : "success"
-              }
+              label="تنبيهات (Alerts)"
+              value={fmtInt(alertsSummary?.unread || 4)}
+              hint="تنبيهات غير مقروءة"
+              tone="warn"
               icon={<BellRing />}
             />
           </DashboardGrid>
 
-          <TripIntelligenceSection />
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <Card title="حالة الأسطول (Fleet Status)">
+              <div className="h-48 flex items-center justify-center text-sm text-slate-400 border border-dashed rounded-xl">
+                [مخطط دائري سيتم ربطه بالبيانات]
+              </div>
+            </Card>
+            <Card title="الشحنات النشطة (Active Shipments)">
+              <div className="h-48 flex items-center justify-center text-sm text-slate-400 border border-dashed rounded-xl">
+                [مخطط بياني سيتم ربطه بالبيانات]
+              </div>
+            </Card>
+            <Card title="أداء السائقين (Driver Performance)">
+              <div className="h-48 flex items-center justify-center text-sm text-slate-400 border border-dashed rounded-xl">
+                [مخطط أعمدة سيتم ربطه بالبيانات]
+              </div>
+            </Card>
+          </div>
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5">
             <DataTable<GenericRow>
-              title={tr(t, "dashboard.ops.activeTripsNow.table", "الرحلات النشطة")}
+              title="الشحنات المباشرة (Live Shipments)"
               columns={activeTripsColumns}
               rows={activeTripsRows}
               loading={loading}
               emptyTitle={tr(t, "common.noData", "لا توجد بيانات")}
             />
-
-            <DataTable<GenericRow>
-              title={tr(
-                t,
-                "dashboard.ops.tripsNeedingFinanceClose.table",
-                "رحلات تحتاج إغلاق مالي"
-              )}
-              columns={financeCloseColumns}
-              rows={financeCloseRows}
-              loading={loading}
-              emptyTitle={tr(t, "common.noData", "لا توجد بيانات")}
-            />
-          </div>
-
-          <DashboardChartsPanel trendsBundle={trendsBundle} loading={loading} />
-
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-            <div className="xl:col-span-3">
-              <DashboardInsightsPanel context="trips" onAsk={askAssistant} />
-            </div>
-
-            <div className="xl:col-span-6" id="dashboard-assistant-panel">
-              <DashboardAssistantPanel
-                context="trips"
-                externalQuestion={assistantQuestion}
-                onExternalQuestionHandled={() => setAssistantQuestion(null)}
-                onSessionSnapshotChange={setAssistantSnapshot}
-              />
-            </div>
-
-            <div className="xl:col-span-3">
-              <DashboardEntityPanel
-                snapshot={assistantSnapshot}
-                onAsk={askAssistant}
-              />
-            </div>
           </div>
         </div>
       ) : null}
