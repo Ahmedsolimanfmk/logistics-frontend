@@ -5,12 +5,16 @@ import { useRouter, usePathname } from "next/navigation";
 import { Home, Truck, Wallet, CheckCircle, PenTool, QrCode } from "lucide-react";
 import { useAuth } from "@/src/store/auth";
 import Link from "next/link";
+import { usePushNotifications } from "@/src/hooks/usePushNotifications";
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, hasHydrated } = useAuth();
   const [mounted, setMounted] = useState(false);
+
+  // Initialize Push Notifications (only runs on Native Android/iOS if user exists)
+  usePushNotifications(mounted && !!user);
 
   useEffect(() => {
     setMounted(true);
