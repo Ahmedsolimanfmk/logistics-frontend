@@ -3,9 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Wrench, CheckCircle, XCircle, Search, Eye } from "lucide-react";
 import Link from "next/link";
-import api from "@/src/lib/api";
-import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { api } from "@/src/lib/api";
 
 export default function MaintenanceRequestsPage() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -107,7 +105,7 @@ export default function MaintenanceRequestsPage() {
                 {filteredRequests.map((req) => (
                   <tr key={req.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
                     <td className="p-4 text-sm text-gray-600">
-                      {format(new Date(req.requested_at), "dd MMM yyyy", { locale: ar })}
+                      {new Date(req.requested_at).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" })}
                     </td>
                     <td className="p-4">
                       <div className="font-semibold">{req.vehicle?.plate_no}</div>

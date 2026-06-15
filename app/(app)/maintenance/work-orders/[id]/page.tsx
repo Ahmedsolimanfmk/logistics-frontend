@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PenTool, CheckCircle, Package, ArrowRight, Save, Play } from "lucide-react";
 import Link from "next/link";
-import api from "@/src/lib/api";
+import { api } from "@/src/lib/api";
 
 export default function WorkOrderDetailPage() {
   const { id } = useParams();
