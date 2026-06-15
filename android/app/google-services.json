@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "69353563921",
+    "project_id": "trex-55573",
+    "storage_bucket": "trex-55573.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:69353563921:android:6995527f38833912ef4eb0",
+        "android_client_info": {
+          "package_name": "com.trex.logistics"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBO3xLdBCk_42p_tBwb6rmzhysPLgP28VM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,7 +4,7 @@
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://logistics-frontend.onrender.com",
+    "url": "https://logistics-frontend-n2us.onrender.com",
     "cleartext": true
   },
   "android": {
