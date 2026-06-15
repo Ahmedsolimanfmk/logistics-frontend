@@ -487,7 +487,6 @@ export default function UsersPage() {
                       <option value="STOREKEEPER">STOREKEEPER (أمين مستودع)</option>
                       <option value="HR">HR (موارد بشرية)</option>
                       <option value="DRIVER">DRIVER (سائق)</option>
-                      <option value="DISPATCHER">DISPATCHER (مُرحّل)</option>
                       <option value="OPERATIONS">OPERATIONS (تشغيل)</option>
                       <option value="MAINTENANCE_MANAGER">MAINTENANCE_MANAGER (مدير صيانة)</option>
                     </select>
