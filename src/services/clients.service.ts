@@ -239,6 +239,11 @@ export const clientsService = {
     return normalizeClient(unwrapApiBody<Client>(res));
   },
 
+  async bulkCreate(clients: any[]): Promise<{ success: boolean; count: number }> {
+    const res = await api.post("/clients/bulk", { clients });
+    return res.data || res;
+  },
+
   async update(id: string, payload: ClientPayload): Promise<Client> {
     const res = await api.put(`/clients/${id}`, normalizePayload(payload));
     return normalizeClient(unwrapApiBody<Client>(res));

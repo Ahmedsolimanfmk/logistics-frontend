@@ -65,10 +65,77 @@ export default function ClientsPage() {
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
   const [toast, setToast] = useState<{
     type: "success" | "error";
     msg: string;
   } | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      const XLSX = await import("xlsx");
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (rawJson.length <= 1) {
+        throw new Error("الملف فارغ أو لا يحتوي على بيانات");
+      }
+
+      const headers = rawJson[0] as string[];
+      const dataRows = rawJson.slice(1).filter((r: any) => r && r.length > 0);
+
+      const clients = dataRows.map((row: any) => {
+        const getVal = (possibleHeaders: string[]) => {
+            const idx = headers.findIndex(h => possibleHeaders.includes(String(h).trim()));
+            return idx !== -1 ? row[idx] : undefined;
+        };
+
+        return {
+          name: getVal(["اسم العميل", "الاسم", "Name", "name", "Client Name", "الشركة", "اسم الشركة"]),
+          code: getVal(["كود العميل", "الكود", "Code", "code"]),
+          phone: getVal(["رقم الهاتف", "الهاتف", "Phone", "phone"]),
+          email: getVal(["البريد الإلكتروني", "الايميل", "Email", "email"]),
+          hq_address: getVal(["العنوان", "عنوان المقر", "Address", "address"]),
+          contact_name: getVal(["مسؤول التواصل", "Contact Person", "contact_name"]),
+          contact_phone: getVal(["هاتف المسؤول", "Contact Phone", "contact_phone"]),
+          tax_no: getVal(["الرقم الضريبي", "Tax No", "tax_no"]),
+          notes: getVal(["ملاحظات", "Notes", "notes"]),
+        };
+      });
+
+      const res = await clientsService.bulkCreate(clients);
+      setToast({ type: "success", msg: `تم استيراد ${res.count} شركة بنجاح` });
+      load();
+    } catch (err: any) {
+      setToast({ type: "error", msg: err.message || "حدث خطأ أثناء استيراد الملف" });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const downloadTemplate = async () => {
+    const XLSX = await import("xlsx");
+    const headers = [
+      "اسم العميل", "كود العميل", "رقم الهاتف", "البريد الإلكتروني", 
+      "العنوان", "الرقم الضريبي", "مسؤول التواصل", "هاتف المسؤول", "ملاحظات"
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ["شركة النصر", "C-001", "01000000000", "info@example.com", "القاهرة", "123456789", "أحمد", "01200000000", ""]]);
+    if (!ws["!views"]) ws["!views"] = [];
+    ws["!views"].push({ rightToLeft: true });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "الشركات");
+    XLSX.writeFile(wb, "Companies_Template.xlsx");
+  };
 
   function setParam(key: string, value: string) {
     const params = new URLSearchParams(sp.toString());
@@ -256,7 +323,34 @@ export default function ClientsPage() {
         title={t("clients.title")}
         subtitle={t("clients.subtitleList")}
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <input
+              type="file"
+              accept=".xlsx, .xls, .csv"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+            />
+            
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              isLoading={importing}
+            >
+              📥 استيراد شركات
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={downloadTemplate}
+              disabled={importing}
+            >
+              📄 تحميل النموذج
+            </Button>
+
             <Link href="/clients/new">
               <Button type="button" variant="primary">
                 + {t("clients.actions.add")}
