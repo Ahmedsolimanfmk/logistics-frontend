@@ -99,7 +99,7 @@ export default function DriversPage() {
   const router = useRouter();
 
   const [q, setQ] = useState("");
-  const [isActive, setIsActive] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
 
@@ -154,7 +154,7 @@ export default function DriversPage() {
     try {
       const params = new URLSearchParams();
       if (q.trim()) params.set("q", q.trim());
-      if (isActive) params.set("is_active", isActive);
+      if (statusFilter) params.set("status", statusFilter);
       params.set("page", String(page));
       params.set("pageSize", String(pageSize));
 
@@ -182,11 +182,11 @@ export default function DriversPage() {
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, isActive, page, pageSize]);
+  }, [q, statusFilter, page, pageSize]);
 
   useEffect(() => {
     setPage(1);
-  }, [q, isActive]);
+  }, [q, statusFilter]);
 
   function resetForm() {
     setFullName("");
@@ -254,12 +254,13 @@ export default function DriversPage() {
   }
 
   async function toggleActive(d: Driver) {
+    const isCurrentlyActive = d.status === "ACTIVE";
     openConfirm({
-      title: d.is_active ? "تأكيد التعطيل" : "تأكيد التفعيل",
+      title: isCurrentlyActive ? "تأكيد التعطيل" : "تأكيد التفعيل",
       description: (
         <div className="space-y-1">
           <div>
-            هل أنت متأكد من {d.is_active ? "تعطيل" : "تفعيل"} السائق:
+            هل أنت متأكد من {isCurrentlyActive ? "تعطيل" : "تفعيل"} السائق:
             <span className="font-semibold"> {d.full_name}</span> ؟
           </div>
           <div className="text-xs text-gray-500">يمكنك التراجع لاحقًا بتغيير الحالة مرة أخرى.</div>
@@ -268,7 +269,7 @@ export default function DriversPage() {
       action: async () => {
         setConfirmBusy(true);
         try {
-          await api.patch(`/drivers/${d.id}/status`, { is_active: !d.is_active });
+          await api.patch(`/drivers/${d.id}/status`, { status: isCurrentlyActive ? "INACTIVE" : "ACTIVE" });
           showToast("تم تحديث الحالة", "success");
           await fetchList();
         } catch (e: any) {
@@ -319,18 +320,18 @@ export default function DriversPage() {
       render: (d) => fmtDate(d.hire_date),
     },
     {
-      key: "is_active",
+      key: "status",
       label: "الحالة",
       render: (d) => (
         <div className="flex flex-col items-start gap-1">
           <span
             className={
-              d.is_active
+              d.status === "ACTIVE"
                 ? "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-green-50 text-green-700 border-green-200"
                 : "inline-flex items-center px-2 py-1 rounded-full text-xs border bg-gray-50 text-gray-700 border-gray-200"
             }
           >
-            {d.status || (d.is_active ? "ACTIVE" : "INACTIVE")}
+            {d.status || "—"}
           </span>
           {d.disable_reason ? <span className="text-xs text-rose-600">{d.disable_reason}</span> : null}
         </div>
@@ -370,7 +371,7 @@ export default function DriversPage() {
               toggleActive(d);
             }}
           >
-            {d.is_active ? "تعطيل" : "تفعيل"}
+            {d.status === "ACTIVE" ? "تعطيل" : "تفعيل"}
           </Button>
         </div>
       ),
@@ -393,7 +394,7 @@ export default function DriversPage() {
               variant="ghost"
               onClick={() => {
                 setQ("");
-                setIsActive("");
+                setStatusFilter("");
                 setPage(1);
               }}
             >
@@ -417,13 +418,15 @@ export default function DriversPage() {
                 <div>
                   <div className="text-xs text-gray-600 mb-1">الحالة</div>
                   <select
-                    value={isActive}
-                    onChange={(e) => setIsActive(e.target.value)}
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
                     className="rounded-xl border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200"
                   >
                     <option value="">الكل</option>
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
+                    <option value="ACTIVE">نشط</option>
+                    <option value="INACTIVE">غير نشط</option>
+                    <option value="DISABLED">موقوف</option>
+                    <option value="TERMINATED">منهى خدمته</option>
                   </select>
                 </div>
 
