@@ -19,7 +19,7 @@ export default function NewMaintenanceRequestPage() {
   });
 
   useEffect(() => {
-    api.get("/vehicles").then((res) => setVehicles(res.data)).catch(console.error);
+    api.get("/vehicles").then((res) => setVehicles(Array.isArray(res.data) ? res.data : (res.data?.items || []))).catch(console.error);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
