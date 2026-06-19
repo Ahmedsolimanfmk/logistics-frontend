@@ -1,5 +1,6 @@
 export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/dashboard": [],
+  "/analytics": ["ADMIN", "SUPER_ADMIN"],
   "/trips": [],
   "/finance": ["ADMIN", "ACCOUNTANT", "FIELD_SUPERVISOR", "SUPER_ADMIN"],
   "/clients": ["ADMIN", "HR", "SUPER_ADMIN"],

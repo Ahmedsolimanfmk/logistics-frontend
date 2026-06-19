@@ -2,7 +2,14 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Link2, Truck, BadgeDollarSign } from "lucide-react";
+import { 
+  Activity, Link2, Truck, BadgeDollarSign, 
+  LayoutDashboard, LineChart, Route,
+  Briefcase, MapPin, FileText, Database,
+  Wrench, Package, Droplets, Users, Settings,
+  UserSquare, Wallet, Users2, ShieldAlert,
+  ChevronDown
+} from "lucide-react";
 import { useAuth } from "@/src/store/auth";
 import { useT } from "@/src/i18n/useT";
 import { ROUTE_PERMISSIONS } from "@/src/config/routeRoles";
@@ -26,6 +33,11 @@ type NavGroup = {
   icon?: React.ReactNode;
   feature?: string;
   children: NavItem[];
+};
+
+type NavSection = {
+  sectionKey?: string;
+  items: (NavItem | NavGroup)[];
 };
 
 function roleUpper(r: any) {
@@ -58,189 +70,124 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
     }
   };
 
-  const items = useMemo<(NavItem | NavGroup)[]>(
+  const sections = useMemo<NavSection[]>(
     () => [
-      { labelKey: "sidebar.dashboard", href: "/dashboard" },
-      { labelKey: "sidebar.analytics", href: "/analytics" },
-      { labelKey: "sidebar.trips", href: "/trips" },
-
       {
-        labelKey: "sidebar.finance",
-        key: "finance",
-        roles: ROUTE_PERMISSIONS["/finance"],
-        children: [
-          { labelKey: "sidebar.financeOverview", href: "/finance" },
-          { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
-          { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
-          { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
-          { labelKey: "sidebar.financeARClients", href: "/finance/ar" },
-          { labelKey: "sidebar.financeARInvoices", href: "/finance/ar/invoices" },
-          { labelKey: "sidebar.financeARPayments", href: "/finance/ar/payments" },
-          { labelKey: "sidebar.financeARLedger", href: "/finance/ar/ledger" },
-        ],
-      },
-
-      {
-        labelKey: "sidebar.clients",
-        href: "/clients",
-        roles: ROUTE_PERMISSIONS["/clients"],
+        items: [
+          { labelKey: "sidebar.dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5 text-indigo-500" /> },
+          { labelKey: "sidebar.analytics", href: "/analytics", icon: <LineChart className="w-5 h-5 text-indigo-500" /> },
+        ]
       },
       {
-        labelKey: "sidebar.sites",
-        href: "/sites",
-        roles: ROUTE_PERMISSIONS["/sites"],
-      },
-
-      {
-        labelKey: "sidebar.contracts",
-        href: "/contracts",
-        roles: ROUTE_PERMISSIONS["/contracts"],
-      },
-      {
-        labelKey: "sidebar.contractPricing",
-        href: "/contract-pricing",
-        roles: ROUTE_PERMISSIONS["/contract-pricing"],
-      },
-
-      {
-        labelKey: "sidebar.masterData",
-        key: "masterData",
-        roles: ROUTE_PERMISSIONS["/contract-pricing/vehicle-classes"],
-        feature: "fleet_enabled",
-        children: [
+        sectionKey: "tabs.operations",
+        items: [
+          { labelKey: "sidebar.trips", href: "/trips", icon: <Route className="w-5 h-5 text-indigo-500" /> },
+          { labelKey: "sidebar.clients", href: "/clients", icon: <Briefcase className="w-5 h-5 text-indigo-500" />, roles: ROUTE_PERMISSIONS["/clients"] },
+          { labelKey: "sidebar.sites", href: "/sites", icon: <MapPin className="w-5 h-5 text-indigo-500" />, roles: ROUTE_PERMISSIONS["/sites"] },
+          { labelKey: "sidebar.contracts", href: "/contracts", icon: <FileText className="w-5 h-5 text-indigo-500" />, roles: ROUTE_PERMISSIONS["/contracts"] },
+          { labelKey: "sidebar.contractPricing", href: "/contract-pricing", icon: <BadgeDollarSign className="w-5 h-5 text-indigo-500" />, roles: ROUTE_PERMISSIONS["/contract-pricing"] },
           {
-            labelKey: "sidebar.vehicleClasses",
-            href: "/contract-pricing/vehicle-classes",
+            labelKey: "sidebar.masterData",
+            key: "masterData",
+            icon: <Database className="w-5 h-5 text-indigo-500" />,
+            roles: ROUTE_PERMISSIONS["/contract-pricing/vehicle-classes"],
+            feature: "fleet_enabled",
+            children: [
+              { labelKey: "sidebar.vehicleClasses", href: "/contract-pricing/vehicle-classes" },
+              { labelKey: "sidebar.cargoTypes", href: "/contract-pricing/cargo-types" },
+              { labelKey: "sidebar.zones", href: "/contract-pricing/zones" },
+              { labelKey: "sidebar.routes", href: "/contract-pricing/routes" },
+            ],
+          },
+        ]
+      },
+      {
+        sectionKey: "sidebar.fleetDashboard",
+        items: [
+          { labelKey: "sidebar.fleetDashboard", icon: <Activity className="w-5 h-5 text-indigo-500" />, href: "/fleet-dashboard", roles: ROUTE_PERMISSIONS["/vehicles"], feature: "fleet_enabled" },
+          { labelKey: "sidebar.vehicles", icon: <Truck className="w-5 h-5 text-indigo-500" />, href: "/vehicles", roles: ROUTE_PERMISSIONS["/vehicles"], feature: "fleet_enabled" },
+          { labelKey: "sidebar.drivers", icon: <UserSquare className="w-5 h-5 text-indigo-500" />, href: "/drivers", roles: ROUTE_PERMISSIONS["/drivers"] },
+          { labelKey: "sidebar.assignments", icon: <Link2 className="w-5 h-5 text-indigo-500" />, href: "/assignments", roles: ROUTE_PERMISSIONS["/vehicles"], feature: "fleet_enabled" },
+          { labelKey: "sidebar.fleetExpenses", icon: <Wallet className="w-5 h-5 text-indigo-500" />, href: "/fleet-expenses", roles: ROUTE_PERMISSIONS["/vehicles"], feature: "fleet_enabled" },
+        ]
+      },
+      {
+        sectionKey: "tabs.finance",
+        items: [
+          {
+            labelKey: "sidebar.finance",
+            key: "finance",
+            icon: <BadgeDollarSign className="w-5 h-5 text-indigo-500" />,
+            roles: ROUTE_PERMISSIONS["/finance"],
+            children: [
+              { labelKey: "sidebar.financeOverview", href: "/finance" },
+              { labelKey: "sidebar.financeExpenses", href: "/finance/expenses" },
+              { labelKey: "sidebar.financeAdvances", href: "/finance/advances" },
+              { labelKey: "sidebar.financePurchases", href: "/finance/purchases" },
+              { labelKey: "sidebar.financeARClients", href: "/finance/ar" },
+              { labelKey: "sidebar.financeARInvoices", href: "/finance/ar/invoices" },
+              { labelKey: "sidebar.financeARPayments", href: "/finance/ar/payments" },
+              { labelKey: "sidebar.financeARLedger", href: "/finance/ar/ledger" },
+            ],
+          },
+          { labelKey: "sidebar.cash", icon: <Wallet className="w-5 h-5 text-indigo-500" />, href: "/cash", roles: ROUTE_PERMISSIONS["/cash"] },
+          { labelKey: "sidebar.vendors", icon: <Users2 className="w-5 h-5 text-indigo-500" />, href: "/vendors", roles: ROUTE_PERMISSIONS["/vendors"] },
+        ]
+      },
+      {
+        sectionKey: "tabs.maintenance",
+        items: [
+          {
+            labelKey: "sidebar.maintenance",
+            key: "maintenance",
+            icon: <Wrench className="w-5 h-5 text-indigo-500" />,
+            roles: ROUTE_PERMISSIONS["/maintenance"],
+            feature: "inventory_enabled",
+            children: [
+              { labelKey: "sidebar.maintenanceRequests", href: "/maintenance/requests", roles: ROUTE_PERMISSIONS["/maintenance/requests"] },
+              { labelKey: "sidebar.maintenanceWorkOrders", href: "/maintenance/work-orders", roles: ROUTE_PERMISSIONS["/maintenance/work-orders"] },
+              { labelKey: "sidebar.maintenanceIssuedParts", href: "/maintenance/issued-parts", roles: ROUTE_PERMISSIONS["/maintenance/issued-parts"] },
+            ],
           },
           {
-            labelKey: "sidebar.cargoTypes",
-            href: "/contract-pricing/cargo-types",
+            labelKey: "sidebar.inventory",
+            key: "inventory",
+            icon: <Package className="w-5 h-5 text-indigo-500" />,
+            roles: ROUTE_PERMISSIONS["/inventory"],
+            feature: "inventory_enabled",
+            children: [
+              { labelKey: "sidebar.inventoryDashboard", href: "/inventory" },
+              { labelKey: "sidebar.inventoryWarehouses", href: "/inventory/warehouses" },
+              { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
+              { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
+              { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
+              { labelKey: "sidebar.inventoryParts", href: "/inventory/parts" },
+              { labelKey: "sidebar.inventoryCategories", href: "/inventory/categories" },
+              { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
+              { labelKey: "sidebar.inventoryStock", href: "/inventory/stock" },
+            ],
           },
           {
-            labelKey: "sidebar.zones",
-            href: "/contract-pricing/zones",
+            labelKey: "sidebar.fuel",
+            key: "fuel",
+            icon: <Droplets className="w-5 h-5 text-indigo-500" />,
+            roles: ["ADMIN", "SUPER_ADMIN"],
+            feature: "fuel_enabled",
+            children: [
+              { labelKey: "sidebar.fuelWallet", href: "/fuel-wallet" },
+              { labelKey: "sidebar.fuelTransactions", href: "/fuel-transactions" },
+            ],
           },
-          {
-            labelKey: "sidebar.routes",
-            href: "/contract-pricing/routes",
-          },
-        ],
-      },
-
-      {
-        labelKey: "sidebar.fleetDashboard",
-        icon: <Activity className="w-5 h-5 text-indigo-500" />,
-        href: "/fleet-dashboard",
-        roles: ROUTE_PERMISSIONS["/vehicles"],
-        feature: "fleet_enabled",
+        ]
       },
       {
-        labelKey: "sidebar.assignments",
-        icon: <Link2 className="w-5 h-5 text-indigo-500" />,
-        href: "/assignments",
-        roles: ROUTE_PERMISSIONS["/vehicles"],
-        feature: "fleet_enabled",
-      },
-      {
-        labelKey: "sidebar.fleetExpenses",
-        icon: <BadgeDollarSign className="w-5 h-5 text-indigo-500" />,
-        href: "/fleet-expenses",
-        roles: ROUTE_PERMISSIONS["/vehicles"],
-        feature: "fleet_enabled",
-      },
-      {
-        labelKey: "sidebar.vehicles",
-        icon: <Truck className="w-5 h-5 text-indigo-500" />,
-        href: "/vehicles",
-        roles: ROUTE_PERMISSIONS["/vehicles"],
-        feature: "fleet_enabled",
-      },
-      {
-        labelKey: "sidebar.drivers",
-        href: "/drivers",
-        roles: ROUTE_PERMISSIONS["/drivers"],
-      },
-
-      {
-        labelKey: "sidebar.cash",
-        href: "/cash",
-        roles: ROUTE_PERMISSIONS["/cash"],
-      },
-
-      {
-        labelKey: "sidebar.maintenance",
-        key: "maintenance",
-        roles: ROUTE_PERMISSIONS["/maintenance"],
-        feature: "inventory_enabled",
-        children: [
-          {
-            labelKey: "sidebar.maintenanceRequests",
-            href: "/maintenance/requests",
-            roles: ROUTE_PERMISSIONS["/maintenance/requests"],
-          },
-          {
-            labelKey: "sidebar.maintenanceWorkOrders",
-            href: "/maintenance/work-orders",
-            roles: ROUTE_PERMISSIONS["/maintenance/work-orders"],
-          },
-          {
-            labelKey: "sidebar.maintenanceIssuedParts",
-            href: "/maintenance/issued-parts",
-            roles: ROUTE_PERMISSIONS["/maintenance/issued-parts"],
-          },
-        ],
-      },
-
-      {
-        labelKey: "sidebar.vendors",
-        href: "/vendors",
-        roles: ROUTE_PERMISSIONS["/vendors"],
-      },
-
-      {
-        labelKey: "sidebar.fuel",
-        key: "fuel",
-        roles: ["ADMIN", "SUPER_ADMIN"],
-        feature: "fuel_enabled",
-        children: [
-          { labelKey: "sidebar.fuelWallet", href: "/fuel-wallet" },
-          { labelKey: "sidebar.fuelTransactions", href: "/fuel-transactions" },
-        ],
-      },
-
-      {
-        labelKey: "sidebar.inventory",
-        key: "inventory",
-        roles: ROUTE_PERMISSIONS["/inventory"],
-        feature: "inventory_enabled",
-        children: [
-          { labelKey: "sidebar.inventoryDashboard", href: "/inventory" },
-          { labelKey: "sidebar.inventoryWarehouses", href: "/inventory/warehouses" },
-          { labelKey: "sidebar.inventoryReceipts", href: "/inventory/receipts" },
-          { labelKey: "sidebar.inventoryRequests", href: "/inventory/requests" },
-          { labelKey: "sidebar.inventoryIssues", href: "/inventory/issues" },
-          { labelKey: "sidebar.inventoryParts", href: "/inventory/parts" },
-          { labelKey: "sidebar.inventoryCategories", href: "/inventory/categories" },
-          { labelKey: "sidebar.inventoryPartItems", href: "/inventory/part-items" },
-          { labelKey: "sidebar.inventoryStock", href: "/inventory/stock" },
-        ],
-      },
-
-      {
-        labelKey: "sidebar.users",
-        href: "/users",
-        roles: ROUTE_PERMISSIONS["/users"],
-      },
-      {
-        labelKey: "sidebar.settings",
-        href: "/settings",
-        roles: ROUTE_PERMISSIONS["/settings"] || ["ADMIN", "SUPER_ADMIN", "HR"],
-      },
-      {
-        labelKey: "sidebar.supervisors",
-        href: "/supervisors",
-        roles: ROUTE_PERMISSIONS["/supervisors"],
-      },
+        sectionKey: "sidebar.settings",
+        items: [
+          { labelKey: "sidebar.users", icon: <Users className="w-5 h-5 text-indigo-500" />, href: "/users", roles: ROUTE_PERMISSIONS["/users"] },
+          { labelKey: "sidebar.supervisors", icon: <ShieldAlert className="w-5 h-5 text-indigo-500" />, href: "/supervisors", roles: ROUTE_PERMISSIONS["/supervisors"] },
+          { labelKey: "sidebar.settings", icon: <Settings className="w-5 h-5 text-indigo-500" />, href: "/settings", roles: ROUTE_PERMISSIONS["/settings"] || ["ADMIN", "SUPER_ADMIN", "HR"] },
+        ]
+      }
     ],
     []
   );
@@ -333,95 +280,117 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-auto p-3">
-        {items
-          .filter((it) => canSee((it as any).roles, (it as any).feature))
-          .map((it) => {
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+        {sections.map((sec, idx) => {
+          const visibleItems = sec.items.filter((it) => {
+            if (!canSee((it as any).roles, (it as any).feature)) return false;
+            
             if ("children" in it) {
-              const isOpen = !!open[it.key];
-              const active = it.children.some((c) => isActive(c.href));
+              const visibleChildren = it.children.filter(c => canSee(c.roles, c.feature));
+              return visibleChildren.length > 0;
+            }
+            return true;
+          });
 
-              return (
-                <div key={it.key} className="space-y-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))
-                    }
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm transition",
-                      active
-                        ? "border-[rgba(var(--trex-accent),0.25)] bg-[rgba(var(--trex-accent),0.12)] text-slate-900"
-                        : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
-                    )}
-                  >
-                    <span>{t(it.labelKey)}</span>
-                    <span
+          if (visibleItems.length === 0) return null;
+
+          return (
+            <div key={idx} className="mb-6">
+              {sec.sectionKey && (
+                <div className="px-4 mb-3 text-[11px] font-bold text-slate-400/90 uppercase tracking-wider">
+                  {t(sec.sectionKey)}
+                </div>
+              )}
+              <div className="space-y-1">
+                {visibleItems.map((it) => {
+                  if ("children" in it) {
+                    const isOpen = !!open[it.key];
+                    const active = it.children.some((c) => isActive(c.href));
+
+                    return (
+                      <div key={it.key} className="space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => setOpen((p) => ({ ...p, [it.key]: !p[it.key] }))}
+                          className={cn(
+                            "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm transition",
+                            active
+                              ? "border-[rgba(var(--trex-accent),0.25)] bg-[rgba(var(--trex-accent),0.12)] text-[rgb(var(--trex-accent))] font-medium"
+                              : "border-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 font-medium"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            {it.icon}
+                            <span>{t(it.labelKey)}</span>
+                          </div>
+                          <ChevronDown
+                            className={cn(
+                              "w-4 h-4 text-slate-400 transition-transform",
+                              isOpen && "rotate-180"
+                            )}
+                          />
+                        </button>
+
+                        {isOpen && (
+                          <div className="space-y-1 pr-10 mt-1">
+                            {it.children
+                              .filter((c) => canSee(c.roles, c.feature))
+                              .map((c) => (
+                                <button
+                                  key={c.href}
+                                  type="button"
+                                  onClick={() => navigateTo(c.href)}
+                                  className={cn(
+                                    "block w-full rounded-xl border-r-2 px-3 py-2 text-right text-[13px] transition",
+                                    isActive(c.href)
+                                      ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.10)] text-[rgb(var(--trex-accent))] font-medium"
+                                      : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                                  )}
+                                >
+                                  {t(c.labelKey)}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={it.href}
+                      type="button"
+                      onClick={() => navigateTo(it.href)}
                       className={cn(
-                        "text-xs transition",
-                        isOpen && "rotate-180"
+                        "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
+                        isActive(it.href)
+                          ? "border-[rgba(var(--trex-accent),0.25)] bg-[rgba(var(--trex-accent),0.12)] text-[rgb(var(--trex-accent))] font-medium"
+                          : "border-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 font-medium"
                       )}
                     >
-                      ▾
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="space-y-1 pr-2">
-                      {it.children
-                        .filter((c) => canSee(c.roles, c.feature))
-                        .map((c) => (
-                          <button
-                            key={c.href}
-                            type="button"
-                            onClick={() => navigateTo(c.href)}
-                            className={cn(
-                              "block w-full rounded-xl border-r-2 px-3 py-2 text-right text-sm transition",
-                              isActive(c.href)
-                                ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.10)] text-slate-900"
-                                : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
-                            )}
-                          >
-                            {t(c.labelKey)}
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            return (
-              <button
-                key={it.href}
-                type="button"
-                onClick={() => navigateTo(it.href)}
-                className={cn(
-                  "block w-full rounded-xl border-r-2 px-3 py-2 text-right text-sm transition",
-                  isActive(it.href)
-                    ? "border-[rgb(var(--trex-accent))] bg-[rgba(var(--trex-accent),0.12)] text-slate-900"
-                    : "border-transparent text-slate-700 hover:bg-black/5 hover:text-[rgb(var(--trex-accent))]"
-                )}
-              >
-                {t(it.labelKey)}
-              </button>
-            );
-          })}
+                      {it.icon}
+                      <span>{t(it.labelKey)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </nav>
 
-      <div className="border-t border-black/10 p-3 space-y-2">
+      <div className="border-t border-black/10 p-4 space-y-2 bg-slate-50/50">
         {user?.is_impersonating && user?.platform_role === "SUPER_ADMIN" && (
           <button
             type="button"
             onClick={() => {
-              // Return to super admin by unsetting company
               const st: any = (useAuth as any).getState?.();
               if (st?.setAuth && st?.token) {
                 st.setAuth(st.token, { ...user, is_impersonating: false, company_id: null, company_name: null });
                 window.location.href = "/dashboard";
               }
             }}
-            className="w-full rounded-xl border border-[rgba(var(--trex-success),0.30)] bg-[rgba(var(--trex-success),0.12)] px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-[rgba(var(--trex-success),0.18)]"
+            className="w-full rounded-xl border border-[rgba(var(--trex-success),0.30)] bg-[rgba(var(--trex-success),0.12)] px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-[rgba(var(--trex-success),0.18)] shadow-sm"
           >
             العودة للوحة التحكم (SaaS)
           </button>
@@ -429,7 +398,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         <button
           type="button"
           onClick={logout}
-          className="w-full rounded-xl border border-[rgba(var(--trex-accent),0.30)] bg-[rgba(var(--trex-accent),0.12)] px-3 py-2 text-sm text-slate-900 transition hover:bg-[rgba(var(--trex-accent),0.18)]"
+          className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 shadow-sm"
         >
           {t("common.logout")}
         </button>
