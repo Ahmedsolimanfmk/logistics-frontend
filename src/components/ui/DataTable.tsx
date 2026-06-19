@@ -2,6 +2,8 @@
 
 import React from "react";
 import { EmptyState } from "./EmptyState";
+import { FileSpreadsheet, FileDown } from "lucide-react";
+import { exportToExcel, exportToPDF } from "@/src/utils/exportUtils";
 
 function cn(...v: Array<string | false | null | undefined>) {
   return v.filter(Boolean).join(" ");
@@ -10,9 +12,11 @@ function cn(...v: Array<string | false | null | undefined>) {
 export type DataTableColumn<T> = {
   key: string;
   label: React.ReactNode;
+  exportLabel?: string;
   className?: string;
   headerClassName?: string;
   render?: (row: T) => React.ReactNode;
+  exportValue?: (row: T) => string | number | null | undefined;
 };
 
 export function DataTable<T>({
@@ -25,6 +29,10 @@ export function DataTable<T>({
   emptyTitle,
   emptyHint,
   onRowClick,
+
+  // export functionality
+  exportable = true,
+  exportFilename = "data_export",
 
   // pagination (server-side)
   total,
@@ -51,6 +59,9 @@ export function DataTable<T>({
 
   onRowClick?: (row: T) => void;
 
+  exportable?: boolean;
+  exportFilename?: string;
+
   total?: number;
   page?: number;
   pages?: number;
@@ -61,7 +72,7 @@ export function DataTable<T>({
 
   minWidthClassName?: string;
 }) {
-  const hasHeader = Boolean(title || subtitle || right || typeof total === "number");
+  const hasHeader = Boolean(title || subtitle || right || typeof total === "number" || exportable);
   const clickable = Boolean(onRowClick);
 
   const shellCls =
@@ -70,6 +81,27 @@ export function DataTable<T>({
 
   const muted = "text-slate-500";
   const fg = "text-[rgb(var(--trex-fg))]";
+
+  const handleExport = (type: "excel" | "pdf") => {
+    if (!rows || rows.length === 0) return;
+
+    const headers = columns.map(c => 
+      c.exportLabel || (typeof c.label === "string" ? c.label : c.key)
+    );
+
+    const data = rows.map(row => {
+      return columns.map(c => {
+        if (c.exportValue) return c.exportValue(row) ?? "";
+        return (row as any)?.[c.key] ?? "";
+      });
+    });
+
+    if (type === "excel") {
+      exportToExcel(exportFilename, headers, data);
+    } else {
+      exportToPDF(exportFilename, headers, data);
+    }
+  };
 
   return (
     <div className={shellCls}>
@@ -87,6 +119,28 @@ export function DataTable<T>({
 
           <div className="flex items-center gap-2">
             {right}
+            
+            {exportable && rows?.length > 0 && (
+              <div className="flex items-center gap-1 bg-black/[0.02] border border-black/10 rounded-xl p-1 mr-2">
+                <button
+                  type="button"
+                  onClick={() => handleExport("excel")}
+                  title="تصدير Excel"
+                  className="p-1.5 rounded-lg text-slate-600 hover:text-green-600 hover:bg-green-50 transition"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("pdf")}
+                  title="تصدير PDF"
+                  className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition"
+                >
+                  <FileDown className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             {typeof page === "number" && typeof pages === "number" ? (
               <div className={cn("text-xs", muted)}>
                 صفحة <span className={cn("font-semibold", fg)}>{page}</span> /{" "}
