@@ -1,6 +1,7 @@
 // src/i18n/useT.ts
 "use client";
 
+import { useCallback } from "react";
 import ar from "@/src/messages/ar.json";
 import en from "@/src/messages/en.json";
 import { useLang } from "@/src/i18n/lang";
@@ -14,7 +15,7 @@ function get(obj: any, path: string) {
 export function useT() {
   const lang = useLang();
 
-  return (key: string, vars?: Record<string, any>) => {
+  return useCallback((key: string, vars?: Record<string, any>) => {
     let text = get(dict[lang], key);
 
     // fallback: return key if missing
@@ -31,5 +32,5 @@ export function useT() {
     }
 
     return text;
-  };
+  }, [lang]);
 }
