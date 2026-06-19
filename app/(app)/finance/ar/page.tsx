@@ -15,7 +15,7 @@ export default function ArHomePage() {
         <Link href="/finance/ar/invoices"><Button>الفواتير</Button></Link>
         <Link href="/finance/ar/payments"><Button variant="secondary">المدفوعات</Button></Link>
         <Link href="/finance/ar/ledger"><Button variant="secondary">دفتر الأستاذ</Button></Link>
-        <Link href="/finance/ar/clients"><Button variant="ghost">العملاء</Button></Link>
+        <Link href="/clients"><Button variant="ghost">العملاء</Button></Link>
       </div>
     </div>
   );
